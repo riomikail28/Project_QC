@@ -26,8 +26,9 @@ from typing import Optional
 try:
     from PIL import Image, ImageFilter, ImageEnhance
     _HAS_PILLOW = True
-except ImportError:
+except Exception:
     _HAS_PILLOW = False
+    logging.error("Pillow fails to load.")
 
 # ---------------------------------------------------------------------------
 # Third-party (lazy imports – gracefully handle missing packages)

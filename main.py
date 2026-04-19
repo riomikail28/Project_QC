@@ -28,13 +28,10 @@ from pydantic import BaseModel, Field
 from supabase import create_client, Client
 
 # Internal skills
-from skills.parametric_checker import (
-    check_facility_temperature,
-    check_ccp_temperatures,
-    FacilityZone,
-)
-from skills.ocr_digital_reader import run_ocr_digital_reader
-from skills.auto_reporter import run_auto_reporter
+# Skill imports are now handled inside the route functions for better resilience
+# from skills.parametric_checker import ...
+# from skills.ocr_digital_reader import ...
+# from skills.auto_reporter import ...
 
 # ---------------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +54,11 @@ app.add_middleware(
     allow_methods     = ["*"],
     allow_headers     = ["*"],
 )
+
+
+@app.get("/", tags=["System"])
+async def root():
+    return {"message": "QC Traceability API is running", "ui": "/dashboard/index.html"}
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +153,7 @@ async def log_facility_temperature(
     Log a facility zone temperature.
     Triggers an automatic alert if the reading is outside SOP limits.
     """
+    from skills.parametric_checker import FacilityZone, check_facility_temperature
     try:
         zone_enum = FacilityZone(zone)
     except ValueError:
@@ -235,6 +238,7 @@ async def submit_ccp1(
         logger.error(f"DB Error ccp1 bypassed: {e}")
         batch_log_id = str(uuid.uuid4())
 
+    from skills.parametric_checker import check_ccp_temperatures
     result = check_ccp_temperatures(
         batch_log_id = batch_log_id,
         stage        = "CCP1_PRE_COOK",
@@ -279,6 +283,7 @@ async def submit_ccp2(
         batch_log_id = str(uuid.uuid4())
 
     # Temperature check
+    from skills.parametric_checker import check_ccp_temperatures
     temp_result = check_ccp_temperatures(
         batch_log_id = batch_log_id,
         stage        = "CCP2_POST_COOK",
@@ -355,6 +360,7 @@ async def generate_report(batch_id: str, sb: Client = Depends(get_supabase)):
     Compile all validated CCP data and photos into a structured PDF report.
     Uploads the PDF to Supabase Storage and writes the URL back to the batch.
     """
+    from skills.auto_reporter import run_auto_reporter
     payload = run_auto_reporter(batch_id=batch_id)
     return ReportResponse(
         batch_id       = batch_id,

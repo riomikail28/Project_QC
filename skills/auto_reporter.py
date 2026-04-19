@@ -32,8 +32,9 @@ from supabase import create_client, Client
 try:
     from weasyprint import HTML as WeasyprintHTML
     _HAS_WEASYPRINT = True
-except ImportError:
+except Exception:
     _HAS_WEASYPRINT = False
+    logging.warning("WeasyPrint fails to load – PDF generation will be skipped.")
     logging.warning("WeasyPrint not installed – PDF generation will be skipped.")
 
 logger = logging.getLogger(__name__)
