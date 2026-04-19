@@ -40,8 +40,8 @@ from skills.auto_reporter import run_auto_reporter
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SUPABASE_URL: str = os.environ["SUPABASE_URL"]
-SUPABASE_KEY: str = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co")
+SUPABASE_KEY: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "placeholder")
 STORAGE_BUCKET = "qc-photos"
 
 app = FastAPI(
