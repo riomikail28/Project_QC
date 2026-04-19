@@ -10,3 +10,4 @@ httpx
 postgrest
 gotrue
 storage3
+jinja2
