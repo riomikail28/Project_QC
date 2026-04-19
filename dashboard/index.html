@@ -1,43 +1,55 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QC Traceability System — PT Astro Teknologi Indonesia</title>
   <meta name="description" content="Intelligent Quality Control Dashboard for Central Kitchen Operations" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <style>
     /* ===================== DESIGN TOKENS ===================== */
     :root {
-      --bg-base:        #345bd3;
-      --bg-card:        #eae8e8;
-      --bg-glass:       rgba(255,255,255,0.04);
-      --border:         rgba(255,255,255,0.08);
-      --border-active:  rgba(99,179,237,0.4);
-      --primary:        #3b82f6;
-      --primary-glow:   rgba(59,130,246,0.25);
-      --success:        #10b981;
-      --success-glow:   rgba(16,185,129,0.2);
-      --danger:         #ef4444;
-      --danger-glow:    rgba(239,68,68,0.2);
-      --warning:        #f59e0b;
-      --warning-glow:   rgba(245,158,11,0.2);
-      --text-primary:   #060606;
+      --bg-base: #345bd3;
+      --bg-card: #eae8e8;
+      --bg-glass: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(99, 179, 237, 0.4);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --text-primary: #060606;
       --text-secondary: #111212;
-      --text-muted:     #475569;
-      --radius-sm:      8px;
-      --radius-md:      12px;
-      --radius-lg:      16px;
-      --radius-xl:      24px;
-      --shadow-card:    0 4px 24px rgba(0,0,0,0.4);
-      --shadow-glow:    0 0 40px rgba(59,130,246,0.15);
-      --transition:     all 0.25s cubic-bezier(0.4,0,0.2,1);
+      --text-muted: #475569;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* ===================== RESET ===================== */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: var(--bg-base);
@@ -48,19 +60,34 @@
     }
 
     /* ===================== SCROLLBAR ===================== */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-base); }
-    ::-webkit-scrollbar-thumb { background: var(--bg-card2); border-radius: 4px; }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-card2);
+      border-radius: 4px;
+    }
 
     /* ===================== LAYOUT ===================== */
     .sidebar {
-      position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
       background: var(--bg-card);
       border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
+      display: flex;
+      flex-direction: column;
       z-index: 100;
       padding: 0 0 20px;
     }
+
     .main-content {
       margin-left: 260px;
       min-height: 100vh;
@@ -72,94 +99,207 @@
       padding: 24px 20px 20px;
       border-bottom: 1px solid var(--border);
     }
+
     .brand-logo {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
     }
+
     .brand-icon {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       background: linear-gradient(135deg, var(--primary), #8b5cf6);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 18px;
     }
-    .brand-name { font-size: 14px; font-weight: 700; line-height: 1.2; }
-    .brand-sub  { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
-    .brand-company { font-size: 11px; color: var(--primary); margin-top: 6px; font-weight: 500; }
+
+    .brand-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .brand-company {
+      font-size: 11px;
+      color: var(--primary);
+      margin-top: 6px;
+      font-weight: 500;
+    }
 
     /* ===================== SIDEBAR NAV ===================== */
-    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
-    .nav-section-title {
-      font-size: 10px; color: var(--text-muted); text-transform: uppercase;
-      letter-spacing: 1px; padding: 12px 8px 6px; font-weight: 600;
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
+
+    .nav-section-title {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 8px 6px;
+      font-weight: 600;
+    }
+
     .nav-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; border-radius: var(--radius-sm);
-      cursor: pointer; transition: var(--transition);
-      font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
       border: 1px solid transparent;
       text-decoration: none;
     }
-    .nav-item:hover { background: var(--bg-glass); color: var(--text-primary); }
+
+    .nav-item:hover {
+      background: var(--bg-glass);
+      color: var(--text-primary);
+    }
+
     .nav-item.active {
-      background: var(--primary-glow); color: var(--primary);
+      background: var(--primary-glow);
+      color: var(--primary);
       border-color: var(--border-active);
     }
-    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
 
     /* ===================== SIDEBAR FOOTER ===================== */
     .sidebar-footer {
       padding: 16px 20px 0;
       border-top: 1px solid var(--border);
     }
+
     .server-status {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
     }
+
     .status-dot {
-      width: 8px; height: 8px; border-radius: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
       background: var(--success);
       box-shadow: 0 0 8px var(--success);
       animation: pulse 2s infinite;
     }
+
     @keyframes pulse {
-      0%,100% { opacity: 1; } 50% { opacity: 0.5; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
     }
 
     /* ===================== TOPBAR ===================== */
     .topbar {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 28px;
     }
-    .page-title { font-size: 22px; font-weight: 700; }
-    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
 
     /* ===================== BUTTONS ===================== */
     .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border-radius: var(--radius-sm);
-      font-size: 13px; font-weight: 600; cursor: pointer;
-      border: 1px solid transparent; transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition);
       text-decoration: none;
     }
+
     .btn-primary {
-      background: var(--primary); color: #fff;
+      background: var(--primary);
+      color: #fff;
       box-shadow: 0 0 20px var(--primary-glow);
     }
-    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+
+    .btn-primary:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+
     .btn-ghost {
-      background: var(--bg-glass); color: var(--text-secondary);
+      background: var(--bg-glass);
+      color: var(--text-secondary);
       border-color: var(--border);
     }
-    .btn-ghost:hover { color: var(--text-primary); background: var(--bg-card2); }
+
+    .btn-ghost:hover {
+      color: var(--text-primary);
+      background: var(--bg-card2);
+    }
+
     .btn-success {
-      background: var(--success); color: #fff;
+      background: var(--success);
+      color: #fff;
       box-shadow: 0 0 20px var(--success-glow);
     }
+
     .btn-danger {
-      background: var(--danger); color: #fff;
+      background: var(--danger);
+      color: #fff;
     }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
 
     /* ===================== CARDS ===================== */
     .card {
@@ -169,12 +309,24 @@
       padding: 24px;
       box-shadow: var(--shadow-card);
     }
+
     .card-header {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 20px;
     }
-    .card-title { font-size: 15px; font-weight: 700; }
-    .card-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
 
     /* ===================== STAT CARDS ===================== */
     .stats-grid {
@@ -183,271 +335,818 @@
       gap: 16px;
       margin-bottom: 24px;
     }
+
     .stat-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 20px;
-      position: relative; overflow: hidden;
+      position: relative;
+      overflow: hidden;
       transition: var(--transition);
     }
-    .stat-card:hover { border-color: var(--border-active); transform: translateY(-2px); }
+
+    .stat-card:hover {
+      border-color: var(--border-active);
+      transform: translateY(-2px);
+    }
+
     .stat-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
       border-radius: 2px 2px 0 0;
     }
-    .stat-card.blue::before { background: linear-gradient(90deg, var(--primary), #8b5cf6); }
-    .stat-card.green::before { background: var(--success); }
-    .stat-card.red::before { background: var(--danger); }
-    .stat-card.yellow::before { background: var(--warning); }
+
+    .stat-card.blue::before {
+      background: linear-gradient(90deg, var(--primary), #8b5cf6);
+    }
+
+    .stat-card.green::before {
+      background: var(--success);
+    }
+
+    .stat-card.red::before {
+      background: var(--danger);
+    }
+
+    .stat-card.yellow::before {
+      background: var(--warning);
+    }
+
     .stat-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; margin-bottom: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
     }
-    .stat-icon.blue { background: var(--primary-glow); }
-    .stat-icon.green { background: var(--success-glow); }
-    .stat-icon.red { background: var(--danger-glow); }
-    .stat-icon.yellow { background: var(--warning-glow); }
-    .stat-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-    .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .stat-icon.blue {
+      background: var(--primary-glow);
+    }
+
+    .stat-icon.green {
+      background: var(--success-glow);
+    }
+
+    .stat-icon.red {
+      background: var(--danger-glow);
+    }
+
+    .stat-icon.yellow {
+      background: var(--warning-glow);
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
     .stat-change {
-      font-size: 11px; margin-top: 8px;
-      display: flex; align-items: center; gap: 4px;
+      font-size: 11px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .stat-change.up { color: var(--success); }
-    .stat-change.down { color: var(--danger); }
+
+    .stat-change.up {
+      color: var(--success);
+    }
+
+    .stat-change.down {
+      color: var(--danger);
+    }
 
     /* ===================== GRID LAYOUT ===================== */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-    .mb-20 { margin-bottom: 20px; }
-    .mb-24 { margin-bottom: 24px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+
+    .mb-24 {
+      margin-bottom: 24px;
+    }
 
     /* ===================== FACILITY ZONES ===================== */
-    .zone-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .zone-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
     .zone-card {
       background: var(--bg-card2);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 20px;
       transition: var(--transition);
-      position: relative; overflow: hidden;
+      position: relative;
+      overflow: hidden;
     }
-    .zone-card.normal { border-color: rgba(16,185,129,0.3); }
-    .zone-card.alert  { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.05); }
-    .zone-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .zone-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .zone-card.normal {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .zone-card.alert {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .zone-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .zone-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     .zone-temp {
-      font-size: 42px; font-weight: 800; letter-spacing: -2px;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -2px;
       line-height: 1;
     }
-    .zone-temp.ok { color: var(--success); }
-    .zone-temp.bad { color: var(--danger); }
-    .zone-limit { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-    .zone-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 4px 10px; border-radius: 99px;
-      font-size: 11px; font-weight: 600;
+
+    .zone-temp.ok {
+      color: var(--success);
     }
-    .badge-ok { background: var(--success-glow); color: var(--success); }
-    .badge-alert { background: var(--danger-glow); color: var(--danger); }
-    .badge-warning { background: var(--warning-glow); color: var(--warning); }
-    .badge-pending { background: rgba(148,163,184,0.1); color: var(--text-secondary); }
-    .zone-updated { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+
+    .zone-temp.bad {
+      color: var(--danger);
+    }
+
+    .zone-limit {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .zone-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-ok {
+      background: var(--success-glow);
+      color: var(--success);
+    }
+
+    .badge-alert {
+      background: var(--danger-glow);
+      color: var(--danger);
+    }
+
+    .badge-warning {
+      background: var(--warning-glow);
+      color: var(--warning);
+    }
+
+    .badge-pending {
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text-secondary);
+    }
+
+    .zone-updated {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
 
     /* ===================== CCP PROGRESS ===================== */
     .ccp-stepper {
-      display: flex; align-items: center; gap: 0;
+      display: flex;
+      align-items: center;
+      gap: 0;
       margin-bottom: 28px;
     }
+
     .ccp-step {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       position: relative;
     }
+
     .ccp-step:not(:last-child)::after {
-      content: ''; position: absolute;
-      top: 18px; left: calc(50% + 18px);
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: calc(50% + 18px);
       right: calc(-50% + 18px);
-      height: 2px; background: var(--border);
+      height: 2px;
+      background: var(--border);
       transition: var(--transition);
     }
-    .ccp-step.done:not(:last-child)::after { background: var(--success); }
-    .ccp-step.active:not(:last-child)::after { background: var(--primary); }
+
+    .ccp-step.done:not(:last-child)::after {
+      background: var(--success);
+    }
+
+    .ccp-step.active:not(:last-child)::after {
+      background: var(--primary);
+    }
+
     .step-circle {
-      width: 36px; height: 36px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700; margin-bottom: 8px;
-      border: 2px solid var(--border); background: var(--bg-card);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      border: 2px solid var(--border);
+      background: var(--bg-card);
       transition: var(--transition);
     }
-    .ccp-step.done .step-circle { background: var(--success); border-color: var(--success); color: #fff; }
-    .ccp-step.active .step-circle { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 16px var(--primary-glow); }
-    .step-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-    .ccp-step.done .step-label, .ccp-step.active .step-label { color: var(--text-primary); }
-    .step-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .ccp-step.done .step-circle {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+
+    .ccp-step.active .step-circle {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .ccp-step.done .step-label,
+    .ccp-step.active .step-label {
+      color: var(--text-primary);
+    }
+
+    .step-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
 
     /* ===================== TABLE ===================== */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
     thead th {
-      text-align: left; padding: 10px 14px;
-      color: var(--text-muted); font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.5px;
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border);
     }
-    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: var(--transition); }
-    tbody tr:hover { background: var(--bg-glass); }
-    tbody td { padding: 12px 14px; color: var(--text-secondary); }
-    tbody td:first-child { color: var(--text-primary); font-weight: 500; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: var(--transition);
+    }
+
+    tbody tr:hover {
+      background: var(--bg-glass);
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      color: var(--text-secondary);
+    }
+
+    tbody td:first-child {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
 
     /* ===================== FORM ===================== */
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group.full { grid-column: 1/-1; }
-    label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-    input, select, textarea {
-      background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text-primary);
-      padding: 10px 14px; font-size: 13px; font-family: 'Inter', sans-serif;
-      transition: var(--transition); outline: none; width: 100%;
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
     }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    select option { background: var(--bg-card); }
+
+    .form-group.full {
+      grid-column: 1/-1;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    input,
+    select,
+    textarea {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      transition: var(--transition);
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    select option {
+      background: var(--bg-card);
+    }
+
     .upload-area {
-      border: 2px dashed var(--border); border-radius: var(--radius-md);
-      padding: 24px; text-align: center; cursor: pointer;
-      transition: var(--transition); background: var(--bg-base);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--bg-base);
     }
-    .upload-area:hover { border-color: var(--primary); background: var(--primary-glow); }
-    .upload-icon { font-size: 28px; margin-bottom: 8px; }
-    .upload-text { font-size: 13px; color: var(--text-secondary); }
-    .upload-sub  { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-    input[type="file"] { display: none; }
+
+    .upload-area:hover {
+      border-color: var(--primary);
+      background: var(--primary-glow);
+    }
+
+    .upload-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .upload-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .upload-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
 
     /* ===================== MODAL ===================== */
     .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-      z-index: 999; align-items: center; justify-content: center;
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
     }
-    .modal-overlay.open { display: flex; }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
     .modal {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius-xl); padding: 32px;
-      width: 90%; max-width: 580px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-      animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      width: 90%;
+      max-width: 580px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+      animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .modal-lg { max-width: 720px; }
+
+    .modal-lg {
+      max-width: 720px;
+    }
+
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-    .modal-title { font-size: 18px; font-weight: 700; }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
     .modal-close {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--bg-glass); border: 1px solid var(--border);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      color: var(--text-secondary); font-size: 18px; transition: var(--transition);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 18px;
+      transition: var(--transition);
     }
-    .modal-close:hover { background: var(--danger-glow); color: var(--danger); }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    .modal-close:hover {
+      background: var(--danger-glow);
+      color: var(--danger);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
 
     /* ===================== TABS ===================== */
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--bg-card2); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border); }
-    .tab {
-      flex: 1; padding: 9px 16px; border-radius: var(--radius-sm);
-      font-size: 13px; font-weight: 600; cursor: pointer; text-align: center;
-      color: var(--text-secondary); transition: var(--transition);
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--bg-card2);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
     }
-    .tab.active { background: var(--primary); color: #fff; box-shadow: 0 0 16px var(--primary-glow); }
+
+    .tab {
+      flex: 1;
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
 
     /* ===================== PAGE SECTIONS ===================== */
-    .page { display: none; }
-    .page.active { display: block; }
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
 
     /* ===================== ALERT BANNER ===================== */
     .alert-banner {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 18px; border-radius: var(--radius-md);
-      font-size: 13px; margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      margin-bottom: 16px;
     }
-    .alert-danger { background: var(--danger-glow); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-    .alert-success { background: var(--success-glow); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
-    .alert-info { background: var(--primary-glow); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+
+    .alert-danger {
+      background: var(--danger-glow);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .alert-success {
+      background: var(--success-glow);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .alert-info {
+      background: var(--primary-glow);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
 
     /* ===================== GAUGE ===================== */
-    .gauge-container { text-align: center; padding: 10px; }
-    .gauge-value { font-size: 32px; font-weight: 800; }
-    .gauge-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-    .gauge-bar { height: 6px; border-radius: 4px; background: var(--bg-base); margin: 12px 0 6px; overflow: hidden; }
-    .gauge-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
-    .gauge-fill.green { background: linear-gradient(90deg, var(--success), #34d399); }
-    .gauge-fill.red   { background: linear-gradient(90deg, var(--danger), #f87171); }
-    .gauge-range { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
+    .gauge-container {
+      text-align: center;
+      padding: 10px;
+    }
+
+    .gauge-value {
+      font-size: 32px;
+      font-weight: 800;
+    }
+
+    .gauge-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .gauge-bar {
+      height: 6px;
+      border-radius: 4px;
+      background: var(--bg-base);
+      margin: 12px 0 6px;
+      overflow: hidden;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    .gauge-fill.green {
+      background: linear-gradient(90deg, var(--success), #34d399);
+    }
+
+    .gauge-fill.red {
+      background: linear-gradient(90deg, var(--danger), #f87171);
+    }
+
+    .gauge-range {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
 
     /* ===================== TOAST ===================== */
-    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .toast {
-      padding: 14px 18px; border-radius: var(--radius-md);
-      font-size: 13px; font-weight: 500; min-width: 300px;
-      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 300px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       box-shadow: var(--shadow-card);
       animation: toastIn 0.3s ease;
     }
-    @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
-    .toast-success { background: #065f46; border: 1px solid var(--success); color: #d1fae5; }
-    .toast-error   { background: #7f1d1d; border: 1px solid var(--danger);  color: #fee2e2; }
-    .toast-info    { background: #1e3a5f; border: 1px solid var(--primary); color: #dbeafe; }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .toast-success {
+      background: #065f46;
+      border: 1px solid var(--success);
+      color: #d1fae5;
+    }
+
+    .toast-error {
+      background: #7f1d1d;
+      border: 1px solid var(--danger);
+      color: #fee2e2;
+    }
+
+    .toast-info {
+      background: #1e3a5f;
+      border: 1px solid var(--primary);
+      color: #dbeafe;
+    }
 
     /* ===================== RESPONSIVE ===================== */
     @media (max-width: 1200px) {
-      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
+
     @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); }
-      .main-content { margin-left: 0; padding: 20px; padding-bottom: 80px; }
-      .bottom-nav { display: flex; }
-      .stats-grid { grid-template-columns: 1fr; }
-      .zone-cards { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 20px;
+        padding-bottom: 80px;
+      }
+
+      .bottom-nav {
+        display: flex;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .zone-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ===================== MISC ===================== */
-    .divider { height: 1px; background: var(--border); margin: 20px 0; }
-    .text-success { color: var(--success); }
-    .text-danger  { color: var(--danger); }
-    .text-warning { color: var(--warning); }
-    .text-muted   { color: var(--text-muted); }
-    .font-mono    { font-family: 'Courier New', monospace; font-size: 12px; }
-    .flex { display: flex; }
-    .items-center { align-items: center; }
-    .gap-8 { gap: 8px; }
-    .gap-12 { gap: 12px; }
-    .mt-4 { margin-top: 4px; }
-    .loading { opacity: 0.6; pointer-events: none; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .text-success {
+      color: var(--success);
+    }
+
+    .text-danger {
+      color: var(--danger);
+    }
+
+    .text-warning {
+      color: var(--warning);
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+    }
+
+    .font-mono {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .gap-8 {
+      gap: 8px;
+    }
+
+    .gap-12 {
+      gap: 12px;
+    }
+
+    .mt-4 {
+      margin-top: 4px;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     /* OCR result box */
     .ocr-box {
-      background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 16px; margin-top: 16px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-top: 16px;
     }
-    .ocr-reading { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
-    .ocr-reading:last-child { border-bottom: none; }
-    .ocr-reading-label { font-size: 13px; color: var(--text-secondary); }
-    .ocr-reading-value { font-size: 22px; font-weight: 800; }
-  
+
+    .ocr-reading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ocr-reading:last-child {
+      border-bottom: none;
+    }
+
+    .ocr-reading-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .ocr-reading-value {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
     /* ===================== BOTTOM NAV (MOBILE) ===================== */
     .bottom-nav {
       display: none;
       position: fixed;
-      bottom: 0; left: 0; right: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
       background: var(--bg-card);
       border-top: 1px solid var(--border);
       z-index: 1000;
@@ -455,18 +1154,36 @@
       padding-bottom: calc(8px + env(safe-area-inset-bottom));
       justify-content: space-around;
       align-items: center;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
     }
+
     .bottom-nav-item {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      color: var(--text-secondary); text-decoration: none;
-      font-size: 10px; font-weight: 600; cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
       transition: var(--transition);
-      padding: 8px 12px; border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
     }
-    .bottom-nav-item:hover { background: var(--bg-glass); }
-    .bottom-nav-item.active { color: var(--primary); }
-    .bottom-nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+    .bottom-nav-item:hover {
+      background: var(--bg-glass);
+    }
+
+    .bottom-nav-item.active {
+      color: var(--primary);
+    }
+
+    .bottom-nav-icon {
+      font-size: 20px;
+      margin-bottom: 2px;
+    }
 
 
     /* ===================== MOBILE HEADER & MENU TOGGLE ===================== */
@@ -479,6 +1196,7 @@
       border-bottom: 1px solid var(--border);
       margin: -20px -20px 20px -20px;
     }
+
     .hamburger-btn {
       background: transparent;
       border: none;
@@ -486,45 +1204,58 @@
       color: var(--text-primary);
       cursor: pointer;
     }
+
     .mobile-brand {
       font-weight: 700;
       font-size: 16px;
     }
-    
+
     @media (max-width: 768px) {
-      .mobile-header { display: flex; }
+      .mobile-header {
+        display: flex;
+      }
+
       .sidebar {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
-        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
       }
+
       .sidebar.open {
         transform: translateX(0);
       }
+
       /* Overlay background when menu is open */
       .sidebar-overlay {
         display: none;
-        position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px); z-index: 99;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 99;
       }
-      .sidebar-overlay.open { display: block; }
+
+      .sidebar-overlay.open {
+        display: block;
+      }
     }
 
 
     /* ===================== MOBILE OVERRIDES (DARK NATIVE APP VIBE) ===================== */
     @media (max-width: 768px) {
+
       /* Force dark theme tokens on mobile */
       body {
         --bg-base: #0f172a;
         --bg-card: #1e293b;
-        --bg-glass: rgba(255,255,255,0.05);
+        --bg-glass: rgba(255, 255, 255, 0.05);
         --bg-card2: #1e293b;
         --border: #334155;
         --text-primary: #f8fafc;
         --text-secondary: #cbd5e1;
         --text-muted: #94a3b8;
         --primary: #6366f1;
-        --primary-glow: rgba(99,102,241,0.25);
+        --primary-glow: rgba(99, 102, 241, 0.25);
         background: var(--bg-base);
         color: var(--text-primary);
       }
@@ -536,33 +1267,69 @@
         border-bottom: none;
         padding: 20px 20px;
         margin: -20px -20px 24px -20px;
-        box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
       }
-      .mobile-brand { font-size: 18px; text-align: center; width: 100%; display: block; }
-      .hamburger-btn { position: absolute; left: 20px; color: white; }
+
+      .mobile-brand {
+        font-size: 18px;
+        text-align: center;
+        width: 100%;
+        display: block;
+      }
+
+      .hamburger-btn {
+        position: absolute;
+        left: 20px;
+        color: white;
+      }
 
       /* The Topbars for pages should be hidden or integrated */
-      .page > .topbar { display: none; } /* Hide the default desktop topbar title */
+      .page>.topbar {
+        display: none;
+      }
+
+      /* Hide the default desktop topbar title */
 
       /* Cards styling match */
       .card {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         padding: 20px;
       }
 
       /* Giant Camera Upload Area */
       .upload-area {
-        background: #0f172a; /* Slate 900 */
+        background: #0f172a;
+        /* Slate 900 */
         border: 1px solid #1e293b;
         border-radius: 16px;
         padding: 40px 20px;
       }
-      .upload-area:hover, .upload-area:active { background: #1e293b; border-color: var(--primary); }
-      .upload-icon { font-size: 40px; color: #64748b; margin-bottom: 12px; }
-      .upload-text { font-size: 16px; font-weight: 600; color: #94a3b8; }
-      .upload-sub { display: none; } /* Hide sub text for clean UI */
+
+      .upload-area:hover,
+      .upload-area:active {
+        background: #1e293b;
+        border-color: var(--primary);
+      }
+
+      .upload-icon {
+        font-size: 40px;
+        color: #64748b;
+        margin-bottom: 12px;
+      }
+
+      .upload-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: #94a3b8;
+      }
+
+      .upload-sub {
+        display: none;
+      }
+
+      /* Hide sub text for clean UI */
 
       /* Pending Status Button looking like the screenshot */
       .zone-badge.badge-pending {
@@ -572,662 +1339,747 @@
         padding: 16px;
         font-size: 14px;
         border-radius: 8px;
-        background: rgba(99,102,241,0.15);
+        background: rgba(99, 102, 241, 0.15);
         color: #a5b4fc;
-        border: 1px solid rgba(99,102,241,0.3);
+        border: 1px solid rgba(99, 102, 241, 0.3);
         margin-top: 16px;
       }
 
       /* Bottom Nav matches exactly */
       .bottom-nav {
-        background: #1e293b; /* slate-800 */
-        border-top: 1px solid #334155; /* slate-700 */
+        background: #1e293b;
+        /* slate-800 */
+        border-top: 1px solid #334155;
+        /* slate-700 */
         justify-content: space-around;
         padding-top: 12px;
       }
+
       .bottom-nav-item {
         font-size: 12px;
         color: #94a3b8;
         background: transparent !important;
       }
-      .bottom-nav-item .bottom-nav-icon { font-size: 24px; color: #94a3b8; background: transparent !important; width: auto !important; height: auto !important; box-shadow: none !important; }
+
+      .bottom-nav-item .bottom-nav-icon {
+        font-size: 24px;
+        color: #94a3b8;
+        background: transparent !important;
+        width: auto !important;
+        height: auto !important;
+        box-shadow: none !important;
+      }
+
       /* Active state */
-      .bottom-nav-item.active { color: #818cf8; }
-      .bottom-nav-item.active .bottom-nav-icon { color: #818cf8; }
+      .bottom-nav-item.active {
+        color: #818cf8;
+      }
+
+      .bottom-nav-item.active .bottom-nav-icon {
+        color: #818cf8;
+      }
     }
 
 
     /* ===================== THEME TOGGLE (DARK MODE) ===================== */
     body.dark-mode {
-        --bg-base: #0f172a;
-        --bg-card: #1e293b;
-        --bg-glass: rgba(255,255,255,0.05);
-        --bg-card2: #1e293b;
-        --border: #334155;
-        --text-primary: #f8fafc;
-        --text-secondary: #cbd5e1;
-        --text-muted: #94a3b8;
-        --primary: #6366f1;
-        --primary-glow: rgba(99,102,241,0.25);
+      --bg-base: #0f172a;
+      --bg-card: #1e293b;
+      --bg-glass: rgba(255, 255, 255, 0.05);
+      --bg-card2: #1e293b;
+      --border: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.25);
     }
-    
-    /* Specific dark mode tweaks for all screens */
-    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
-        background: #0f172a; color: #f8fafc; border-color: #334155;
-    }
-    body.dark-mode table tbody tr { border-color: #334155; }
-    body.dark-mode .upload-area { background: #0f172a; border-color: #334155; }
-    body.dark-mode .upload-area:hover { background: #1e293b; border-color: var(--primary); }
-    body.dark-mode .zone-card { background: #1e293b; }
-    body.dark-mode .sidebar { background: #1e293b; }
-    body.dark-mode .mobile-header, body.dark-mode .bottom-nav { background: #1e293b; }
 
-</style>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link rel="manifest" href="manifest.json">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    /* Specific dark mode tweaks for all screens */
+    body.dark-mode input,
+    body.dark-mode select,
+    body.dark-mode textarea {
+      background: #0f172a;
+      color: #f8fafc;
+      border-color: #334155;
+    }
+
+    body.dark-mode table tbody tr {
+      border-color: #334155;
+    }
+
+    body.dark-mode .upload-area {
+      background: #0f172a;
+      border-color: #334155;
+    }
+
+    body.dark-mode .upload-area:hover {
+      background: #1e293b;
+      border-color: var(--primary);
+    }
+
+    body.dark-mode .zone-card {
+      background: #1e293b;
+    }
+
+    body.dark-mode .sidebar {
+      background: #1e293b;
+    }
+
+    body.dark-mode .mobile-header,
+    body.dark-mode .bottom-nav {
+      background: #1e293b;
+    }
+  </style>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 </head>
+
 <body>
 
-<!-- ===================== TOAST ===================== -->
-<div class="toast-container" id="toastContainer"></div>
+  <!-- ===================== TOAST ===================== -->
+  <div class="toast-container" id="toastContainer"></div>
 
-<!-- ===================== SIDEBAR ===================== -->
-<aside class="sidebar">
-  <div class="sidebar-brand">
-    <div class="brand-logo">
-      <div class="brand-icon">🏭</div>
-      <div>
-        <div class="brand-name">QC Traceability</div>
-        <div class="brand-sub">Central Kitchen System</div>
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">🏭</div>
+        <div>
+          <div class="brand-name">QC Traceability</div>
+          <div class="brand-sub">Central Kitchen System</div>
+        </div>
       </div>
-    </div>
-    <div class="brand-company">PT Astro Teknologi Indonesia</div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-section-title">Overview</div>
-    <a class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-      <span class="nav-icon">📊</span> Dashboard
-    </a>
-
-    <div class="nav-section-title">Module A — Fasilitas</div>
-    <a class="nav-item" onclick="showPage('facility')" id="nav-facility">
-      <span class="nav-icon">🌡️</span> Monitoring Suhu
-    </a>
-    <a class="nav-item" onclick="showPage('alerts')" id="nav-alerts">
-      <span class="nav-icon">🚨</span> Alert Log
-    </a>
-
-    <div class="nav-section-title">Module B — Batch QC</div>
-    <a class="nav-item" onclick="showPage('new-batch')" id="nav-new-batch">
-      <span class="nav-icon">➕</span> Buat Batch Baru
-    </a>
-    <a class="nav-item" onclick="showPage('ccp')" id="nav-ccp">
-      <span class="nav-icon">🔬</span> Input CCP
-    </a>
-    <a class="nav-item" onclick="showPage('batches')" id="nav-batches">
-      <span class="nav-icon">📋</span> Riwayat Batch
-    </a>
-    <a class="nav-item" onclick="showPage('reports')" id="nav-reports">
-      <span class="nav-icon">📄</span> Laporan QC
-    </a>
-
-    
-    <div class="nav-section-title">Tema Tampilan</div>
-    <a class="nav-item" onclick="toggleTheme()" id="nav-theme">
-      <span class="nav-icon" id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
-    </a>
-
-    <div class="nav-section-title">Konfigurasi</div>
-    <a class="nav-item" onclick="showPage('products')" id="nav-products">
-      <span class="nav-icon">🍱</span> Produk & SOP
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="server-status">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="serverStatusText">API Connected</span>
-    </div>
-    <div style="font-size:10px;color:var(--text-muted);margin-top:6px;" id="apiUrlDisplay">localhost:8000</div>
-  </div>
-</aside>
-
-<!-- ===================== MAIN ===================== -->
-<main class="main-content">
-
-  <!-- ===== MOBILE HEADER ===== -->
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-  <div class="mobile-header">
-    <div class="mobile-brand">QC Traceability</div>
-    <div style="display:flex; gap:15px"><button class="hamburger-btn" id="mobileThemeIcon" onclick="toggleTheme()">🌙</button><button class="hamburger-btn" onclick="toggleSidebar()">☰</button></div>
-  </div>
-
-
-  <!-- ===== DASHBOARD PAGE ===== -->
-  <div class="page active" id="page-dashboard">
-    <div class="topbar">
-      <div>
-        <div class="page-title">Dashboard</div>
-        <div class="page-subtitle" id="dashDate">—</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
-        <button class="btn btn-primary btn-sm" onclick="showPage('new-batch')">+ Batch Baru</button>
-      </div>
+      <div class="brand-company">PT Astro Teknologi Indonesia</div>
     </div>
 
-    <div class="stats-grid" id="statsGrid">
-      <div class="stat-card blue">
-        <div class="stat-icon blue">🏗️</div>
-        <div class="stat-value" id="statBatchToday">—</div>
-        <div class="stat-label">Batch Hari Ini</div>
-        <div class="stat-change up">↑ Periode aktif</div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Overview</div>
+      <a class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+
+      <div class="nav-section-title">Module A — Fasilitas</div>
+      <a class="nav-item" onclick="showPage('facility')" id="nav-facility">
+        <span class="nav-icon">🌡️</span> Monitoring Suhu
+      </a>
+      <a class="nav-item" onclick="showPage('alerts')" id="nav-alerts">
+        <span class="nav-icon">🚨</span> Alert Log
+      </a>
+
+      <div class="nav-section-title">Module B — Batch QC</div>
+      <a class="nav-item" onclick="showPage('new-batch')" id="nav-new-batch">
+        <span class="nav-icon">➕</span> Buat Batch Baru
+      </a>
+      <a class="nav-item" onclick="showPage('ccp')" id="nav-ccp">
+        <span class="nav-icon">🔬</span> Input CCP
+      </a>
+      <a class="nav-item" onclick="showPage('batches')" id="nav-batches">
+        <span class="nav-icon">📋</span> Riwayat Batch
+      </a>
+      <a class="nav-item" onclick="showPage('reports')" id="nav-reports">
+        <span class="nav-icon">📄</span> Laporan QC
+      </a>
+
+
+      <div class="nav-section-title">Tema Tampilan</div>
+      <a class="nav-item" onclick="toggleTheme()" id="nav-theme">
+        <span class="nav-icon" id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+      </a>
+
+      <div class="nav-section-title">Konfigurasi</div>
+      <a class="nav-item" onclick="showPage('products')" id="nav-products">
+        <span class="nav-icon">🍱</span> Produk & SOP
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="server-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="serverStatusText">API Connected</span>
       </div>
-      <div class="stat-card green">
-        <div class="stat-icon green">✅</div>
-        <div class="stat-value" id="statBatchPass">—</div>
-        <div class="stat-label">Batch PASS</div>
-        <div class="stat-change up">↑ QC Lulus</div>
-      </div>
-      <div class="stat-card red">
-        <div class="stat-icon red">❌</div>
-        <div class="stat-value" id="statBatchFail">—</div>
-        <div class="stat-label">Batch FAIL</div>
-        <div class="stat-change down">Perlu tindakan</div>
-      </div>
-      <div class="stat-card yellow">
-        <div class="stat-icon yellow">⚠️</div>
-        <div class="stat-value" id="statAlerts">—</div>
-        <div class="stat-label">Alert Suhu Aktif</div>
-        <div class="stat-change down">Cek fasilitas</div>
-      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;" id="apiUrlDisplay">localhost:8000</div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="main-content">
+    <!-- ===== MOBILE HEADER ===== -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="mobile-header">
+      <div class="mobile-brand">QC Traceability</div>
+      <div style="display:flex; gap:15px"><button class="hamburger-btn" id="mobileThemeIcon"
+          onclick="toggleTheme()">🌙</button><button class="hamburger-btn" onclick="toggleSidebar()">☰</button></div>
     </div>
 
-    <div class="mb-24">
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="topbar">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle" id="dashDate">—</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="showPage('new-batch')">+ Batch Baru</button>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card blue">
+          <div class="stat-icon blue">🏗️</div>
+          <div class="stat-value" id="statBatchToday">—</div>
+          <div class="stat-label">Batch Hari Ini</div>
+          <div class="stat-change up">↑ Periode aktif</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-value" id="statBatchPass">—</div>
+          <div class="stat-label">Batch PASS</div>
+          <div class="stat-change up">↑ QC Lulus</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon red">❌</div>
+          <div class="stat-value" id="statBatchFail">—</div>
+          <div class="stat-label">Batch FAIL</div>
+          <div class="stat-change down">Perlu tindakan</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon yellow">⚠️</div>
+          <div class="stat-value" id="statAlerts">—</div>
+          <div class="stat-label">Alert Suhu Aktif</div>
+          <div class="stat-change down">Cek fasilitas</div>
+        </div>
+      </div>
+
+      <div class="mb-24">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Status Fasilitas Real-Time</div>
+              <div class="card-subtitle">Pemantauan suhu zona aktif</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('facility')">Lihat Semua →</button>
+          </div>
+          <div class="zone-cards" id="zoneDashboard">
+            <div class="zone-card">
+              <div class="zone-header"><span class="zone-name">Chiller</span><span
+                  class="badge-pending zone-badge">Loading…</span></div>
+              <div class="zone-temp" id="dChiller">—°C</div>
+              <div class="zone-limit">SOP: ≤ 4°C</div>
+            </div>
+            <div class="zone-card">
+              <div class="zone-header"><span class="zone-name">Freezer</span><span
+                  class="badge-pending zone-badge">Loading…</span></div>
+              <div class="zone-temp" id="dFreezer">—°C</div>
+              <div class="zone-limit">SOP: ≤ -18°C</div>
+            </div>
+            <div class="zone-card">
+              <div class="zone-header"><span class="zone-name">Ambient</span><span
+                  class="badge-pending zone-badge">Loading…</span></div>
+              <div class="zone-temp" id="dAmbient">—°C</div>
+              <div class="zone-limit">SOP: ≤ 20°C</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Status Fasilitas Real-Time</div>
-            <div class="card-subtitle">Pemantauan suhu zona aktif</div>
+            <div class="card-title">Batch QC Terkini</div>
+            <div class="card-subtitle">5 batch terakhir diproduksi</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('facility')">Lihat Semua →</button>
         </div>
-        <div class="zone-cards" id="zoneDashboard">
-          <div class="zone-card">
-            <div class="zone-header"><span class="zone-name">Chiller</span><span class="badge-pending zone-badge">Loading…</span></div>
-            <div class="zone-temp" id="dChiller">—°C</div>
-            <div class="zone-limit">SOP: ≤ 4°C</div>
-          </div>
-          <div class="zone-card">
-            <div class="zone-header"><span class="zone-name">Freezer</span><span class="badge-pending zone-badge">Loading…</span></div>
-            <div class="zone-temp" id="dFreezer">—°C</div>
-            <div class="zone-limit">SOP: ≤ -18°C</div>
-          </div>
-          <div class="zone-card">
-            <div class="zone-header"><span class="zone-name">Ambient</span><span class="badge-pending zone-badge">Loading…</span></div>
-            <div class="zone-temp" id="dAmbient">—°C</div>
-            <div class="zone-limit">SOP: ≤ 20°C</div>
-          </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Batch Code</th>
+                <th>Produk</th>
+                <th>Tanggal</th>
+                <th>Shift</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="dashBatchTable">
+              <tr>
+                <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
+    <!-- ===== FACILITY PAGE ===== -->
+    <div class="page" id="page-facility">
+      <div class="topbar">
         <div>
-          <div class="card-title">Batch QC Terkini</div>
-          <div class="card-subtitle">5 batch terakhir diproduksi</div>
+          <div class="page-title">🌡️ Monitoring Fasilitas</div>
+          <div class="page-subtitle">Input & pantau suhu zona dapur</div>
+        </div>
+        <button class="btn btn-primary" onclick="openLogModal()">+ Input Suhu</button>
+      </div>
+
+      <div class="zone-cards mb-24" id="facilityZones">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Log Suhu Terbaru</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Zona</th>
+                <th>Suhu (°C)</th>
+                <th>Threshold</th>
+                <th>Status</th>
+                <th>Petugas</th>
+              </tr>
+            </thead>
+            <tbody id="facilityLogTable">
+              <tr>
+                <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada data</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Batch Code</th>
-              <th>Produk</th>
-              <th>Tanggal</th>
-              <th>Shift</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="dashBatchTable">
-            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Memuat data…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== FACILITY PAGE ===== -->
-  <div class="page" id="page-facility">
-    <div class="topbar">
-      <div>
-        <div class="page-title">🌡️ Monitoring Fasilitas</div>
-        <div class="page-subtitle">Input & pantau suhu zona dapur</div>
-      </div>
-      <button class="btn btn-primary" onclick="openLogModal()">+ Input Suhu</button>
     </div>
 
-    <div class="zone-cards mb-24" id="facilityZones">
-      <!-- Rendered by JS -->
+    <!-- ===== ALERTS PAGE ===== -->
+    <div class="page" id="page-alerts">
+      <div class="topbar">
+        <div class="page-title">🚨 Alert Log</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Alert Aktif</div>
+        </div>
+        <div id="alertList">
+          <div style="text-align:center;padding:40px;color:var(--text-muted)">Tidak ada alert aktif 🎉</div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Log Suhu Terbaru</div>
+    <!-- ===== NEW BATCH PAGE ===== -->
+    <div class="page" id="page-new-batch">
+      <div class="topbar">
+        <div>
+          <div class="page-title">➕ Buat Batch Baru</div>
+          <div class="page-subtitle">Mulai sesi produksi baru</div>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Waktu</th><th>Zona</th><th>Suhu (°C)</th><th>Threshold</th><th>Status</th><th>Petugas</th></tr>
-          </thead>
-          <tbody id="facilityLogTable">
-            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada data</td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="max-width:700px">
+        <div class="card-header">
+          <div class="card-title">Informasi Batch</div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>MFG Date (Stok Masak) *</label>
+            <input id="batchDate" type="date" />
+          </div>
+          <div class="form-group">
+            <label>EXP Date (Kedaluwarsa) *</label>
+            <input id="batchExp" type="date" />
+          </div>
+          <div class="form-group">
+            <label>Produk *</label>
+            <select id="batchProduct">
+              <option value="">— Pilih Produk —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Shift</label>
+            <select id="batchShift">
+              <option value="morning">Pagi (06:00–14:00)</option>
+              <option value="afternoon">Siang (14:00–22:00)</option>
+              <option value="night">Malam (22:00–06:00)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Operator ID (opsional)</label>
+            <input id="batchOperator" type="text" placeholder="UUID operator" />
+          </div>
+          <div class="form-group">
+            <label>QC Officer ID (opsional)</label>
+            <input id="batchQcOfficer" type="text" placeholder="UUID QC officer" />
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="showPage('batches')">Batal</button>
+          <button class="btn btn-primary" onclick="createBatch()" id="btnCreateBatch">🚀 Buat Batch & Mulai CCP</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ===== ALERTS PAGE ===== -->
-  <div class="page" id="page-alerts">
-    <div class="topbar">
-      <div class="page-title">🚨 Alert Log</div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title">Alert Aktif</div></div>
-      <div id="alertList">
-        <div style="text-align:center;padding:40px;color:var(--text-muted)">Tidak ada alert aktif 🎉</div>
+    <!-- ===== CCP INPUT PAGE ===== -->
+    <div class="page" id="page-ccp">
+      <div class="topbar">
+        <div>
+          <div class="page-title">🔬 Input CCP</div>
+          <div class="page-subtitle">Batch: <strong id="activeBatchLabel">—</strong></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('batches')">← Kembali</button>
       </div>
-    </div>
-  </div>
 
-  <!-- ===== NEW BATCH PAGE ===== -->
-  <div class="page" id="page-new-batch">
-    <div class="topbar">
-      <div>
-        <div class="page-title">➕ Buat Batch Baru</div>
-        <div class="page-subtitle">Mulai sesi produksi baru</div>
+      <div class="ccp-stepper" id="ccpStepper">
+        <div class="ccp-step active" id="step1">
+          <div class="step-circle">1</div>
+          <div class="step-label">CCP 1</div>
+          <div class="step-sub">Pre-Cook</div>
+        </div>
+        <div class="ccp-step" id="step2">
+          <div class="step-circle">2</div>
+          <div class="step-label">CCP 2</div>
+          <div class="step-sub">Post-Cook</div>
+        </div>
+        <div class="ccp-step" id="step3">
+          <div class="step-circle">3</div>
+          <div class="step-label">CCP 3</div>
+          <div class="step-sub">Packaging</div>
+        </div>
+        <div class="ccp-step" id="step4">
+          <div class="step-circle">✓</div>
+          <div class="step-label">Laporan</div>
+          <div class="step-sub">Generate</div>
+        </div>
+      </div>
+
+      <!-- CCP1 -->
+      <div id="ccp1Panel" class="card mb-24">
+        <div class="card-header">
+          <div>
+            <div class="card-title">CCP 1 — Pre-Cook</div>
+            <div class="card-subtitle">Validasi bahan baku sebelum proses memasak</div>
+          </div>
+          <span class="zone-badge badge-pending" id="ccp1Badge">Pending</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Suhu Bahan Baku (°C) — SOP: ≤ 5°C *</label>
+            <input id="ccp1Temp" type="number" step="0.1" placeholder="Contoh: 3.5" />
+          </div>
+          <div class="form-group">
+            <label>Foto Bahan Baku *</label>
+            <div class="upload-area" onclick="document.getElementById('ccp1Photo').click()" id="ccp1UploadArea">
+              <div class="upload-icon">📷</div>
+              <div class="upload-text">Klik untuk upload foto</div>
+              <div class="upload-sub">JPG, PNG, WEBP — maks 10MB</div>
+            </div>
+            <input type="file" id="ccp1Photo" accept="image/*" onchange="previewUpload('ccp1Photo','ccp1UploadArea')"
+              capture="environment" />
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-primary" onclick="submitCCP1()" id="btnCCP1">Submit CCP 1</button>
+        </div>
+      </div>
+
+      <!-- CCP2 -->
+      <div id="ccp2Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
+        <div class="card-header">
+          <div>
+            <div class="card-title">CCP 2 — Post-Cook</div>
+            <div class="card-subtitle">Validasi setelah proses memasak — OCR otomatis pada foto alat ukur</div>
+          </div>
+          <span class="zone-badge badge-pending" id="ccp2Badge">Menunggu CCP1</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Suhu Inti (°C) — SOP: ≥ 75°C *</label>
+            <input id="ccp2Temp" type="number" step="0.1" placeholder="Contoh: 82.5" />
+          </div>
+          <div class="form-group" style="grid-row:span 3">
+            <label>Foto LCD pH Meter (Milwaukee pH51) *</label>
+            <div class="upload-area" onclick="document.getElementById('ccp2PhPhoto').click()" id="ccp2PhArea">
+              <div class="upload-icon">🧪</div>
+              <div class="upload-text">Upload foto LCD pH Meter</div>
+              <div class="upload-sub">OCR akan membaca nilai otomatis</div>
+            </div>
+            <input type="file" id="ccp2PhPhoto" accept="image/*" onchange="previewUpload('ccp2PhPhoto','ccp2PhArea')"
+              capture="environment" />
+          </div>
+          <div class="form-group" style="grid-row:span 3">
+            <label>Foto LCD Refraktometer *</label>
+            <div class="upload-area" onclick="document.getElementById('ccp2BrixPhoto').click()" id="ccp2BrixArea">
+              <div class="upload-icon">🔭</div>
+              <div class="upload-text">Upload foto LCD Refraktometer</div>
+              <div class="upload-sub">OCR akan membaca nilai Brix</div>
+            </div>
+            <input type="file" id="ccp2BrixPhoto" accept="image/*"
+              onchange="previewUpload('ccp2BrixPhoto','ccp2BrixArea')" capture="environment" />
+          </div>
+        </div>
+        <div id="ocrResultBox" style="display:none" class="ocr-box">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary)">HASIL OCR OTOMATIS
+          </div>
+          <div class="ocr-reading">
+            <span class="ocr-reading-label">🧪 pH (Milwaukee pH51)</span>
+            <span class="ocr-reading-value" id="ocrPh">—</span>
+            <span class="zone-badge" id="ocrPhBadge">—</span>
+          </div>
+          <div class="ocr-reading">
+            <span class="ocr-reading-label">🔭 Brix (Refraktometer)</span>
+            <span class="ocr-reading-value" id="ocrBrix">—</span>
+            <span class="zone-badge" id="ocrBrixBadge">—</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-primary" onclick="submitCCP2()" id="btnCCP2">Submit CCP 2 + OCR</button>
+        </div>
+      </div>
+
+      <!-- CCP3 -->
+      <div id="ccp3Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
+        <div class="card-header">
+          <div>
+            <div class="card-title">CCP 3 — Packaging</div>
+            <div class="card-subtitle">Validasi suhu ruang pengemasan</div>
+          </div>
+          <span class="zone-badge badge-pending" id="ccp3Badge">Menunggu CCP2</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Suhu Ruang (°C) — SOP: ≤ 20°C *</label>
+            <input id="ccp3Temp" type="number" step="0.1" placeholder="Contoh: 18.0" />
+          </div>
+          <div class="form-group">
+            <label>Foto Kemasan *</label>
+            <div class="upload-area" onclick="document.getElementById('ccp3Photo').click()" id="ccp3UploadArea">
+              <div class="upload-icon">📦</div>
+              <div class="upload-text">Upload foto kemasan</div>
+              <div class="upload-sub">Pastikan label dan kondisi terlihat jelas</div>
+            </div>
+            <input type="file" id="ccp3Photo" accept="image/*" onchange="previewUpload('ccp3Photo','ccp3UploadArea')"
+              capture="environment" />
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-success" onclick="submitCCP3()" id="btnCCP3">✅ Submit CCP 3 & Generate Laporan</button>
+        </div>
       </div>
     </div>
-    <div class="card" style="max-width:700px">
-      <div class="card-header"><div class="card-title">Informasi Batch</div></div>
+
+    <!-- ===== BATCHES PAGE ===== -->
+    <div class="page" id="page-batches">
+      <div class="topbar">
+        <div class="page-title">📋 Riwayat Batch</div>
+        <button class="btn btn-primary" onclick="showPage('new-batch')">+ Batch Baru</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Batch Code</th>
+                <th>Produk</th>
+                <th>Tanggal</th>
+                <th>Shift</th>
+                <th>Status</th>
+                <th>QC</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="batchTable">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== REPORTS PAGE ===== -->
+    <div class="page" id="page-reports">
+      <div class="topbar">
+        <div class="page-title">📄 Laporan QC</div>
+      </div>
+      <div class="card">
+        <div id="reportList">
+          <div style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada laporan tersedia</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PRODUCTS PAGE ===== -->
+    <div class="page" id="page-products">
+      <div class="topbar">
+        <div class="page-title">🍱 Produk & SOP Threshold</div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Produk</th>
+                <th>pH Min</th>
+                <th>pH Max</th>
+                <th>Brix Min</th>
+                <th>Brix Max</th>
+                <th>Core Temp Min</th>
+              </tr>
+            </thead>
+            <tbody id="productTable">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Memuat produk…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== MODAL: Input Suhu Fasilitas ===== -->
+  <div class="modal-overlay" id="logModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">🌡️ Input Suhu Fasilitas</div>
+        <div class="modal-close" onclick="closeModal('logModal')">×</div>
+      </div>
       <div class="form-grid">
         <div class="form-group">
-          <label>MFG Date (Stok Masak) *</label>
-          <input id="batchDate" type="date" />
-        </div>
-        <div class="form-group">
-          <label>EXP Date (Kedaluwarsa) *</label>
-          <input id="batchExp" type="date" />
-        </div>
-        <div class="form-group">
-          <label>Produk *</label>
-          <select id="batchProduct">
-            <option value="">— Pilih Produk —</option>
+          <label>Zona Suhu *</label>
+          <select id="logZone">
+            <option value="chiller">Chiller (≤ 4°C)</option>
+            <option value="freezer">Freezer (≤ -18°C)</option>
+            <option value="ambient">Ambient (≤ 20°C)</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Shift</label>
-          <select id="batchShift">
-            <option value="morning">Pagi (06:00–14:00)</option>
-            <option value="afternoon">Siang (14:00–22:00)</option>
-            <option value="night">Malam (22:00–06:00)</option>
-          </select>
+          <label>Suhu Terukur (°C) *</label>
+          <input id="logTemp" type="number" step="0.1" placeholder="Contoh: 3.5" />
         </div>
-        <div class="form-group">
-          <label>Operator ID (opsional)</label>
-          <input id="batchOperator" type="text" placeholder="UUID operator" />
-        </div>
-        <div class="form-group">
-          <label>QC Officer ID (opsional)</label>
-          <input id="batchQcOfficer" type="text" placeholder="UUID QC officer" />
+        <div class="form-group full">
+          <label>Catatan (opsional)</label>
+          <input id="logNotes" type="text" placeholder="Catatan tambahan…" />
         </div>
       </div>
-      <div class="divider"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-ghost" onclick="showPage('batches')">Batal</button>
-        <button class="btn btn-primary" onclick="createBatch()" id="btnCreateBatch">🚀 Buat Batch & Mulai CCP</button>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('logModal')">Batal</button>
+        <button class="btn btn-primary" onclick="submitFacilityLog()" id="btnLogSubmit">💾 Simpan</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== CCP INPUT PAGE ===== -->
-  <div class="page" id="page-ccp">
-    <div class="topbar">
-      <div>
-        <div class="page-title">🔬 Input CCP</div>
-        <div class="page-subtitle">Batch: <strong id="activeBatchLabel">—</strong></div>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="showPage('batches')">← Kembali</button>
-    </div>
+  <!-- ===== SCRIPT ===== -->
+  <script>
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    const API_BASE = ''; // Use relative path for Vercel deployment
+    let activeBatchId = null;
+    let activeBatchCode = null;
+    let activeBatchProductId = null;
+    let currentStep = 1;
 
-    <div class="ccp-stepper" id="ccpStepper">
-      <div class="ccp-step active" id="step1">
-        <div class="step-circle">1</div>
-        <div class="step-label">CCP 1</div>
-        <div class="step-sub">Pre-Cook</div>
-      </div>
-      <div class="ccp-step" id="step2">
-        <div class="step-circle">2</div>
-        <div class="step-label">CCP 2</div>
-        <div class="step-sub">Post-Cook</div>
-      </div>
-      <div class="ccp-step" id="step3">
-        <div class="step-circle">3</div>
-        <div class="step-label">CCP 3</div>
-        <div class="step-sub">Packaging</div>
-      </div>
-      <div class="ccp-step" id="step4">
-        <div class="step-circle">✓</div>
-        <div class="step-label">Laporan</div>
-        <div class="step-sub">Generate</div>
-      </div>
-    </div>
-
-    <!-- CCP1 -->
-    <div id="ccp1Panel" class="card mb-24">
-      <div class="card-header">
-        <div>
-          <div class="card-title">CCP 1 — Pre-Cook</div>
-          <div class="card-subtitle">Validasi bahan baku sebelum proses memasak</div>
-        </div>
-        <span class="zone-badge badge-pending" id="ccp1Badge">Pending</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Suhu Bahan Baku (°C) — SOP: ≤ 5°C *</label>
-          <input id="ccp1Temp" type="number" step="0.1" placeholder="Contoh: 3.5" />
-        </div>
-        <div class="form-group">
-          <label>Foto Bahan Baku *</label>
-          <div class="upload-area" onclick="document.getElementById('ccp1Photo').click()" id="ccp1UploadArea">
-            <div class="upload-icon">📷</div>
-            <div class="upload-text">Klik untuk upload foto</div>
-            <div class="upload-sub">JPG, PNG, WEBP — maks 10MB</div>
-          </div>
-          <input type="file" id="ccp1Photo" accept="image/*" onchange="previewUpload('ccp1Photo','ccp1UploadArea')" capture="environment" />
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:16px">
-        <button class="btn btn-primary" onclick="submitCCP1()" id="btnCCP1">Submit CCP 1</button>
-      </div>
-    </div>
-
-    <!-- CCP2 -->
-    <div id="ccp2Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
-      <div class="card-header">
-        <div>
-          <div class="card-title">CCP 2 — Post-Cook</div>
-          <div class="card-subtitle">Validasi setelah proses memasak — OCR otomatis pada foto alat ukur</div>
-        </div>
-        <span class="zone-badge badge-pending" id="ccp2Badge">Menunggu CCP1</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Suhu Inti (°C) — SOP: ≥ 75°C *</label>
-          <input id="ccp2Temp" type="number" step="0.1" placeholder="Contoh: 82.5" />
-        </div>
-        <div class="form-group" style="grid-row:span 3">
-          <label>Foto LCD pH Meter (Milwaukee pH51) *</label>
-          <div class="upload-area" onclick="document.getElementById('ccp2PhPhoto').click()" id="ccp2PhArea">
-            <div class="upload-icon">🧪</div>
-            <div class="upload-text">Upload foto LCD pH Meter</div>
-            <div class="upload-sub">OCR akan membaca nilai otomatis</div>
-          </div>
-          <input type="file" id="ccp2PhPhoto" accept="image/*" onchange="previewUpload('ccp2PhPhoto','ccp2PhArea')" capture="environment" />
-        </div>
-        <div class="form-group" style="grid-row:span 3">
-          <label>Foto LCD Refraktometer *</label>
-          <div class="upload-area" onclick="document.getElementById('ccp2BrixPhoto').click()" id="ccp2BrixArea">
-            <div class="upload-icon">🔭</div>
-            <div class="upload-text">Upload foto LCD Refraktometer</div>
-            <div class="upload-sub">OCR akan membaca nilai Brix</div>
-          </div>
-          <input type="file" id="ccp2BrixPhoto" accept="image/*" onchange="previewUpload('ccp2BrixPhoto','ccp2BrixArea')" capture="environment" />
-        </div>
-      </div>
-      <div id="ocrResultBox" style="display:none" class="ocr-box">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary)">HASIL OCR OTOMATIS</div>
-        <div class="ocr-reading">
-          <span class="ocr-reading-label">🧪 pH (Milwaukee pH51)</span>
-          <span class="ocr-reading-value" id="ocrPh">—</span>
-          <span class="zone-badge" id="ocrPhBadge">—</span>
-        </div>
-        <div class="ocr-reading">
-          <span class="ocr-reading-label">🔭 Brix (Refraktometer)</span>
-          <span class="ocr-reading-value" id="ocrBrix">—</span>
-          <span class="zone-badge" id="ocrBrixBadge">—</span>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:16px">
-        <button class="btn btn-primary" onclick="submitCCP2()" id="btnCCP2">Submit CCP 2 + OCR</button>
-      </div>
-    </div>
-
-    <!-- CCP3 -->
-    <div id="ccp3Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
-      <div class="card-header">
-        <div>
-          <div class="card-title">CCP 3 — Packaging</div>
-          <div class="card-subtitle">Validasi suhu ruang pengemasan</div>
-        </div>
-        <span class="zone-badge badge-pending" id="ccp3Badge">Menunggu CCP2</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Suhu Ruang (°C) — SOP: ≤ 20°C *</label>
-          <input id="ccp3Temp" type="number" step="0.1" placeholder="Contoh: 18.0" />
-        </div>
-        <div class="form-group">
-          <label>Foto Kemasan *</label>
-          <div class="upload-area" onclick="document.getElementById('ccp3Photo').click()" id="ccp3UploadArea">
-            <div class="upload-icon">📦</div>
-            <div class="upload-text">Upload foto kemasan</div>
-            <div class="upload-sub">Pastikan label dan kondisi terlihat jelas</div>
-          </div>
-          <input type="file" id="ccp3Photo" accept="image/*" onchange="previewUpload('ccp3Photo','ccp3UploadArea')" capture="environment" />
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:16px">
-        <button class="btn btn-success" onclick="submitCCP3()" id="btnCCP3">✅ Submit CCP 3 & Generate Laporan</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== BATCHES PAGE ===== -->
-  <div class="page" id="page-batches">
-    <div class="topbar">
-      <div class="page-title">📋 Riwayat Batch</div>
-      <button class="btn btn-primary" onclick="showPage('new-batch')">+ Batch Baru</button>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Batch Code</th><th>Produk</th><th>Tanggal</th><th>Shift</th><th>Status</th><th>QC</th><th>Aksi</th></tr>
-          </thead>
-          <tbody id="batchTable">
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Memuat data…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== REPORTS PAGE ===== -->
-  <div class="page" id="page-reports">
-    <div class="topbar">
-      <div class="page-title">📄 Laporan QC</div>
-    </div>
-    <div class="card">
-      <div id="reportList">
-        <div style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada laporan tersedia</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== PRODUCTS PAGE ===== -->
-  <div class="page" id="page-products">
-    <div class="topbar">
-      <div class="page-title">🍱 Produk & SOP Threshold</div>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Kode</th><th>Nama Produk</th><th>pH Min</th><th>pH Max</th><th>Brix Min</th><th>Brix Max</th><th>Core Temp Min</th></tr>
-          </thead>
-          <tbody id="productTable">
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Memuat produk…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<!-- ===== MODAL: Input Suhu Fasilitas ===== -->
-<div class="modal-overlay" id="logModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">🌡️ Input Suhu Fasilitas</div>
-      <div class="modal-close" onclick="closeModal('logModal')">×</div>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Zona Suhu *</label>
-        <select id="logZone">
-          <option value="chiller">Chiller (≤ 4°C)</option>
-          <option value="freezer">Freezer (≤ -18°C)</option>
-          <option value="ambient">Ambient (≤ 20°C)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Suhu Terukur (°C) *</label>
-        <input id="logTemp" type="number" step="0.1" placeholder="Contoh: 3.5" />
-      </div>
-      <div class="form-group full">
-        <label>Catatan (opsional)</label>
-        <input id="logNotes" type="text" placeholder="Catatan tambahan…" />
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('logModal')">Batal</button>
-      <button class="btn btn-primary" onclick="submitFacilityLog()" id="btnLogSubmit">💾 Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== SCRIPT ===== -->
-<script>
-  // ============================================================
-  // CONFIG
-  // ============================================================
-  const API_BASE = ''; // Use relative path for Vercel deployment
-  let activeBatchId   = null;
-  let activeBatchCode = null;
-  let activeBatchProductId = null;
-  let currentStep = 1;
-
-  // ============================================================
-  // INIT
-  // ============================================================
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('dashDate').textContent = new Date().toLocaleDateString('id-ID', {
-      weekday:'long', year:'numeric', month:'long', day:'numeric'
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('dashDate').textContent = new Date().toLocaleDateString('id-ID', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      document.getElementById('batchDate').value = new Date().toISOString().split('T')[0];
+      let exp = new Date(); exp.setMonth(exp.getMonth() + 6); // default 6 month EXP
+      document.getElementById('batchExp').value = exp.toISOString().split('T')[0];
+      checkServerStatus();
+      loadDashboard();
+      loadProducts();
     });
-    document.getElementById('batchDate').value = new Date().toISOString().split('T')[0];
-    let exp = new Date(); exp.setMonth(exp.getMonth() + 6); // default 6 month EXP
-    document.getElementById('batchExp').value = exp.toISOString().split('T')[0];
-    checkServerStatus();
-    loadDashboard();
-    loadProducts();
-  });
 
-  // ============================================================
-  // NAVIGATION
-  // ============================================================
-  function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    const nav = document.getElementById('nav-' + name);
-    if (nav) nav.classList.add('active');
-    // Load page-specific data
-    if (name === 'dashboard') loadDashboard();
-    if (name === 'facility')  loadFacilityPage();
-    if (name === 'batches')   loadBatches();
-    if (name === 'products')  loadProductsTable();
-  }
-
-  // ============================================================
-  // SERVER STATUS CHECK
-  // ============================================================
-  async function checkServerStatus() {
-    try {
-      const r = await fetch(API_BASE + '/health');
-      const d = await r.json();
-      document.getElementById('statusDot').style.background = 'var(--success)';
-      document.getElementById('serverStatusText').textContent = 'API Connected';
-    } catch {
-      document.getElementById('statusDot').style.background = 'var(--danger)';
-      document.getElementById('serverStatusText').textContent = 'API Offline';
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      const nav = document.getElementById('nav-' + name);
+      if (nav) nav.classList.add('active');
+      // Load page-specific data
+      if (name === 'dashboard') loadDashboard();
+      if (name === 'facility') loadFacilityPage();
+      if (name === 'batches') loadBatches();
+      if (name === 'products') loadProductsTable();
     }
-  }
 
-  // ============================================================
-  // DASHBOARD
-  // ============================================================
-  async function loadDashboard() {
-    refreshDashboard();
-  }
-
-  async function refreshDashboard() {
-    // Try to load recent batch data from API
-    try {
-      // Fetch recent facility logs for zone cards display
-      renderZoneDashboard('chiller', null, false);
-      renderZoneDashboard('freezer', null, false);
-      renderZoneDashboard('ambient', null, false);
-      // Stats placeholder
-      document.getElementById('statBatchToday').textContent = '—';
-      document.getElementById('statBatchPass').textContent  = '—';
-      document.getElementById('statBatchFail').textContent  = '—';
-      document.getElementById('statAlerts').textContent     = '0';
-      document.getElementById('dashBatchTable').innerHTML =
-        '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada batch hari ini</td></tr>';
-    } catch(e) { console.error(e); }
-  }
-
-  function renderZoneDashboard(zone, temp, isNormal) {
-    const elId = {chiller:'dChiller', freezer:'dFreezer', ambient:'dAmbient'}[zone];
-    const el = document.getElementById(elId);
-    if (!el) return;
-    if (temp === null) {
-      el.textContent = '—°C';
-      el.className = 'zone-temp';
-    } else {
-      el.textContent = temp + '°C';
-      el.className = 'zone-temp ' + (isNormal ? 'ok' : 'bad');
+    // ============================================================
+    // SERVER STATUS CHECK
+    // ============================================================
+    async function checkServerStatus() {
+      try {
+        const r = await fetch(API_BASE + '/health');
+        const d = await r.json();
+        document.getElementById('statusDot').style.background = 'var(--success)';
+        document.getElementById('serverStatusText').textContent = 'API Connected';
+      } catch {
+        document.getElementById('statusDot').style.background = 'var(--danger)';
+        document.getElementById('serverStatusText').textContent = 'API Offline';
+      }
     }
-  }
 
-  // ============================================================
-  // FACILITY PAGE
-  // ============================================================
-  function loadFacilityPage() {
-    const zones = [
-      { key:'chiller', label:'Chiller',  icon:'❄️',  limit:'≤ 4°C',  max: 4   },
-      { key:'freezer', label:'Freezer',  icon:'🧊',  limit:'≤ -18°C', max: -18 },
-      { key:'ambient', label:'Ambient',  icon:'🌡️', limit:'≤ 20°C', max: 20  },
-    ];
-    const container = document.getElementById('facilityZones');
-    container.innerHTML = zones.map(z => `
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    async function loadDashboard() {
+      refreshDashboard();
+    }
+
+    async function refreshDashboard() {
+      // Try to load recent batch data from API
+      try {
+        // Fetch recent facility logs for zone cards display
+        renderZoneDashboard('chiller', null, false);
+        renderZoneDashboard('freezer', null, false);
+        renderZoneDashboard('ambient', null, false);
+        // Stats placeholder
+        document.getElementById('statBatchToday').textContent = '—';
+        document.getElementById('statBatchPass').textContent = '—';
+        document.getElementById('statBatchFail').textContent = '—';
+        document.getElementById('statAlerts').textContent = '0';
+        document.getElementById('dashBatchTable').innerHTML =
+          '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada batch hari ini</td></tr>';
+      } catch (e) { console.error(e); }
+    }
+
+    function renderZoneDashboard(zone, temp, isNormal) {
+      const elId = { chiller: 'dChiller', freezer: 'dFreezer', ambient: 'dAmbient' }[zone];
+      const el = document.getElementById(elId);
+      if (!el) return;
+      if (temp === null) {
+        el.textContent = '—°C';
+        el.className = 'zone-temp';
+      } else {
+        el.textContent = temp + '°C';
+        el.className = 'zone-temp ' + (isNormal ? 'ok' : 'bad');
+      }
+    }
+
+    // ============================================================
+    // FACILITY PAGE
+    // ============================================================
+    function loadFacilityPage() {
+      const zones = [
+        { key: 'chiller', label: 'Chiller', icon: '❄️', limit: '≤ 4°C', max: 4 },
+        { key: 'freezer', label: 'Freezer', icon: '🧊', limit: '≤ -18°C', max: -18 },
+        { key: 'ambient', label: 'Ambient', icon: '🌡️', limit: '≤ 20°C', max: 20 },
+      ];
+      const container = document.getElementById('facilityZones');
+      container.innerHTML = zones.map(z => `
       <div class="zone-card" id="zoneCard-${z.key}">
         <div class="zone-header">
           <span class="zone-name">${z.icon} ${z.label}</span>
@@ -1238,765 +2090,717 @@
         <div class="zone-updated" id="zoneUpdated-${z.key}"></div>
       </div>
     `).join('');
-  }
-
-  function openLogModal() {
-    document.getElementById('logModal').classList.add('open');
-    document.getElementById('logTemp').value = '';
-    document.getElementById('logNotes').value = '';
-  }
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-  }
-
-  async function submitFacilityLog() {
-    const zone = document.getElementById('logZone').value;
-    const temp = document.getElementById('logTemp').value;
-    const notes = document.getElementById('logNotes').value;
-    if (!temp) { toast('Masukkan suhu terukur', 'error'); return; }
-
-    const btn = document.getElementById('btnLogSubmit');
-    btn.innerHTML = '<span class="spinner"></span> Menyimpan…';
-    btn.classList.add('loading');
-
-    try {
-      const fd = new FormData();
-      fd.append('zone', zone);
-      fd.append('temperature', temp);
-      if (notes) fd.append('notes', notes);
-
-      const r = await fetch(API_BASE + '/facility/log', { method: 'POST', body: fd });
-      const d = await r.json();
-
-      closeModal('logModal');
-      if (d.is_normal) {
-        toast(`✅ ${zone.toUpperCase()} ${temp}°C — NORMAL`, 'success');
-      } else {
-        toast(`🚨 ALERT: ${zone.toUpperCase()} ${temp}°C — SOP VIOLATION! ${d.violation_msg}`, 'error');
-      }
-
-      // Update zone card
-      const zoneEl = document.getElementById('zoneTemp-' + zone);
-      const badgeEl = document.getElementById('zoneBadge-' + zone);
-      const cardEl  = document.getElementById('zoneCard-' + zone);
-      if (zoneEl) { 
-        zoneEl.textContent = temp + '°C'; 
-        zoneEl.className = 'zone-temp ' + (d.is_normal ? 'ok' : 'bad');
-      }
-      if (badgeEl) {
-        badgeEl.textContent = d.is_normal ? 'NORMAL' : 'ALERT';
-        badgeEl.className = 'zone-badge ' + (d.is_normal ? 'badge-ok' : 'badge-alert');
-      }
-      if (cardEl) { cardEl.className = 'zone-card ' + (d.is_normal ? 'normal' : 'alert'); }
-
-      // Log to table
-      const tbody = document.getElementById('facilityLogTable');
-      const now = new Date().toLocaleString('id-ID');
-      const row = `<tr>
-        <td>${now}</td>
-        <td>${zone}</td>
-        <td class="${d.is_normal?'text-success':'text-danger'}">${temp}</td>
-        <td>${d.threshold_c}</td>
-        <td><span class="zone-badge ${d.is_normal?'badge-ok':'badge-alert'}">${d.is_normal?'NORMAL':'FAIL'}</span></td>
-        <td class="text-muted">—</td>
-      </tr>`;
-      if (tbody.innerHTML.includes('Belum ada')) tbody.innerHTML = '';
-      tbody.insertAdjacentHTML('afterbegin', row);
-
-    } catch(e) {
-      toast('Gagal menghubungi API: ' + e.message, 'error');
     }
 
-    btn.innerHTML = '💾 Simpan';
-    btn.classList.remove('loading');
-  }
+    function openLogModal() {
+      document.getElementById('logModal').classList.add('open');
+      document.getElementById('logTemp').value = '';
+      document.getElementById('logNotes').value = '';
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
 
-  // ============================================================
-  // PRODUCTS
-  // ============================================================
-  let productsCache = [];
+    async function submitFacilityLog() {
+      const zone = document.getElementById('logZone').value;
+      const temp = document.getElementById('logTemp').value;
+      const notes = document.getElementById('logNotes').value;
+      if (!temp) { toast('Masukkan suhu terukur', 'error'); return; }
 
-  async function loadProducts() {
-    // Since there's no GET /products endpoint, we'll use a local default
-    // and load from Supabase via API if added later
-    productsCache = [
-      { id: 'LOAD', product_code: 'Loading...', product_name: '—' }
-    ];
-    // Try to fetch via API health check first
-    try {
-      // placeholder – real endpoint would be GET /products
-      const sel = document.getElementById('batchProduct');
-      sel.innerHTML = `<option value="">— Pilih Produk —</option>
+      const btn = document.getElementById('btnLogSubmit');
+      btn.innerHTML = '<span class="spinner"></span> Menyimpan…';
+      btn.classList.add('loading');
+
+      try {
+        const fd = new FormData();
+        fd.append('zone', zone);
+        fd.append('temperature', temp);
+        if (notes) fd.append('notes', notes);
+
+        const r = await fetch(API_BASE + '/facility/log', { method: 'POST', body: fd });
+        const d = await r.json();
+
+        closeModal('logModal');
+        if (d.is_normal) {
+          toast(`✅ ${zone.toUpperCase()} ${temp}°C — NORMAL`, 'success');
+        } else {
+          toast(`🚨 ALERT: ${zone.toUpperCase()} ${temp}°C — SOP VIOLATION! ${d.violation_msg}`, 'error');
+        }
+
+        // Update zone card
+        const zoneEl = document.getElementById('zoneTemp-' + zone);
+        const badgeEl = document.getElementById('zoneBadge-' + zone);
+        const cardEl = document.getElementById('zoneCard-' + zone);
+        if (zoneEl) {
+          zoneEl.textContent = temp + '°C';
+          zoneEl.className = 'zone-temp ' + (d.is_normal ? 'ok' : 'bad');
+        }
+        if (badgeEl) {
+          badgeEl.textContent = d.is_normal ? 'NORMAL' : 'ALERT';
+          badgeEl.className = 'zone-badge ' + (d.is_normal ? 'badge-ok' : 'badge-alert');
+        }
+        if (cardEl) { cardEl.className = 'zone-card ' + (d.is_normal ? 'normal' : 'alert'); }
+
+        // Log to table
+        const tbody = document.getElementById('facilityLogTable');
+        const now = new Date().toLocaleString('id-ID');
+        const row = `<tr>
+        <td>${now}</td>
+        <td>${zone}</td>
+        <td class="${d.is_normal ? 'text-success' : 'text-danger'}">${temp}</td>
+        <td>${d.threshold_c}</td>
+        <td><span class="zone-badge ${d.is_normal ? 'badge-ok' : 'badge-alert'}">${d.is_normal ? 'NORMAL' : 'FAIL'}</span></td>
+        <td class="text-muted">—</td>
+      </tr>`;
+        if (tbody.innerHTML.includes('Belum ada')) tbody.innerHTML = '';
+        tbody.insertAdjacentHTML('afterbegin', row);
+
+      } catch (e) {
+        toast('Gagal menghubungi API: ' + e.message, 'error');
+      }
+
+      btn.innerHTML = '💾 Simpan';
+      btn.classList.remove('loading');
+    }
+
+    // ============================================================
+    // PRODUCTS
+    // ============================================================
+    let productsCache = [];
+
+    async function loadProducts() {
+      // Since there's no GET /products endpoint, we'll use a local default
+      // and load from Supabase via API if added later
+      productsCache = [
+        { id: 'LOAD', product_code: 'Loading...', product_name: '—' }
+      ];
+      // Try to fetch via API health check first
+      try {
+        // placeholder – real endpoint would be GET /products
+        const sel = document.getElementById('batchProduct');
+        sel.innerHTML = `<option value="">— Pilih Produk —</option>
         <option value="SKU-SOUP-001">Tom Yam Soup Base</option>
         <option value="SKU-SAUCE-002">Sweet Chili Sauce</option>
         <option value="SKU-MARINADE-003">Teriyaki Marinade</option>`;
-    } catch(e) {}
-  }
+      } catch (e) { }
+    }
 
-  async function loadProductsTable() {
-    document.getElementById('productTable').innerHTML = `
+    async function loadProductsTable() {
+      document.getElementById('productTable').innerHTML = `
       <tr><td>SKU-SOUP-001</td><td>Tom Yam Soup Base</td><td>5.5</td><td>6.5</td><td>8.0</td><td>12.0</td><td>75°C</td></tr>
       <tr><td>SKU-SAUCE-002</td><td>Sweet Chili Sauce</td><td>3.5</td><td>4.5</td><td>35.0</td><td>45.0</td><td>75°C</td></tr>
       <tr><td>SKU-MARINADE-003</td><td>Teriyaki Marinade</td><td>4.0</td><td>5.0</td><td>20.0</td><td>28.0</td><td>75°C</td></tr>
     `;
-  }
+    }
 
-  // ============================================================
-  // BATCH CREATE
-  // ============================================================
-  async function createBatch() {
-    const date  = document.getElementById('batchDate').value; // MFG Date
-    const expDate = document.getElementById('batchExp').value; // EXP Date
-    const productVal = document.getElementById('batchProduct').value;
-    const shift = document.getElementById('batchShift').value;
-    if (!date)  { toast('Pilih MFG Date', 'error'); return; }
-    if (!expDate)  { toast('Pilih EXP Date', 'error'); return; }
-    if (!productVal) { toast('Pilih produk', 'error'); return; }
-    
-    // Auto Generate Code Batch 
-    const pCode = productVal.split('-')[1] || 'PRD';
-    const code = `MFG${date.replace(/-/g, '')}-EXP${expDate.replace(/-/g, '')}-${pCode}`;
+    // ============================================================
+    // BATCH CREATE
+    // ============================================================
+    async function createBatch() {
+      const date = document.getElementById('batchDate').value; // MFG Date
+      const expDate = document.getElementById('batchExp').value; // EXP Date
+      const productVal = document.getElementById('batchProduct').value;
+      const shift = document.getElementById('batchShift').value;
+      if (!date) { toast('Pilih MFG Date', 'error'); return; }
+      if (!expDate) { toast('Pilih EXP Date', 'error'); return; }
+      if (!productVal) { toast('Pilih produk', 'error'); return; }
 
-    const btn = document.getElementById('btnCreateBatch');
-    btn.innerHTML = '<span class="spinner"></span> Membuat batch…';
-    btn.classList.add('loading');
+      // Auto Generate Code Batch 
+      const pCode = productVal.split('-')[1] || 'PRD';
+      const code = `MFG${date.replace(/-/g, '')}-EXP${expDate.replace(/-/g, '')}-${pCode}`;
 
-    // Map product code to a valid UUID from DB
-    // In production, GET /products would return UUIDs
-    // For now, we'll show warning that product_id needs to be UUID
-    const productNames = {
-      'SKU-SOUP-001': 'Tom Yam Soup Base',
-      'SKU-SAUCE-002': 'Sweet Chili Sauce',
-      'SKU-MARINADE-003': 'Teriyaki Marinade',
-    };
+      const btn = document.getElementById('btnCreateBatch');
+      btn.innerHTML = '<span class="spinner"></span> Membuat batch…';
+      btn.classList.add('loading');
 
-    toast('⚠️ Catatan: Tambahkan endpoint GET /products ke API untuk mendapatkan UUID produk secara otomatis.', 'info');
-
-    try {
-      const body = {
-        product_id: productVal, // needs real UUID from DB
-        batch_code: code,
-        production_date: date,
-        shift: shift,
-        operator_id: document.getElementById('batchOperator').value || null,
-        qc_officer_id: document.getElementById('batchQcOfficer').value || null,
+      // Map product code to a valid UUID from DB
+      // In production, GET /products would return UUIDs
+      // For now, we'll show warning that product_id needs to be UUID
+      const productNames = {
+        'SKU-SOUP-001': 'Tom Yam Soup Base',
+        'SKU-SAUCE-002': 'Sweet Chili Sauce',
+        'SKU-MARINADE-003': 'Teriyaki Marinade',
       };
 
-      const r = await fetch(API_BASE + '/batch/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      toast('⚠️ Catatan: Tambahkan endpoint GET /products ke API untuk mendapatkan UUID produk secara otomatis.', 'info');
+
+      try {
+        const body = {
+          product_id: productVal, // needs real UUID from DB
+          batch_code: code,
+          production_date: date,
+          shift: shift,
+          operator_id: document.getElementById('batchOperator').value || null,
+          qc_officer_id: document.getElementById('batchQcOfficer').value || null,
+        };
+
+        const r = await fetch(API_BASE + '/batch/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+
+        if (r.ok) {
+          activeBatchId = d.batch_id;
+          activeBatchCode = d.batch_code;
+          activeBatchProductId = productVal;
+          currentStep = 1;
+          resetCCPUI();
+          showPage('ccp');
+          document.getElementById('activeBatchLabel').textContent = d.batch_code;
+          toast('✅ Batch ' + d.batch_code + ' berhasil dibuat!', 'success');
+        } else {
+          toast('Error: ' + (d.detail || JSON.stringify(d)), 'error');
+        }
+      } catch (e) {
+        toast('Gagal membuat batch: ' + e.message, 'error');
+      }
+
+      btn.innerHTML = '🚀 Buat Batch & Mulai CCP';
+      btn.classList.remove('loading');
+    }
+
+    // ============================================================
+    // CCP SUBMIT
+    // ============================================================
+    function resetCCPUI() {
+      ['ccp1Panel', 'ccp2Panel', 'ccp3Panel'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.style.opacity = i === 0 ? '1' : '0.4';
+        el.style.pointerEvents = i === 0 ? 'all' : 'none';
       });
-      const d = await r.json();
-
-      if (r.ok) {
-        activeBatchId   = d.batch_id;
-        activeBatchCode = d.batch_code;
-        activeBatchProductId = productVal;
-        currentStep = 1;
-        resetCCPUI();
-        showPage('ccp');
-        document.getElementById('activeBatchLabel').textContent = d.batch_code;
-        toast('✅ Batch ' + d.batch_code + ' berhasil dibuat!', 'success');
-      } else {
-        toast('Error: ' + (d.detail || JSON.stringify(d)), 'error');
-      }
-    } catch(e) {
-      toast('Gagal membuat batch: ' + e.message, 'error');
+      setStepActive(1);
     }
 
-    btn.innerHTML = '🚀 Buat Batch & Mulai CCP';
-    btn.classList.remove('loading');
-  }
-
-  // ============================================================
-  // CCP SUBMIT
-  // ============================================================
-  function resetCCPUI() {
-    ['ccp1Panel','ccp2Panel','ccp3Panel'].forEach((id,i) => {
-      const el = document.getElementById(id);
-      el.style.opacity = i === 0 ? '1' : '0.4';
-      el.style.pointerEvents = i === 0 ? 'all' : 'none';
-    });
-    setStepActive(1);
-  }
-
-  function setStepActive(n) {
-    for (let i = 1; i <= 4; i++) {
-      const el = document.getElementById('step'+i);
-      if (i < n) el.className = 'ccp-step done';
-      else if (i === n) el.className = 'ccp-step active';
-      else el.className = 'ccp-step';
+    function setStepActive(n) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('step' + i);
+        if (i < n) el.className = 'ccp-step done';
+        else if (i === n) el.className = 'ccp-step active';
+        else el.className = 'ccp-step';
+      }
     }
-  }
 
-  async function submitCCP1() {
-    if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
-    const temp = document.getElementById('ccp1Temp').value;
-    const photo = document.getElementById('ccp1Photo').files[0];
-    if (!temp) { toast('Masukkan suhu bahan baku', 'error'); return; }
-    if (!photo) { toast('Upload foto bahan baku', 'error'); return; }
+    async function submitCCP1() {
+      if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
+      const temp = document.getElementById('ccp1Temp').value;
+      const photo = document.getElementById('ccp1Photo').files[0];
+      if (!temp) { toast('Masukkan suhu bahan baku', 'error'); return; }
+      if (!photo) { toast('Upload foto bahan baku', 'error'); return; }
 
-    const btn = document.getElementById('btnCCP1');
-    btn.innerHTML = '<span class="spinner"></span> Menyimpan CCP1…';
-    btn.className = 'btn btn-primary loading';
+      const btn = document.getElementById('btnCCP1');
+      btn.innerHTML = '<span class="spinner"></span> Menyimpan CCP1…';
+      btn.className = 'btn btn-primary loading';
 
-    try {
-      const fd = new FormData();
-      fd.append('raw_temp_c', temp);
-      fd.append('photo', photo);
+      try {
+        const fd = new FormData();
+        fd.append('raw_temp_c', temp);
+        fd.append('photo', photo);
 
-      const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp1`, { method:'POST', body:fd });
-      const d = await r.json();
+        const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp1`, { method: 'POST', body: fd });
+        const d = await r.json();
 
-      if (r.ok) {
-        const pass = d.stage_status === 'pass';
-        document.getElementById('ccp1Badge').textContent = pass ? 'PASS ✓' : 'FAIL ✗';
-        document.getElementById('ccp1Badge').className = 'zone-badge ' + (pass ? 'badge-ok' : 'badge-alert');
-        // Unlock CCP2
-        document.getElementById('ccp2Panel').style.opacity = '1';
-        document.getElementById('ccp2Panel').style.pointerEvents = 'all';
-        document.getElementById('ccp2Badge').textContent = 'Siap';
-        setStepActive(2);
-        currentStep = 2;
-        toast(pass ? '✅ CCP1 PASS — Suhu bahan baku OK' : '⚠️ CCP1 FAIL — ' + (d.checks[0]?.status || ''), pass ? 'success' : 'error');
-      } else {
-        toast('Error CCP1: ' + (d.detail || JSON.stringify(d)), 'error');
-      }
-    } catch(e) { toast('Gagal submit CCP1: ' + e.message, 'error'); }
-
-    btn.innerHTML = 'Submit CCP 1 ✓';
-    btn.className = 'btn btn-ghost';
-    btn.disabled = true;
-  }
-
-  async function submitCCP2() {
-    if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
-    const temp      = document.getElementById('ccp2Temp').value;
-    const phPhoto   = document.getElementById('ccp2PhPhoto').files[0];
-    const brixPhoto = document.getElementById('ccp2BrixPhoto').files[0];
-    if (!temp)      { toast('Masukkan suhu inti', 'error'); return; }
-    if (!phPhoto)   { toast('Upload foto LCD pH Meter', 'error'); return; }
-    if (!brixPhoto) { toast('Upload foto LCD Refraktometer', 'error'); return; }
-
-    const btn = document.getElementById('btnCCP2');
-    btn.innerHTML = '<span class="spinner"></span> Memproses OCR…';
-    btn.className = 'btn btn-primary loading';
-
-    try {
-      const fd = new FormData();
-      fd.append('core_temp_c', temp);
-      fd.append('product_id', activeBatchProductId || '');
-      fd.append('ph_photo', phPhoto);
-      fd.append('brix_photo', brixPhoto);
-
-      const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp2`, { method:'POST', body:fd });
-      const d = await r.json();
-
-      if (r.ok) {
-        const pass = d.stage_status === 'pass';
-        document.getElementById('ccp2Badge').textContent = pass ? 'PASS ✓' : 'FAIL ✗';
-        document.getElementById('ccp2Badge').className = 'zone-badge ' + (pass ? 'badge-ok' : 'badge-alert');
-
-        // Show OCR results
-        if (d.ocr_result) {
-          document.getElementById('ocrResultBox').style.display = 'block';
-          const phPass = d.ocr_result.ph_value !== null;
-          document.getElementById('ocrPh').textContent   = d.ocr_result.ph_value ?? '—';
-          document.getElementById('ocrBrix').textContent = d.ocr_result.brix_value ?? '—';
-          document.getElementById('ocrPhBadge').textContent   = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
-          document.getElementById('ocrBrixBadge').textContent = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
-          document.getElementById('ocrPhBadge').className = 'zone-badge ' + (d.ocr_result.overall_pass ? 'badge-ok' : 'badge-warning');
-          document.getElementById('ocrBrixBadge').className = document.getElementById('ocrPhBadge').className;
+        if (r.ok) {
+          const pass = d.stage_status === 'pass';
+          document.getElementById('ccp1Badge').textContent = pass ? 'PASS ✓' : 'FAIL ✗';
+          document.getElementById('ccp1Badge').className = 'zone-badge ' + (pass ? 'badge-ok' : 'badge-alert');
+          // Unlock CCP2
+          document.getElementById('ccp2Panel').style.opacity = '1';
+          document.getElementById('ccp2Panel').style.pointerEvents = 'all';
+          document.getElementById('ccp2Badge').textContent = 'Siap';
+          setStepActive(2);
+          currentStep = 2;
+          toast(pass ? '✅ CCP1 PASS — Suhu bahan baku OK' : '⚠️ CCP1 FAIL — ' + (d.checks[0]?.status || ''), pass ? 'success' : 'error');
+        } else {
+          toast('Error CCP1: ' + (d.detail || JSON.stringify(d)), 'error');
         }
+      } catch (e) { toast('Gagal submit CCP1: ' + e.message, 'error'); }
 
-        // Unlock CCP3
-        document.getElementById('ccp3Panel').style.opacity = '1';
-        document.getElementById('ccp3Panel').style.pointerEvents = 'all';
-        document.getElementById('ccp3Badge').textContent = 'Siap';
-        setStepActive(3);
-        currentStep = 3;
-        toast(pass ? '✅ CCP2 PASS — Core temp & OCR OK' : '⚠️ CCP2 FAIL — Periksa hasil', pass ? 'success' : 'error');
-      } else {
-        toast('Error CCP2: ' + (d.detail || JSON.stringify(d)), 'error');
-      }
-    } catch(e) { toast('Gagal submit CCP2: ' + e.message, 'error'); }
+      btn.innerHTML = 'Submit CCP 1 ✓';
+      btn.className = 'btn btn-ghost';
+      btn.disabled = true;
+    }
 
-    btn.innerHTML = 'Submit CCP 2 ✓';
-    btn.className = 'btn btn-ghost';
-    btn.disabled = true;
-  }
+    async function submitCCP2() {
+      if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
+      const temp = document.getElementById('ccp2Temp').value;
+      const phPhoto = document.getElementById('ccp2PhPhoto').files[0];
+      const brixPhoto = document.getElementById('ccp2BrixPhoto').files[0];
+      if (!temp) { toast('Masukkan suhu inti', 'error'); return; }
+      if (!phPhoto) { toast('Upload foto LCD pH Meter', 'error'); return; }
+      if (!brixPhoto) { toast('Upload foto LCD Refraktometer', 'error'); return; }
 
-  async function submitCCP3() {
-    if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
-    const temp  = document.getElementById('ccp3Temp').value;
-    const photo = document.getElementById('ccp3Photo').files[0];
-    if (!temp)  { toast('Masukkan suhu ruang', 'error'); return; }
-    if (!photo) { toast('Upload foto kemasan', 'error'); return; }
+      const btn = document.getElementById('btnCCP2');
+      btn.innerHTML = '<span class="spinner"></span> Memproses OCR…';
+      btn.className = 'btn btn-primary loading';
 
-    const btn = document.getElementById('btnCCP3');
-    btn.innerHTML = '<span class="spinner"></span> Submit & Generate Laporan…';
-    btn.className = 'btn btn-success loading';
+      try {
+        const fd = new FormData();
+        fd.append('core_temp_c', temp);
+        fd.append('product_id', activeBatchProductId || '');
+        fd.append('ph_photo', phPhoto);
+        fd.append('brix_photo', brixPhoto);
 
-    try {
-      const fd = new FormData();
-      fd.append('room_temp_c', temp);
-      fd.append('photo', photo);
-      const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp3`, { method:'POST', body:fd });
-      const d = await r.json();
+        const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp2`, { method: 'POST', body: fd });
+        const d = await r.json();
 
-      if (r.ok) {
-        document.getElementById('ccp3Badge').textContent = d.stage_status === 'pass' ? 'PASS ✓' : 'FAIL ✗';
-        document.getElementById('ccp3Badge').className   = 'zone-badge ' + (d.stage_status === 'pass' ? 'badge-ok' : 'badge-alert');
-        setStepActive(4);
-        // Auto-generate report
-        await generateReport();
-      } else {
-        toast('Error CCP3: ' + (d.detail || JSON.stringify(d)), 'error');
-      }
-    } catch(e) { toast('Gagal submit CCP3: ' + e.message, 'error'); }
+        if (r.ok) {
+          const pass = d.stage_status === 'pass';
+          document.getElementById('ccp2Badge').textContent = pass ? 'PASS ✓' : 'FAIL ✗';
+          document.getElementById('ccp2Badge').className = 'zone-badge ' + (pass ? 'badge-ok' : 'badge-alert');
 
-    btn.innerHTML = '✅ CCP3 Selesai';
-    btn.className = 'btn btn-ghost';
-    btn.disabled = true;
-  }
+          // Show OCR results
+          if (d.ocr_result) {
+            document.getElementById('ocrResultBox').style.display = 'block';
+            const phPass = d.ocr_result.ph_value !== null;
+            document.getElementById('ocrPh').textContent = d.ocr_result.ph_value ?? '—';
+            document.getElementById('ocrBrix').textContent = d.ocr_result.brix_value ?? '—';
+            document.getElementById('ocrPhBadge').textContent = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
+            document.getElementById('ocrBrixBadge').textContent = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
+            document.getElementById('ocrPhBadge').className = 'zone-badge ' + (d.ocr_result.overall_pass ? 'badge-ok' : 'badge-warning');
+            document.getElementById('ocrBrixBadge').className = document.getElementById('ocrPhBadge').className;
+          }
 
-  async function generateReport() {
-    if (!activeBatchId) return;
-    try {
-      const r = await fetch(`${API_BASE}/batch/${activeBatchId}/report`, { method:'POST' });
-      const d = await r.json();
-      if (r.ok) {
-        const pass = d.final_status === 'pass';
-        toast(pass
-          ? '🎉 Laporan QC dibuat! Batch ' + d.batch_code + ' — PASS'
-          : '⚠️ Laporan QC dibuat. Batch FAIL — ' + d.violations.join(', '),
-          pass ? 'success' : 'error');
-        if (d.report_pdf_url) {
-          setTimeout(() => {
-            if (confirm('Laporan siap! Buka PDF?')) window.open(d.report_pdf_url, '_blank');
-          }, 1000);
+          // Unlock CCP3
+          document.getElementById('ccp3Panel').style.opacity = '1';
+          document.getElementById('ccp3Panel').style.pointerEvents = 'all';
+          document.getElementById('ccp3Badge').textContent = 'Siap';
+          setStepActive(3);
+          currentStep = 3;
+          toast(pass ? '✅ CCP2 PASS — Core temp & OCR OK' : '⚠️ CCP2 FAIL — Periksa hasil', pass ? 'success' : 'error');
+        } else {
+          toast('Error CCP2: ' + (d.detail || JSON.stringify(d)), 'error');
         }
-      }
-    } catch(e) { toast('Laporan data tersimpan (PDF generation butuh WeasyPrint)', 'info'); }
-  }
+      } catch (e) { toast('Gagal submit CCP2: ' + e.message, 'error'); }
 
-  // ============================================================
-  // BATCHES TABLE
-  // ============================================================
-  async function loadBatches() {
-    document.getElementById('batchTable').innerHTML =
-      '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada batch — buat batch baru untuk memulai</td></tr>';
-  }
+      btn.innerHTML = 'Submit CCP 2 ✓';
+      btn.className = 'btn btn-ghost';
+      btn.disabled = true;
+    }
 
-  // ============================================================
-  // UPLOAD PREVIEW
-  // ============================================================
-  function previewUpload(inputId, areaId) {
-    const file = document.getElementById(inputId).files[0];
-    const area = document.getElementById(areaId);
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    area.innerHTML = `
+    async function submitCCP3() {
+      if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
+      const temp = document.getElementById('ccp3Temp').value;
+      const photo = document.getElementById('ccp3Photo').files[0];
+      if (!temp) { toast('Masukkan suhu ruang', 'error'); return; }
+      if (!photo) { toast('Upload foto kemasan', 'error'); return; }
+
+      const btn = document.getElementById('btnCCP3');
+      btn.innerHTML = '<span class="spinner"></span> Submit & Generate Laporan…';
+      btn.className = 'btn btn-success loading';
+
+      try {
+        const fd = new FormData();
+        fd.append('room_temp_c', temp);
+        fd.append('photo', photo);
+        const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp3`, { method: 'POST', body: fd });
+        const d = await r.json();
+
+        if (r.ok) {
+          document.getElementById('ccp3Badge').textContent = d.stage_status === 'pass' ? 'PASS ✓' : 'FAIL ✗';
+          document.getElementById('ccp3Badge').className = 'zone-badge ' + (d.stage_status === 'pass' ? 'badge-ok' : 'badge-alert');
+          setStepActive(4);
+          // Auto-generate report
+          await generateReport();
+        } else {
+          toast('Error CCP3: ' + (d.detail || JSON.stringify(d)), 'error');
+        }
+      } catch (e) { toast('Gagal submit CCP3: ' + e.message, 'error'); }
+
+      btn.innerHTML = '✅ CCP3 Selesai';
+      btn.className = 'btn btn-ghost';
+      btn.disabled = true;
+    }
+
+    async function generateReport() {
+      if (!activeBatchId) return;
+      try {
+        const r = await fetch(`${API_BASE}/batch/${activeBatchId}/report`, { method: 'POST' });
+        const d = await r.json();
+        if (r.ok) {
+          const pass = d.final_status === 'pass';
+          toast(pass
+            ? '🎉 Laporan QC dibuat! Batch ' + d.batch_code + ' — PASS'
+            : '⚠️ Laporan QC dibuat. Batch FAIL — ' + d.violations.join(', '),
+            pass ? 'success' : 'error');
+          if (d.report_pdf_url) {
+            setTimeout(() => {
+              if (confirm('Laporan siap! Buka PDF?')) window.open(d.report_pdf_url, '_blank');
+            }, 1000);
+          }
+        }
+      } catch (e) { toast('Laporan data tersimpan (PDF generation butuh WeasyPrint)', 'info'); }
+    }
+
+    // ============================================================
+    // BATCHES TABLE
+    // ============================================================
+    async function loadBatches() {
+      document.getElementById('batchTable').innerHTML =
+        '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada batch — buat batch baru untuk memulai</td></tr>';
+    }
+
+    // ============================================================
+    // UPLOAD PREVIEW
+    // ============================================================
+    function previewUpload(inputId, areaId) {
+      const file = document.getElementById(inputId).files[0];
+      const area = document.getElementById(areaId);
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      area.innerHTML = `
       <img src="${url}" style="max-height:120px;border-radius:8px;object-fit:cover;margin-bottom:6px" />
       <div class="upload-text text-success">✅ ${file.name}</div>
     `;
-  }
+    }
 
-  // ============================================================
-  // TOAST NOTIFICATIONS
-  // ============================================================
-  function toast(msg, type = 'info') {
-    const icons = { success:'✅', error:'❌', info:'ℹ️' };
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
-    document.getElementById('toastContainer').appendChild(el);
-    setTimeout(() => el.remove(), type === 'error' ? 6000 : 4000);
-  }
-</script>
-
-
-<!-- ===================== BOTTOM NAV (MOBILE) ===================== -->
-<nav class="bottom-nav">
-  <div class="bottom-nav-item active" onclick="showPage('dashboard'); document.querySelector('.mobile-brand').innerText='Dash'; document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
-    <span class="bottom-nav-icon">🏠</span>
-    <span>Dash</span>
-  </div>
-  <div class="bottom-nav-item" onclick="showPage('ccp'); document.querySelector('.mobile-brand').innerText='Input CCP'; document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
-    <span class="bottom-nav-icon">➕</span>
-    <span>Input</span>
-  </div>
-  <div class="bottom-nav-item" onclick="alert('Profile Akun'); document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
-    <span class="bottom-nav-icon">👤</span>
-    <span>Akun</span>
-  </div>
-</nav>
+    // ============================================================
+    // TOAST NOTIFICATIONS
+    // ============================================================
+    function toast(msg, type = 'info') {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => el.remove(), type === 'error' ? 6000 : 4000);
+    }
+  </script>
 
 
+  <!-- ===================== BOTTOM NAV (MOBILE) ===================== -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-item active"
+      onclick="showPage('dashboard'); document.querySelector('.mobile-brand').innerText='Dash'; document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
+      <span class="bottom-nav-icon">🏠</span>
+      <span>Dash</span>
+    </div>
+    <div class="bottom-nav-item"
+      onclick="showPage('ccp'); document.querySelector('.mobile-brand').innerText='Input CCP'; document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
+      <span class="bottom-nav-icon">➕</span>
+      <span>Input</span>
+    </div>
+    <div class="bottom-nav-item"
+      onclick="alert('Profile Akun'); document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">
+      <span class="bottom-nav-icon">👤</span>
+      <span>Akun</span>
+    </div>
+  </nav>
 
-<script>
-  function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('open');
-    document.getElementById('sidebarOverlay').classList.toggle('open');
-  }
-  
-  // Auto-close sidebar when clicking a nav item on mobile
-  document.querySelectorAll('.sidebar .nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      if(window.innerWidth <= 768) {
-        document.querySelector('.sidebar').classList.remove('open');
-        document.getElementById('sidebarOverlay').classList.remove('open');
+
+
+  <script>
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    // Auto-close sidebar when clicking a nav item on mobile
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          document.querySelector('.sidebar').classList.remove('open');
+          document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+      });
+    });
+  </script>
+
+
+  <script>
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark-mode');
+
+      const isDark = body.classList.contains('dark-mode');
+      localStorage.setItem('qc_theme', isDark ? 'dark' : 'light');
+
+      document.getElementById('themeIcon').innerText = isDark ? '☀️' : '🌙';
+      document.getElementById('themeText').innerText = isDark ? 'Light Mode' : 'Dark Mode';
+      if (document.getElementById('mobileThemeIcon')) {
+        document.getElementById('mobileThemeIcon').innerText = isDark ? '☀️' : '🌙';
+      }
+    }
+
+    // Check saved theme on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('qc_theme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('themeIcon').innerText = '☀️';
+        document.getElementById('themeText').innerText = 'Light Mode';
+        if (document.getElementById('mobileThemeIcon')) {
+          document.getElementById('mobileThemeIcon').innerText = '☀️';
+        }
       }
     });
-  });
-</script>
+  </script>
 
 
-<script>
-  function toggleTheme() {
-    const body = document.body;
-    body.classList.toggle('dark-mode');
-    
-    const isDark = body.classList.contains('dark-mode');
-    localStorage.setItem('qc_theme', isDark ? 'dark' : 'light');
-    
-    document.getElementById('themeIcon').innerText = isDark ? '☀️' : '🌙';
-    document.getElementById('themeText').innerText = isDark ? 'Light Mode' : 'Dark Mode';
-    if(document.getElementById('mobileThemeIcon')) {
-        document.getElementById('mobileThemeIcon').innerText = isDark ? '☀️' : '🌙';
-    }
-  }
-
-  // Check saved theme on load
-  window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('qc_theme');
-    if (savedTheme === 'dark') {
-      document.body.classList.add('dark-mode');
-      document.getElementById('themeIcon').innerText = '☀️';
-      document.getElementById('themeText').innerText = 'Light Mode';
-      if(document.getElementById('mobileThemeIcon')) {
-          document.getElementById('mobileThemeIcon').innerText = '☀️';
-      }
-    }
-  });
-</script>
-
-
-<script>
-  // ===================== AUTHENTICATION & ROLE GATEKEEPER =====================
-  document.addEventListener('DOMContentLoaded', () => {
-    const isLoggedIn = localStorage.getItem('qc_logged_in') === 'true';
-    if (!isLoggedIn) {
-      window.location.href = 'login.html';
-      return;
-    }
-
-    const role = localStorage.getItem('qc_user_role');
-    const username = localStorage.getItem('qc_username') || 'User';
-    
-    // Update topbar actions with user info and Logout button
-    const actionsCont = document.querySelector('.topbar-actions');
-    if(actionsCont && !document.getElementById('btnLogout')) {
-      const logoutBtn = document.createElement('button');
-      logoutBtn.className = 'btn btn-danger btn-sm';
-      logoutBtn.id = 'btnLogout';
-      logoutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout (' + role + ')';
-      logoutBtn.onclick = () => {
-        localStorage.removeItem('qc_logged_in');
-        localStorage.removeItem('qc_user_role');
+  <script>
+    // ===================== AUTHENTICATION & ROLE GATEKEEPER =====================
+    document.addEventListener('DOMContentLoaded', () => {
+      const isLoggedIn = localStorage.getItem('qc_logged_in') === 'true';
+      if (!isLoggedIn) {
         window.location.href = 'login.html';
-      };
-      actionsCont.appendChild(logoutBtn);
-    }
-    
-    // Add logout to mobile if exists
-    if(document.querySelector('.mobile-header') && !document.getElementById('mobileLogout')) {
-      const mobLog = document.createElement('button');
-      mobLog.innerHTML = '🚪';
-      mobLog.id = 'mobileLogout';
-      mobLog.style.background = 'transparent';
-      mobLog.style.border = 'none';
-      mobLog.style.fontSize = '20px';
-      mobLog.style.position = 'absolute';
-      mobLog.style.right = '20px';
-      mobLog.onclick = () => { localStorage.clear(); window.location.href = 'login.html'; };
-      document.querySelector('.mobile-header').appendChild(mobLog);
-    }
-
-    // Role Enforcement
-    if (role === 'operator') {
-      // Operator should ONLY see: Input CCP, Batches, Facility.
-      // Hide Dashboard & Reports in Sidebar
-      if(document.getElementById('nav-dashboard')) document.getElementById('nav-dashboard').style.display = 'none';
-      if(document.getElementById('nav-reports')) document.getElementById('nav-reports').style.display = 'none';
-      if(document.getElementById('nav-products')) document.getElementById('nav-products').style.display = 'none';
-      if(document.getElementById('nav-alerts')) document.getElementById('nav-alerts').style.display = 'none';
-      
-      // Initially show CCP page instead of Dashboard
-      setTimeout(() => { showPage('ccp'); }, 100);
-      
-      // Enforce Dark Mode for Operator as they are field workers
-      document.body.classList.add('dark-mode');
-    } else {
-      // Manager Views
-      setTimeout(() => { showPage('dashboard'); }, 100);
-    }
-  });
-</script>
-
-
-<script>
-  const API_URL = 'http://localhost:8000';
-  let currentBatchId = null; // Store active batch
-
-  // Override Dummy Facility Submit
-  async function submitFacilityLog() {
-    event.preventDefault();
-    const zone = document.getElementById('fas-zona').value;
-    const temp = document.getElementById('fas-suhu').value;
-    
-    const formData = new FormData();
-    formData.append('zone', zone);
-    formData.append('temperature', temp);
-    formData.append('recorder_id', localStorage.getItem('qc_username') || 'Unknown');
-
-    try {
-      const res = await fetch(`${API_URL}/facility/log`, { method: 'POST', body: formData });
-      const data = await res.json();
-      if(data.is_normal) {
-        alert('✅ Suhu Normal. Status: ' + data.status);
-      } else {
-        alert('⚠️ PERINGATAN: ' + data.violation_msg);
+        return;
       }
-      document.getElementById('fas-suhu').value = '';
-    } catch(err) {
-      alert('Error koneksi ke API.');
-    }
-  }
 
-  // Override Dummy Batch Create (Called in ccp step 1 or via + Batch Baru)
-  async function createBatch(batchCode, productId) {
-    try {
-      const res = await fetch(`${API_URL}/batch/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product_id: productId,
-          batch_code: batchCode,
-          production_date: new Date().toISOString().split('T')[0],
-          operator_id: localStorage.getItem('qc_username')
-        })
-      });
-      const data = await res.json();
-      currentBatchId = data.batch_id;
-      return true;
-    } catch(err) {
-      alert('Gagal membuat batch di sistem.');
-      return false;
-    }
-  }
+      const role = localStorage.getItem('qc_user_role');
+      const username = localStorage.getItem('qc_username') || 'User';
 
-  
-  // Bind facility form
-  const facForm = document.getElementById('facilityForm');
-  if(facForm) { facForm.onsubmit = submitFacilityLog; }
+      // Update topbar actions with user info and Logout button
+      const actionsCont = document.querySelector('.topbar-actions');
+      if (actionsCont && !document.getElementById('btnLogout')) {
+        const logoutBtn = document.createElement('button');
+        logoutBtn.className = 'btn btn-danger btn-sm';
+        logoutBtn.id = 'btnLogout';
+        logoutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout (' + role + ')';
+        logoutBtn.onclick = () => {
+          localStorage.removeItem('qc_logged_in');
+          localStorage.removeItem('qc_user_role');
+          window.location.href = 'login.html';
+        };
+        actionsCont.appendChild(logoutBtn);
+      }
 
-  // Bind the CCP Form Submit
-  document.addEventListener('DOMContentLoaded', () => {
-    // Override form behavior if form exists
-    const ccpForm = document.getElementById('ccpForm');
-    if(ccpForm) {
-      ccpForm.onsubmit = async (e) => {
-        e.preventDefault();
-        
-        // 1. Create batch if we don't have one active
-        const batchCode = document.getElementById('ccp-batch').value;
-        const productId = document.getElementById('ccp-product').value;
-        const tahap = document.getElementById('ccp-tahap').value;
+      // Add logout to mobile if exists
+      if (document.querySelector('.mobile-header') && !document.getElementById('mobileLogout')) {
+        const mobLog = document.createElement('button');
+        mobLog.innerHTML = '🚪';
+        mobLog.id = 'mobileLogout';
+        mobLog.style.background = 'transparent';
+        mobLog.style.border = 'none';
+        mobLog.style.fontSize = '20px';
+        mobLog.style.position = 'absolute';
+        mobLog.style.right = '20px';
+        mobLog.onclick = () => { localStorage.clear(); window.location.href = 'login.html'; };
+        document.querySelector('.mobile-header').appendChild(mobLog);
+      }
 
-        // Note: For simplicity in prototype, we auto-create batch if it's CCP1
-        if(tahap === "ccp1" && !currentBatchId) {
-           const ok = await createBatch(batchCode, productId);
-           if(!ok) return;
-        }
-        
-        if(!currentBatchId && tahap !== "ccp1") {
-           alert("Anda harus menyelesaikan CCP-1 terlebih dahulu untuk batch ini.");
-           return;
-        }
+      // Role Enforcement
+      if (role === 'operator') {
+        // Operator should ONLY see: Input CCP, Batches, Facility.
+        // Hide Dashboard & Reports in Sidebar
+        if (document.getElementById('nav-dashboard')) document.getElementById('nav-dashboard').style.display = 'none';
+        if (document.getElementById('nav-reports')) document.getElementById('nav-reports').style.display = 'none';
+        if (document.getElementById('nav-products')) document.getElementById('nav-products').style.display = 'none';
+        if (document.getElementById('nav-alerts')) document.getElementById('nav-alerts').style.display = 'none';
 
-        const formData = new FormData();
-        formData.append('recorder_id', localStorage.getItem('qc_username') || 'Op');
-        
-        // Disable button
-        const btn = document.getElementById('btnSubmitCCP');
-        const oldText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim & Menganalisis...';
-        btn.disabled = true;
+        // Initially show CCP page instead of Dashboard
+        setTimeout(() => { showPage('ccp'); }, 100);
 
-        try {
+        // Enforce Dark Mode for Operator as they are field workers
+        document.body.classList.add('dark-mode');
+      } else {
+        // Manager Views
+        setTimeout(() => { showPage('dashboard'); }, 100);
+      }
+    });
+  </script>
+
+
+  <script>
+    const API_URL = window.location.origin;
+    let currentBatchId = null; // Store active batch
+
+    // Bind the CCP Form Submit
+    document.addEventListener('DOMContentLoaded', () => {
+      // Override form behavior if form exists
+      const ccpForm = document.getElementById('ccpForm');
+      if (ccpForm) {
+        ccpForm.onsubmit = async (e) => {
+          e.preventDefault();
+
+          // 1. Create batch if we don't have one active
+          const batchCode = document.getElementById('ccp-batch').value;
+          const productId = document.getElementById('ccp-product').value;
+          const tahap = document.getElementById('ccp-tahap').value;
+
+          // Note: For simplicity in prototype, we auto-create batch if it's CCP1
+          if (tahap === "ccp1" && !currentBatchId) {
+            const ok = await createBatch(batchCode, productId);
+            if (!ok) return;
+          }
+
+          if (!currentBatchId && tahap !== "ccp1") {
+            alert("Anda harus menyelesaikan CCP-1 terlebih dahulu untuk batch ini.");
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('recorder_id', localStorage.getItem('qc_username') || 'Op');
+
+          // Disable button
+          const btn = document.getElementById('btnSubmitCCP');
+          const oldText = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim & Menganalisis...';
+          btn.disabled = true;
+
+          try {
             let res, data;
             if (tahap === "ccp1") {
-                const rawTemp = document.getElementById('ccp-raw-temp').value;
-                const photo = document.getElementById('ccp-raw-photo').files[0];
-                if(!photo) throw new Error("Foto Suhu Bahan Baku Wajib Diisi!");
-                formData.append('raw_temp_c', rawTemp);
-                formData.append('photo', photo);
-                
-                res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp1`, { method: 'POST', body: formData });
-            } 
-            else if (tahap === "ccp2") {
-                const coreTemp = document.getElementById('ccp-core-temp').value;
-                const phPhoto = document.getElementById('ccp-ph-photo').files[0];
-                const brixPhoto = document.getElementById('ccp-brix-photo').files[0];
-                if(!phPhoto || !brixPhoto) throw new Error("Foto pH dan Brix Wajib Diisi!");
-                
-                formData.append('core_temp_c', coreTemp);
-                formData.append('product_id', productId);
-                formData.append('ph_photo', phPhoto);
-                formData.append('brix_photo', brixPhoto);
+              const rawTemp = document.getElementById('ccp-raw-temp').value;
+              const photo = document.getElementById('ccp-raw-photo').files[0];
+              if (!photo) throw new Error("Foto Suhu Bahan Baku Wajib Diisi!");
+              formData.append('raw_temp_c', rawTemp);
+              formData.append('photo', photo);
 
-                res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp2`, { method: 'POST', body: formData });
+              res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp1`, { method: 'POST', body: formData });
+            }
+            else if (tahap === "ccp2") {
+              const coreTemp = document.getElementById('ccp-core-temp').value;
+              const phPhoto = document.getElementById('ccp-ph-photo').files[0];
+              const brixPhoto = document.getElementById('ccp-brix-photo').files[0];
+              if (!phPhoto || !brixPhoto) throw new Error("Foto pH dan Brix Wajib Diisi!");
+
+              formData.append('core_temp_c', coreTemp);
+              formData.append('product_id', productId);
+              formData.append('ph_photo', phPhoto);
+              formData.append('brix_photo', brixPhoto);
+
+              res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp2`, { method: 'POST', body: formData });
             }
             else if (tahap === "ccp3") {
-                const roomTemp = document.getElementById('ccp-room-temp').value;
-                const photo = document.getElementById('ccp-pack-photo').files[0];
-                if(!photo) throw new Error("Foto Kemasan Wajib Diisi!");
-                
-                formData.append('room_temp_c', roomTemp);
-                formData.append('photo', photo);
+              const roomTemp = document.getElementById('ccp-room-temp').value;
+              const photo = document.getElementById('ccp-pack-photo').files[0];
+              if (!photo) throw new Error("Foto Kemasan Wajib Diisi!");
 
-                res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp3`, { method: 'POST', body: formData });
-                
-                // If CCP3 done, trigger report formulation dynamically
-                fetch(`${API_URL}/batch/${currentBatchId}/report`, { method: 'POST' });
+              formData.append('room_temp_c', roomTemp);
+              formData.append('photo', photo);
+
+              res = await fetch(`${API_URL}/batch/${currentBatchId}/ccp3`, { method: 'POST', body: formData });
+
+              // If CCP3 done, trigger report formulation dynamically
+              fetch(`${API_URL}/batch/${currentBatchId}/report`, { method: 'POST' });
             }
 
             data = await res.json();
-            
-            if(res.ok) {
-                // Determine if OCR was used and print result
-                let msg = `✅ Tahap ${tahap.toUpperCase()} Tersimpan!\nStatus: ${data.stage_status}`;
-                if(data.ocr_result && data.ocr_result.ph_value !== undefined) {
-                    msg += `\nOCR pH: ${data.ocr_result.ph_value} | OCR Brix: ${data.ocr_result.brix_value}`;
-                }
-                alert(msg);
-                ccpForm.reset();
+
+            if (res.ok) {
+              // Determine if OCR was used and print result
+              let msg = `✅ Tahap ${tahap.toUpperCase()} Tersimpan!\nStatus: ${data.stage_status}`;
+              if (data.ocr_result && data.ocr_result.ph_value !== undefined) {
+                msg += `\nOCR pH: ${data.ocr_result.ph_value} | OCR Brix: ${data.ocr_result.brix_value}`;
+              }
+              alert(msg);
+              ccpForm.reset();
             } else {
-                alert(`❌ Peringatan HACCP: ${data.detail || "Gagal upload"}`);
+              alert(`❌ Peringatan HACCP: ${data.detail || "Gagal upload"}`);
             }
-            
-        } catch(err) {
-            if(!navigator.onLine) {
-                // Save to IndexedDB simply via localforage
-                let queue = await localforage.getItem('offline_ccp_queue') || [];
-                queue.push({tahap, time: Date.now()});
-                await localforage.setItem('offline_ccp_queue', queue);
-                alert('💾 Anda Sedang Offline! Foto & Data sementara diamankan di Memori HP. Akan otomatis terkirim saat sinyal kembali.');
+
+          } catch (err) {
+            if (!navigator.onLine) {
+              // Save to IndexedDB simply via localforage
+              let queue = await localforage.getItem('offline_ccp_queue') || [];
+              queue.push({ tahap, time: Date.now() });
+              await localforage.setItem('offline_ccp_queue', queue);
+              alert('💾 Anda Sedang Offline! Foto & Data sementara diamankan di Memori HP. Akan otomatis terkirim saat sinyal kembali.');
             } else {
-                alert('Kesalahan Server: ' + err.message);
+              alert('Kesalahan Server: ' + err.message);
             }
-        } finally {
+          } finally {
             btn.innerHTML = oldText;
             btn.disabled = false;
-        }
-      };
-    }
-  });
-</script>
+          }
+        };
+      }
+    });
+  </script>
 
 
-<script>
-  let html5QrcodeScanner;
-  
-  function startQRScanner() {
-    const qrContainer = document.getElementById('qr-reader');
-    
-    // Toggle scanner off if already running
-    if(qrContainer.style.display === 'block') {
-        if(html5QrcodeScanner) {
-            html5QrcodeScanner.clear();
-            qrContainer.style.display = 'none';
+  <script>
+    let html5QrcodeScanner;
+
+    function startQRScanner() {
+      const qrContainer = document.getElementById('qr-reader');
+
+      // Toggle scanner off if already running
+      if (qrContainer.style.display === 'block') {
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear();
+          qrContainer.style.display = 'none';
         }
         return;
-    }
-    
-    // Show container
-    qrContainer.style.display = 'block';
+      }
 
-    function onScanSuccess(decodedText, decodedResult) {
-      // 1. Matikan scanner
-      html5QrcodeScanner.clear();
-      document.getElementById('qr-reader').style.display = 'none';
-      
-      // 2. Isi value ke input
-      const batchInput = document.getElementById('ccp-batch');
-      batchInput.value = decodedText;
-      
-      // 3. Efek visual berhasil
-      batchInput.style.backgroundColor = '#ccffcc';
-      batchInput.style.color = '#000';
-      setTimeout(() => {
+      // Show container
+      qrContainer.style.display = 'block';
+
+      function onScanSuccess(decodedText, decodedResult) {
+        // 1. Matikan scanner
+        html5QrcodeScanner.clear();
+        document.getElementById('qr-reader').style.display = 'none';
+
+        // 2. Isi value ke input
+        const batchInput = document.getElementById('ccp-batch');
+        batchInput.value = decodedText;
+
+        // 3. Efek visual berhasil
+        batchInput.style.backgroundColor = '#ccffcc';
+        batchInput.style.color = '#000';
+        setTimeout(() => {
           batchInput.style.backgroundColor = '';
           batchInput.style.color = '';
-      }, 1500);
-      
-      // Play a tiny beep sound (web audio API)
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        oscillator.type = 'sine';
-        oscillator.frequency.value = 800; // hz
-        oscillator.connect(audioCtx.destination);
-        oscillator.start();
-        setTimeout(() => oscillator.stop(), 100);
-      } catch(e) {}
+        }, 1500);
+
+        // Play a tiny beep sound (web audio API)
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioCtx.createOscillator();
+          oscillator.type = 'sine';
+          oscillator.frequency.value = 800; // hz
+          oscillator.connect(audioCtx.destination);
+          oscillator.start();
+          setTimeout(() => oscillator.stop(), 100);
+        } catch (e) { }
+      }
+
+      function onScanFailure(error) {
+        // Supress errors frame by frame
+      }
+
+      // Gunakan konfigurasi FPS yang lebih cepat dan otomatis pilih kamera belakang
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "qr-reader", { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" }, /* verbose= */ false);
+
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
-
-    function onScanFailure(error) {
-      // Supress errors frame by frame
-    }
-
-    // Gunakan konfigurasi FPS yang lebih cepat dan otomatis pilih kamera belakang
-    html5QrcodeScanner = new Html5QrcodeScanner(
-      "qr-reader", { fps: 10, qrbox: {width: 250, height: 250}, facingMode: "environment" }, /* verbose= */ false);
-    
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-  }
-</script>
+  </script>
 
 
-<script>
-  // PWA Service Worker Registration
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').then(reg => {
-        console.log('SW Registered', reg);
-      }).catch(err => {
-        console.log('SW Registration failed: ', err);
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          console.log('SW Registered', reg);
+        }).catch(err => {
+          console.log('SW Registration failed: ', err);
+        });
       });
-    });
-  }
-
-  // Offline Sync Logic
-  window.addEventListener('online', async () => {
-    // Show visual online popup
-    alert('📶 Sinyal kembali! Aplikasi melanjutkan pengiriman data yang tertunda...');
-    // Real app would iterate through localforage queue here and re-run fetch().
-    const queue = await localforage.getItem('offline_ccp_queue') || [];
-    if(queue.length > 0) {
-       console.log('Syncing ' + queue.length + ' items...');
-       // Mock syncing cleared
-       await localforage.setItem('offline_ccp_queue', []);
-       alert('✅ Sinkronisasi berhasil, semua data di dalam HP telah masuk ke Server Utama.');
     }
-  });
 
-  window.addEventListener('offline', () => {
-    alert('⚠️ Anda sedang OFFLINE (Sinyal Terputus). Aplikasi beralih ke Mode Pendingin (Offline Storage). Data tetap aman!');
-  });
-</script>
+    // Offline Sync Logic
+    window.addEventListener('online', async () => {
+      // Show visual online popup
+      alert('📶 Sinyal kembali! Aplikasi melanjutkan pengiriman data yang tertunda...');
+      // Real app would iterate through localforage queue here and re-run fetch().
+      const queue = await localforage.getItem('offline_ccp_queue') || [];
+      if (queue.length > 0) {
+        console.log('Syncing ' + queue.length + ' items...');
+        // Mock syncing cleared
+        await localforage.setItem('offline_ccp_queue', []);
+        alert('✅ Sinkronisasi berhasil, semua data di dalam HP telah masuk ke Server Utama.');
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      alert('⚠️ Anda sedang OFFLINE (Sinyal Terputus). Aplikasi beralih ke Mode Pendingin (Offline Storage). Data tetap aman!');
+    });
+  </script>
 
 </body>
+
 </html>

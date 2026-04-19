@@ -280,7 +280,7 @@ async def submit_ccp2(
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error ccp1 bypassed: {e}")
+        logger.error(f"DB Error ccp2 bypassed: {e}")
         batch_log_id = str(uuid.uuid4())
 
     # Temperature check
@@ -336,7 +336,7 @@ async def submit_ccp3(
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error ccp1 bypassed: {e}")
+        logger.error(f"DB Error ccp3 bypassed: {e}")
         batch_log_id = str(uuid.uuid4())
 
     from skills.parametric_checker import check_ccp_temperatures
