@@ -6,3 +6,7 @@ supabase
 requests
 pydantic
 email-validator
+httpx
+postgrest
+gotrue
+storage3
