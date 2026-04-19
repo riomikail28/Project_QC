@@ -1,0 +1,287 @@
+# Intelligent QC Traceability System
+## PT Astro Teknologi Indonesia — Central Kitchen
+### Integration Plan & Technical Walkthrough
+
+---
+
+## Project Structure
+
+```
+Project_QC/
+├── db/
+│   └── schema.sql              ← Full PostgreSQL schema (run once in Supabase SQL Editor)
+├── skills/
+│   ├── ocr_digital_reader.py   ← OCR Skill: pH & Brix from LCD photos
+│   ├── parametric_checker.py   ← Temperature validation across all CCPs
+│   └── auto_reporter.py        ← PDF report compiler & uploader
+├── main.py                     ← FastAPI app (all API endpoints)
+├── requirements.txt
+└── .env.example                ← Copy to .env and fill values
+```
+
+---
+
+## Step 1 — Supabase Setup
+
+### 1.1 Create Project
+1. Go to [supabase.com](https://supabase.com) → **New Project** → name: `qc-central-kitchen`
+2. Copy your **Project URL** and **Service Role Key** (Settings → API)
+
+### 1.2 Run the Schema
+1. Open **SQL Editor** in your Supabase dashboard
+2. Paste and execute the full contents of `db/schema.sql`
+3. This creates: `facility_logs`, `facility_alerts`, `products`, `production_batches`, `production_batch_logs`
+
+### 1.3 Create Storage Buckets
+Go to **Storage** → **New Bucket**:
+
+| Bucket Name | Public? | Purpose |
+|-------------|---------|---------|
+| `qc-photos` | ❌ Private | All CCP photos (raw, pH, brix, packaging) |
+| `qc-reports` | ✅ Public | Final PDF QC reports |
+
+### 1.4 Seed Products
+The schema seeds 3 example products. Add your actual products via:
+```sql
+INSERT INTO products (product_code, product_name, ph_min, ph_max, brix_min, brix_max)
+VALUES ('SKU-XXX-004', 'Your Product Name', 4.0, 5.5, 12.0, 18.0);
+```
+
+---
+
+## Step 2 — Environment Setup
+
+```bash
+cd Project_QC
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+
+pip install -r requirements.txt
+
+# Copy and fill your credentials
+copy .env.example .env
+```
+
+Edit `.env`:
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJ...
+GCP_PROJECT_ID=your-gcp-project          # Optional: for Google Vision OCR
+GOOGLE_APPLICATION_CREDENTIALS=C:\path\to\sa.json
+ALERT_WEBHOOK_URL=https://hooks.slack.com/...  # Optional
+```
+
+> [!NOTE]
+> If Google Cloud Vision is unavailable, the `OCR_Digital_Reader` automatically falls back to **Tesseract** (free, local). For Tesseract, install from: https://github.com/UB-Mannheim/tesseract/wiki
+
+---
+
+## Step 3 — Run the API Server
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Interactive docs available at: `http://localhost:8000/docs`
+
+---
+
+## Step 4 — API Integration Flow
+
+### MODULE A: Facility Temperature Logging
+
+```http
+POST /facility/log
+Content-Type: multipart/form-data
+
+zone=chiller
+temperature=-2.5
+recorder_id=<user-uuid>
+```
+
+**Response:**
+```json
+{
+  "zone": "chiller",
+  "temperature_c": -2.5,
+  "threshold_c": 4.0,
+  "is_normal": true,
+  "status": "pass"
+}
+```
+
+> [!IMPORTANT]
+> If `is_normal: false`, the system **automatically**:
+> 1. Inserts a row in `facility_alerts` with `status = 'open'`
+> 2. POSTs an alert to your `ALERT_WEBHOOK_URL` (Slack/Chat/N8N)
+
+---
+
+### MODULE B: Full Batch QC Lifecycle
+
+#### Step B1 — Create Batch
+```http
+POST /batch/create
+Content-Type: application/json
+
+{
+  "product_id": "uuid-from-products-table",
+  "batch_code": "BATCH-2026-04-19-001",
+  "production_date": "2026-04-19",
+  "shift": "morning"
+}
+```
+→ returns `batch_id` — use this for all subsequent CCP calls.
+
+---
+
+#### Step B2 — CCP1: Pre-Cook
+```http
+POST /batch/{batch_id}/ccp1
+Content-Type: multipart/form-data
+
+raw_temp_c=3.2
+photo=<file: raw_material_photo.jpg>
+```
+
+---
+
+#### Step B3 — CCP2: Post-Cook (OCR triggered automatically)
+```http
+POST /batch/{batch_id}/ccp2
+Content-Type: multipart/form-data
+
+core_temp_c=82.5
+product_id=<uuid>
+ph_photo=<file: ph_meter_lcd.jpg>
+brix_photo=<file: refractometer_lcd.jpg>
+```
+
+**What happens internally:**
+1. Photos uploaded to `qc-photos/ccp2/{batch_id}/` in Supabase Storage
+2. `Parametric_Checker` validates `core_temp_c ≥ 75°C`
+3. `OCR_Digital_Reader` runs Google Vision (or Tesseract) on both LCD photos
+4. Extracted pH and Brix values are validated against the product's SOP thresholds
+5. All results written to `production_batch_logs`
+
+**Response includes:**
+```json
+{
+  "ocr_result": {
+    "ph_value": 5.82,
+    "brix_value": 38.5,
+    "overall_pass": true
+  },
+  "stage_status": "pass"
+}
+```
+
+---
+
+#### Step B4 — CCP3: Packaging
+```http
+POST /batch/{batch_id}/ccp3
+Content-Type: multipart/form-data
+
+room_temp_c=18.0
+photo=<file: packaging_photo.jpg>
+```
+
+---
+
+#### Step B5 — Generate Final Report
+```http
+POST /batch/{batch_id}/report
+```
+
+**What happens internally:**
+1. `AutoReporter` fetches all batch data + CCP logs from Supabase
+2. Generates signed URLs for all stored photos
+3. Renders a full HTML report using Jinja2 template
+4. Converts HTML → PDF (WeasyPrint)
+5. Uploads PDF to `qc-reports/` bucket
+6. Updates `production_batches.report_url` and `final_qc_status`
+
+**Response:**
+```json
+{
+  "batch_code": "BATCH-2026-04-19-001",
+  "final_status": "pass",
+  "report_pdf_url": "https://your-project.supabase.co/storage/v1/object/public/qc-reports/reports/...",
+  "violations": []
+}
+```
+
+---
+
+## Step 5 — Scheduled Facility Monitoring (Cron)
+
+For automated scheduled readings, call the facility endpoint from a cron job or N8N workflow:
+
+```bash
+# Example: every 30 minutes via cron (Linux/Mac) or Task Scheduler (Windows)
+curl -X POST http://localhost:8000/facility/log \
+  -F "zone=chiller" \
+  -F "temperature=3.5" \
+  -F "recorder_id=system"
+```
+
+Or use **Supabase Edge Functions** + **pg_cron** to alert automatically when sensors push readings.
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    A[Mobile/Web App] -->|multipart/form| B(FastAPI API)
+    B --> C{Skill Router}
+    C --> D[Parametric_Checker]
+    C --> E[OCR_Digital_Reader]
+    C --> F[AutoReporter]
+    D --> G[(Supabase DB)]
+    E --> G
+    E --> H[Google Vision / Tesseract]
+    F --> G
+    F --> I[Supabase Storage PDF]
+    D -->|Alert| J[Webhook: Slack / Google Chat]
+```
+
+---
+
+## Skill Responsibilities Summary
+
+| Skill | Input | Output | Writes To |
+|-------|-------|--------|-----------|
+| `Parametric_Checker` | temp value + stage | `CheckResult` | `facility_logs`, `production_batch_logs` |
+| `OCR_Digital_Reader` | Storage path (LCD photo) | `OCRResult` (value, confidence, valid) | `production_batch_logs` |
+| `AutoReporter` | `batch_id` | `ReportPayload` + PDF URL | `production_batches.report_url` |
+
+---
+
+## Threshold Reference
+
+| Check Point | Parameter | SOP Limit |
+|-------------|-----------|-----------|
+| Facility: Chiller | Temperature | ≤ 4°C |
+| Facility: Freezer | Temperature | ≤ -18°C |
+| Facility: Ambient | Temperature | ≤ 20°C |
+| CCP1 — Pre-Cook | Raw temp | ≤ 5°C |
+| CCP2 — Post-Cook | Core temp | ≥ 75°C |
+| CCP2 — Post-Cook | pH (product-specific) | From `products` table |
+| CCP2 — Post-Cook | Brix (product-specific) | From `products` table |
+| CCP3 — Packaging | Room temp | ≤ 20°C |
+
+> [!TIP]
+> pH and Brix thresholds are **per-product** and stored in the `products` table. Update them via SQL or build an admin endpoint to manage them dynamically.
+
+---
+
+## Common Issues & Fixes
+
+| Issue | Fix |
+|-------|-----|
+| OCR extracts wrong number | Increase image resolution; ensure LCD is in frame; use Google Vision for better accuracy |
+| `WeasyPrint` fails on Windows | Run `pip install weasyprint` and install GTK: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer |
+| Supabase RLS blocks INSERT | Use `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS) on the backend. Never expose this key to frontend. |
+| PDF photos don't load | Signed URLs expire in 1 hour. Increase `PHOTO_URL_EXPIRY` in `auto_reporter.py` or use public bucket. |
