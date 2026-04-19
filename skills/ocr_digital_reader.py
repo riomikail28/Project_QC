@@ -23,7 +23,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from PIL import Image, ImageFilter, ImageEnhance
+try:
+    from PIL import Image, ImageFilter, ImageEnhance
+    _HAS_PILLOW = True
+except ImportError:
+    _HAS_PILLOW = False
 
 # ---------------------------------------------------------------------------
 # Third-party (lazy imports – gracefully handle missing packages)

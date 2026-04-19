@@ -11,3 +11,7 @@ postgrest
 gotrue
 storage3
 jinja2
+Pillow
+weasyprint
+google-cloud-vision
+pytesseract
