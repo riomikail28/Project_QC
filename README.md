@@ -1,5 +1,5 @@
 # Intelligent QC Traceability System 🚀
-### PT Astro Teknologi Indonesia — Central Kitchen Solutions
+### Study kasus PT Astro Teknologi Indonesia — Central Kitchen Solutions
 
 Sistem manajemen mutu (Quality Control) berbasis digital yang dirancang khusus untuk operasional **Central Kitchen** skala industri. Proyek ini mengintegrasikan pemantauan fasilitas cerdas dengan pelacakan batch produksi yang ketat untuk memastikan standar keamanan pangan tertinggi.
 
@@ -26,4 +26,4 @@ Sistem manajemen mutu (Quality Control) berbasis digital yang dirancang khusus u
 - `/skills/` - Modul Pintar (OCR Reader, Auto Reporter, Parametric Checker).
 
 ---
-*Proyek ini dikembangkan untuk tujuan komersialisasi B2B dan pemenuhan tugas akhir akademis.*
+*Proyek ini dikembangkan untuk tujuan pemenuhan tugas akhir akademis.bisa dikembangkan lebih lanjut*
