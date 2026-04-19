@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Login | QC Traceability System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        astro: { 500: '#3b82f6', 600: '#2563eb' },
+                        dark: { bg: '#0f172a', card: '#1e293b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; overflow: hidden; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .hero-glow {
+            position: absolute; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: -1; pointer-events: none;
+        }
+        .input-glass {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.2s;
+        }
+        .input-glass:focus {
+            border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.3);
+        }
+    </style>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="antialiased min-h-screen flex items-center justify-center relative">
+
+    <div class="hero-glow"></div>
+    <div class="hero-glow" style="background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, rgba(0,0,0,0) 70%); transform: translate(-20%, -30%);"></div>
+
+    <div class="glass-panel w-full max-w-md rounded-3xl p-10 relative z-10 m-4 animate-[slideUp_0.5s_ease-out]">
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-astro-500 to-purple-600 flex items-center justify-center text-white text-3xl shadow-lg shadow-astro-500/30 mx-auto mb-4">
+                <i class="fa-solid fa-fingerprint"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Otentikasi Sistem</h1>
+            <p class="text-slate-400 text-sm mt-1">Gunakan kredensial yang valid untuk masuk.</p>
+        </div>
+
+        <form id="loginForm" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">User ID / Username</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <input type="text" id="username" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm" placeholder="Ketik RIO-MANAGER atau OP-01" required>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Role Akses (Simulasi Skripsi)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <select id="role" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm appearance-none" required>
+                        <option value="operator">🏗️ Operator Lapangan (Input Data)</option>
+                        <option value="manager">📊 QA/QC Manager (Analitik Web)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <input type="password" id="password" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-astro-600 hover:bg-astro-500 text-white font-semibold py-3.5 rounded-xl transition-all shadow-lg shadow-astro-500/30 mt-4 outline-none focus:ring-4 ring-astro-500/30">
+                Akses Sistem Sekuriti
+            </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-slate-700/50 text-center text-xs text-slate-500">
+            Intelligent QC Traceability &copy; PT Astro Teknologi
+        </div>
+    </div>
+
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const role = document.getElementById('role').value;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            let isValid = false;
+
+            // --- DATABASE ACREDENTIAL SEMENTARA (SIMULASI) ---
+            if (role === 'manager' && username === 'RIO-MANAGER' && password === 'admin123') {
+                isValid = true;
+            } else if (role === 'operator' && username === 'OP-01' && password === '1234') {
+                isValid = true;
+            }
+
+            if (!isValid) {
+                alert('Peringatan: User ID, Role, atau Password salah! Pastikan Anda memilih role yang tepat.');
+                return;
+            }
+
+            // Simpan sesi login di LocalStorage
+            localStorage.setItem('qc_user_role', role);
+            localStorage.setItem('qc_logged_in', 'true');
+            localStorage.setItem('qc_username', username);
+
+            // Simulasi proses loading tipis
+            const btn = document.querySelector('button[type="submit"]');
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi Kredensial...';
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        });
+
+        // Auto redirect jika sudah login
+        if(localStorage.getItem('qc_logged_in') === 'true') {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+<script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js');
+        });
+      }
+    </script>
+</body>
+</html>

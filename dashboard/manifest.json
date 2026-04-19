@@ -1,0 +1,22 @@
+{
+  "name": "Intelligent QC Traceability",
+  "short_name": "QC System",
+  "description": "Aplikasi Central Kitchen QC untuk mencatat Suhu dan Traceability secara cerdas.",
+  "start_url": "./login.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3408/3408798.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3408/3408798.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
