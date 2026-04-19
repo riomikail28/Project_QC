@@ -58,7 +58,13 @@ app.add_middleware(
 
 @app.get("/", tags=["System"])
 async def root():
-    return {"message": "QC Traceability API is running", "ui": "/dashboard/index.html"}
+    return RedirectResponse(url="/dashboard/index.html")
+
+
+# Mount static files for dashboard
+if os.path.exists("dashboard"):
+    app.mount("/dashboard", StaticFiles(directory="dashboard"), name="dashboard")
+
 
 
 # ---------------------------------------------------------------------------
@@ -182,9 +188,19 @@ async def log_facility_temperature(
 @app.post("/batch/create", response_model=BatchCreateResponse, tags=["Batch QC"])
 async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supabase)):
     """Create a new production batch record."""
+    # Mencari UUID produk berdasarkan Product Code (misal SKU-SOUP-001)
+    pid = body.product_id
+    if len(pid) != 36: # Jika bukan format UUID
+        try:
+            prod_check = sb.table("products").select("id").eq("product_code", pid).execute()
+            if prod_check.data:
+                pid = prod_check.data[0]["id"]
+        except Exception:
+            pass
+
     try:
         res = sb.table("production_batches").insert({
-            "product_id":      body.product_id if len(body.product_id) == 36 else "00000000-0000-0000-0000-000000000000",
+            "product_id":      pid if len(pid) == 36 else "00000000-0000-0000-0000-000000000000",
             "batch_code":      body.batch_code,
             "production_date": body.production_date,
             "shift":           body.shift,
