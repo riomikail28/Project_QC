@@ -29,13 +29,6 @@ from typing import Optional
 from jinja2 import Environment, BaseLoader
 from supabase import create_client, Client
 
-try:
-    from weasyprint import HTML as WeasyprintHTML
-    _HAS_WEASYPRINT = True
-except (Exception, OSError):
-    _HAS_WEASYPRINT = False
-    logging.warning("WeasyPrint not installed – PDF generation will be skipped.")
-
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -404,8 +397,12 @@ def _render_html(payload: ReportPayload) -> str:
 
 
 def _html_to_pdf(html: str) -> bytes:
-    if not _HAS_WEASYPRINT:
-        raise RuntimeError("WeasyPrint is not installed. Run: pip install weasyprint")
+    try:
+        from weasyprint import HTML as WeasyprintHTML
+    except (Exception, OSError) as e:
+        logger.error(f"WeasyPrint error: {e}")
+        raise RuntimeError("WeasyPrint components (pango/cairo) are missing in this environment.")
+
     return WeasyprintHTML(string=html).write_pdf()
 
 

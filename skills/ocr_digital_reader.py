@@ -23,13 +23,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-try:
-    from PIL import Image, ImageFilter, ImageEnhance
-    _HAS_PILLOW = True
-except Exception:
-    _HAS_PILLOW = False
-    logging.error("Pillow fails to load.")
-
 # ---------------------------------------------------------------------------
 # Third-party (lazy imports – gracefully handle missing packages)
 # ---------------------------------------------------------------------------
@@ -86,6 +79,11 @@ def _preprocess_image(image_bytes: bytes) -> Image.Image:
     - Increase contrast & sharpness
     - Upscale if small
     """
+    try:
+        from PIL import Image, ImageFilter, ImageEnhance
+    except ImportError:
+        raise RuntimeError("Pillow (PIL) is not installed.")
+
     img = Image.open(io.BytesIO(image_bytes)).convert("L")  # greyscale
 
     # Upscale small images (OCR struggles < 300 dpi equivalent)

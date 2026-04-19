@@ -273,7 +273,7 @@ async def submit_ccp2(
     try:
         log_res = sb.table("production_batch_logs").insert({
             "batch_id":                 batch_id,
-            "stage":                    "CCP1_PRE_COOK",
+            "stage":                    "CCP2_POST_COOK",
             "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
             "ph_meter_photo_path":      ph_path,
             "refractometer_photo_path": brix_path
@@ -330,15 +330,16 @@ async def submit_ccp3(
     try:
         log_res = sb.table("production_batch_logs").insert({
             "batch_id":                 batch_id,
-            "stage":                    "CCP1_PRE_COOK",
+            "stage":                    "CCP3_PACKAGING",
             "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
-            "raw_material_photo_path":  photo_path,
+            "packaging_photo_path":     photo_path,
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
         logger.error(f"DB Error ccp1 bypassed: {e}")
         batch_log_id = str(uuid.uuid4())
 
+    from skills.parametric_checker import check_ccp_temperatures
     result = check_ccp_temperatures(
         batch_log_id = batch_log_id,
         stage        = "CCP3_PACKAGING",
