@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co")
-SUPABASE_KEY: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "placeholder_key")
+SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "") or "https://placeholder.supabase.co"
+SUPABASE_KEY: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "") or "placeholder_key"
 
 # Optional: Webhook URL for maintenance alert (e.g. Google Chat, Slack, N8N)
 ALERT_WEBHOOK_URL: str = os.getenv("ALERT_WEBHOOK_URL", "")

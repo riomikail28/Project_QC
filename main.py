@@ -275,7 +275,8 @@ async def submit_ccp2(
             "batch_id":                 batch_id,
             "stage":                    "CCP1_PRE_COOK",
             "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
-            "raw_material_photo_path":  photo_path,
+            "ph_meter_photo_path":      ph_path,
+            "refractometer_photo_path": brix_path
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
@@ -292,6 +293,7 @@ async def submit_ccp2(
     )
 
     # OCR on LCD photos
+    from skills.ocr_digital_reader import run_ocr_digital_reader
     ocr_output = run_ocr_digital_reader(
         batch_log_id    = batch_log_id,
         product_id      = product_id,
