@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SUPABASE_URL: str  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY: str  = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+SUPABASE_URL: str  = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co")
+SUPABASE_KEY: str  = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "placeholder_key")
 GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
 
 

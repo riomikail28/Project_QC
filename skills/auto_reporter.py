@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SUPABASE_URL: str = os.environ["SUPABASE_URL"]
-SUPABASE_KEY: str = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "https://placeholder.supabase.co")
+SUPABASE_KEY: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "placeholder_key")
 STORAGE_BUCKET: str = "qc-photos"
 REPORT_BUCKET: str  = "qc-reports"
 PHOTO_URL_EXPIRY: int = 3600  # seconds (1 hour signed URLs)
