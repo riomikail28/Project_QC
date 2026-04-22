@@ -1,9 +1,30 @@
 {
-  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(facility|batch|health|report|docs|openapi.json)(.*)",
-      "destination": "main.py"
+      "source": "/",
+      "destination": "/dashboard/index.html"
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "/dashboard/:path*"
+    },
+    {
+      "source": "/skills/:path*",
+      "destination": "/skills/:path*"
+    },
+    {
+      "source": "/landing.html",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/main.py"
     }
   ]
 }
