@@ -155,13 +155,16 @@ def _run_ocr(image_bytes: bytes) -> tuple[str, float, str]:
             text, conf = _ocr_via_google_vision(image_bytes)
             return text, conf, "google_vision"
         except Exception as e:
-            logger.warning("Google Vision failed, falling back to Tesseract: %s", e)
+            logger.warning("Google Vision failed: %s. Falling back to Tesseract.", e)
 
     if _HAS_TESSERACT:
-        text, conf = _ocr_via_tesseract(image_bytes)
-        return text, conf, "tesseract"
+        try:
+            text, conf = _ocr_via_tesseract(image_bytes)
+            return text, conf, "tesseract"
+        except Exception as e:
+            logger.error("Tesseract engine failed: %s. (Is tesseract binary installed?)", e)
 
-    raise RuntimeError("No OCR engine available. Install google-cloud-vision or pytesseract.")
+    raise RuntimeError("No functional OCR engine available on this server.")
 
 
 # ---------------------------------------------------------------------------

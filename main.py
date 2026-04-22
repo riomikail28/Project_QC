@@ -18,11 +18,10 @@ import uuid
 import logging
 from typing import Optional
 
-
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from supabase import create_client, Client
@@ -56,15 +55,24 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------------------------
+# KOREKSI ROUTING UTAMA (Arahkan ke Landing Page)
+# ---------------------------------------------------------------------------
 @app.get("/", tags=["System"])
 async def root():
-    return RedirectResponse(url="/dashboard/index.html")
+    # Mengarahkan URL root (domain utama) ke file landing.html
+    return RedirectResponse(url="/landing.html")
 
+@app.get("/landing.html", tags=["UI"])
+async def serve_landing():
+    # Menyajikan file landing.html jika diakses langsung
+    if os.path.exists("landing.html"):
+        return FileResponse("landing.html")
+    return {"error": "File landing.html tidak ditemukan di direktori proyek."}
 
-# Mount static files for dashboard
+# Mount static files for dashboard (Folder ini tetap melayani UI setelah login)
 if os.path.exists("dashboard"):
-    app.mount("/dashboard", StaticFiles(directory="dashboard"), name="dashboard")
-
+    app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +244,7 @@ async def submit_ccp1(
     batch_id:     str,
     raw_temp_c:   float             = Form(..., description="Raw material temperature (≤ 5°C)"),
     recorder_id:  Optional[str]     = Form(None),
-    photo:        UploadFile         = File(..., description="Raw material photo"),
+    photo:        UploadFile        = File(..., description="Raw material photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP1 – Pre-Cook: upload raw material photo and validate raw temperature."""
@@ -278,8 +286,8 @@ async def submit_ccp2(
     core_temp_c:     float             = Form(..., description="Core temp (≥ 75°C)"),
     product_id:      str               = Form(...),
     recorder_id:     Optional[str]     = Form(None),
-    ph_photo:        UploadFile         = File(..., description="Milwaukee pH51 LCD photo"),
-    brix_photo:      UploadFile         = File(..., description="Refractometer LCD photo"),
+    ph_photo:        UploadFile        = File(..., description="Milwaukee pH51 LCD photo"),
+    brix_photo:      UploadFile        = File(..., description="Refractometer LCD photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP2 – Post-Cook: validate core temp, and run OCR on pH + Brix photos."""
@@ -337,7 +345,7 @@ async def submit_ccp3(
     batch_id:    str,
     room_temp_c: float             = Form(..., description="Room/ambient temp (≤ 20°C)"),
     recorder_id: Optional[str]     = Form(None),
-    photo:       UploadFile         = File(..., description="Packaging visual photo"),
+    photo:       UploadFile        = File(..., description="Packaging visual photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP3 – Packaging: upload packaging photo and validate room temperature."""
