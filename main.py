@@ -21,7 +21,7 @@ from typing import Optional
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from supabase import create_client, Client
@@ -54,15 +54,23 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 
+
 # ---------------------------------------------------------------------------
-# KOREKSI ROUTING: Mengalihkan root ke UI Dashboard
+# KOREKSI ROUTING UTAMA (Arahkan ke Landing Page)
 # ---------------------------------------------------------------------------
 @app.get("/", tags=["System"])
 async def root():
-    # Perubahan eksekusi: Memaksa pengalihan ke file statis UI
-    return RedirectResponse(url="/dashboard/index.html")
+    # Mengarahkan URL root (domain utama) ke file landing.html
+    return RedirectResponse(url="/landing.html")
 
-# Mount static files for dashboard
+@app.get("/landing.html", tags=["UI"])
+async def serve_landing():
+    # Menyajikan file landing.html jika diakses langsung
+    if os.path.exists("landing.html"):
+        return FileResponse("landing.html")
+    return {"error": "File landing.html tidak ditemukan di direktori proyek."}
+
+# Mount static files for dashboard (Folder ini tetap melayani UI setelah login)
 if os.path.exists("dashboard"):
     app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
