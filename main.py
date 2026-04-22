@@ -18,7 +18,6 @@ import uuid
 import logging
 from typing import Optional
 
-
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -55,16 +54,17 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 
-
-@app.get("/")
-async def read_root():
+# ---------------------------------------------------------------------------
+# KOREKSI ROUTING: Mengalihkan root ke UI Dashboard
+# ---------------------------------------------------------------------------
+@app.get("/", tags=["System"])
+async def root():
+    # Perubahan eksekusi: Memaksa pengalihan ke file statis UI
     return RedirectResponse(url="/dashboard/index.html")
-
 
 # Mount static files for dashboard
 if os.path.exists("dashboard"):
-    app.mount("/dashboard", StaticFiles(directory="dashboard"), name="dashboard")
-
+    app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ async def submit_ccp1(
     batch_id:     str,
     raw_temp_c:   float             = Form(..., description="Raw material temperature (≤ 5°C)"),
     recorder_id:  Optional[str]     = Form(None),
-    photo:        UploadFile         = File(..., description="Raw material photo"),
+    photo:        UploadFile        = File(..., description="Raw material photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP1 – Pre-Cook: upload raw material photo and validate raw temperature."""
@@ -278,8 +278,8 @@ async def submit_ccp2(
     core_temp_c:     float             = Form(..., description="Core temp (≥ 75°C)"),
     product_id:      str               = Form(...),
     recorder_id:     Optional[str]     = Form(None),
-    ph_photo:        UploadFile         = File(..., description="Milwaukee pH51 LCD photo"),
-    brix_photo:      UploadFile         = File(..., description="Refractometer LCD photo"),
+    ph_photo:        UploadFile        = File(..., description="Milwaukee pH51 LCD photo"),
+    brix_photo:      UploadFile        = File(..., description="Refractometer LCD photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP2 – Post-Cook: validate core temp, and run OCR on pH + Brix photos."""
@@ -337,7 +337,7 @@ async def submit_ccp3(
     batch_id:    str,
     room_temp_c: float             = Form(..., description="Room/ambient temp (≤ 20°C)"),
     recorder_id: Optional[str]     = Form(None),
-    photo:       UploadFile         = File(..., description="Packaging visual photo"),
+    photo:       UploadFile        = File(..., description="Packaging visual photo"),
     sb: Client = Depends(get_supabase),
 ):
     """CCP3 – Packaging: upload packaging photo and validate room temperature."""
