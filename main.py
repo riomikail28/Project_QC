@@ -56,8 +56,8 @@ app.add_middleware(
 )
 
 
-@app.get("/", tags=["System"])
-async def root():
+@app.get("/")
+async def read_root():
     return RedirectResponse(url="/dashboard/index.html")
 
 
