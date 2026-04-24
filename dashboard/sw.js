@@ -49,3 +49,10 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// Di service-worker.js
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-photos') {
+    event.waitUntil(syncPendingPhotos());
+  }
+});

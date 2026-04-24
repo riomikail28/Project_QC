@@ -2691,6 +2691,43 @@
     window.addEventListener('offline', () => {
       alert('⚠️ Anda sedang OFFLINE (Sinyal Terputus). Aplikasi beralih ke Mode Pendingin (Offline Storage). Data tetap aman!');
     });
+
+    // Perbaikan — simpan ke LocalForage dulu, sync kemudian
+    async function savePhoto(blob, batchId) {
+      const key = `photo_${batchId}_${Date.now()}`;
+      // Simpan lokal dulu (offline-safe)
+      await localforage.setItem(key, blob);
+
+      if (navigator.onLine) {
+        await uploadToSupabase(blob, key);
+        await localforage.removeItem(key);
+      }
+      // Service worker akan sync saat online
+    }
+
+    // Perbaikan — kompres ke maks 800KB sebelum upload
+    function compressImage(file, maxKB = 800) {
+      return new Promise(resolve => {
+        const canvas = document.createElement('canvas');
+        const img = new Image();
+        img.onload = () => {
+          const ratio = Math.min(1, Math.sqrt(maxKB * 1024 / file.size));
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          canvas.getContext('2d').drawImage(img, 0, 0,
+            canvas.width, canvas.height);
+          canvas.toBlob(resolve, 'image/jpeg', 0.82);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    // Perbaikan — daftarkan background sync di SW
+    // Di app.js — trigger saat offline save
+    async function scheduleSync() {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.sync.register('sync-photos');
+    }
   </script>
 
 </body>
