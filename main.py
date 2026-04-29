@@ -33,6 +33,8 @@ from supabase import create_client, Client
 # from skills.auto_reporter import ...
 
 # ---------------------------------------------------------------------------
+from qc_validator import router as qc_router
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,8 @@ app = FastAPI(
     description = "Intelligent Quality Control API for Central Kitchen operations.",
     version     = "1.0.0",
 )
+
+app.include_router(qc_router)
 
 app.add_middleware(
     CORSMiddleware,

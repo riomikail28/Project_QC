@@ -12,30 +12,25 @@
   <style>
     /* ===================== DESIGN TOKENS ===================== */
     :root {
-      --bg-base: #f8fafc;
-      --bg-card: #ffffff;
-      --bg-glass: rgba(255, 255, 255, 0.5);
-      --border: #e2e8f0;
-      --border-active: rgba(37, 99, 235, 0.4);
-      --primary: #2563eb;
-      --primary-glow: rgba(37, 99, 235, 0.15);
-      --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.1);
-      --danger: #ef4444;
-      --danger-glow: rgba(239, 68, 68, 0.1);
-      --warning: #f59e0b;
-      --warning-glow: rgba(245, 158, 11, 0.1);
-      --text-primary: #0f172a;
-      --text-secondary: #334155;
-      --text-muted: #64748b;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --radius-xl: 20px;
-      --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
-      --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.1);
-      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    --primary:     #2563eb;
+    --primary-dark: #1e40af;
+    --secondary:   #64748b;
+    --success:     #10b981;
+    --warning:     #f59e0b;
+    --danger:      #ef4444;
+    --bg-app:      #f8fafc;
+    --bg-card:     #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted:   #94a3b8;
+    --border:      #e2e8f0;
+    --radius-sm:   6px;
+    --radius-md:   10px;
+    --radius-lg:   16px;
+    --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --sidebar-w:   260px;
+  }
 
     /* ===================== RESET ===================== */
     *,
@@ -1879,140 +1874,38 @@
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <label>MFG Date (Stok Masak) *</label>
-            <input id="batchDate" type="date" />
-          </div>
-          <div class="form-group">
-            <label>EXP Date (Kedaluwarsa) *</label>
-            <input id="batchExp" type="date" />
-          </div>
-          <div class="form-group">
-            <label>Produk *</label>
-            <select id="batchProduct">
-              <option value="">— Pilih Produk —</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Shift</label>
-            <select id="batchShift">
-              <option value="morning">Pagi (06:00–14:00)</option>
-              <option value="afternoon">Siang (14:00–22:00)</option>
-              <option value="night">Malam (22:00–06:00)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Operator ID (opsional)</label>
-            <input id="batchOperator" type="text" placeholder="UUID operator" />
-          </div>
-          <div class="form-group">
-            <label>QC Officer ID (opsional)</label>
-            <input id="batchQcOfficer" type="text" placeholder="UUID QC officer" />
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div style="display:flex;gap:10px;justify-content:flex-end">
-          <button class="btn btn-ghost" onclick="showPage('batches')">Batal</button>
-          <button class="btn btn-primary" onclick="createBatch()" id="btnCreateBatch">🚀 Buat Batch & Mulai CCP</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== CCP INPUT PAGE ===== -->
-    <div class="page" id="page-ccp">
-      <div class="topbar">
-        <div>
-          <div class="page-title">🔬 Input CCP</div>
-          <div class="page-subtitle">Batch: <strong id="activeBatchLabel">—</strong></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('batches')">← Kembali</button>
-      </div>
-
-      <div class="ccp-stepper" id="ccpStepper">
-        <div class="ccp-step active" id="step1">
-          <div class="step-circle">1</div>
-          <div class="step-label">CCP 1</div>
-          <div class="step-sub">Pre-Cook</div>
-        </div>
-        <div class="ccp-step" id="step2">
-          <div class="step-circle">2</div>
-          <div class="step-label">CCP 2</div>
-          <div class="step-sub">Post-Cook</div>
-        </div>
-        <div class="ccp-step" id="step3">
-          <div class="step-circle">3</div>
-          <div class="step-label">CCP 3</div>
-          <div class="step-sub">Packaging</div>
-        </div>
-        <div class="ccp-step" id="step4">
-          <div class="step-circle">✓</div>
-          <div class="step-label">Laporan</div>
-          <div class="step-sub">Generate</div>
-        </div>
-      </div>
-
-      <!-- CCP1 -->
-      <div id="ccp1Panel" class="card mb-24">
-        <div class="card-header">
-          <div>
-            <div class="card-title">CCP 1 — Pre-Cook</div>
-            <div class="card-subtitle">Validasi bahan baku sebelum proses memasak</div>
-          </div>
-          <span class="zone-badge badge-pending" id="ccp1Badge">Pending</span>
-        </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Suhu Bahan Baku (°C) — SOP: ≤ 5°C *</label>
-            <input id="ccp1Temp" type="number" step="0.1" placeholder="Contoh: 3.5" />
-          </div>
-          <div class="form-group">
-            <label>Foto Bahan Baku *</label>
-            <div class="upload-area" onclick="document.getElementById('ccp1Photo').click()" id="ccp1UploadArea">
-              <div class="upload-icon">📷</div>
-              <div class="upload-text">Klik untuk upload foto</div>
-              <div class="upload-sub">JPG, PNG, WEBP — maks 10MB</div>
-            </div>
-            <input type="file" id="ccp1Photo" accept="image/*" onchange="previewUpload('ccp1Photo','ccp1UploadArea')"
-              capture="environment" />
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:16px">
-          <button class="btn btn-primary" onclick="submitCCP1()" id="btnCCP1">Submit CCP 1</button>
-        </div>
-      </div>
-
-      <!-- CCP2 -->
-      <div id="ccp2Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
-        <div class="card-header">
-          <div>
-            <div class="card-title">CCP 2 — Post-Cook</div>
-            <div class="card-subtitle">Validasi setelah proses memasak — OCR otomatis pada foto alat ukur</div>
-          </div>
-          <span class="zone-badge badge-pending" id="ccp2Badge">Menunggu CCP1</span>
-        </div>
-        <div class="form-grid">
-          <div class="form-group">
             <label>Suhu Inti (°C) — SOP: ≥ 75°C *</label>
             <input id="ccp2Temp" type="number" step="0.1" placeholder="Contoh: 82.5" />
           </div>
-          <div class="form-group" style="grid-row:span 3">
-            <label>Foto LCD pH Meter (Milwaukee pH51) *</label>
+          <div class="form-group" id="param-ph-wrap" style="display:none">
+            <label>Nilai pH *</label>
+            <input id="ccp2Ph" type="number" step="0.01" placeholder="Contoh: 4.5" />
+          </div>
+          <div class="form-group" id="param-brix-wrap" style="display:none">
+            <label>Kadar Brix (%) *</label>
+            <input id="ccp2Brix" type="number" step="0.1" placeholder="Contoh: 12.5" />
+          </div>
+          <div class="form-group" id="param-tds-wrap" style="display:none">
+            <label>Kadar TDS (ppm) *</label>
+            <input id="ccp2Tds" type="number" step="1" placeholder="Contoh: 3500" />
+          </div>
+          
+          <div class="form-group" id="ph-photo-wrap" style="grid-row:span 2">
+            <label>Foto LCD pH Meter *</label>
             <div class="upload-area" onclick="document.getElementById('ccp2PhPhoto').click()" id="ccp2PhArea">
               <div class="upload-icon">🧪</div>
-              <div class="upload-text">Upload foto LCD pH Meter</div>
-              <div class="upload-sub">OCR akan membaca nilai otomatis</div>
+              <div class="upload-text">Upload foto LCD pH</div>
             </div>
-            <input type="file" id="ccp2PhPhoto" accept="image/*" onchange="previewUpload('ccp2PhPhoto','ccp2PhArea')"
-              capture="environment" />
+            <input type="file" id="ccp2PhPhoto" accept="image/*" onchange="previewUpload('ccp2PhPhoto','ccp2PhArea')" capture="environment" />
           </div>
-          <div class="form-group" style="grid-row:span 3">
+          
+          <div class="form-group" id="brix-photo-wrap" style="grid-row:span 2">
             <label>Foto LCD Refraktometer *</label>
             <div class="upload-area" onclick="document.getElementById('ccp2BrixPhoto').click()" id="ccp2BrixArea">
               <div class="upload-icon">🔭</div>
-              <div class="upload-text">Upload foto LCD Refraktometer</div>
-              <div class="upload-sub">OCR akan membaca nilai Brix</div>
+              <div class="upload-text">Upload foto LCD Brix</div>
             </div>
-            <input type="file" id="ccp2BrixPhoto" accept="image/*"
-              onchange="previewUpload('ccp2BrixPhoto','ccp2BrixArea')" capture="environment" />
+            <input type="file" id="ccp2BrixPhoto" accept="image/*" onchange="previewUpload('ccp2BrixPhoto','ccp2BrixArea')" capture="environment" />
           </div>
         </div>
         <div id="ocrResultBox" style="display:none" class="ocr-box">
@@ -2158,34 +2051,264 @@
                 <th>Nama Produk</th>
                 <th>pH Range</th>
                 <th>Brix Range</th>
-                <th>Core Temp Min</th>
+                <th>TDS Range</th>
                 <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="productTable">
               <tr>
-                <td>SKU-SOUP-001</td>
-                <td>Tom Yam Soup Base</td>
-                <td>5.5 - 6.5</td>
-                <td>8.0 - 12.0</td>
-                <td>75.0°C</td>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
                 <td>
                   <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
                   <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
                 </td>
               </tr>
               <tr>
-                <td>SKU-SAUCE-002</td>
-                <td>Sweet Chili Sauce</td>
-                <td>3.5 - 4.5</td>
-                <td>35.0 - 45.0</td>
-                <td>75.0°C</td>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
                 <td>
                   <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
                   <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
                 </td>
               </tr>
-            </tbody>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sop.ph ? p.sop.ph.min + ' - ' + p.sop.ph.max : '-'}</td>
+                <td>${p.sop.brix ? p.sop.brix.min + ' - ' + p.sop.brix.max : '-'}</td>
+                <td>${p.sop.tds ? p.sop.tds.min + ' - ' + p.sop.tds.max : '-'}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr></tbody>
           </table>
         </div>
       </div>
@@ -2626,7 +2749,7 @@
           activeBatchProductId = productVal;
           currentStep = 1;
           resetCCPUI();
-          showPage('ccp');
+          const selProd = PRODUCTS.find(p => p.id === document.getElementById('batchProduct').value); updateCcpFields(selProd); showPage('ccp');
           document.getElementById('activeBatchLabel').textContent = d.batch_code;
           toast('✅ Batch ' + d.batch_code + ' berhasil dibuat!', 'success');
         } else {
