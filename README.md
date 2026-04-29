@@ -27,4 +27,7 @@ Sistem manajemen mutu (Quality Control) berbasis digital yang dirancang khusus u
 
 ---
 *Proyek ini dikembangkan untuk tujuan pemenuhan tugas akhir akademis.bisa dikembangkan lebih lanjut*
-OP-01  1234
+
+
+Username: admin | Password: admin123 -> Mendapatkan akses Admin (kendali penuh)
+Username: staff | Password: 1234 -> Mendapatkan akses Staff (mengerjakan tugas QC)
