@@ -1872,12 +1872,60 @@
       <div class="topbar">
         <div>
           <div class="page-title">➕ Buat Batch Baru</div>
-          <div class="page-subtitle">Mulai sesi produksi baru</div>
+          <div class="page-subtitle">Pilih produk (SKU) dan mulai sesi inspeksi QC</div>
         </div>
       </div>
-      <div class="card" style="max-width:700px">
+
+      <!-- STEP 1: Batch Identity -->
+      <div class="card mb-24" id="batchCreationPanel">
         <div class="card-header">
-          <div class="card-title">Informasi Batch</div>
+          <div class="card-title">Step 1: Identitas Produksi</div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Produk (SKU) *</label>
+            <select id="batchProduct" onchange="updateCcpFields(selectedProduct())">
+              <option value="">Memuat master produk...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Shift *</label>
+            <select id="batchShift">
+              <option value="Pagi">Pagi (07:00 - 15:00)</option>
+              <option value="Siang">Siang (15:00 - 23:00)</option>
+              <option value="Malam">Malam (23:00 - 07:00)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>MFG Date (Tanggal Masak) *</label>
+            <input type="date" id="batchDate" />
+          </div>
+          <div class="form-group">
+            <label>EXP Date (Kadaluarsa) *</label>
+            <input type="date" id="batchExp" />
+          </div>
+          <div class="form-group">
+            <label>Operator (Cook) *</label>
+            <select id="batchOperator">
+              <option value="">Pilih Operator</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>QC Officer *</label>
+            <select id="batchQcOfficer">
+              <option value="">Pilih QC</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:20px">
+          <button class="btn btn-primary" id="btnCreateBatch" onclick="createBatch()">Mulai Sesi Batch</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: CCP 2 -->
+      <div class="card mb-24" id="ccp2Panel" style="opacity:0.4; pointer-events:none">
+        <div class="card-header">
+          <div class="card-title">Step 2: CCP 2 — Cooking & Sensory</div>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -1934,7 +1982,7 @@
         </div>
       </div>
 
-      <!-- CCP3 -->
+      <!-- STEP 3: CCP 3 -->
       <div id="ccp3Panel" class="card mb-24" style="opacity:0.4;pointer-events:none">
         <div class="card-header">
           <div>
@@ -2593,6 +2641,7 @@
       if (name === 'batches') loadBatches();
       if (name === 'products') loadProductsTable();
       if (name === 'staff') loadStaffAccounts();
+      if (name === 'new-batch') { loadProducts(); loadStaff(); }
     }
 
     // ============================================================
@@ -2789,13 +2838,13 @@
 
     async function loadProducts() {
       const sel = document.getElementById('batchProduct');
+      if (!sel) return;
       try {
-        const r = await fetch(API_BASE + '/products');
+        const r = await fetch(API_BASE + '/api/qc/products');
         productsCache = await r.json();
-        sel.innerHTML = '<option value="">Pilih Produk</option>' + productsCache.map(p =>
-          `<option value="${p.id}" data-code="${p.product_code}">${p.product_code} - ${p.product_name}</option>`
+        sel.innerHTML = '<option value="">Pilih Produk (SKU)</option>' + productsCache.map(p =>
+          `<option value="${p.id}">${p.id} - ${p.name}</option>`
         ).join('');
-        sel.onchange = () => updateCcpFields(selectedProduct());
       } catch (e) {
         productsCache = [];
         sel.innerHTML = '<option value="">Produk gagal dimuat</option>';
@@ -2803,18 +2852,50 @@
       }
     }
 
+    async function loadStaff() {
+      const opSel = document.getElementById('batchOperator');
+      const qcSel = document.getElementById('batchQcOfficer');
+      if (!opSel || !qcSel) return;
+      try {
+        const r = await fetch(API_BASE + '/api/staff/');
+        const staff = await r.json();
+        const ops = staff.filter(s => s.role === 'staff' || s.role === 'operator' || s.role === 'admin');
+        const qcs = staff.filter(s => s.role === 'admin' || s.role === 'qc');
+        
+        opSel.innerHTML = '<option value="">Pilih Operator</option>' + ops.map(s => `<option value="${s.id}">${s.username}</option>`).join('');
+        qcSel.innerHTML = '<option value="">Pilih QC</option>' + qcs.map(s => `<option value="${s.id}">${s.username}</option>`).join('');
+      } catch (e) {
+        console.error('Load staff failed', e);
+      }
+    }
+
     async function loadProductsTable() {
-      if (!productsCache.length) await loadProducts();
-      document.getElementById('productTable').innerHTML = productsCache.map(p => `
-        <tr>
-          <td>${p.product_code}</td>
-          <td>${p.product_name}</td>
-          <td>${formatRange(p.ph_min, p.ph_max, ' pH')}</td>
-          <td>${formatRange(p.brix_min, p.brix_max, '%')}</td>
-          <td>${formatRange(p.tds_min, p.tds_max, ' ppm')}</td>
-          <td><span class="zone-badge badge-ok">Active</span></td>
-        </tr>
-      `).join('');
+      try {
+        const r = await fetch(API_BASE + '/api/qc/products');
+        const products = await r.json();
+        productsCache = products;
+        
+        const tbody = document.getElementById('productTable');
+        if (!products || products.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada data produk</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = products.map(p => `
+          <tr>
+            <td class="font-mono">${p.id}</td>
+            <td>${p.name}</td>
+            <td>${formatRange(p.params.ph?.min, p.params.ph?.max, '')}</td>
+            <td>${formatRange(p.params.brix?.min, p.params.brix?.max, '%')}</td>
+            <td>${formatRange(p.params.tds?.min, p.params.tds?.max, ' ppm')}</td>
+            <td>
+              <button class="btn btn-sm" onclick="alert('Edit feature coming soon')">Edit</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        toast('Gagal memuat tabel produk: ' + e.message, 'error');
+      }
     }
     // BATCH CREATE
     // ============================================================
@@ -2856,11 +2937,21 @@
           activeBatchId = d.batch_id;
           activeBatchCode = d.batch_code;
           activeBatchProductId = productVal;
-          currentStep = 1;
-          resetCCPUI();
-          updateCcpFields(selectedProduct()); showPage('ccp');
-          document.getElementById('activeBatchLabel').textContent = d.batch_code;
+          
+          // UI Transition: Unlock Step 2
+          const ccp2 = document.getElementById('ccp2Panel');
+          ccp2.style.opacity = '1';
+          ccp2.style.pointerEvents = 'auto';
+          document.getElementById('ccp2Badge').className = 'zone-badge badge-pending';
+          document.getElementById('ccp2Badge').textContent = 'Siap Diisi';
+          
+          // Lock Step 1
+          document.getElementById('batchCreationPanel').style.opacity = '0.7';
+          document.getElementById('batchCreationPanel').style.pointerEvents = 'none';
+          document.getElementById('btnCreateBatch').style.display = 'none';
+
           toast('✅ Batch ' + d.batch_code + ' berhasil dibuat!', 'success');
+          ccp2.scrollIntoView({ behavior: 'smooth' });
         } else {
           toast('Error: ' + (d.detail || JSON.stringify(d)), 'error');
         }
