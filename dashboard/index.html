@@ -1447,6 +1447,13 @@
         </div>
       </div>
       <div class="brand-company">PT Astro Teknologi Indonesia</div>
+      <div id="userProfile" style="margin-top:15px; padding:10px; background:var(--primary-glow); border-radius:8px; display:flex; align-items:center; gap:10px">
+        <div style="width:32px; height:32px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold" id="userInitial">A</div>
+        <div style="overflow:hidden">
+          <div style="font-size:12px; font-weight:700; color:var(--text-primary)" id="userName">Admin</div>
+          <div style="font-size:10px; color:var(--text-muted); text-transform:capitalize" id="userRole">Administrator</div>
+        </div>
+      </div>
     </div>
 
     <nav class="sidebar-nav">
@@ -2421,25 +2428,85 @@
   <!-- ===== SCRIPT ===== -->
   <script>
     
+    
     function openStaffModal() {
       document.getElementById('staffUsername').value = '';
       document.getElementById('staffPassword').value = '';
       document.getElementById('staffModal').classList.add('open');
     }
-    function addStaff() {
-      const uname = document.getElementById('staffUsername').value;
-      if(!uname) { toast('Username wajib diisi', 'error'); return; }
+    
+    async function loadStaffAccounts() {
+      const tbody = document.getElementById('staffTable');
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px">Memuat data staf...</td></tr>';
       
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${uname}</td>
-        <td><span class="badge-pending">Staff</span></td>
-        <td><button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus akun staff?')){this.parentElement.parentElement.remove();toast('Akun staff dihapus','success')}">Hapus</button></td>
-      `;
-      document.getElementById('staffTable').appendChild(tr);
-      closeModal('staffModal');
-      toast('Akun staff ' + uname + ' berhasil ditambahkan', 'success');
+      try {
+        const r = await fetch(API_BASE + '/api/staff/');
+        const data = await r.json();
+        
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px">Tidak ada data staf</td></tr>';
+          return;
+        }
+        
+        data.forEach(s => {
+          const tr = document.createElement('tr');
+          const isStaff = s.role === 'staff';
+          tr.innerHTML = `
+            <td>${s.username}</td>
+            <td><span class="${isStaff ? 'badge-pending' : 'badge-pass'}">${s.role}</span></td>
+            <td>
+              ${s.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}', '${s.username}')">Hapus</button>` : '-'}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        toast('Gagal memuat data staf', 'error');
+      }
     }
+
+    async function addStaff() {
+      const uname = document.getElementById('staffUsername').value;
+      const pwd = document.getElementById('staffPassword').value;
+      if(!uname || !pwd) { toast('Username dan Password wajib diisi', 'error'); return; }
+      
+      try {
+        const r = await fetch(API_BASE + '/api/staff/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: uname, password: pwd, role: 'staff' })
+        });
+        
+        if (r.ok) {
+          closeModal('staffModal');
+          toast('Akun staff ' + uname + ' berhasil ditambahkan', 'success');
+          loadStaffAccounts();
+        } else {
+          const d = await r.json();
+          toast('Gagal: ' + (d.detail || 'Terjadi kesalahan'), 'error');
+        }
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      }
+    }
+
+    async function deleteStaff(id, name) {
+      if(!confirm(`Hapus akun staff ${name}?`)) return;
+      
+      try {
+        const r = await fetch(API_BASE + '/api/staff/' + id, { method: 'DELETE' });
+        if (r.ok) {
+          toast('Akun staff dihapus', 'success');
+          loadStaffAccounts();
+        } else {
+          toast('Gagal menghapus staff', 'error');
+        }
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      }
+    }
+
 
     function openProductModal() {
       document.getElementById('prodCode').value = '';
@@ -2498,6 +2565,14 @@
       document.getElementById('batchDate').value = new Date().toISOString().split('T')[0];
       let exp = new Date(); exp.setMonth(exp.getMonth() + 6); // default 6 month EXP
       document.getElementById('batchExp').value = exp.toISOString().split('T')[0];
+      
+      // Load User Info
+      const role = localStorage.getItem('qc_user_role') || 'staff';
+      const username = localStorage.getItem('qc_username') || 'Staff';
+      document.getElementById('userName').textContent = username;
+      document.getElementById('userRole').textContent = role;
+      document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
+      
       checkServerStatus();
       loadDashboard();
       loadProducts();
@@ -2517,6 +2592,7 @@
       if (name === 'facility') loadFacilityPage();
       if (name === 'batches') loadBatches();
       if (name === 'products') loadProductsTable();
+      if (name === 'staff') loadStaffAccounts();
     }
 
     // ============================================================

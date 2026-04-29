@@ -121,41 +121,47 @@
 
 
   <script>
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
 
-      let isValid = false;
-      let role = '';
-
-      // --- DATABASE ACREDENTIAL SEMENTARA (SIMULASI) ---
-      if (username === 'admin' && password === 'admin123') {
-        isValid = true;
-        role = 'admin';
-      } else if (username === 'staff' && password === '1234') {
-        isValid = true;
-        role = 'staff';
-      }
-
-      if (!isValid) {
-        alert('Peringatan: Username atau Password salah!');
-        return;
-      }
-
-      // Simpan sesi login di LocalStorage
-      localStorage.setItem('qc_user_role', role);
-      localStorage.setItem('qc_logged_in', 'true');
-      localStorage.setItem('qc_username', username);
-
-      // Simulasi proses loading tipis
       const btn = document.querySelector('button[type="submit"]');
-      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi Kredensial...';
-      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      const originalBtnText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memverifikasi...';
+      btn.disabled = true;
 
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 1000);
+      try {
+        const response = await fetch('/api/staff/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Simpan sesi login di LocalStorage
+          localStorage.setItem('qc_user_role', data.role);
+          localStorage.setItem('qc_logged_in', 'true');
+          localStorage.setItem('qc_username', data.username);
+          localStorage.setItem('qc_user_id', data.id);
+          localStorage.setItem('qc_token', data.token);
+
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 500);
+        } else {
+          alert('Gagal: ' + (data.detail || 'Username atau Password salah!'));
+          btn.innerHTML = originalBtnText;
+          btn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Koneksi ke server gagal. Pastikan API berjalan.');
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
+      }
     });
 
     // Auto redirect jika sudah login

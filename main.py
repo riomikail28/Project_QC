@@ -34,6 +34,7 @@ from supabase import create_client, Client
 
 # ---------------------------------------------------------------------------
 from qc_validator import router as qc_router
+from staff_manager import router as staff_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ app = FastAPI(
 )
 
 app.include_router(qc_router)
+app.include_router(staff_router)
 
 app.add_middleware(
     CORSMiddleware,
