@@ -179,6 +179,7 @@ def _build_report_payload(
             ("core_temp_status", f"Core temp {ccp2_row.get('core_temp_c')}°C < min {product.get('core_temp_min_c')}°C"),
             ("ph_value_status",  f"pH {ccp2_row.get('ph_value_extracted')} out of SOP [{product.get('ph_min')}–{product.get('ph_max')}]"),
             ("brix_value_status",f"Brix {ccp2_row.get('brix_value_extracted')} out of SOP [{product.get('brix_min')}–{product.get('brix_max')}]"),
+            ("tds_value_status", f"TDS {ccp2_row.get('tds_value')} out of SOP [{product.get('tds_min')}-{product.get('tds_max')}]"),
         ]:
             if ccp2_row.get(check_field) == "fail":
                 violations.append(f"CCP2 FAIL – {label}")
@@ -192,6 +193,9 @@ def _build_report_payload(
             "brix_value_extracted":  ccp2_row.get("brix_value_extracted"),
             "brix_value_status":     ccp2_row.get("brix_value_status"),
             "brix_threshold":        f"{product.get('brix_min')} – {product.get('brix_max')}",
+            "tds_value":             ccp2_row.get("tds_value"),
+            "tds_value_status":      ccp2_row.get("tds_value_status"),
+            "tds_threshold":         f"{product.get('tds_min')} - {product.get('tds_max')}",
             "ocr_confidence_ph":     ccp2_row.get("ocr_confidence_ph"),
             "ocr_confidence_brix":   ccp2_row.get("ocr_confidence_brix"),
             "stage_qc_status":       ccp2_row.get("stage_qc_status"),
@@ -216,7 +220,8 @@ def _build_report_payload(
             "recorded_at":           ccp3_row.get("recorded_at"),
         }
 
-    final_status = batch.get("final_qc_status") or (
+    stored_status = batch.get("final_qc_status")
+    final_status = stored_status if stored_status in {"pass", "fail"} else (
         "fail" if violations else "pass"
     )
 
@@ -347,6 +352,15 @@ REPORT_HTML_TEMPLATE = """
     <td class="{{ payload.ccp2.brix_value_status }}">
         {{ payload.ccp2.brix_value_status | upper }}</td>
   </tr>
+  {% if payload.ccp2.tds_value is not none %}
+  <tr>
+    <td>TDS</td>
+    <td>{{ payload.ccp2.tds_value }}</td>
+    <td>{{ payload.ccp2.tds_threshold }}</td>
+    <td class="{{ payload.ccp2.tds_value_status }}">
+        {{ payload.ccp2.tds_value_status | upper }}</td>
+  </tr>
+  {% endif %}
 </table>
 <p>
   {% if payload.photos.ph_meter %}

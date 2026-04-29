@@ -16,6 +16,7 @@ Run:
 import os
 import uuid
 import logging
+from datetime import date
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
@@ -35,6 +36,7 @@ from supabase import create_client, Client
 # ---------------------------------------------------------------------------
 from qc_validator import router as qc_router
 from staff_manager import router as staff_router
+from product_catalog import CENTRAL_KITCHEN_PRODUCTS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,6 +93,60 @@ if os.path.exists("assets"):
 
 def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def _clean_uuid(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    try:
+        return str(uuid.UUID(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _product_payload(row: dict) -> dict:
+    return {
+        "id": row.get("id") or row["product_code"],
+        "product_code": row["product_code"],
+        "product_name": row["product_name"],
+        "ph_min": row.get("ph_min"),
+        "ph_max": row.get("ph_max"),
+        "brix_min": row.get("brix_min"),
+        "brix_max": row.get("brix_max"),
+        "tds_min": row.get("tds_min"),
+        "tds_max": row.get("tds_max"),
+        "core_temp_min_c": row.get("core_temp_min_c", 75.0),
+        "raw_temp_max_c": row.get("raw_temp_max_c", 5.0),
+        "room_temp_max_c": row.get("room_temp_max_c", 20.0),
+        "is_active": row.get("is_active", True),
+    }
+
+
+def _resolve_product_id(sb: Client, product_id_or_code: str) -> str:
+    if _clean_uuid(product_id_or_code):
+        return product_id_or_code
+
+    try:
+        res = (
+            sb.table("products")
+            .select("id")
+            .eq("product_code", product_id_or_code)
+            .single()
+            .execute()
+        )
+    except Exception as e:
+        raise HTTPException(503, f"Database produk belum siap: {e}")
+
+    if not res.data:
+        raise HTTPException(400, f"Product code '{product_id_or_code}' tidak ditemukan.")
+    return res.data["id"]
+
+
+def _stage_status(*statuses: Optional[str]) -> str:
+    present = [s for s in statuses if s]
+    if not present:
+        return "pending_review"
+    return "fail" if any(s == "fail" for s in present) else "pass"
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +217,16 @@ class ReportResponse(BaseModel):
     violations:    list[str]
 
 
+class DashboardSummary(BaseModel):
+    date: str
+    batch_today: int
+    batch_pass: int
+    batch_fail: int
+    open_alerts: int
+    latest_facility: list[dict]
+    recent_batches: list[dict]
+
+
 # ---------------------------------------------------------------------------
 # MODULE A — Facility Monitoring
 # ---------------------------------------------------------------------------
@@ -186,7 +252,7 @@ async def log_facility_temperature(
     result = check_facility_temperature(
         zone        = zone_enum,
         temperature = temperature,
-        recorder_id = recorder_id,
+        recorder_id = _clean_uuid(recorder_id),
         notes       = notes,
     )
     return FacilityLogResponse(
@@ -203,33 +269,111 @@ async def log_facility_temperature(
 # MODULE B — Production Batch Lifecycle
 # ---------------------------------------------------------------------------
 
+@app.get("/products", tags=["Master Data"])
+async def list_products(sb: Client = Depends(get_supabase)):
+    """Return active products and SOP thresholds for dashboard/forms."""
+    try:
+        res = (
+            sb.table("products")
+            .select("*")
+            .eq("is_active", True)
+            .order("product_code")
+            .execute()
+        )
+        if res.data:
+            return [_product_payload(row) for row in res.data]
+    except Exception as e:
+        logger.warning("Product DB unavailable, using local catalog: %s", e)
+
+    return [_product_payload(row) for row in CENTRAL_KITCHEN_PRODUCTS]
+
+
+@app.get("/api/analytics/summary", response_model=DashboardSummary, tags=["Analytics"])
+async def analytics_summary(day: Optional[str] = None, sb: Client = Depends(get_supabase)):
+    """BI summary for the dashboard."""
+    selected_day = day or date.today().isoformat()
+    try:
+        batches = (
+            sb.table("production_batches")
+            .select("id,batch_code,production_date,shift,status,final_qc_status,created_at,products(product_code,product_name)")
+            .eq("production_date", selected_day)
+            .order("created_at", desc=True)
+            .execute()
+        ).data or []
+        alerts = (
+            sb.table("facility_alerts")
+            .select("id")
+            .eq("status", "open")
+            .execute()
+        ).data or []
+        facility_logs = (
+            sb.table("facility_logs")
+            .select("zone,temperature_c,threshold_c,is_normal,recorded_at")
+            .order("recorded_at", desc=True)
+            .limit(50)
+            .execute()
+        ).data or []
+    except Exception as e:
+        logger.warning("Analytics DB unavailable: %s", e)
+        return DashboardSummary(
+            date=selected_day,
+            batch_today=0,
+            batch_pass=0,
+            batch_fail=0,
+            open_alerts=0,
+            latest_facility=[],
+            recent_batches=[],
+        )
+
+    latest_by_zone: dict[str, dict] = {}
+    for row in facility_logs:
+        latest_by_zone.setdefault(row["zone"], row)
+
+    return DashboardSummary(
+        date=selected_day,
+        batch_today=len(batches),
+        batch_pass=sum(1 for b in batches if b.get("final_qc_status") == "pass"),
+        batch_fail=sum(1 for b in batches if b.get("final_qc_status") == "fail"),
+        open_alerts=len(alerts),
+        latest_facility=list(latest_by_zone.values()),
+        recent_batches=batches[:10],
+    )
+
+
+@app.get("/batches", tags=["Batch QC"])
+async def list_batches(limit: int = 50, sb: Client = Depends(get_supabase)):
+    try:
+        res = (
+            sb.table("production_batches")
+            .select("id,batch_code,production_date,shift,status,final_qc_status,report_url,created_at,products(product_code,product_name)")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+    except Exception as e:
+        raise HTTPException(503, f"Gagal membaca batch: {e}")
+
+
 @app.post("/batch/create", response_model=BatchCreateResponse, tags=["Batch QC"])
 async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supabase)):
     """Create a new production batch record."""
-    # Mencari UUID produk berdasarkan Product Code (misal SKU-SOUP-001)
-    pid = body.product_id
-    if len(pid) != 36: # Jika bukan format UUID
-        try:
-            prod_check = sb.table("products").select("id").eq("product_code", pid).execute()
-            if prod_check.data:
-                pid = prod_check.data[0]["id"]
-        except Exception:
-            pass
+    pid = _resolve_product_id(sb, body.product_id)
 
     try:
         res = sb.table("production_batches").insert({
-            "product_id":      pid if len(pid) == 36 else "00000000-0000-0000-0000-000000000000",
+            "product_id":      pid,
             "batch_code":      body.batch_code,
             "production_date": body.production_date,
             "shift":           body.shift,
-            "operator_id":     body.operator_id if body.operator_id else "00000000-0000-0000-0000-000000000000",
-            "qc_officer_id":   body.qc_officer_id if body.qc_officer_id else "00000000-0000-0000-0000-000000000000",
+            "operator_id":     _clean_uuid(body.operator_id),
+            "qc_officer_id":   _clean_uuid(body.qc_officer_id),
         }).execute()
         if not res.data: raise Exception("No data returned")
         batch_id = res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error create_batch bypassed: {e}")
-        batch_id = str(uuid.uuid4())
+        logger.error(f"DB Error create_batch: {e}")
+        raise HTTPException(503, f"Gagal membuat batch di database: {e}")
     return BatchCreateResponse(
         batch_id   = batch_id,
         batch_code = body.batch_code,
@@ -264,13 +408,13 @@ async def submit_ccp1(
         log_res = sb.table("production_batch_logs").insert({
             "batch_id":                 batch_id,
             "stage":                    "CCP1_PRE_COOK",
-            "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
+            "recorder_id":              _clean_uuid(recorder_id),
             "raw_material_photo_path":  photo_path,
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error ccp1 bypassed: {e}")
-        batch_log_id = str(uuid.uuid4())
+        logger.error(f"DB Error ccp1: {e}")
+        raise HTTPException(503, f"Gagal menyimpan CCP1: {e}")
 
     from skills.parametric_checker import check_ccp_temperatures
     result = check_ccp_temperatures(
@@ -279,6 +423,9 @@ async def submit_ccp1(
         temperature  = raw_temp_c,
         recorder_id  = recorder_id,
     )
+    sb.table("production_batch_logs").update({
+        "stage_qc_status": result.status.value,
+    }).eq("id", batch_log_id).execute()
 
     return CCPLogResponse(
         batch_log_id = batch_log_id,
@@ -295,27 +442,31 @@ async def submit_ccp2(
     batch_id:        str,
     core_temp_c:     float             = Form(..., description="Core temp (≥ 75°C)"),
     product_id:      str               = Form(...),
+    ph_value:        Optional[float]    = Form(None),
+    brix_value:      Optional[float]    = Form(None),
+    tds_value:       Optional[float]    = Form(None),
     recorder_id:     Optional[str]     = Form(None),
-    ph_photo:        UploadFile        = File(..., description="Milwaukee pH51 LCD photo"),
-    brix_photo:      UploadFile        = File(..., description="Refractometer LCD photo"),
+    ph_photo:        Optional[UploadFile] = File(None),
+    brix_photo:      Optional[UploadFile] = File(None),
     sb: Client = Depends(get_supabase),
 ):
     """CCP2 – Post-Cook: validate core temp, and run OCR on pH + Brix photos."""
-    ph_path   = await _upload_photo(sb, ph_photo,   f"ccp2/{batch_id}/ph")
-    brix_path = await _upload_photo(sb, brix_photo, f"ccp2/{batch_id}/brix")
+    ph_path = await _upload_photo(sb, ph_photo, f"ccp2/{batch_id}/ph") if ph_photo else None
+    brix_path = await _upload_photo(sb, brix_photo, f"ccp2/{batch_id}/brix") if brix_photo else None
+    resolved_product_id = _resolve_product_id(sb, product_id)
 
     try:
         log_res = sb.table("production_batch_logs").insert({
             "batch_id":                 batch_id,
             "stage":                    "CCP2_POST_COOK",
-            "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
+            "recorder_id":              _clean_uuid(recorder_id),
             "ph_meter_photo_path":      ph_path,
             "refractometer_photo_path": brix_path
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error ccp2 bypassed: {e}")
-        batch_log_id = str(uuid.uuid4())
+        logger.error(f"DB Error ccp2: {e}")
+        raise HTTPException(503, f"Gagal menyimpan CCP2: {e}")
 
     # Temperature check
     from skills.parametric_checker import check_ccp_temperatures
@@ -330,10 +481,53 @@ async def submit_ccp2(
     from skills.ocr_digital_reader import run_ocr_digital_reader
     ocr_output = run_ocr_digital_reader(
         batch_log_id    = batch_log_id,
-        product_id      = product_id,
+        product_id      = resolved_product_id,
         ph_photo_path   = ph_path,
         brix_photo_path = brix_path,
     )
+
+    product = (
+        sb.table("products")
+        .select("ph_min,ph_max,brix_min,brix_max,tds_min,tds_max")
+        .eq("id", resolved_product_id)
+        .single()
+        .execute()
+    ).data or {}
+
+    def param_status(value: Optional[float], lo: Optional[float], hi: Optional[float]) -> Optional[str]:
+        if value is None:
+            return None
+        if lo is not None and value < float(lo):
+            return "fail"
+        if hi is not None and value > float(hi):
+            return "fail"
+        return "pass"
+
+    manual_payload = {}
+    manual_ph_status = param_status(ph_value, product.get("ph_min"), product.get("ph_max"))
+    manual_brix_status = param_status(brix_value, product.get("brix_min"), product.get("brix_max"))
+    manual_tds_status = param_status(tds_value, product.get("tds_min"), product.get("tds_max"))
+    if ph_value is not None:
+        manual_payload.update(ph_value_extracted=ph_value, ph_value_status=manual_ph_status)
+    if brix_value is not None:
+        manual_payload.update(brix_value_extracted=brix_value, brix_value_status=manual_brix_status)
+    if tds_value is not None:
+        manual_payload.update(tds_value=tds_value, tds_value_status=manual_tds_status)
+    if manual_payload:
+        sb.table("production_batch_logs").update(manual_payload).eq("id", batch_log_id).execute()
+
+    ph_status = None
+    brix_status = None
+    if ocr_output.get("ph_result"):
+        ph_status = "pass" if ocr_output["ph_result"].is_valid else "fail"
+    if ocr_output.get("brix_result"):
+        brix_status = "pass" if ocr_output["brix_result"].is_valid else "fail"
+    ph_status = manual_ph_status or ph_status
+    brix_status = manual_brix_status or brix_status
+    stage_status = _stage_status(temp_result.status.value, ph_status, brix_status, manual_tds_status)
+    sb.table("production_batch_logs").update({
+        "stage_qc_status": stage_status,
+    }).eq("id", batch_log_id).execute()
 
     return CCPLogResponse(
         batch_log_id = batch_log_id,
@@ -342,9 +536,12 @@ async def submit_ccp2(
         ocr_result   = {
             "ph_value":    ocr_output["ph_result"].value if ocr_output.get("ph_result") else None,
             "brix_value":  ocr_output["brix_result"].value if ocr_output.get("brix_result") else None,
+            "manual_ph_value": ph_value,
+            "manual_brix_value": brix_value,
+            "manual_tds_value": tds_value,
             "overall_pass": ocr_output["overall_pass"],
         },
-        stage_status = "pass" if (temp_result.status.value == "pass" and ocr_output["overall_pass"]) else "fail",
+        stage_status = stage_status,
     )
 
 
@@ -365,13 +562,13 @@ async def submit_ccp3(
         log_res = sb.table("production_batch_logs").insert({
             "batch_id":                 batch_id,
             "stage":                    "CCP3_PACKAGING",
-            "recorder_id":              recorder_id if recorder_id else "00000000-0000-0000-0000-000000000000",
+            "recorder_id":              _clean_uuid(recorder_id),
             "packaging_photo_path":     photo_path,
         }).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error ccp3 bypassed: {e}")
-        batch_log_id = str(uuid.uuid4())
+        logger.error(f"DB Error ccp3: {e}")
+        raise HTTPException(503, f"Gagal menyimpan CCP3: {e}")
 
     from skills.parametric_checker import check_ccp_temperatures
     result = check_ccp_temperatures(
@@ -380,6 +577,9 @@ async def submit_ccp3(
         temperature  = room_temp_c,
         recorder_id  = recorder_id,
     )
+    sb.table("production_batch_logs").update({
+        "stage_qc_status": result.status.value,
+    }).eq("id", batch_log_id).execute()
 
     return CCPLogResponse(
         batch_log_id = batch_log_id,

@@ -56,3 +56,11 @@ self.addEventListener('sync', event => {
     event.waitUntil(syncPendingPhotos());
   }
 });
+
+async function syncPendingPhotos() {
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => client.postMessage({
+    type: 'SYNC_REQUESTED',
+    message: 'Background sync requested. Pending queue is handled by the app when online.'
+  }));
+}

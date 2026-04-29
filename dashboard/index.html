@@ -2618,22 +2618,40 @@
     }
 
     async function refreshDashboard() {
-      // Try to load recent batch data from API
       try {
-        // Fetch recent facility logs for zone cards display
-        renderZoneDashboard('chiller', null, false);
-        renderZoneDashboard('freezer', null, false);
-        renderZoneDashboard('ambient', null, false);
-        // Stats placeholder
-        document.getElementById('statBatchToday').textContent = '—';
-        document.getElementById('statBatchPass').textContent = '—';
-        document.getElementById('statBatchFail').textContent = '—';
-        document.getElementById('statAlerts').textContent = '0';
-        document.getElementById('dashBatchTable').innerHTML =
-          '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada batch hari ini</td></tr>';
+        const r = await fetch(API_BASE + '/api/analytics/summary');
+        const d = await r.json();
+        document.getElementById('statBatchToday').textContent = d.batch_today ?? 0;
+        document.getElementById('statBatchPass').textContent = d.batch_pass ?? 0;
+        document.getElementById('statBatchFail').textContent = d.batch_fail ?? 0;
+        document.getElementById('statAlerts').textContent = d.open_alerts ?? 0;
+
+        ['chiller', 'freezer', 'ambient'].forEach(zone => renderZoneDashboard(zone, null, false));
+        (d.latest_facility || []).forEach(row => renderZoneDashboard(row.zone, row.temperature_c, row.is_normal));
+
+        const rows = d.recent_batches || [];
+        const dashTable = document.getElementById('dashBatchTable');
+        if (dashTable) {
+          dashTable.innerHTML = rows.length ? rows.map(batchRow).join('') :
+            '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada batch hari ini</td></tr>';
+        }
       } catch (e) { console.error(e); }
     }
 
+    function batchRow(b) {
+      const product = b.products?.product_name || b.product_name || '-';
+      const status = b.final_qc_status || b.status || 'pending_review';
+      const badge = status === 'pass' ? 'badge-ok' : (status === 'fail' ? 'badge-alert' : 'badge-pending');
+      return `<tr>
+        <td>${b.batch_code || '-'}</td>
+        <td>${product}</td>
+        <td>${b.production_date || '-'}</td>
+        <td>${b.shift || '-'}</td>
+        <td><span class="zone-badge ${badge}">${status.toUpperCase()}</span></td>
+        <td>${b.qc_officer_id || '-'}</td>
+        <td>${b.report_url ? `<a href="${b.report_url}" target="_blank">PDF</a>` : '-'}</td>
+      </tr>`;
+    }
     function renderZoneDashboard(zone, temp, isNormal) {
       const elId = { chiller: 'dChiller', freezer: 'dFreezer', ambient: 'dAmbient' }[zone];
       const el = document.getElementById(elId);
@@ -2746,32 +2764,58 @@
     // ============================================================
     let productsCache = [];
 
+    function formatRange(min, max, unit = '') {
+      if (min == null && max == null) return '-';
+      if (min == null) return `<= ${max}${unit}`;
+      if (max == null) return `>= ${min}${unit}`;
+      return `${min} - ${max}${unit}`;
+    }
+
+    function selectedProduct() {
+      const val = document.getElementById('batchProduct').value;
+      return productsCache.find(p => p.id === val || p.product_code === val);
+    }
+
+    function updateCcpFields(product) {
+      const hasPh = !!product && (product.ph_min != null || product.ph_max != null);
+      const hasBrix = !!product && (product.brix_min != null || product.brix_max != null);
+      const hasTds = !!product && (product.tds_min != null || product.tds_max != null);
+      document.getElementById('param-ph-wrap').style.display = hasPh ? '' : 'none';
+      document.getElementById('param-brix-wrap').style.display = hasBrix ? '' : 'none';
+      document.getElementById('param-tds-wrap').style.display = hasTds ? '' : 'none';
+      document.getElementById('ph-photo-wrap').style.display = hasPh ? '' : 'none';
+      document.getElementById('brix-photo-wrap').style.display = hasBrix ? '' : 'none';
+    }
+
     async function loadProducts() {
-      // Since there's no GET /products endpoint, we'll use a local default
-      // and load from Supabase via API if added later
-      productsCache = [
-        { id: 'LOAD', product_code: 'Loading...', product_name: '—' }
-      ];
-      // Try to fetch via API health check first
+      const sel = document.getElementById('batchProduct');
       try {
-        // placeholder – real endpoint would be GET /products
-        const sel = document.getElementById('batchProduct');
-        sel.innerHTML = `<option value="">— Pilih Produk —</option>
-        <option value="SKU-SOUP-001">Tom Yam Soup Base</option>
-        <option value="SKU-SAUCE-002">Sweet Chili Sauce</option>
-        <option value="SKU-MARINADE-003">Teriyaki Marinade</option>`;
-      } catch (e) { }
+        const r = await fetch(API_BASE + '/products');
+        productsCache = await r.json();
+        sel.innerHTML = '<option value="">Pilih Produk</option>' + productsCache.map(p =>
+          `<option value="${p.id}" data-code="${p.product_code}">${p.product_code} - ${p.product_name}</option>`
+        ).join('');
+        sel.onchange = () => updateCcpFields(selectedProduct());
+      } catch (e) {
+        productsCache = [];
+        sel.innerHTML = '<option value="">Produk gagal dimuat</option>';
+        toast('Gagal memuat master produk: ' + e.message, 'error');
+      }
     }
 
     async function loadProductsTable() {
-      document.getElementById('productTable').innerHTML = `
-      <tr><td>SKU-SOUP-001</td><td>Tom Yam Soup Base</td><td>5.5</td><td>6.5</td><td>8.0</td><td>12.0</td><td>75°C</td></tr>
-      <tr><td>SKU-SAUCE-002</td><td>Sweet Chili Sauce</td><td>3.5</td><td>4.5</td><td>35.0</td><td>45.0</td><td>75°C</td></tr>
-      <tr><td>SKU-MARINADE-003</td><td>Teriyaki Marinade</td><td>4.0</td><td>5.0</td><td>20.0</td><td>28.0</td><td>75°C</td></tr>
-    `;
+      if (!productsCache.length) await loadProducts();
+      document.getElementById('productTable').innerHTML = productsCache.map(p => `
+        <tr>
+          <td>${p.product_code}</td>
+          <td>${p.product_name}</td>
+          <td>${formatRange(p.ph_min, p.ph_max, ' pH')}</td>
+          <td>${formatRange(p.brix_min, p.brix_max, '%')}</td>
+          <td>${formatRange(p.tds_min, p.tds_max, ' ppm')}</td>
+          <td><span class="zone-badge badge-ok">Active</span></td>
+        </tr>
+      `).join('');
     }
-
-    // ============================================================
     // BATCH CREATE
     // ============================================================
     async function createBatch() {
@@ -2790,17 +2834,6 @@
       const btn = document.getElementById('btnCreateBatch');
       btn.innerHTML = '<span class="spinner"></span> Membuat batch…';
       btn.classList.add('loading');
-
-      // Map product code to a valid UUID from DB
-      // In production, GET /products would return UUIDs
-      // For now, we'll show warning that product_id needs to be UUID
-      const productNames = {
-        'SKU-SOUP-001': 'Tom Yam Soup Base',
-        'SKU-SAUCE-002': 'Sweet Chili Sauce',
-        'SKU-MARINADE-003': 'Teriyaki Marinade',
-      };
-
-      toast('⚠️ Catatan: Tambahkan endpoint GET /products ke API untuk mendapatkan UUID produk secara otomatis.', 'info');
 
       try {
         const body = {
@@ -2825,7 +2858,7 @@
           activeBatchProductId = productVal;
           currentStep = 1;
           resetCCPUI();
-          const selProd = PRODUCTS.find(p => p.id === document.getElementById('batchProduct').value); updateCcpFields(selProd); showPage('ccp');
+          updateCcpFields(selectedProduct()); showPage('ccp');
           document.getElementById('activeBatchLabel').textContent = d.batch_code;
           toast('✅ Batch ' + d.batch_code + ' berhasil dibuat!', 'success');
         } else {
@@ -2903,11 +2936,16 @@
     async function submitCCP2() {
       if (!activeBatchId) { toast('Buat batch terlebih dahulu', 'error'); return; }
       const temp = document.getElementById('ccp2Temp').value;
+      const product = selectedProduct();
+      const phVal = document.getElementById('ccp2Ph').value;
+      const brixVal = document.getElementById('ccp2Brix').value;
+      const tdsVal = document.getElementById('ccp2Tds').value;
       const phPhoto = document.getElementById('ccp2PhPhoto').files[0];
       const brixPhoto = document.getElementById('ccp2BrixPhoto').files[0];
       if (!temp) { toast('Masukkan suhu inti', 'error'); return; }
-      if (!phPhoto) { toast('Upload foto LCD pH Meter', 'error'); return; }
-      if (!brixPhoto) { toast('Upload foto LCD Refraktometer', 'error'); return; }
+      if (product?.ph_min != null && !phVal && !phPhoto) { toast('Masukkan pH atau upload foto LCD pH', 'error'); return; }
+      if (product?.brix_min != null && !brixVal && !brixPhoto) { toast('Masukkan Brix atau upload foto refraktometer', 'error'); return; }
+      if (product?.tds_min != null && !tdsVal) { toast('Masukkan nilai TDS', 'error'); return; }
 
       const btn = document.getElementById('btnCCP2');
       btn.innerHTML = '<span class="spinner"></span> Memproses OCR…';
@@ -2917,8 +2955,11 @@
         const fd = new FormData();
         fd.append('core_temp_c', temp);
         fd.append('product_id', activeBatchProductId || '');
-        fd.append('ph_photo', phPhoto);
-        fd.append('brix_photo', brixPhoto);
+        if (phVal) fd.append('ph_value', phVal);
+        if (brixVal) fd.append('brix_value', brixVal);
+        if (tdsVal) fd.append('tds_value', tdsVal);
+        if (phPhoto) fd.append('ph_photo', phPhoto);
+        if (brixPhoto) fd.append('brix_photo', brixPhoto);
 
         const r = await fetch(`${API_BASE}/batch/${activeBatchId}/ccp2`, { method: 'POST', body: fd });
         const d = await r.json();
@@ -3015,8 +3056,14 @@
     // BATCHES TABLE
     // ============================================================
     async function loadBatches() {
-      document.getElementById('batchTable').innerHTML =
-        '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada batch — buat batch baru untuk memulai</td></tr>';
+      try {
+        const r = await fetch(API_BASE + '/batches');
+        const rows = await r.json();
+        document.getElementById('batchTable').innerHTML = rows.length ? rows.map(batchRow).join('') :
+          '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada batch - buat batch baru untuk memulai</td></tr>';
+      } catch (e) {
+        toast('Gagal memuat batch: ' + e.message, 'error');
+      }
     }
 
     // ============================================================
