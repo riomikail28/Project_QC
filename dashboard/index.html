@@ -12,29 +12,29 @@
   <style>
     /* ===================== DESIGN TOKENS ===================== */
     :root {
-      --bg-base: #345bd3;
-      --bg-card: #eae8e8;
-      --bg-glass: rgba(255, 255, 255, 0.04);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-active: rgba(99, 179, 237, 0.4);
-      --primary: #3b82f6;
-      --primary-glow: rgba(59, 130, 246, 0.25);
+      --bg-base: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-glass: rgba(255, 255, 255, 0.5);
+      --border: #e2e8f0;
+      --border-active: rgba(37, 99, 235, 0.4);
+      --primary: #2563eb;
+      --primary-glow: rgba(37, 99, 235, 0.15);
       --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.2);
+      --success-glow: rgba(16, 185, 129, 0.1);
       --danger: #ef4444;
-      --danger-glow: rgba(239, 68, 68, 0.2);
+      --danger-glow: rgba(239, 68, 68, 0.1);
       --warning: #f59e0b;
-      --warning-glow: rgba(245, 158, 11, 0.2);
-      --text-primary: #060606;
-      --text-secondary: #111212;
-      --text-muted: #475569;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 16px;
-      --radius-xl: 24px;
-      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
-      --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --warning-glow: rgba(245, 158, 11, 0.1);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
+      --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.1);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* ===================== RESET ===================== */
@@ -1488,6 +1488,11 @@
         <span class="nav-icon" id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
       </a>
 
+      <div class="nav-section-title">Manajemen</div>
+      <a class="nav-item" onclick="showPage('staff')" id="nav-staff">
+        <span class="nav-icon">👥</span> Akun Staf
+      </a>
+
       <div class="nav-section-title">Konfigurasi</div>
       <a class="nav-item" onclick="showPage('products')" id="nav-products">
         <span class="nav-icon">🍱</span> Produk & SOP
@@ -1516,103 +1521,293 @@
 
     <!-- ===== DASHBOARD PAGE ===== -->
     <div class="page active" id="page-dashboard">
-      <div class="topbar">
+      <div class="topbar" style="margin-bottom: 20px;">
         <div>
-          <div class="page-title">Dashboard</div>
-          <div class="page-subtitle" id="dashDate">—</div>
+          <div class="page-title">Quality Control Dashboard</div>
+          <div class="page-subtitle">Real-time monitoring and compliance tracking</div>
         </div>
         <div class="topbar-actions">
-          <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
-          <button class="btn btn-primary btn-sm" onclick="showPage('new-batch')">+ Batch Baru</button>
+          <select class="btn btn-ghost btn-sm" style="background:#fff; border:1px solid var(--border);">
+            <option>Last 7 days</option>
+            <option>Today</option>
+            <option>This Month</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="showPage('new-batch')">Export Report</button>
         </div>
       </div>
 
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card blue">
-          <div class="stat-icon blue">🏗️</div>
-          <div class="stat-value" id="statBatchToday">—</div>
-          <div class="stat-label">Batch Hari Ini</div>
-          <div class="stat-change up">↑ Periode aktif</div>
+      <style>
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-card); position: relative; }
+        .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 8px; }
+        .kpi-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .kpi-sub { font-size: 11px; color: var(--text-muted); }
+        .kpi-icon { position: absolute; right: 20px; top: 20px; font-size: 24px; opacity: 0.8; }
+        .val-green { color: #10b981; } .val-blue { color: #3b82f6; } .val-red { color: #ef4444; }
+
+        .dash-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        @media (max-width: 1024px) { .dash-grid { grid-template-columns: 1fr; } .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+        
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 20px; margin-bottom: 24px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .panel-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+        
+        .temp-tabs { display: flex; gap: 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+        .temp-tab { cursor: pointer; padding-bottom: 4px; }
+        .temp-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        .temp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media (max-width: 768px) { .temp-grid { grid-template-columns: repeat(2, 1fr); } }
+        .temp-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; position: relative; }
+        .temp-card-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+        .temp-card-val { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+        .temp-status-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; right: 16px; top: 16px; }
+        .dot-green { background: #10b981; } .dot-yellow { background: #f59e0b; }
+        .temp-bars { display: flex; gap: 4px; margin-bottom: 8px; }
+        .temp-bar { height: 24px; flex: 1; background: #bfdbfe; border-radius: 2px; }
+        .temp-update { font-size: 10px; color: var(--text-muted); }
+
+        .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .dash-table th { text-align: left; padding: 12px 8px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+        .dash-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: middle; }
+        .dash-table tr:last-child td { border-bottom: none; }
+        .badge-pass { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; }
+        .badge-fail { background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; }
+        .badge-prog { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; }
+        .link-blue { color: var(--primary); text-decoration: none; font-weight: 500; cursor: pointer; }
+
+        .alert-card { border: 1px solid #fca5a5; border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; position: relative; padding-left: 40px; }
+        .alert-card::before { content: '!'; position: absolute; left: 16px; top: 16px; width: 16px; height: 16px; background: #ef4444; color: white; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .alert-title { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .alert-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+        .btn-resolve { width: 100%; background: #ef4444; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        
+        .hygiene-item { display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .hygiene-item:last-child { border-bottom: none; }
+        .perf-item { margin-bottom: 12px; }
+        .perf-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; font-weight: 600; }
+        .perf-bar-bg { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+        .perf-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; }
+
+        .bottom-actions { display: flex; gap: 12px; justify-content: center; border-top: 1px solid var(--border); padding-top: 24px; margin-top: 24px; }
+        .action-btn { background: #fff; border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .action-btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+      </style>
+
+      <div class="kpi-row">
+        <div class="kpi-card" style="border-top: 4px solid #10b981;">
+          <div class="kpi-icon">📋</div>
+          <div class="kpi-value val-green">94.2%</div>
+          <div class="kpi-title">Overall Compliance</div>
+          <div class="kpi-sub" style="color:#10b981">↗ + 2.3% vs last week</div>
         </div>
-        <div class="stat-card green">
-          <div class="stat-icon green">✅</div>
-          <div class="stat-value" id="statBatchPass">—</div>
-          <div class="stat-label">Batch PASS</div>
-          <div class="stat-change up">↑ QC Lulus</div>
+        <div class="kpi-card" style="border-top: 4px solid #3b82f6;">
+          <div class="kpi-icon">📝</div>
+          <div class="kpi-value val-blue">12</div>
+          <div class="kpi-title">Active Inspections</div>
+          <div class="kpi-sub">3 pending review</div>
         </div>
-        <div class="stat-card red">
-          <div class="stat-icon red">❌</div>
-          <div class="stat-value" id="statBatchFail">—</div>
-          <div class="stat-label">Batch FAIL</div>
-          <div class="stat-change down">Perlu tindakan</div>
+        <div class="kpi-card" style="border-top: 4px solid #ef4444;">
+          <div class="kpi-icon" style="color:#ef4444">⚠️</div>
+          <div class="kpi-value val-red">3</div>
+          <div class="kpi-title">Critical Alerts</div>
+          <div class="kpi-sub" style="color:#ef4444">Requires immediate action</div>
         </div>
-        <div class="stat-card yellow">
-          <div class="stat-icon yellow">⚠️</div>
-          <div class="stat-value" id="statAlerts">—</div>
-          <div class="stat-label">Alert Suhu Aktif</div>
-          <div class="stat-change down">Cek fasilitas</div>
+        <div class="kpi-card" style="border-top: 4px solid #10b981;">
+          <div class="kpi-icon">🌡️</div>
+          <div class="kpi-value val-green">98.7%</div>
+          <div class="kpi-title">Temperature Logs</div>
+          <div class="kpi-sub">All zones monitored</div>
         </div>
       </div>
 
-      <div class="mb-24">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Status Fasilitas Real-Time</div>
-              <div class="card-subtitle">Pemantauan suhu zona aktif</div>
+      <div class="dash-grid">
+        <div class="dash-col-left">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Real-Time Temperature Monitoring</div>
+              <div class="temp-tabs">
+                <div class="temp-tab active">Cold Storage</div>
+                <div class="temp-tab">Hot Holding</div>
+                <div class="temp-tab">Prep Areas</div>
+              </div>
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="showPage('facility')">Lihat Semua →</button>
+            <div class="temp-grid">
+              <div class="temp-card">
+                <div class="temp-status-dot dot-green"></div>
+                <div class="temp-card-title">Chiller 1</div>
+                <div class="temp-card-val">3°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+              <div class="temp-card">
+                <div class="temp-status-dot dot-green"></div>
+                <div class="temp-card-title">Chiller 2</div>
+                <div class="temp-card-val">4°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div><div class="temp-bar"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+              <div class="temp-card">
+                <div class="temp-status-dot dot-green"></div>
+                <div class="temp-card-title">Freezer</div>
+                <div class="temp-card-val">-19°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar" style="background:#e2e8f0"></div><div class="temp-bar" style="background:#e2e8f0"></div><div class="temp-bar" style="background:#e2e8f0"></div><div class="temp-bar" style="background:#e2e8f0"></div><div class="temp-bar" style="background:#e2e8f0"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+              <div class="temp-card">
+                <div class="temp-status-dot dot-green"></div>
+                <div class="temp-card-title">Prep Area 1</div>
+                <div class="temp-card-val">18°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+              <div class="temp-card">
+                <div class="temp-status-dot dot-yellow"></div>
+                <div class="temp-card-title">Prep Area 2</div>
+                <div class="temp-card-val">22°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div><div class="temp-bar" style="background:#e2e8f0; height:2px; margin-top:22px"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+              <div class="temp-card">
+                <div class="temp-status-dot dot-green"></div>
+                <div class="temp-card-title">Ambient Storage</div>
+                <div class="temp-card-val">24°C</div>
+                <div class="temp-bars">
+                  <div class="temp-bar" style="background:#bfdbfe; height:12px; margin-top:12px"></div><div class="temp-bar" style="background:#bfdbfe; height:12px; margin-top:12px"></div>
+                </div>
+                <div class="temp-update">Updated 2 min ago</div>
+              </div>
+            </div>
           </div>
-          <div class="zone-cards" id="zoneDashboard">
-            <div class="zone-card">
-              <div class="zone-header"><span class="zone-name">Chiller</span><span
-                  class="badge-pending zone-badge">Loading…</span></div>
-              <div class="zone-temp" id="dChiller">—°C</div>
-              <div class="zone-limit">SOP: ≤ 4°C</div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Today's Quality Inspections</div>
+              <div class="temp-tabs">
+                <div class="temp-tab active">All</div>
+                <div class="temp-tab">Passed</div>
+                <div class="temp-tab">Failed</div>
+                <div class="temp-tab">In Progress</div>
+              </div>
             </div>
-            <div class="zone-card">
-              <div class="zone-header"><span class="zone-name">Freezer</span><span
-                  class="badge-pending zone-badge">Loading…</span></div>
-              <div class="zone-temp" id="dFreezer">—°C</div>
-              <div class="zone-limit">SOP: ≤ -18°C</div>
+            <table class="dash-table">
+              <tbody>
+                <tr>
+                  <td style="color:var(--text-muted); font-size:11px">08:15 AM</td>
+                  <td><strong>Food Temperature Check</strong></td>
+                  <td>Sarah Johnson</td>
+                  <td><span class="badge-pass">Passed</span></td>
+                  <td><strong>98%</strong></td>
+                  <td><span class="link-blue">View Details</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--text-muted); font-size:11px">09:30 AM</td>
+                  <td><strong>Hygiene Inspection</strong></td>
+                  <td>Michael Chen</td>
+                  <td><span class="badge-pass">Passed</span></td>
+                  <td><strong>95%</strong></td>
+                  <td><span class="link-blue">View Details</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--text-muted); font-size:11px">10:45 AM</td>
+                  <td><strong>Equipment Sanitization</strong></td>
+                  <td>Emily Rodriguez</td>
+                  <td><span class="badge-prog">In Progress</span></td>
+                  <td><strong>-</strong></td>
+                  <td><span class="link-blue">View Details</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--text-muted); font-size:11px">12:00 PM</td>
+                  <td><strong>Storage Compliance</strong></td>
+                  <td>Sarah Johnson</td>
+                  <td><span class="badge-fail">Failed</span></td>
+                  <td><strong>72%</strong></td>
+                  <td><span class="link-blue">View Details</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--text-muted); font-size:11px">01:15 PM</td>
+                  <td><strong>PPE Compliance</strong></td>
+                  <td>Michael Chen</td>
+                  <td><span class="badge-pass">Passed</span></td>
+                  <td><strong>96%</strong></td>
+                  <td><span class="link-blue">View Details</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="dash-col-right">
+          <div class="panel">
+            <div class="panel-header" style="color:#ef4444; margin-bottom: 8px;">
+              <div class="panel-title" style="color:#ef4444;">⚠️ Critical Alerts Requiring Action</div>
             </div>
-            <div class="zone-card">
-              <div class="zone-header"><span class="zone-name">Ambient</span><span
-                  class="badge-pending zone-badge">Loading…</span></div>
-              <div class="zone-temp" id="dAmbient">—°C</div>
-              <div class="zone-limit">SOP: ≤ 20°C</div>
+            <div class="alert-card">
+              <div class="alert-title">Temperature Deviation Detected</div>
+              <div class="alert-sub">Prep Area 2 temperature exceeds safe threshold (22°C)<br>15 min ago</div>
+              <button class="btn-resolve">Resolve</button>
+            </div>
+            <div class="alert-card">
+              <div class="alert-title">Failed Storage Compliance Check</div>
+              <div class="alert-sub">Raw and cooked items found in same storage unit<br>1 hour ago</div>
+              <button class="btn-resolve">Resolve</button>
+            </div>
+            <div style="text-align:center; margin-top:12px;">
+              <span class="link-blue" style="font-size:12px;">View All Alerts (3)</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom:16px;">Hygiene Standards Compliance</div>
+            <div style="display:flex; justify-content:center; margin-bottom:20px;">
+              <div style="width:120px; height:120px; border-radius:50%; border:12px solid #10b981; display:flex; align-items:center; justify-content:center; border-top-color:#e2e8f0; transform:rotate(45deg);">
+                <div style="transform:rotate(-45deg); font-size:24px; font-weight:800;">91%</div>
+              </div>
+            </div>
+            <div class="hygiene-item"><span>✅ Hand Washing Compliance</span> <strong>96%</strong></div>
+            <div class="hygiene-item"><span>✅ Surface Sanitization</span> <strong>88%</strong></div>
+            <div class="hygiene-item"><span>✅ PPE Usage</span> <strong>93%</strong></div>
+            <div class="hygiene-item"><span>✅ Waste Management</span> <strong>87%</strong></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom:16px;">Inspector Performance Today</div>
+            <div class="perf-item">
+              <div class="perf-head"><span>👩🏽‍🔬 Sarah Johnson</span><span style="color:var(--text-muted)">12 inspections</span></div>
+              <div class="perf-bar-bg"><div class="perf-bar-fill" style="width: 85%;"></div></div>
+            </div>
+            <div class="perf-item">
+              <div class="perf-head"><span>👨🏻‍🔬 Michael Chen</span><span style="color:var(--text-muted)">10 inspections</span></div>
+              <div class="perf-bar-bg"><div class="perf-bar-fill" style="width: 75%;"></div></div>
+            </div>
+            <div class="perf-item">
+              <div class="perf-head"><span>👩🏼‍🔬 Emily Rodriguez</span><span style="color:var(--text-muted)">8 inspections</span></div>
+              <div class="perf-bar-bg"><div class="perf-bar-fill" style="width: 60%; background:#f59e0b;"></div></div>
+            </div>
+            <div style="text-align:center; margin-top:16px;">
+              <span class="link-blue" style="font-size:12px;">View Full Team</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Batch QC Terkini</div>
-            <div class="card-subtitle">5 batch terakhir diproduksi</div>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Batch Code</th>
-                <th>Produk</th>
-                <th>Tanggal</th>
-                <th>Shift</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="dashBatchTable">
-              <tr>
-                <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Memuat data…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="bottom-actions">
+        <button class="action-btn primary" onclick="showPage('new-batch')">📋 New Inspection</button>
+        <button class="action-btn" onclick="showPage('facility')">🌡️ Log Temperature</button>
+        <button class="action-btn" onclick="showPage('alerts')">⚠️ Report Issue</button>
+        <button class="action-btn">📅 Schedule Audit</button>
       </div>
+
     </div>
 
     <!-- ===== FACILITY PAGE ===== -->
@@ -1912,10 +2107,47 @@
       </div>
     </div>
 
-    <!-- ===== PRODUCTS PAGE ===== -->
+    
+    <!-- ===== STAFF MANAGEMENT PAGE ===== -->
+    <div class="page" id="page-staff">
+      <div class="topbar">
+        <div class="page-title">👥 Manajemen Staf</div>
+        <button class="btn btn-primary" onclick="openStaffModal()">+ Tambah Akun Staf</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="staffTable">
+              <tr>
+                <td>admin</td>
+                <td><span class="badge-pass">Admin</span></td>
+                <td>-</td>
+              </tr>
+              <tr>
+                <td>staff</td>
+                <td><span class="badge-pending">Staff</span></td>
+                <td>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus akun staff?')){this.parentElement.parentElement.remove();toast('Akun staff dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+        <!-- ===== PRODUCTS PAGE ===== -->
     <div class="page" id="page-products">
       <div class="topbar">
         <div class="page-title">🍱 Produk & SOP Threshold</div>
+        <button class="btn btn-primary" onclick="openProductModal()">+ Tambah Produk</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -1924,16 +2156,34 @@
               <tr>
                 <th>Kode</th>
                 <th>Nama Produk</th>
-                <th>pH Min</th>
-                <th>pH Max</th>
-                <th>Brix Min</th>
-                <th>Brix Max</th>
+                <th>pH Range</th>
+                <th>Brix Range</th>
                 <th>Core Temp Min</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="productTable">
               <tr>
-                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Memuat produk…</td>
+                <td>SKU-SOUP-001</td>
+                <td>Tom Yam Soup Base</td>
+                <td>5.5 - 6.5</td>
+                <td>8.0 - 12.0</td>
+                <td>75.0°C</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
+              </tr>
+              <tr>
+                <td>SKU-SAUCE-002</td>
+                <td>Sweet Chili Sauce</td>
+                <td>3.5 - 4.5</td>
+                <td>35.0 - 45.0</td>
+                <td>75.0°C</td>
+                <td>
+                  <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -1942,6 +2192,76 @@
     </div>
 
   </main>
+
+  
+  <!-- ===== MODAL: Tambah Akun Staf ===== -->
+  <div class="modal-overlay" id="staffModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">👥 Tambah Akun Staf</div>
+        <div class="modal-close" onclick="closeModal('staffModal')">×</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Username *</label>
+          <input id="staffUsername" type="text" placeholder="Masukkan username" />
+        </div>
+        <div class="form-group full">
+          <label>Password *</label>
+          <input id="staffPassword" type="password" placeholder="Masukkan password" />
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn btn-ghost" onclick="closeModal('staffModal')">Batal</button>
+        <button class="btn btn-primary" onclick="addStaff()">Simpan Akun</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: Tambah/Edit Produk ===== -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">🍱 Tambah Produk & SOP</div>
+        <div class="modal-close" onclick="closeModal('productModal')">×</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Kode Produk *</label>
+          <input id="prodCode" type="text" placeholder="Contoh: SKU-NEW-001" />
+        </div>
+        <div class="form-group">
+          <label>Nama Produk *</label>
+          <input id="prodName" type="text" placeholder="Contoh: Saus Teriyaki" />
+        </div>
+        <div class="form-group">
+          <label>pH Min</label>
+          <input id="prodPhMin" type="number" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label>pH Max</label>
+          <input id="prodPhMax" type="number" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label>Brix Min</label>
+          <input id="prodBrixMin" type="number" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label>Brix Max</label>
+          <input id="prodBrixMax" type="number" step="0.1" />
+        </div>
+        <div class="form-group full">
+          <label>Core Temp Min (°C) (Suhu Inti Matang)</label>
+          <input id="prodCoreTemp" type="number" step="0.1" value="75.0" />
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn btn-ghost" onclick="closeModal('productModal')">Batal</button>
+        <button class="btn btn-primary" onclick="saveProduct()">Simpan Produk</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- ===== MODAL: Input Suhu Fasilitas ===== -->
   <div class="modal-overlay" id="logModal">
@@ -1977,6 +2297,65 @@
 
   <!-- ===== SCRIPT ===== -->
   <script>
+    
+    function openStaffModal() {
+      document.getElementById('staffUsername').value = '';
+      document.getElementById('staffPassword').value = '';
+      document.getElementById('staffModal').classList.add('open');
+    }
+    function addStaff() {
+      const uname = document.getElementById('staffUsername').value;
+      if(!uname) { toast('Username wajib diisi', 'error'); return; }
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${uname}</td>
+        <td><span class="badge-pending">Staff</span></td>
+        <td><button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus akun staff?')){this.parentElement.parentElement.remove();toast('Akun staff dihapus','success')}">Hapus</button></td>
+      `;
+      document.getElementById('staffTable').appendChild(tr);
+      closeModal('staffModal');
+      toast('Akun staff ' + uname + ' berhasil ditambahkan', 'success');
+    }
+
+    function openProductModal() {
+      document.getElementById('prodCode').value = '';
+      document.getElementById('prodName').value = '';
+      document.getElementById('prodPhMin').value = '';
+      document.getElementById('prodPhMax').value = '';
+      document.getElementById('prodBrixMin').value = '';
+      document.getElementById('prodBrixMax').value = '';
+      document.getElementById('prodCoreTemp').value = '75.0';
+      document.getElementById('productModal').classList.add('open');
+    }
+    function saveProduct() {
+      const code = document.getElementById('prodCode').value;
+      const name = document.getElementById('prodName').value;
+      if(!code || !name) { toast('Kode dan Nama Produk wajib diisi', 'error'); return; }
+      
+      const phMin = document.getElementById('prodPhMin').value || '-';
+      const phMax = document.getElementById('prodPhMax').value || '-';
+      const brixMin = document.getElementById('prodBrixMin').value || '-';
+      const brixMax = document.getElementById('prodBrixMax').value || '-';
+      const coreTemp = document.getElementById('prodCoreTemp').value || '75';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${code}</td>
+        <td>${name}</td>
+        <td>${phMin} - ${phMax}</td>
+        <td>${brixMin} - ${brixMax}</td>
+        <td>${coreTemp}°C</td>
+        <td>
+          <button class="btn btn-sm" onclick="alert('Edit Produk')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="if(confirm('Hapus produk?')){this.parentElement.parentElement.remove();toast('Produk dihapus','success')}">Hapus</button>
+        </td>
+      `;
+      document.getElementById('productTable').appendChild(tr);
+      closeModal('productModal');
+      toast('Produk ' + name + ' berhasil ditambahkan', 'success');
+    }
+
     // ============================================================
     // CONFIG
     // ============================================================
@@ -2551,19 +2930,29 @@
       const username = localStorage.getItem('qc_username') || 'User';
 
       // Update topbar actions with user info and Logout button
-      const actionsCont = document.querySelector('.topbar-actions');
-      if (actionsCont && !document.getElementById('btnLogout')) {
-        const logoutBtn = document.createElement('button');
-        logoutBtn.className = 'btn btn-danger btn-sm';
-        logoutBtn.id = 'btnLogout';
-        logoutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout (' + role + ')';
-        logoutBtn.onclick = () => {
-          localStorage.removeItem('qc_logged_in');
-          localStorage.removeItem('qc_user_role');
-          window.location.href = 'login.html';
-        };
-        actionsCont.appendChild(logoutBtn);
-      }
+      const topbars = document.querySelectorAll('.topbar');
+      topbars.forEach(topbar => {
+        if (!topbar.querySelector('.btnLogout')) {
+          let actionsCont = topbar.querySelector('.topbar-actions');
+          if (!actionsCont) {
+            actionsCont = document.createElement('div');
+            actionsCont.className = 'topbar-actions';
+            actionsCont.style.display = 'flex';
+            actionsCont.style.gap = '10px';
+            topbar.appendChild(actionsCont);
+          }
+          
+          const logoutBtn = document.createElement('button');
+          logoutBtn.className = 'btn btn-danger btn-sm btnLogout';
+          logoutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout (' + role + ')';
+          logoutBtn.onclick = () => {
+            localStorage.removeItem('qc_logged_in');
+            localStorage.removeItem('qc_user_role');
+            window.location.href = 'login.html';
+          };
+          actionsCont.appendChild(logoutBtn);
+        }
+      });
 
       // Add logout to mobile if exists
       if (document.querySelector('.mobile-header') && !document.getElementById('mobileLogout')) {
@@ -2580,21 +2969,22 @@
       }
 
       // Role Enforcement
-      if (role === 'operator') {
-        // Operator should ONLY see: Input CCP, Batches, Facility.
-        // Hide Dashboard & Reports in Sidebar
+      if (role === 'staff') {
+        // Staff should ONLY see: Input CCP, Batches, Facility.
+        // Hide Dashboard, Reports, Products, Alerts in Sidebar
         if (document.getElementById('nav-dashboard')) document.getElementById('nav-dashboard').style.display = 'none';
         if (document.getElementById('nav-reports')) document.getElementById('nav-reports').style.display = 'none';
         if (document.getElementById('nav-products')) document.getElementById('nav-products').style.display = 'none';
         if (document.getElementById('nav-alerts')) document.getElementById('nav-alerts').style.display = 'none';
+        if (document.getElementById('nav-staff')) document.getElementById('nav-staff').style.display = 'none';
 
         // Initially show CCP page instead of Dashboard
         setTimeout(() => { showPage('ccp'); }, 100);
 
-        // Enforce Dark Mode for Operator as they are field workers
+        // Enforce Dark Mode for Staff as they are field workers
         document.body.classList.add('dark-mode');
       } else {
-        // Manager Views
+        // Admin Views
         setTimeout(() => { showPage('dashboard'); }, 100);
       }
     });

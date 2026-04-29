@@ -1,509 +1,253 @@
 <!DOCTYPE html>
-<html lang="id" class="scroll-smooth">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem QC Traceability | PT Astro Teknologi Indonesia</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind Config for Custom Colors -->
-    <script>
-        tailwind.config = {git push
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        astro: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            900: '#1e3a8a',
-                            950: '#172554',
-                        },
-                        dark: {
-                            bg: '#0B0F19',
-                            card: '#131C2F',
-                            border: '#1E293B',
-                        }
-                    },
-                    animation: {
-                        'blob': 'blob 7s infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-                    },
-                    keyframes: {
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-20px)' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(40px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        /* Custom Glossy & Glassmorphism effects */
-        body {
-            background-color: #0B0F19; /* Deep dark tech vibe */
-            color: #F8FAFC;
-            overflow-x: hidden;
-        }
-        
-        .glass-nav {
-            background: rgba(11, 15, 25, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .glass-card {
-            background: rgba(19, 28, 47, 0.6);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .glass-card:hover {
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);
-        }
-
-        .text-gradient {
-            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-glow {
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        /* Abstract UI Mockup Elements */
-        .mockup-window {
-            border-radius: 1rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: linear-gradient(180deg, #131C2F 0%, #0B0F19 100%);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QC Traceability — PT Astro Teknologi Indonesia</title>
+<meta name="description" content="Platform QC cerdas untuk Central Kitchen — AI OCR, pelacakan batch real-time, dan kepatuhan HACCP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/landing.css">
 </head>
-<body class="antialiased selection:bg-astro-500 selection:text-white">
+<body>
 
-    <!-- Background Animated Blobs -->
-    <div class="fixed inset-0 w-full h-full z-[-1] overflow-hidden">
-        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-astro-600/30 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob"></div>
-        <div class="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-purple-600/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob animation-delay-2000"></div>
-        <div class="absolute bottom-[-20%] left-[20%] w-[600px] h-[600px] bg-teal-600/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob animation-delay-4000"></div>
+<!-- NAV -->
+<nav id="mainNav">
+  <a href="#" class="nav-logo">
+    <img src="https://astfrfrx8o.cloudimg.io/v7/astro.id/images/astro-logo.png?w=80" alt="Astro Logo" onerror="this.style.display='none'">
+    <span class="nav-logo-text">Astro<span>QC</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="#fitur">Fitur</a>
+    <a href="#roles">Peran</a>
+    <a href="#cta">Kontak</a>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="dashboard/login.html" class="btn-ghost">Masuk</a>
+    <a href="dashboard/login.html" class="btn-primary">Coba Demo →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="glow-orb hero-orb-1"></div>
+  <div class="glow-orb hero-orb-2"></div>
+
+  <div class="badge-announce">
+    <span class="badge-dot"></span>
+    Sistem QC v2.0 — Kini Live dengan AI OCR
+  </div>
+
+  <h1>
+    Kendali Penuh<br>
+    <span class="grad">Kualitas Pangan</span><br>
+    di Satu Layar.
+  </h1>
+
+  <p class="hero-sub">
+    Platform QC cerdas untuk Central Kitchen — memadukan AI, pelacakan batch real-time,
+    dan kepatuhan HACCP dalam satu sistem yang bisa dipakai dari genggaman tangan.
+  </p>
+
+  <div class="hero-cta">
+    <a href="dashboard/login.html" class="btn-hero btn-hero-blue">Mulai Sekarang →</a>
+    <a href="#fitur" class="btn-hero btn-hero-outline">Lihat Fitur</a>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-item">
+      <div class="stat-val"><span>99</span>%</div>
+      <div class="stat-lbl">Akurasi OCR</div>
     </div>
+    <div class="stat-item">
+      <div class="stat-val"><span>0</span></div>
+      <div class="stat-lbl">Kertas Logbook</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val"><span>1</span>s</div>
+      <div class="stat-lbl">Traceability Batch</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val"><span>24/7</span></div>
+      <div class="stat-lbl">Monitoring Real-time</div>
+    </div>
+  </div>
+</section>
 
-    <!-- Navigation -->
-    <nav class="fixed w-full z-50 glass-nav transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-astro-400 to-purple-600 flex items-center justify-center text-white text-xl shadow-lg shadow-astro-500/30">
-                        <i class="fa-solid fa-industry"></i>
-                    </div>
-                    <div>
-                        <span class="font-bold text-xl tracking-tight text-white block leading-tight">QC Traceability</span>
-                        <span class="text-[10px] text-astro-400 font-semibold tracking-widest uppercase">PT Astro Teknologi</span>
-                    </div>
-                </div>
+<!-- FITUR -->
+<section id="fitur">
+  <div class="section-inner">
+    <p class="section-label reveal">Kapabilitas Platform</p>
+    <h2 class="section-title reveal">QC Anti-Fraud.<br>Otomatis & Terjamin.</h2>
+    <p class="section-sub reveal">Kombinasi AI dan sistem pencatatan cerdas mendigitalkan seluruh workflow Quality Control.</p>
 
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex space-x-8 items-center">
-                    <a href="#fitur" class="text-slate-300 hover:text-white text-sm font-medium transition-colors">Fitur</a>
-                    <a href="#workflow" class="text-slate-300 hover:text-white text-sm font-medium transition-colors">Cara Kerja</a>
-                    <a href="#manfaat" class="text-slate-300 hover:text-white text-sm font-medium transition-colors">Manfaat</a>
-                </div>
-
-                <!-- CTA Buttons -->
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="dashboard/login.html" class="text-slate-300 hover:text-white text-sm font-medium transition-colors">
-                        <i class="fa-solid fa-lock mr-2"></i>Login Operator
-                    </a>
-                    <a href="#contact" class="bg-white text-dark-bg hover:bg-slate-100 px-5 py-2.5 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-                        Request Demo
-                    </a>
-                </div>
-
-                <!-- Mobile menu button -->
-                <div class="md:hidden flex items-center">
-                    <button class="text-slate-300 hover:text-white focus:outline-none">
-                        <i class="fa-solid fa-bars text-2xl"></i>
-                    </button>
-                </div>
-            </div>
+    <div class="bento">
+      <!-- Card 1 — OCR wide -->
+      <div class="bento-card wide reveal">
+        <div class="card-icon icon-cyan">🤖</div>
+        <h3>AI-Powered OCR Data Integrity</h3>
+        <p>Operator tidak bisa lagi memasukkan data palsu. AI membaca nilai Suhu, pH, dan Brix langsung dari foto layar instrumen. Zero human error, zero manipulasi.</p>
+        <div class="mini-phone">
+          <div class="mini-row">
+            <div class="mini-dot dot-ok"></div>
+            <div class="mini-label">Suhu Chiller A</div>
+            <div class="mini-val val-ok">2.4 °C</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-dot dot-warn"></div>
+            <div class="mini-label">pH Sambal Merah</div>
+            <div class="mini-val val-warn">4.6 pH</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-dot dot-ok"></div>
+            <div class="mini-label">Brix Saus Tomat</div>
+            <div class="mini-val val-ok">22.1 %</div>
+          </div>
         </div>
-    </nav>
+        <span class="feature-badge badge-cyan">✓ Anti-Tembak Data</span>
+        <span class="feature-badge badge-blue" style="margin-left:6px">Akurasi 99%</span>
+      </div>
 
-    <!-- Hero Section -->
-    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div class="hero-glow"></div>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card mb-8 animate-slide-up" style="animation-delay: 0.1s;">
-                <span class="flex h-2 w-2 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-astro-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-astro-500"></span>
-                </span>
-                <span class="text-xs font-medium text-slate-300 tracking-wide">Sistem QC v2.0 kini live untuk Central Kitchen</span>
-            </div>
-
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 animate-slide-up" style="animation-delay: 0.2s;">
-                Digitalisasi Total untuk <br class="hidden md:block" />
-                <span class="text-gradient">Keamanan Pangan Anda.</span>
-            </h1>
-            
-            <p class="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-slate-400 mb-10 animate-slide-up" style="animation-delay: 0.3s;">
-                Sistem Intelijen QC yang menjamin integritas data tanpa kecurangan, efisiensi operasional dengan AI, dan kepatuhan standar HACCP dalam satu platform web & mobile.
-            </p>
-            
-            <div class="flex flex-col sm:flex-row justify-center gap-4 animate-slide-up" style="animation-delay: 0.4s;">
-                <a href="#demo" class="bg-astro-600 hover:bg-astro-500 text-white px-8 py-4 rounded-full text-base font-semibold transition-all transform hover:-translate-y-1 shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center justify-center gap-2">
-                    Mulai Transformasi <i class="fa-solid fa-arrow-right"></i>
-                </a>
-                <a href="dashboard/login.html" class="glass-card text-white hover:bg-white/5 px-8 py-4 rounded-full text-base font-semibold transition-all flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-chart-line text-astro-400"></i> Lihat Web Dashboard
-                </a>
-            </div>
-
-            <!-- Dashboard Abstract Mockup -->
-            <div class="mt-20 relative max-w-5xl mx-auto animate-slide-up animate-float" style="animation-delay: 0.6s;">
-                <div class="mockup-window pt-4 pb-0 px-0 shadow-[0_0_100px_rgba(59,130,246,0.2)]">
-                    <!-- Fake Window Controls -->
-                    <div class="flex gap-2 px-6 mb-4">
-                        <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
-                        <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                        <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
-                    </div>
-                    <!-- Abstract UI Image -->
-                    <div class="bg-dark-bg p-6 rounded-t-xl border-t border-white/5 mx-2 flex flex-col md:flex-row gap-6">
-                        <!-- Sidebar Mock -->
-                        <div class="hidden md:block w-48 space-y-4">
-                            <div class="h-8 bg-white/5 rounded-lg w-full"></div>
-                            <div class="h-8 bg-astro-500/20 rounded-lg w-3/4 border border-astro-500/30"></div>
-                            <div class="h-8 bg-white/5 rounded-lg w-5/6"></div>
-                            <div class="h-8 bg-white/5 rounded-lg w-4/6"></div>
-                        </div>
-                        <!-- Main Panel Mock -->
-                        <div class="flex-1 space-y-6">
-                            <div class="flex gap-4">
-                                <div class="h-24 bg-white/5 rounded-xl flex-1 border border-white/5 relative overflow-hidden">
-                                    <div class="absolute bottom-0 left-0 h-1 bg-green-500 w-full"></div>
-                                </div>
-                                <div class="h-24 bg-white/5 rounded-xl flex-1 border border-white/5 relative overflow-hidden">
-                                    <div class="absolute bottom-0 left-0 h-1 bg-astro-500 w-full"></div>
-                                </div>
-                                <div class="h-24 bg-red-500/10 rounded-xl flex-1 border border-red-500/20 relative overflow-hidden">
-                                    <div class="absolute bottom-0 left-0 h-1 bg-red-500 w-full"></div>
-                                </div>
-                            </div>
-                            <div class="h-64 bg-white/5 rounded-xl border border-white/5 w-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Floating Mobile App Mockup -->
-                <div class="absolute -right-4 -bottom-10 md:-right-12 md:-bottom-16 w-32 md:w-64 h-auto mockup-window border-4 border-slate-800 shadow-2xl z-20 bg-dark-bg rounded-[2rem] md:rounded-[2.5rem]">
-                    <div class="h-6 md:h-10 border-b border-white/5 flex justify-center items-end pb-1 md:pb-2">
-                        <div class="w-12 md:w-20 h-2 md:h-4 bg-black rounded-b-xl md:rounded-b-2xl"></div>
-                    </div>
-                    <div class="p-2 md:p-4 space-y-2 md:space-y-4">
-                        <div class="h-16 md:h-32 bg-gradient-to-br from-astro-500/20 to-purple-500/20 rounded-lg md:rounded-xl border border-white/10 flex items-center justify-center">
-                            <i class="fa-solid fa-camera text-2xl md:text-4xl text-white/50"></i>
-                        </div>
-                        <div class="h-4 md:h-8 bg-green-500/20 rounded-md md:rounded-lg border border-green-500/30 w-full"></div>
-                        <div class="h-4 md:h-8 bg-white/5 rounded-md md:rounded-lg w-3/4"></div>
-                    </div>
-                    <div class="h-8 md:h-12 border-t border-white/5 mt-2 md:mt-4 flex justify-around items-center px-2">
-                        <div class="w-4 h-4 md:w-6 md:h-6 bg-astro-500/50 rounded-full"></div>
-                        <div class="w-4 h-4 md:w-6 md:h-6 bg-white/10 rounded-full"></div>
-                        <div class="w-4 h-4 md:w-6 md:h-6 bg-white/10 rounded-full"></div>
-                    </div>
-                </div>
-            </div>
+      <!-- Card 2 — Monitoring -->
+      <div class="bento-card reveal">
+        <div class="card-icon icon-blue">🌡️</div>
+        <h3>Smart Facility Monitoring</h3>
+        <p>Pantau suhu chiller, freezer, dan ambient secara real-time. Alert otomatis jika melanggar SOP.</p>
+        <div class="gauge-row">
+          <div class="gauge-item">
+            <div class="gauge-label">Chiller A</div>
+            <div class="gauge-track"><div class="gauge-fill g-ok" style="width:35%"></div></div>
+            <div class="g-val val-ok">2.4°C</div>
+          </div>
+          <div class="gauge-item">
+            <div class="gauge-label">Freezer B</div>
+            <div class="gauge-track"><div class="gauge-fill g-ok" style="width:10%"></div></div>
+            <div class="g-val val-ok">−18°C</div>
+          </div>
+          <div class="gauge-item">
+            <div class="gauge-label">Ambient</div>
+            <div class="gauge-track"><div class="gauge-fill g-warn" style="width:72%"></div></div>
+            <div class="g-val val-warn">28°C</div>
+          </div>
         </div>
-    </section>
+      </div>
 
-    <!-- Features Bento Grid -->
-    <section id="fitur" class="py-24 relative z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-base text-astro-400 font-semibold tracking-wide uppercase">Fitur "Killer"</h2>
-                <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
-                    QC Anti-Fraud. Otomatis & Terjamin.
-                </p>
-                <p class="mt-4 max-w-2xl text-xl text-slate-400 mx-auto">
-                    Kombinasi AI dan sistem pencatatan cerdas mendigitalkan seluruh workflow Quality Control di dapur terpusat Anda.
-                </p>
+      <!-- Card 3 — Alerts -->
+      <div class="bento-card reveal">
+        <div class="card-icon icon-red">🔔</div>
+        <h3>HACCP Real-Time Alerts</h3>
+        <p>Notifikasi instan ke Manager jika ada pelanggaran SOP sebelum jadi insiden serius.</p>
+        <div style="margin-top:16px">
+          <div class="alert-item">
+            <div class="alert-icon al-red">🌡</div>
+            <div class="alert-body">
+              <div class="alert-title">Freezer C — Suhu Naik!</div>
+              <div class="alert-sub">−12°C · Batas: −18°C</div>
             </div>
-
-            <!-- Bento Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Feature 1: OCR (Large) -->
-                <div class="glass-card rounded-3xl p-8 md:col-span-2 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <i class="fa-solid fa-microchip text-9xl text-astro-400"></i>
-                    </div>
-                    <div class="relative z-10 h-full flex flex-col justify-between">
-                        <div>
-                            <div class="w-12 h-12 rounded-xl bg-astro-500/20 flex items-center justify-center mb-6 border border-astro-500/30 text-astro-400 text-xl">
-                                <i class="fa-solid fa-camera-viewfinder"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-white mb-3">AI-Powered OCR Data Integrity</h3>
-                            <p class="text-slate-400 text-lg max-w-md">
-                                Operator tidak bisa lagi memasukkan data palsu. AI membaca nilai Suhu, pH, dan Brix langsung dari foto layar instrumen secara otomatis.
-                            </p>
-                        </div>
-                        <div class="mt-8 flex gap-3 text-sm font-medium text-astro-300">
-                            <span class="bg-astro-900/50 px-3 py-1 rounded-full border border-astro-700/50">Anti-Tembak Data</span>
-                            <span class="bg-astro-900/50 px-3 py-1 rounded-full border border-astro-700/50">Akurasi 99%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 2: Traceability -->
-                <div class="glass-card rounded-3xl p-8 relative overflow-hidden group">
-                    <div class="relative z-10 h-full flex flex-col justify-between">
-                        <div>
-                            <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6 border border-purple-500/30 text-purple-400 text-xl">
-                                <i class="fa-solid fa-route"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-white mb-3">1-Tap Traceability</h3>
-                            <p class="text-slate-400">
-                                Lacak maju & mundur dalam 1 detik. Telusuri riwayat produksi batch hingga nama operator jika terjadi keluhan (food-poisoning).
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 3: Alerts -->
-                <div class="glass-card rounded-3xl p-8 relative overflow-hidden group">
-                    <div class="relative z-10 h-full flex flex-col justify-between">
-                        <div>
-                            <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center mb-6 border border-red-500/30 text-red-400 text-xl">
-                                <i class="fa-solid fa-bell"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-white mb-3">HACCP Real-Time Alerts</h3>
-                            <p class="text-slate-400">
-                                Notifikasi instan ke Web & Mobile Manajer jika suhu Chiller/Freezer melanggar standar SOP produksi.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 4: Reporting (Large) -->
-                <div class="glass-card rounded-3xl p-8 md:col-span-2 relative overflow-hidden group">
-                    <div class="relative z-10 h-full flex flex-col justify-between md:flex-row md:items-center">
-                        <div class="md:w-3/5">
-                            <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6 border border-emerald-500/30 text-emerald-400 text-xl">
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-white mb-3">1-Click Compliance Reporting</h3>
-                            <p class="text-slate-400 text-lg">
-                                Selamat tinggal logbook kertas! Generate laporan PDF inspeksi harian yang sesuai format Auditor ISO 22000 & HACCP secara otomatis.
-                            </p>
-                        </div>
-                        <div class="hidden md:block md:w-2/5 pl-8">
-                            <div class="w-full bg-white/5 border border-white/10 rounded-xl p-4 transform rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                                <div class="h-3 w-3/4 bg-white/20 rounded mb-4"></div>
-                                <div class="h-2 w-full bg-white/10 rounded mb-2"></div>
-                                <div class="h-2 w-5/6 bg-white/10 rounded mb-2"></div>
-                                <div class="h-2 w-4/6 bg-white/10 rounded mb-6"></div>
-                                <div class="border-t border-dashed border-white/20 pt-4 flex justify-between items-center">
-                                    <div class="h-4 w-12 bg-emerald-500/50 rounded"></div>
-                                    <div class="h-8 w-8 bg-white/10 rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="alert-time">2 mnt lalu</div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-icon al-amber">⚗</div>
+            <div class="alert-body">
+              <div class="alert-title">pH Sambal mendekati batas</div>
+              <div class="alert-sub">4.6 pH · Batas: 3.8–4.8</div>
             </div>
+            <div class="alert-time">14 mnt lalu</div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-icon al-green">✓</div>
+            <div class="alert-body">
+              <div class="alert-title">Batch AY01-260424 Lulus QC</div>
+              <div class="alert-sub">Semua parameter dalam batas</div>
+            </div>
+            <div class="alert-time">1 jam lalu</div>
+          </div>
         </div>
-    </section>
+      </div>
 
-    <!-- Dual Role Workflow Section -->
-    <section id="workflow" class="py-24 border-t border-white/5 bg-gradient-to-b from-dark-bg to-[#070b14]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-extrabold text-white sm:text-4xl">Dibangun untuk Dual-Role Operasional</h2>
-                <p class="mt-4 text-xl text-slate-400">Satu sistem, dua pengalaman optimal yang disesuaikan dengan kebutuhan pengguna.</p>
-            </div>
+      <!-- Card 4 — Traceability -->
+      <div class="bento-card reveal">
+        <div class="card-icon icon-amber">🔍</div>
+        <h3>1-Tap Traceability</h3>
+        <p>Lacak riwayat produksi batch — maju & mundur — dalam hitungan detik. Siap untuk audit ISO 22000.</p>
+        <span class="feature-badge badge-blue" style="margin-top:12px">Audit-Ready</span>
+      </div>
 
-            <div class="grid md:grid-cols-2 gap-16 items-center">
-                
-                <!-- Operator Mobile View -->
-                <div class="order-2 md:order-1">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl border border-indigo-500/30">
-                            <i class="fa-solid fa-mobile-screen"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white">Bagi Operator Lapangan</h3>
-                    </div>
-                    <ul class="space-y-6">
-                        <li class="flex gap-4">
-                            <i class="fa-solid fa-check text-indigo-400 mt-1"></i>
-                            <div>
-                                <h4 class="text-white font-semibold flex items-center gap-2">Mobile-First UI</h4>
-                                <p class="text-slate-400 text-sm mt-1">Akses mudah lewat bottom-navigation-bar smartphone, tanpa perlu menyalakan PC di dapur.</p>
-                            </div>
-                        </li>
-                        <li class="flex gap-4">
-                            <i class="fa-solid fa-check text-indigo-400 mt-1"></i>
-                            <div>
-                                <h4 class="text-white font-semibold">Integrasi Kamera Langsung</h4>
-                                <p class="text-slate-400 text-sm mt-1">Cukup tekan tombol, ambil foto termometer, biarkan AI membaca angkanya. Super cepat.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="order-1 md:order-2 flex justify-center">
-                    <div class="w-64 h-96 mockup-window border-4 border-slate-800 bg-dark-bg relative overflow-hidden flex flex-col shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-                        <div class="bg-indigo-600 px-4 py-6 text-center text-white font-bold text-lg mt-0">Input CCP-1</div>
-                        <div class="p-4 flex-1 space-y-4">
-                            <div class="w-full h-32 bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 flex-col"><i class="fa-solid fa-camera mb-2 text-2xl"></i>Foto Suhu</div>
-                            <div class="h-10 bg-indigo-500/20 rounded border border-indigo-500/50 flex items-center justify-center text-indigo-300 font-semibold text-sm">Menunggu Scan...</div>
-                        </div>
-                        <div class="h-14 bg-[#1e293b] border-t border-slate-700 flex justify-around items-center text-slate-400 text-xs pb-2">
-                            <div class="flex flex-col items-center"><i class="fa-solid fa-home text-lg mb-1"></i>Dash</div>
-                            <div class="flex flex-col items-center text-indigo-400"><i class="fa-solid fa-plus-circle text-lg mb-1"></i>Input</div>
-                            <div class="flex flex-col items-center"><i class="fa-solid fa-user text-lg mb-1"></i>Akun</div>
-                        </div>
-                    </div>
-                </div>
+      <!-- Card 5 — Report -->
+      <div class="bento-card reveal">
+        <div class="card-icon icon-green">📄</div>
+        <h3>1-Click Compliance Report</h3>
+        <p>Generate laporan PDF inspeksi harian sesuai format Auditor ISO 22000 & HACCP secara otomatis.</p>
+        <span class="feature-badge badge-cyan" style="margin-top:12px">PDF Otomatis</span>
+      </div>
+    </div>
+  </div>
+</section>
 
-                <!-- Manager Web View -->
-                <div class="order-3 flex justify-center mt-10 md:mt-0">
-                    <div class="w-full max-w-sm aspect-video mockup-window bg-dark-bg p-4 flex flex-col shadow-[0_0_50px_rgba(59,130,246,0.2)]">
-                        <div class="flex gap-4 h-full">
-                            <div class="w-16 bg-slate-800/50 rounded-lg flex flex-col items-center py-4 space-y-4 text-slate-500">
-                                <i class="fa-solid fa-chart-pie text-astro-500"></i>
-                                <i class="fa-solid fa-table"></i>
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </div>
-                            <div class="flex-1 flex flex-col gap-2">
-                                <div class="flex justify-between items-center mb-2">
-                                    <div class="h-4 w-24 bg-slate-700 rounded"></div>
-                                    <div class="h-4 w-12 bg-emerald-500/30 rounded"></div>
-                                </div>
-                                <div class="h-1/2 bg-astro-500/10 rounded-lg border border-astro-500/20"></div>
-                                <div class="flex gap-2 flex-1">
-                                    <div class="flex-1 bg-slate-800/50 rounded-lg"></div>
-                                    <div class="flex-1 bg-slate-800/50 rounded-lg"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<!-- ROLES -->
+<section id="roles">
+  <div class="section-inner">
+    <p class="section-label reveal">Dual-Role Platform</p>
+    <h2 class="section-title reveal">Satu Sistem,<br>Dua Pengalaman Optimal.</h2>
+    <p class="section-sub reveal">Dirancang untuk kebutuhan berbeda antara operator lapangan dan manager analitik.</p>
 
-                <div class="order-4">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-full bg-astro-500/20 flex items-center justify-center text-astro-400 text-xl border border-astro-500/30">
-                            <i class="fa-solid fa-display"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white">Bagi QA/QC Manager</h3>
-                    </div>
-                    <ul class="space-y-6">
-                        <li class="flex gap-4">
-                            <i class="fa-solid fa-check text-astro-400 mt-1"></i>
-                            <div>
-                                <h4 class="text-white font-semibold">Dashboard Real-Time Komprehensif</h4>
-                                <p class="text-slate-400 text-sm mt-1">Pantau seluruh pergerakan batch, anomali suhu ruangan, dan produktivitas dapur dari satu layar elegan.</p>
-                            </div>
-                        </li>
-                        <li class="flex gap-4">
-                            <i class="fa-solid fa-check text-astro-400 mt-1"></i>
-                            <div>
-                                <h4 class="text-white font-semibold">Generate Laporan 1-Klik</h4>
-                                <p class="text-slate-400 text-sm mt-1">Ubah data rumit menjadi lembar pengesahan PDF resmi untuk inspeksi auditor.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
+    <div class="roles-grid">
+      <div class="role-card reveal">
+        <div class="role-pill pill-blue">🏗️ Operator Lapangan</div>
+        <h3>Cepat. Simpel. Tanpa Kertas.</h3>
+        <p>Antarmuka mobile-first yang dirancang untuk kecepatan. Input CCP cukup dengan foto — AI yang baca angkanya.</p>
+        <ul class="role-features">
+          <li><span class="feat-check">✓</span>Ambil foto → AI baca otomatis</li>
+          <li><span class="feat-check">✓</span>Checklist CCP per produk</li>
+          <li><span class="feat-check">✓</span>Offline-first, sync otomatis</li>
+          <li><span class="feat-check">✓</span>Scan QR lokasi stasiun</li>
+          <li><span class="feat-check">✓</span>Status batch real-time</li>
+        </ul>
+      </div>
+      <div class="role-card reveal">
+        <div class="role-pill pill-cyan">📊 QA/QC Manager</div>
+        <h3>Pantau. Analisis. Ambil Tindakan.</h3>
+        <p>Dashboard komprehensif yang mengubah data produksi harian menjadi insight yang bisa ditindaklanjuti.</p>
+        <ul class="role-features">
+          <li><span class="feat-check">✓</span>Dashboard real-time seluruh dapur</li>
+          <li><span class="feat-check">✓</span>Alert eskalasi bertingkat</li>
+          <li><span class="feat-check">✓</span>Grafik tren anomali mingguan</li>
+          <li><span class="feat-check">✓</span>Generate laporan 1-klik</li>
+          <li><span class="feat-check">✓</span>Traceability batch lengkap</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 
-            </div>
-        </div>
-    </section>
+<!-- CTA -->
+<section id="cta">
+  <div class="cta-inner">
+    <h2 class="reveal">Siap Meningkatkan<br><span style="color:var(--accent)">Standar Food Safety?</span></h2>
+    <p class="reveal">Tinggalkan metode pencatatan manual. Beralih ke sistem Intelligent QC yang mengamankan brand dan efisiensi pabrik Anda.</p>
+    <div class="cta-btns reveal">
+      <a href="dashboard/login.html" class="btn-cta-white">Coba Live Demo →</a>
+      <a href="mailto:contact@astro.id" class="btn-cta-outline">Hubungi Enterprise</a>
+    </div>
+  </div>
+</section>
 
-    <!-- Closing CTA Section -->
-    <section class="py-20 relative overflow-hidden">
-        <div class="absolute inset-0 bg-astro-900/20"></div>
-        <div class="hero-glow" style="background: radial-gradient(circle, rgba(168,85,247,0.15) 0%, rgba(0,0,0,0) 70%);"></div>
-        
-        <div class="max-w-4xl mx-auto px-4 relative z-10 text-center glass-card py-16 rounded-[2.5rem]">
-            <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">Siap Meningkatkan Standar Food Safety Anda?</h2>
-            <p class="text-lg text-slate-400 mb-10 max-w-2xl mx-auto">Tinggalkan metode pencatatan manual. Beralih ke sistem Intelligent QC yang mengamankan brand dan efisiensi pabrik Anda.</p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="#contact" class="bg-white text-dark-bg hover:bg-slate-200 px-8 py-4 rounded-full text-base font-bold transition-all transform hover:scale-105">
-                    Hubungi Kami Untuk Enterprise
-                </a>
-                <a href="dashboard/login.html" class="bg-astro-600 hover:bg-astro-500 text-white px-8 py-4 rounded-full text-base font-semibold transition-all">
-                    Coba Live Demo (Khusus Skripsi)
-                </a>
-            </div>
-        </div>
-    </section>
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:8px">
+    <strong style="color:var(--text)">AstroQC</strong> —
+    Dikembangkan oleh PT Astro Teknologi Indonesia
+  </p>
+  <p>© 2026 All rights reserved · <a href="#">Kebijakan Privasi</a> · <a href="#">Syarat Penggunaan</a></p>
+</footer>
 
-    <!-- Footer -->
-    <footer class="border-t border-white/10 bg-[#060913] pt-16 pb-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-astro-500 flex items-center justify-center text-white">
-                        <i class="fa-solid fa-industry text-sm"></i>
-                    </div>
-                    <span class="font-bold text-lg text-white">Project QC</span>
-                </div>
-                <div class="text-slate-500 text-sm">
-                    &copy; 2026 PT Astro Teknologi Indonesia. All rights reserved. <br/>
-                    <span class="text-xs">Dikembangkan untuk inovasi Skripsi dan Skala Enterprise.</span>
-                </div>
-            </div>
-        </div>
-    </footer>
-
+<script>
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('visible');obs.unobserve(x.target)}})},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(i%4)*80+'ms';obs.observe(el)});
+const gObs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.gauge-fill').forEach(g=>{const w=g.style.width;g.style.width='0';setTimeout(()=>g.style.width=w,100)})}})},{threshold:.3});
+document.querySelectorAll('.bento-card').forEach(c=>gObs.observe(c));
+window.addEventListener('scroll',()=>{document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>50)});
+</script>
 </body>
 </html>

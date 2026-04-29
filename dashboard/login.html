@@ -66,25 +66,12 @@
 
         <form id="loginForm" class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1.5">User ID / Username</label>
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Username</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                         <i class="fa-regular fa-user"></i>
                     </div>
-                    <input type="text" id="username" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm" placeholder="Ketik RIO-MANAGER atau OP-01" required>
-                </div>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1.5">Role Akses (Simulasi Skripsi)</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </div>
-                    <select id="role" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm appearance-none" required>
-                        <option value="operator">🏗️ Operator Lapangan (Input Data)</option>
-                        <option value="manager">📊 QA/QC Manager (Analitik Web)</option>
-                    </select>
+                    <input type="text" id="username" class="input-glass w-full pl-10 pr-4 py-3 rounded-xl text-sm" placeholder="Ketik admin atau staff" required>
                 </div>
             </div>
 
@@ -112,21 +99,23 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const role = document.getElementById('role').value;
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
             let isValid = false;
+            let role = '';
 
             // --- DATABASE ACREDENTIAL SEMENTARA (SIMULASI) ---
-            if (role === 'manager' && username === 'RIO-MANAGER' && password === 'admin123') {
+            if (username === 'admin' && password === 'admin123') {
                 isValid = true;
-            } else if (role === 'operator' && username === 'OP-01' && password === '1234') {
+                role = 'admin';
+            } else if (username === 'staff' && password === '1234') {
                 isValid = true;
+                role = 'staff';
             }
 
             if (!isValid) {
-                alert('Peringatan: User ID, Role, atau Password salah! Pastikan Anda memilih role yang tepat.');
+                alert('Peringatan: Username atau Password salah!');
                 return;
             }
 
