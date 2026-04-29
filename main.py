@@ -74,7 +74,7 @@ async def serve_landing():
 if os.path.exists("dashboard"):
     app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
-# Mount static files for landing page assets
+# Mount assets folder for landing page
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
