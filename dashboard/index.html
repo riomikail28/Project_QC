@@ -46,20 +46,22 @@
     }
 
     body.light-mode {
-      --bg: #f5f7fb;
+      --bg: #f8fafc;
       --bg2: #ffffff;
       --surface: #ffffff;
-      --surface2: #edf2f7;
-      --glass: rgba(0, 0, 0, 0.02);
+      --surface2: #f1f5f9;
+      --glass: rgba(0, 0, 0, 0.03);
       --border: rgba(0, 0, 0, 0.08);
-      --border2: rgba(0, 0, 0, 0.15);
-      --text: #1a202c;
+      --border2: rgba(0, 0, 0, 0.12);
+      --text: #0f172a;
       --muted: #64748b;
       --dim: #94a3b8;
     }
 
     body.light-mode .bottom-nav {
-      background: rgba(255, 255, 255, .94);
+      background: rgba(255, 255, 255, .8);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(0,0,0,0.05);
     }
 
     *,
@@ -113,8 +115,12 @@
       flex-direction: column;
       z-index: 200;
       transform: translateX(0);
-      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+      transition: transform .4s var(--ease), box-shadow .4s var(--ease), background .4s var(--ease), border .4s var(--ease);
       will-change: transform;
+      box-shadow: 10px 0 30px rgba(0,0,0,0.05);
+    }
+    body.light-mode .sidebar {
+      box-shadow: 5px 0 20px rgba(0,0,0,0.02);
     }
 
     .sidebar.collapsed {
@@ -2000,7 +2006,7 @@
   <!-- ═══════════════════════════════════════════
      TOPBAR
 ═══════════════════════════════════════════ -->
-  <header class="topbar full-width" id="topbar">
+  <header class="topbar" id="topbar">
     <div class="tb-left">
       <button class="tb-ham" id="tbHam" onclick="toggleSidebar()">
         <span></span><span></span><span></span>
@@ -2771,7 +2777,22 @@
        SIDEBAR
     ───────────────────────────────────── */
     function toggleSidebar() {
-      sidebarOpen ? closeSidebar() : openSidebar();
+      if (window.innerWidth <= 768) {
+        sidebarOpen ? closeSidebar() : openSidebar();
+      } else {
+        const sb = document.getElementById('sidebar');
+        const main = document.getElementById('main');
+        const tb = document.getElementById('topbar');
+        const ham = document.getElementById('tbHam');
+        
+        const isCollapsed = sb.classList.toggle('collapsed');
+        main.classList.toggle('collapsed', isCollapsed);
+        tb.classList.toggle('collapsed', isCollapsed);
+        ham.classList.toggle('open', !isCollapsed);
+        
+        localStorage.setItem('qc_sidebar_collapsed', isCollapsed);
+        sidebarOpen = !isCollapsed;
+      }
     }
     function openSidebar() {
       sidebarOpen = true;
@@ -2793,25 +2814,35 @@
         document.getElementById('topbar').classList.add('collapsed');
         document.getElementById('main').classList.add('collapsed');
         localStorage.setItem('qc_sidebar_collapsed', 'true');
+        document.getElementById('tbHam').classList.remove('open');
       }
       document.getElementById('sbOverlay').classList.remove('show');
-      document.getElementById('tbHam').classList.remove('open');
+      if (isMobile) document.getElementById('tbHam').classList.remove('open');
     }
 
     function initSidebarState() {
       const collapsed = localStorage.getItem('qc_sidebar_collapsed') === 'true';
-      if (window.innerWidth > 768 && collapsed) {
+      const isMobile = window.innerWidth <= 768;
+      
+      if (!isMobile && collapsed) {
         document.getElementById('sidebar').classList.add('collapsed');
         document.getElementById('topbar').classList.add('collapsed');
         document.getElementById('main').classList.add('collapsed');
         document.getElementById('tbHam').classList.remove('open');
         sidebarOpen = false;
-      } else if (window.innerWidth > 768) {
+      } else if (!isMobile) {
         document.getElementById('sidebar').classList.remove('collapsed');
         document.getElementById('topbar').classList.remove('collapsed');
         document.getElementById('main').classList.remove('collapsed');
         document.getElementById('tbHam').classList.add('open');
         sidebarOpen = true;
+      } else {
+        // Mobile resets
+        document.getElementById('sidebar').classList.remove('collapsed');
+        document.getElementById('topbar').classList.add('collapsed');
+        document.getElementById('main').classList.add('collapsed');
+        document.getElementById('tbHam').classList.remove('open');
+        sidebarOpen = false;
       }
     }
 
