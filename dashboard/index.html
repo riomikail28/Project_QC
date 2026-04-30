@@ -2751,21 +2751,7 @@
        SIDEBAR
     ───────────────────────────────────── */
     function toggleSidebar() {
-      if (window.innerWidth <= 768) {
-        sidebarOpen ? closeSidebar() : openSidebar();
-      } else {
-        const sb = document.getElementById('sidebar');
-        const main = document.getElementById('main');
-        const tb = document.getElementById('topbar');
-        const ham = document.getElementById('tbHam');
-        
-        const isCollapsed = sb.classList.toggle('collapsed');
-        main.classList.toggle('collapsed', isCollapsed);
-        tb.classList.toggle('collapsed', isCollapsed);
-        ham.classList.toggle('open', !isCollapsed);
-        
-        localStorage.setItem('qc_sidebar_collapsed', isCollapsed);
-      }
+      sidebarOpen ? closeSidebar() : openSidebar();
     }
     function openSidebar() {
       sidebarOpen = true;
@@ -3414,21 +3400,6 @@
     /* ─────────────────────────────────────
        THEME TOGGLE
     ───────────────────────────────────── */
-    function initTheme() {
-      const saved = localStorage.getItem('qc_theme');
-      if (saved === 'light') {
-        document.body.classList.add('light-mode');
-        updateThemeUI(true);
-      }
-      
-      const sbCollapsed = localStorage.getItem('qc_sidebar_collapsed') === 'true';
-      if (sbCollapsed && window.innerWidth > 768) {
-        document.getElementById('sidebar').classList.add('collapsed');
-        document.getElementById('main').classList.add('collapsed');
-        document.getElementById('topbar').classList.add('collapsed');
-      }
-    }
-
     function toggleTheme(el) {
       document.body.classList.toggle('light-mode');
       const isLight = document.body.classList.contains('light-mode');
