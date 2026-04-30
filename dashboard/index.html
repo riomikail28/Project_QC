@@ -58,6 +58,10 @@
       --dim: #94a3b8;
     }
 
+    body.light-mode .bottom-nav {
+      background: rgba(255, 255, 255, .94);
+    }
+
     *,
     *::before,
     *::after {
@@ -459,6 +463,10 @@
 
     .tb-icon-btn:hover {
       background: var(--glass)
+    }
+
+    .tb-theme {
+      font-size: 15px;
     }
 
     .tb-notif-dot {
@@ -1754,6 +1762,12 @@
         margin-left: 0
       }
 
+      .topbar.collapsed,
+      .main.collapsed {
+        left: 0;
+        margin-left: 0
+      }
+
       .topbar.full-width {
         left: 0
       }
@@ -1997,6 +2011,9 @@
     </div>
     <div class="tb-right">
       <div class="tb-clock" id="tbClock">00:00:00</div>
+      <button class="tb-icon-btn tb-theme" id="themeTopBtn" title="Ganti mode terang/gelap" onclick="toggleTheme()">
+        <span id="themeTopIcon">☀️</span>
+      </button>
       <button class="tb-icon-btn" title="Notifikasi" onclick="showPage('alerts',document.getElementById('nav-alerts'))">
         🔔<span class="tb-notif-dot" id="notifDot" style="display:none"></span>
       </button>
@@ -2669,6 +2686,7 @@
       loadDashboard();
       loadFacilityZones();
       initTheme();
+      initSidebarState();
 
       // Topbar auto-hide on scroll (mobile)
       let ticking = false;
@@ -2693,6 +2711,7 @@
 
       // Swipe to open/close sidebar on mobile
       initSwipeGesture();
+      window.addEventListener('resize', initSidebarState);
     });
 
     /* ─────────────────────────────────────
@@ -2755,16 +2774,44 @@
     }
     function openSidebar() {
       sidebarOpen = true;
+      const isMobile = window.innerWidth <= 768;
       document.getElementById('sidebar').classList.add('open');
       document.getElementById('sidebar').classList.remove('collapsed');
-      document.getElementById('sbOverlay').classList.add('show');
+      document.getElementById('topbar').classList.remove('collapsed');
+      document.getElementById('main').classList.remove('collapsed');
+      if (isMobile) document.getElementById('sbOverlay').classList.add('show');
       document.getElementById('tbHam').classList.add('open');
+      localStorage.setItem('qc_sidebar_collapsed', 'false');
     }
     function closeSidebar() {
       sidebarOpen = false;
+      const isMobile = window.innerWidth <= 768;
       document.getElementById('sidebar').classList.remove('open');
+      if (!isMobile) {
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('topbar').classList.add('collapsed');
+        document.getElementById('main').classList.add('collapsed');
+        localStorage.setItem('qc_sidebar_collapsed', 'true');
+      }
       document.getElementById('sbOverlay').classList.remove('show');
       document.getElementById('tbHam').classList.remove('open');
+    }
+
+    function initSidebarState() {
+      const collapsed = localStorage.getItem('qc_sidebar_collapsed') === 'true';
+      if (window.innerWidth > 768 && collapsed) {
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('topbar').classList.add('collapsed');
+        document.getElementById('main').classList.add('collapsed');
+        document.getElementById('tbHam').classList.remove('open');
+        sidebarOpen = false;
+      } else if (window.innerWidth > 768) {
+        document.getElementById('sidebar').classList.remove('collapsed');
+        document.getElementById('topbar').classList.remove('collapsed');
+        document.getElementById('main').classList.remove('collapsed');
+        document.getElementById('tbHam').classList.add('open');
+        sidebarOpen = true;
+      }
     }
 
     // Swipe gesture
@@ -3407,11 +3454,25 @@
       updateThemeUI(isLight);
     }
 
+    function initTheme() {
+      const stored = localStorage.getItem('qc_theme');
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      const isLight = stored ? stored === 'light' : prefersLight;
+      document.body.classList.toggle('light-mode', isLight);
+      updateThemeUI(isLight);
+    }
+
     function updateThemeUI(isLight) {
       const icon = document.getElementById('themeIcon');
       const label = document.getElementById('themeLabel');
+      const topIcon = document.getElementById('themeTopIcon');
+      const topBtn = document.getElementById('themeTopBtn');
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
       if (icon) icon.textContent = isLight ? '🌙' : '☀️';
       if (label) label.textContent = isLight ? 'Mode Gelap' : 'Mode Terang';
+      if (topIcon) topIcon.textContent = isLight ? '🌙' : '☀️';
+      if (topBtn) topBtn.title = isLight ? 'Ganti ke mode gelap' : 'Ganti ke mode terang';
+      if (metaTheme) metaTheme.setAttribute('content', isLight ? '#f5f7fb' : '#060a12');
     }
 
     /* ─────────────────────────────────────
