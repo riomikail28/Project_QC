@@ -135,8 +135,10 @@ def _check_temperature(
 
 def check_facility_temperature(
     *,
+    device_id:    Optional[str] = None,
     zone:         FacilityZone,
     temperature:  float,
+    threshold_override: Optional[float] = None,
     recorder_id:  Optional[str] = None,
     notes:        Optional[str] = None,
 ) -> CheckResult:
@@ -146,7 +148,7 @@ def check_facility_temperature(
 
     Returns CheckResult.
     """
-    threshold = FACILITY_THRESHOLDS[zone]
+    threshold = threshold_override if threshold_override is not None else FACILITY_THRESHOLDS[zone]
 
     # All facility checks have max threshold only
     result = _check_temperature(
@@ -161,6 +163,7 @@ def check_facility_temperature(
     sb = _get_supabase()
     log_row = sb.table("facility_logs").insert([{
         "zone":          zone.value,
+        "device_id":     device_id,
         "temperature_c": temperature,
         "threshold_c":   threshold,
         "is_normal":     result.status == QCStatus.PASS,
@@ -170,7 +173,7 @@ def check_facility_temperature(
 
     if result.status == QCStatus.FAIL:
         log_id = log_row.data[0]["id"] if log_row.data else None
-        _create_facility_alert(sb, log_id, zone, temperature, threshold)
+        _create_facility_alert(sb, log_id, device_id, zone, temperature, threshold)
         _send_alert_webhook(result)
 
     logger.info("Facility check [%s]: %s°C → %s", zone.value, temperature, result.status)
@@ -180,6 +183,7 @@ def check_facility_temperature(
 def _create_facility_alert(
     sb:          Client,
     log_id:      Optional[str],
+    device_id:   Optional[str],
     zone:        FacilityZone,
     temperature: float,
     threshold:   float,
@@ -187,6 +191,7 @@ def _create_facility_alert(
     """Insert an alert record into facility_alerts."""
     sb.table("facility_alerts").insert([{
         "log_id":       log_id,
+        "device_id":    device_id,
         "zone":         zone.value,
         "temperature_c": temperature,
         "threshold_c":  threshold,

@@ -1925,6 +1925,22 @@
     .full {
       grid-column: 1/-1
     }
+
+    .room-section { margin-bottom: 32px; }
+    .room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
+    .room-title { font-weight: 700; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+    .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .device-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; position: relative; transition: transform .2s; }
+    .device-card:hover { transform: translateY(-2px); border-color: var(--blue); }
+    .device-type { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+    .device-name { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+    .device-temp { font-size: 24px; font-weight: 800; font-family: var(--font-m); margin-bottom: 8px; }
+    .device-temp.ok { color: var(--green); }
+    .device-temp.bad { color: var(--red); }
+    .device-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+    .device-actions { position: absolute; top: 8px; right: 8px; display: none; }
+    .device-card:hover .device-actions { display: flex; gap: 4px; }
+    .btn-icon-xs { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; }
   </style>
 </head>
 
@@ -2259,8 +2275,12 @@
             <button class="btn btn-green" onclick="openModal('logModal')">+ Input Suhu</button>
           </div>
         </div>
-        <div class="fac-grid mb16" id="facilityZones" style="grid-template-columns:repeat(3,1fr)"></div>
-        <div class="card">
+        <div id="facilityContainer">
+          <!-- Rooms will be loaded here -->
+          <div style="text-align:center;padding:40px;color:var(--muted)"><span class="spin"></span> Memuat konfigurasi ruangan…</div>
+        </div>
+
+        <div class="card mt24">
           <div class="card-header">
             <div class="card-title">Log Suhu Terbaru</div>
           </div>
@@ -2632,11 +2652,9 @@
       </div>
       <div class="form-grid">
         <div class="form-group">
-          <div class="form-label">Zona *</div>
-          <select id="logZone">
-            <option value="chiller">❄️ Chiller (≤ 4°C)</option>
-            <option value="freezer">🧊 Freezer (≤ −18°C)</option>
-            <option value="ambient">🌡️ Ambient (≤ 20°C)</option>
+          <div class="form-label">Perangkat *</div>
+          <select id="logDeviceId">
+            <option value="">— Pilih Perangkat —</option>
           </select>
         </div>
         <div class="form-group">
@@ -3102,98 +3120,164 @@
     /* ─────────────────────────────────────
        FACILITY
     ───────────────────────────────────── */
-    const ZONES_CONFIG = [
-      { key: 'chiller', label: 'Chiller', icon: '❄️', limit: '≤ 4°C', max: 4 },
-      { key: 'freezer', label: 'Freezer', icon: '🧊', limit: '≤ −18°C', max: -18 },
-      { key: 'ambient', label: 'Ambient', icon: '🌡️', limit: '≤ 20°C', max: 20 },
-    ];
+    /* ─────────────────────────────────────
+       FACILITY (Rooms & Devices)
+    ───────────────────────────────────── */
+    let facilityRooms = [];
 
-    function loadFacilityZones() {
-      const c = document.getElementById('facilityZones');
-      c.innerHTML = ZONES_CONFIG.map(z => `
-    <div class="fac-zone" id="fac-${z.key}">
-      <div class="fac-zone-name">${z.icon} ${z.label}</div>
-      <div class="fac-temp" id="ftemp-${z.key}">—°C</div>
-      <div class="fac-limit">SOP: ${z.limit}</div>
-      <div class="fac-badge none" id="fbadge-${z.key}">No Data</div>
-      <div class="fac-updated" id="fupdated-${z.key}"></div>
-    </div>`).join('');
-    }
-
-    function updateFacZone(zone, temp, isNormal) {
-      // Dashboard
-      const dGrid = document.getElementById('dashFacGrid');
-      if (dGrid) {
-        const cards = dGrid.querySelectorAll('.fac-zone');
-        const idx = { chiller: 0, freezer: 1, ambient: 2 }[zone];
-        if (cards[idx] && temp !== null) {
-          const cl = isNormal ? 'ok' : 'bad';
-          cards[idx].className = `fac-zone ${cl}`;
-          cards[idx].querySelector('.fac-temp').className = `fac-temp ${cl}`;
-          cards[idx].querySelector('.fac-temp').textContent = temp + '°C';
-          cards[idx].querySelector('.fac-badge').className = `fac-badge ${cl}`;
-          cards[idx].querySelector('.fac-badge').textContent = isNormal ? '✓ NORMAL' : '✗ ALERT';
+    async function loadFacilityZones() {
+      const container = document.getElementById('facilityContainer');
+      const logSel = document.getElementById('logDeviceId');
+      
+      try {
+        const r = await fetch(API + '/facility/rooms');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        facilityRooms = await r.json();
+        
+        // Render Rooms
+        if (facilityRooms.length === 0) {
+          container.innerHTML = `<div class="card p24 text-center">
+            <div class="mb16 text-muted">Belum ada ruangan monitoring.</div>
+            <button class="btn btn-blue" onclick="promptAddRoom()">+ Tambah Ruangan Pertama</button>
+          </div>`;
+          return;
         }
+
+        container.innerHTML = facilityRooms.map(room => `
+          <div class="room-section">
+            <div class="room-header">
+              <div class="room-title">📍 ${room.name}</div>
+              <div class="flex gap8">
+                <button class="btn btn-ghost btn-xs" onclick="promptAddDevice('${room.id}', '${room.name}')">+ Chiller/Freezer</button>
+                <button class="btn btn-ghost btn-xs text-red" onclick="deleteRoom('${room.id}', '${room.name}')">Hapus</button>
+              </div>
+            </div>
+            <div class="device-grid">
+              ${room.devices.length ? room.devices.map(dev => {
+                const icon = dev.type === 'chiller' ? '❄️' : (dev.type === 'freezer' ? '🧊' : '🌡️');
+                return `
+                <div class="device-card" id="dev-${dev.id}">
+                  <div class="device-actions">
+                    <button class="btn btn-ghost btn-icon-xs text-red" onclick="deleteDevice('${dev.id}')" title="Hapus">×</button>
+                  </div>
+                  <div class="device-type">${icon} ${dev.type.toUpperCase()}</div>
+                  <div class="device-name">${dev.name}</div>
+                  <div class="device-temp" id="temp-${dev.id}">—°C</div>
+                  <div class="device-meta">
+                    <span>SOP: ≤ ${dev.threshold_c}°C</span>
+                    <span id="upd-${dev.id}">No Data</span>
+                  </div>
+                </div>`;
+              }).join('') : '<div class="text-muted p16" style="grid-column: 1/-1; border: 1px dashed var(--border); border-radius: 8px; text-align: center; font-size: 13px">Belum ada perangkat di ruangan ini</div>'}
+            </div>
+          </div>
+        `).join('') + `
+          <div class="mt16 text-center">
+            <button class="btn btn-ghost btn-sm" onclick="promptAddRoom()">+ Tambah Ruangan Baru</button>
+          </div>
+        `;
+
+        // Update Log Selector
+        logSel.innerHTML = '<option value="">— Pilih Perangkat —</option>' + 
+          facilityRooms.map(room => `
+            <optgroup label="${room.name}">
+              ${room.devices.map(d => `<option value="${d.id}">${d.name} (${d.type})</option>`).join('')}
+            </optgroup>
+          `).join('');
+
+      } catch (e) {
+        container.innerHTML = `<div class="card p24 text-red">Gagal memuat data: ${e.message}</div>`;
       }
-      // Facility page
-      const el = document.getElementById(`fac-${zone}`);
-      const tempEl = document.getElementById(`ftemp-${zone}`);
-      const bEl = document.getElementById(`fbadge-${zone}`);
-      const updEl = document.getElementById(`fupdated-${zone}`);
-      if (!el) return;
-      const cl = isNormal ? 'ok' : 'bad';
-      el.className = `fac-zone ${cl}`;
-      tempEl.className = `fac-temp ${cl}`;
-      tempEl.textContent = temp + '°C';
-      bEl.className = `fac-badge ${cl}`;
-      bEl.textContent = isNormal ? '✓ NORMAL' : '✗ ALERT';
-      if (updEl) updEl.textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
     }
 
-    async function submitFacilityLog() {
-      const zone = document.getElementById('logZone').value;
-      const temp = document.getElementById('logTemp').value;
-      const notes = document.getElementById('logNotes').value;
-      if (!temp) { toast('Masukkan suhu terukur', 'e'); return; }
+    async function promptAddRoom() {
+      const name = prompt('Masukkan nama ruangan baru (contoh: Ruang Kitchen):');
+      if (!name) return;
+      try {
+        const fd = new FormData(); fd.append('name', name);
+        const r = await fetch(API + '/facility/rooms', { method: 'POST', body: fd });
+        if (r.ok) { toast('Ruangan berhasil ditambah', 's'); loadFacilityZones(); }
+        else { const d = await r.json(); toast(d.detail || 'Gagal tambah ruangan', 'e'); }
+      } catch (e) { toast(e.message, 'e'); }
+    }
 
-      const btn = document.getElementById('btnLogSubmit');
-      btn.innerHTML = '<span class="spin"></span> Menyimpan…';
-      btn.disabled = true;
+    async function promptAddDevice(roomId, roomName) {
+      const name = prompt(`Nama perangkat di ${roomName} (contoh: Chiller 1):`);
+      if (!name) return;
+      const type = prompt(`Tipe perangkat (chiller / freezer / ambient):`, 'chiller');
+      if (!['chiller', 'freezer', 'ambient'].includes(type)) { toast('Tipe tidak valid', 'e'); return; }
+      const threshold = prompt(`Batas suhu SOP (°C):`, type === 'chiller' ? '4' : (type === 'freezer' ? '-18' : '20'));
+      if (isNaN(threshold)) { toast('Threshold harus angka', 'e'); return; }
 
       try {
         const fd = new FormData();
-        fd.append('zone', zone);
+        fd.append('room_id', roomId);
+        fd.append('name', name);
+        fd.append('type', type);
+        fd.append('threshold_c', threshold);
+        const r = await fetch(API + '/facility/devices', { method: 'POST', body: fd });
+        if (r.ok) { toast('Perangkat berhasil ditambah', 's'); loadFacilityZones(); }
+        else { const d = await r.json(); toast(d.detail || 'Gagal tambah perangkat', 'e'); }
+      } catch (e) { toast(e.message, 'e'); }
+    }
+
+    async function deleteDevice(id) {
+      if (!confirm('Hapus perangkat ini?')) return;
+      try {
+        const r = await fetch(API + '/facility/devices/' + id, { method: 'DELETE' });
+        if (r.ok) { toast('Perangkat dihapus', 'i'); loadFacilityZones(); }
+      } catch (e) { toast(e.message, 'e'); }
+    }
+
+    async function deleteRoom(id, name) {
+      if (!confirm(`Hapus ruangan "${name}" dan semua perangkat di dalamnya?`)) return;
+      try {
+        const r = await fetch(API + '/facility/rooms/' + id, { method: 'DELETE' });
+        if (r.ok) { toast('Ruangan dihapus', 'i'); loadFacilityZones(); }
+      } catch (e) { toast(e.message, 'e'); }
+    }
+
+    async function submitFacilityLog() {
+      const deviceId = document.getElementById('logDeviceId').value;
+      const temp = document.getElementById('logTemp').value;
+      const notes = document.getElementById('logNotes').value;
+      if (!deviceId || !temp) { toast('Perangkat dan suhu wajib diisi', 'e'); return; }
+
+      const btn = document.getElementById('btnLogSubmit');
+      btn.innerHTML = '<span class="spin"></span> Menyimpan…'; btn.disabled = true;
+
+      try {
+        const fd = new FormData();
+        fd.append('device_id', deviceId);
         fd.append('temperature', temp);
         if (notes) fd.append('notes', notes);
 
         const r = await fetch(API + '/facility/log', { method: 'POST', body: fd });
         const d = await r.json();
-        closeModal('logModal');
+        if (!r.ok) throw new Error(d.detail || 'Gagal simpan');
 
-        updateFacZone(zone, parseFloat(temp), d.is_normal);
+        closeModal('logModal');
+        loadFacilityZones(); // Refresh views
 
         // Add to log table
-        const cfg = ZONES_CONFIG.find(z => z.key === zone);
-        const cl = d.is_normal ? 'ok' : 'bad';
         const row = `<tr>
-      <td>${new Date().toLocaleString('id-ID')}</td>
-      <td>${cfg?.icon} ${zone}</td>
-      <td class="text-${d.is_normal ? 'green' : 'red'} mono">${temp}°C</td>
-      <td class="mono">${d.threshold_c}°C</td>
-      <td><span class="badge badge-${d.is_normal ? 'ok' : 'fail'}">${d.is_normal ? 'NORMAL' : 'FAIL'}</span></td>
-      <td>${notes || '—'}</td>
-    </tr>`;
+          <td>${new Date().toLocaleString('id-ID')}</td>
+          <td><b>${d.room_name}</b><br><small>${d.device_name}</small></td>
+          <td class="text-${d.is_normal ? 'green' : 'red'} mono">${temp}°C</td>
+          <td class="mono">${d.threshold_c}°C</td>
+          <td><span class="badge badge-${d.is_normal ? 'ok' : 'fail'}">${d.is_normal ? 'NORMAL' : 'FAIL'}</span></td>
+          <td>${notes || '—'}</td>
+        </tr>`;
         const tb = document.getElementById('facilityLogTbody');
         if (tb.innerHTML.includes('Belum ada')) tb.innerHTML = '';
         tb.insertAdjacentHTML('afterbegin', row);
 
-        toast(d.is_normal ? `✅ ${zone} ${temp}°C — NORMAL` : `🚨 ${zone} ${temp}°C — SOP VIOLATION!`, d.is_normal ? 's' : 'e');
+        toast(d.is_normal ? `✅ Berhasil disimpan` : `🚨 SOP VIOLATION!`, d.is_normal ? 's' : 'e');
       } catch (e) {
         toast('Gagal simpan: ' + e.message, 'e');
+      } finally {
+        btn.innerHTML = '💾 Simpan Log'; btn.disabled = false;
       }
-
-      btn.innerHTML = '💾 Simpan Log';
-      btn.disabled = false;
     }
 
     /* ─────────────────────────────────────

@@ -199,12 +199,14 @@ async def _upload_photo(
 # ---------------------------------------------------------------------------
 
 class FacilityLogResponse(BaseModel):
-    zone:          str
+    device_id:     str
     temperature_c: float
     threshold_c:   float
     is_normal:     bool
     status:        str
     violation_msg: str = ""
+    room_name:     str = ""
+    device_name:   str = ""
 
 
 class BatchCreateRequest(BaseModel):
@@ -254,37 +256,86 @@ class DashboardSummary(BaseModel):
 # MODULE A — Facility Monitoring
 # ---------------------------------------------------------------------------
 
+@app.get("/facility/rooms", tags=["Facility Monitoring"])
+async def list_facility_rooms(sb: Client = Depends(get_supabase)):
+    """List all rooms with their active devices."""
+    rooms = sb.table("facility_rooms").select("*").order("name").execute()
+    devices = sb.table("facility_devices").select("*").eq("is_active", True).execute()
+    
+    # Nest devices into rooms
+    res = []
+    for r in (rooms.data or []):
+        r_devices = [d for d in (devices.data or []) if d["room_id"] == r["id"]]
+        res.append({**r, "devices": r_devices})
+    return res
+
+@app.post("/facility/rooms", tags=["Facility Monitoring"])
+async def create_room(name: str = Form(...), sb: Client = Depends(get_supabase)):
+    res = sb.table("facility_rooms").insert({"name": name}).execute()
+    if not res.data: raise HTTPException(500, "Gagal membuat ruangan")
+    return res.data[0]
+
+@app.post("/facility/devices", tags=["Facility Monitoring"])
+async def create_device(
+    room_id: str = Form(...),
+    name: str = Form(...),
+    type: str = Form(..., description="chiller | freezer | ambient"),
+    threshold_c: float = Form(...),
+    sb: Client = Depends(get_supabase)
+):
+    res = sb.table("facility_devices").insert({
+        "room_id": room_id,
+        "name": name,
+        "type": type,
+        "threshold_c": threshold_c
+    }).execute()
+    if not res.data: raise HTTPException(500, "Gagal menambah perangkat")
+    return res.data[0]
+
+@app.delete("/facility/devices/{device_id}", tags=["Facility Monitoring"])
+async def delete_device(device_id: str, sb: Client = Depends(get_supabase)):
+    sb.table("facility_devices").delete().eq("id", device_id).execute()
+    return {"status": "deleted"}
+
+@app.delete("/facility/rooms/{room_id}", tags=["Facility Monitoring"])
+async def delete_room(room_id: str, sb: Client = Depends(get_supabase)):
+    sb.table("facility_rooms").delete().eq("id", room_id).execute()
+    return {"status": "deleted"}
+
 @app.post("/facility/log", response_model=FacilityLogResponse, tags=["Facility Monitoring"])
 async def log_facility_temperature(
-    zone:         str   = Form(..., description="chiller | freezer | ambient"),
+    device_id:    str   = Form(...),
     temperature:  float = Form(...),
     recorder_id:  Optional[str] = Form(None),
     notes:        Optional[str] = Form(None),
     sb: Client = Depends(get_supabase),
 ):
-    """
-    Log a facility zone temperature.
-    Triggers an automatic alert if the reading is outside SOP limits.
-    """
+    """Log a device temperature and trigger alert if out of SOP."""
+    # Fetch device details
+    dev_res = sb.table("facility_devices").select("*, facility_rooms(name)").eq("id", device_id).execute()
+    if not dev_res.data: raise HTTPException(404, "Perangkat tidak ditemukan")
+    dev = dev_res.data[0]
+    
     from skills.parametric_checker import FacilityZone, check_facility_temperature
-    try:
-        zone_enum = FacilityZone(zone)
-    except ValueError:
-        raise HTTPException(400, f"Invalid zone '{zone}'. Choose: chiller, freezer, ambient")
-
+    
     result = check_facility_temperature(
-        zone        = zone_enum,
+        device_id   = device_id,
+        zone        = FacilityZone(dev["type"]),
         temperature = temperature,
+        threshold_override = dev["threshold_c"],
         recorder_id = _clean_uuid(recorder_id),
         notes       = notes,
     )
+    
     return FacilityLogResponse(
-        zone          = zone,
+        device_id     = device_id,
         temperature_c = temperature,
-        threshold_c   = result.threshold_max,  # type: ignore[arg-type]
+        threshold_c   = dev["threshold_c"],
         is_normal     = result.status.value == "pass",
         status        = result.status.value,
         violation_msg = result.violation_msg,
+        room_name     = dev.get("facility_rooms", {}).get("name", "Unknown"),
+        device_name   = dev["name"]
     )
 
 
