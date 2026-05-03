@@ -155,10 +155,10 @@ def _resolve_product_id(sb: Client, product_id_or_code: str) -> str:
             if new_prod.data:
                 return new_prod.data[0]["id"]
         except Exception as e:
-            logger.error(f"Gagal auto-provision product: {e}")
+            logger.error(f"Gagal auto-provision product: {e}", exc_info=True)
             # If insert fails (maybe already exists but select missed it), return code as last resort
             # but usually it's better to fail here than with a UUID error later
-            raise HTTPException(503, f"Produk '{product_id_or_code}' ada di katalog tapi gagal masuk Database: {e}")
+            raise HTTPException(503, f"Produk '{product_id_or_code}' ada di katalog tapi gagal masuk Database: {repr(e)}")
 
     raise HTTPException(400, f"Product '{product_id_or_code}' tidak ditemukan di Database atau Katalog.")
 
@@ -390,11 +390,11 @@ async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supaba
             "operator_id":     _clean_uuid(body.operator_id),
             "qc_officer_id":   _clean_uuid(body.qc_officer_id),
         }]).execute()
-        if not res.data: raise Exception("No data returned")
+        if not res.data: raise Exception("No data returned - possibly foreign key constraint or RLS blocked insert")
         batch_id = res.data[0]["id"]
     except Exception as e:
-        logger.error(f"DB Error create_batch: {e}")
-        raise HTTPException(503, f"Gagal membuat batch di database: {e}")
+        logger.error(f"DB Error create_batch: {e}", exc_info=True)
+        raise HTTPException(503, f"Gagal membuat batch di database: {repr(e)}")
     return BatchCreateResponse(
         batch_id   = batch_id,
         batch_code = body.batch_code,

@@ -285,7 +285,12 @@ def run_ocr_digital_reader(
         logger.info("Processing %s photo: %s", reading_type, photo_path)
 
         image_bytes           = _download_from_storage(photo_path)
-        raw_text, conf, engine = _run_ocr(image_bytes)
+        
+        try:
+            raw_text, conf, engine = _run_ocr(image_bytes)
+        except RuntimeError as e:
+            logger.error(f"OCR bypass active. Details: {e}")
+            raw_text, conf, engine = "", 0.0, "bypass"
         value                 = _extract_number(raw_text, reading_type)
 
         t_min = thresholds.get(f"{reading_type.value}_min")
