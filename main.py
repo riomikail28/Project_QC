@@ -19,7 +19,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, FileResponse
@@ -646,13 +646,24 @@ async def submit_ccp3(
 # ---- Report Generation ------------------------------------------------------
 
 @app.post("/batch/{batch_id}/report", response_model=ReportResponse, tags=["Batch QC"])
-async def generate_report(batch_id: str, sb: Client = Depends(get_supabase)):
+async def generate_report(batch_id: str, background_tasks: BackgroundTasks, sb: Client = Depends(get_supabase)):
     """
     Compile all validated CCP data and photos into a structured PDF report.
     Uploads the PDF to Supabase Storage and writes the URL back to the batch.
     """
     from skills.auto_reporter import run_auto_reporter
     payload = run_auto_reporter(batch_id=batch_id)
+
+    # Sinkronisasi ke Google Sheets
+    from skills.gsheets_integration import send_to_google_sheets
+    sheet_payload = {
+        "batch_id": batch_id,
+        "batch_code": payload.batch_code,
+        "final_status": payload.final_status,
+        "report_pdf_url": payload.report_pdf_url,
+        "violations": payload.violations
+    }
+    background_tasks.add_task(send_to_google_sheets, sheet_payload)
     return ReportResponse(
         batch_id       = batch_id,
         batch_code     = payload.batch_code,
