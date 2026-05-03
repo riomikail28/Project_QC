@@ -58,11 +58,11 @@ async def list_staff(sb: Client = Depends(get_supabase)):
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_staff(staff: StaffCreate, sb: Client = Depends(get_supabase)):
     try:
-        res = sb.table("staff_accounts").insert({
+        res = sb.table("staff_accounts").insert([{
             "username": staff.username,
             "password_hash": _hash_password(staff.password),
             "role": staff.role
-        }).execute()
+        }]).execute()
         row = res.data[0]
         row.pop("password_hash", None)
         row.pop("password", None)

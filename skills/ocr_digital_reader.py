@@ -235,10 +235,9 @@ def _fetch_product_thresholds(product_id: str) -> dict:
         sb.table("products")
         .select("ph_min, ph_max, brix_min, brix_max")
         .eq("id", product_id)
-        .single()
         .execute()
     )
-    return result.data or {}
+    return result.data[0] if result.data else {}
 
 
 def _download_from_storage(storage_path: str) -> bytes:

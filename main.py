@@ -131,15 +131,36 @@ def _resolve_product_id(sb: Client, product_id_or_code: str) -> str:
             sb.table("products")
             .select("id")
             .eq("product_code", product_id_or_code)
-            .single()
             .execute()
         )
+        if res.data:
+            return res.data[0]["id"]
     except Exception as e:
-        raise HTTPException(503, f"Database produk belum siap: {e}")
+        logger.warning(f"Database produk lookup failed: {e}")
 
-    if not res.data:
-        raise HTTPException(400, f"Product code '{product_id_or_code}' tidak ditemukan.")
-    return res.data["id"]
+    # Fallback: check local catalog and auto-provision in DB
+    from product_catalog import product_by_code
+    local = product_by_code(product_id_or_code)
+    if local:
+        try:
+            logger.info(f"Auto-provisioning product: {product_id_or_code}")
+            new_prod = sb.table("products").insert([{
+                "product_code": local["product_code"],
+                "product_name": local["product_name"],
+                "ph_min": local.get("ph_min"),
+                "ph_max": local.get("ph_max"),
+                "brix_min": local.get("brix_min"),
+                "brix_max": local.get("brix_max"),
+            }]).execute()
+            if new_prod.data:
+                return new_prod.data[0]["id"]
+        except Exception as e:
+            logger.error(f"Gagal auto-provision product: {e}")
+            # If insert fails (maybe already exists but select missed it), return code as last resort
+            # but usually it's better to fail here than with a UUID error later
+            raise HTTPException(503, f"Produk '{product_id_or_code}' ada di katalog tapi gagal masuk Database: {e}")
+
+    raise HTTPException(400, f"Product '{product_id_or_code}' tidak ditemukan di Database atau Katalog.")
 
 
 def _stage_status(*statuses: Optional[str]) -> str:
@@ -361,14 +382,14 @@ async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supaba
     pid = _resolve_product_id(sb, body.product_id)
 
     try:
-        res = sb.table("production_batches").insert({
+        res = sb.table("production_batches").insert([{
             "product_id":      pid,
             "batch_code":      body.batch_code,
             "production_date": body.production_date,
             "shift":           body.shift,
             "operator_id":     _clean_uuid(body.operator_id),
             "qc_officer_id":   _clean_uuid(body.qc_officer_id),
-        }).execute()
+        }]).execute()
         if not res.data: raise Exception("No data returned")
         batch_id = res.data[0]["id"]
     except Exception as e:
@@ -379,16 +400,21 @@ async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supaba
         batch_code = body.batch_code,
         message    = "Batch created. Proceed to CCP1.",
     )
+    return BatchCreateResponse(
+        batch_id   = batch_id,
+        batch_code = body.batch_code,
+        message    = "Batch created. Proceed to CCP1.",
+    )
 
 
 @app.get("/batch/{batch_id}", tags=["Batch QC"])
 async def get_batch(batch_id: str, sb: Client = Depends(get_supabase)):
     """Fetch a batch with all CCP logs."""
-    batch = sb.table("production_batches").select("*").eq("id", batch_id).single().execute()
-    if not batch.data:
+    batch_res = sb.table("production_batches").select("*").eq("id", batch_id).execute()
+    if not batch_res.data:
         raise HTTPException(404, "Batch not found.")
     logs = sb.table("production_batch_logs").select("*").eq("batch_id", batch_id).execute()
-    return {"batch": batch.data, "ccp_logs": logs.data}
+    return {"batch": batch_res.data[0], "ccp_logs": logs.data}
 
 
 # ---- CCP 1: Pre-Cook -------------------------------------------------------
@@ -405,12 +431,12 @@ async def submit_ccp1(
     photo_path = await _upload_photo(sb, photo, f"ccp1/{batch_id}")
 
     try:
-        log_res = sb.table("production_batch_logs").insert({
+        log_res = sb.table("production_batch_logs").insert([{
             "batch_id":                 batch_id,
             "stage":                    "CCP1_PRE_COOK",
             "recorder_id":              _clean_uuid(recorder_id),
             "raw_material_photo_path":  photo_path,
-        }).execute()
+        }]).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
         logger.error(f"DB Error ccp1: {e}")
@@ -456,13 +482,13 @@ async def submit_ccp2(
     resolved_product_id = _resolve_product_id(sb, product_id)
 
     try:
-        log_res = sb.table("production_batch_logs").insert({
+        log_res = sb.table("production_batch_logs").insert([{
             "batch_id":                 batch_id,
             "stage":                    "CCP2_POST_COOK",
             "recorder_id":              _clean_uuid(recorder_id),
             "ph_meter_photo_path":      ph_path,
             "refractometer_photo_path": brix_path
-        }).execute()
+        }]).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
         logger.error(f"DB Error ccp2: {e}")
@@ -486,13 +512,13 @@ async def submit_ccp2(
         brix_photo_path = brix_path,
     )
 
-    product = (
+    product_res = (
         sb.table("products")
         .select("ph_min,ph_max,brix_min,brix_max,tds_min,tds_max")
         .eq("id", resolved_product_id)
-        .single()
         .execute()
-    ).data or {}
+    )
+    product = product_res.data[0] if product_res.data else {}
 
     def param_status(value: Optional[float], lo: Optional[float], hi: Optional[float]) -> Optional[str]:
         if value is None:
@@ -559,12 +585,12 @@ async def submit_ccp3(
     photo_path = await _upload_photo(sb, photo, f"ccp3/{batch_id}")
 
     try:
-        log_res = sb.table("production_batch_logs").insert({
+        log_res = sb.table("production_batch_logs").insert([{
             "batch_id":                 batch_id,
             "stage":                    "CCP3_PACKAGING",
             "recorder_id":              _clean_uuid(recorder_id),
             "packaging_photo_path":     photo_path,
-        }).execute()
+        }]).execute()
         batch_log_id = log_res.data[0]["id"]
     except Exception as e:
         logger.error(f"DB Error ccp3: {e}")

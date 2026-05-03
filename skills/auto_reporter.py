@@ -97,10 +97,9 @@ def _fetch_batch(sb: Client, batch_id: str) -> dict:
             "         core_temp_min_c, raw_temp_max_c, room_temp_max_c)"
         )
         .eq("id", batch_id)
-        .single()
         .execute()
     )
-    return res.data or {}
+    return res.data[0] if res.data else {}
 
 
 def _fetch_batch_logs(sb: Client, batch_id: str) -> list[dict]:

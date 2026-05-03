@@ -159,14 +159,14 @@ def check_facility_temperature(
 
     # ---- Persist to Supabase ----
     sb = _get_supabase()
-    log_row = sb.table("facility_logs").insert({
+    log_row = sb.table("facility_logs").insert([{
         "zone":          zone.value,
         "temperature_c": temperature,
         "threshold_c":   threshold,
         "is_normal":     result.status == QCStatus.PASS,
         "recorder_id":   recorder_id,
         "notes":         notes,
-    }).execute()
+    }]).execute()
 
     if result.status == QCStatus.FAIL:
         log_id = log_row.data[0]["id"] if log_row.data else None
@@ -185,13 +185,13 @@ def _create_facility_alert(
     threshold:   float,
 ) -> None:
     """Insert an alert record into facility_alerts."""
-    sb.table("facility_alerts").insert({
+    sb.table("facility_alerts").insert([{
         "log_id":       log_id,
         "zone":         zone.value,
         "temperature_c": temperature,
         "threshold_c":  threshold,
         "status":       "open",
-    }).execute()
+    }]).execute()
 
 
 # ---------------------------------------------------------------------------

@@ -396,10 +396,6 @@
       transition: background .15s;
     }
 
-    .tb-ham:hover {
-      background: var(--glass)
-    }
-
     .tb-ham span {
       display: block;
       width: 15px;
@@ -592,6 +588,10 @@
 
     .btn:active {
       transform: scale(.97)
+    }
+
+    .btn:focus {
+      outline: 2px solid var(--blue);
     }
 
     .btn-green {
@@ -1796,7 +1796,7 @@
       }
 
       .kpi-strip {
-        grid-template-columns: repeat(2, 1fr)
+        grid-template-columns: 1fr
       }
 
       .fac-grid {
@@ -1837,13 +1837,20 @@
       color: var(--blue)
     }
 
-    .text-muted {
-      color: var(--muted)
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, transparent 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: skeleton 1.5s infinite;
+      border-radius: var(--r-sm);
     }
 
-    .mono {
-      font-family: var(--font-m);
-      font-size: 11px
+    @keyframes skeleton {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
     }
 
     .link {
@@ -2008,7 +2015,7 @@
 ═══════════════════════════════════════════ -->
   <header class="topbar" id="topbar">
     <div class="tb-left">
-      <button class="tb-ham" id="tbHam" onclick="toggleSidebar()">
+      <button class="tb-ham" id="tbHam" onclick="toggleSidebar()" aria-label="Toggle sidebar">
         <span></span><span></span><span></span>
       </button>
       <div>
@@ -2018,13 +2025,13 @@
     </div>
     <div class="tb-right">
       <div class="tb-clock" id="tbClock">00:00:00</div>
-      <button class="tb-icon-btn tb-theme" id="themeTopBtn" title="Ganti mode terang/gelap" onclick="toggleTheme()">
+      <button class="tb-icon-btn tb-theme" id="themeTopBtn" title="Ganti mode terang/gelap" onclick="toggleTheme()" aria-label="Toggle theme">
         <span id="themeTopIcon">☀️</span>
       </button>
-      <button class="tb-icon-btn" title="Notifikasi" onclick="showPage('alerts',document.getElementById('nav-alerts'))">
+      <button class="tb-icon-btn" title="Notifikasi" onclick="showPage('alerts',document.getElementById('nav-alerts'))" aria-label="Notifications">
         🔔<span class="tb-notif-dot" id="notifDot" style="display:none"></span>
       </button>
-      <div class="tb-avatar" id="tbAvatar" title="Profil">A</div>
+      <div class="tb-avatar" id="tbAvatar" title="Profil" role="button" aria-label="Profile">A</div>
     </div>
   </header>
 
@@ -2120,8 +2127,28 @@
                   </thead>
                   <tbody id="dashBatchTbody">
                     <tr>
-                      <td colspan="6" style="text-align:center;padding:24px;color:var(--muted)"><span
-                          class="spin"></span></td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                    </tr>
+                    <tr>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                    </tr>
+                    <tr>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
+                      <td class="skeleton">&nbsp;</td>
                     </tr>
                   </tbody>
                 </table>
@@ -2148,14 +2175,14 @@
             <div class="card">
               <div class="card-title">🧼 Hygiene Compliance</div>
               <div class="hygiene-ring-wrap">
-                <svg width="110" height="110" viewBox="0 0 110 110">
-                  <circle cx="55" cy="55" r="44" fill="none" stroke="var(--border)" stroke-width="10" />
-                  <circle cx="55" cy="55" r="44" fill="none" stroke="var(--green)" stroke-width="10"
-                    stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="25" transform="rotate(-90 55 55)"
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="10" />
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--green)" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="28" transform="rotate(-90 60 60)"
                     id="hygieneArc" />
-                  <text x="55" y="52" text-anchor="middle" font-size="18" fill="var(--text)"
+                  <text x="60" y="57" text-anchor="middle" font-size="20" fill="var(--text)"
                     font-weight="700">91%</text>
-                  <text x="55" y="66" text-anchor="middle" font-size="9" fill="var(--muted)">Compliance</text>
+                  <text x="60" y="72" text-anchor="middle" font-size="10" fill="var(--muted)">Compliance</text>
                 </svg>
               </div>
               <div class="hygiene-bars">
