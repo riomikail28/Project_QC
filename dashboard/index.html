@@ -2181,7 +2181,7 @@
                     stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="28" transform="rotate(-90 60 60)"
                     id="hygieneArc" />
                   <text x="60" y="57" text-anchor="middle" font-size="20" fill="var(--text)"
-                    font-weight="700">91%</text>
+                    font-weight="700" id="hygieneVal">91%</text>
                   <text x="60" y="72" text-anchor="middle" font-size="10" fill="var(--muted)">Compliance</text>
                 </svg>
               </div>
@@ -2997,6 +2997,12 @@
 
         // Batch table
         renderDashBatches(d.recent_batches || []);
+        
+        // Hygiene
+        if (d.hygiene_compliance) renderHygiene(d.hygiene_compliance);
+
+        // Inspectors
+        if (d.inspector_performance) renderInspectors(d.inspector_performance);
 
         // Alerts
         renderDashAlerts(d.active_alerts || []);
@@ -3042,6 +3048,47 @@
       </div>
       <div class="alert-time">${a.created_at ? timeAgo(a.created_at) : '—'}</div>
     </div>`).join('');
+    }
+
+    function renderHygiene(data) {
+      const wrap = document.querySelector('.hygiene-bars');
+      if (!wrap) return;
+      
+      const avg = data.length ? Math.round(data.reduce((sum, item) => sum + item.score, 0) / data.length) : 0;
+      const arc = document.getElementById('hygieneArc');
+      if (arc) arc.style.strokeDashoffset = 314 - (314 * avg / 100);
+      const valEl = document.getElementById('hygieneVal');
+      if (valEl) valEl.textContent = avg + '%';
+      
+      wrap.innerHTML = data.map(item => {
+        const color = item.score >= 90 ? 'var(--green)' : (item.score >= 80 ? 'var(--amber)' : 'var(--red)');
+        const textCls = item.score >= 90 ? 'text-green' : (item.score >= 80 ? 'text-amber' : 'text-red');
+        return `
+          <div class="hb-row">
+            <div class="hb-top"><span>${item.label}</span><span class="${textCls}">${item.score}%</span></div>
+            <div class="hb-track">
+              <div class="hb-fill" style="width:${item.score}%;background:${color}"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderInspectors(data) {
+      const list = document.getElementById('inspList');
+      if (!list) return;
+      list.innerHTML = data.map(i => {
+        const scoreCls = i.score >= 90 ? 'text-green' : (i.score >= 80 ? 'text-amber' : 'text-red');
+        const avatarStyle = i.initials === 'SJ' ? '' : (i.initials === 'MC' ? 'style="background:linear-gradient(135deg,var(--amber),#ff6b35)"' : 'style="background:linear-gradient(135deg,var(--purple),var(--blue))"');
+        return `
+          <div class="insp-item">
+            <div class="insp-avatar" ${avatarStyle}>${i.initials}</div>
+            <div>
+              <div class="insp-name">${i.name}</div>
+              <div class="insp-count">${i.count} inspeksi</div>
+            </div>
+            <div class="insp-score ${scoreCls}">${i.score}%</div>
+          </div>`;
+      }).join('');
     }
 
     async function resolveAlert(id) {
