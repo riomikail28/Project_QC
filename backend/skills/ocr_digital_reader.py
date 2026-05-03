@@ -19,7 +19,7 @@ import io
 import os
 import re
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
@@ -39,6 +39,7 @@ except ImportError:
     _HAS_TESSERACT = False
 
 from supabase import create_client, Client
+from PIL import Image, ImageFilter, ImageEnhance
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +50,9 @@ SUPABASE_URL: str  = os.environ.get("SUPABASE_URL", "https://placeholder.supabas
 SUPABASE_KEY: str  = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "placeholder_key")
 GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
 
-
 class ReadingType(str, Enum):
     PH   = "ph"
     BRIX = "brix"
-
 
 @dataclass
 class OCRResult:
@@ -67,7 +66,6 @@ class OCRResult:
     violation_msg: str             = ""
     engine_used:   str             = "unknown"
 
-
 # ---------------------------------------------------------------------------
 # Image Pre-Processing
 # ---------------------------------------------------------------------------
@@ -79,11 +77,6 @@ def _preprocess_image(image_bytes: bytes) -> Image.Image:
     - Increase contrast & sharpness
     - Upscale if small
     """
-    try:
-        from PIL import Image, ImageFilter, ImageEnhance
-    except ImportError:
-        raise RuntimeError("Pillow (PIL) is not installed.")
-
     img = Image.open(io.BytesIO(image_bytes)).convert("L")  # greyscale
 
     # Upscale small images (OCR struggles < 300 dpi equivalent)
@@ -99,7 +92,6 @@ def _preprocess_image(image_bytes: bytes) -> Image.Image:
     img = ImageEnhance.Sharpness(img).enhance(2.0)
     img = img.filter(ImageFilter.MedianFilter(size=3))
     return img
-
 
 # ---------------------------------------------------------------------------
 # OCR Engines
@@ -122,10 +114,8 @@ def _ocr_via_google_vision(image_bytes: bytes) -> tuple[str, float]:
         return "", 0.0
 
     full_text   = texts[0].description.strip()
-    # Confidence is per-symbol; average the first annotation's symbols
     confidence  = 0.8  # Vision API doesn't expose per-annotation confidence directly
     return full_text, confidence
-
 
 def _ocr_via_tesseract(image_bytes: bytes) -> tuple[str, float]:
     """Return (raw_text, confidence) using pytesseract (offline fallback)."""
@@ -143,7 +133,6 @@ def _ocr_via_tesseract(image_bytes: bytes) -> tuple[str, float]:
     raw_text   = " ".join(texts)
     confidence = (sum(confidences) / len(confidences) / 100) if confidences else 0.0
     return raw_text, confidence
-
 
 def _run_ocr(image_bytes: bytes) -> tuple[str, float, str]:
     """
@@ -166,14 +155,12 @@ def _run_ocr(image_bytes: bytes) -> tuple[str, float, str]:
 
     raise RuntimeError("No functional OCR engine available on this server.")
 
-
 # ---------------------------------------------------------------------------
 # Value Extraction
 # ---------------------------------------------------------------------------
 
 # Regex patterns for common LCD numeric formats
 _NUMBER_PATTERN = re.compile(r"[-+]?\d+\.?\d*")
-
 
 def _extract_number(raw_text: str, reading_type: ReadingType) -> Optional[float]:
     """
@@ -191,7 +178,6 @@ def _extract_number(raw_text: str, reading_type: ReadingType) -> Optional[float]
         valid = [v for v in candidates if 0.0 <= v <= 85.0]
 
     return valid[0] if valid else candidates[0]  # return first plausible value
-
 
 # ---------------------------------------------------------------------------
 # Threshold Validation
@@ -219,14 +205,12 @@ def _validate_value(
         )
     return True, ""
 
-
 # ---------------------------------------------------------------------------
 # Supabase Helpers
 # ---------------------------------------------------------------------------
 
 def _get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 def _fetch_product_thresholds(product_id: str) -> dict:
     """Fetch SOP thresholds for a product from Supabase."""
@@ -239,14 +223,12 @@ def _fetch_product_thresholds(product_id: str) -> dict:
     )
     return result.data[0] if result.data else {}
 
-
 def _download_from_storage(storage_path: str) -> bytes:
     """Download a file from Supabase Storage and return its bytes."""
     sb      = _get_supabase()
     bucket  = "qc-photos"
     response = sb.storage.from_(bucket).download(storage_path)
     return response  # returns bytes
-
 
 # ---------------------------------------------------------------------------
 # Main Skill Entry Point

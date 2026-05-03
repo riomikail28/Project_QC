@@ -34,18 +34,15 @@ SUPABASE_KEY: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "") or "placehol
 # Optional: Webhook URL for maintenance alert (e.g. Google Chat, Slack, N8N)
 ALERT_WEBHOOK_URL: str = os.getenv("ALERT_WEBHOOK_URL", "")
 
-
 class QCStatus(str, Enum):
     PASS           = "pass"
     FAIL           = "fail"
     PENDING_REVIEW = "pending_review"
 
-
 class FacilityZone(str, Enum):
     CHILLER = "chiller"
     FREEZER = "freezer"
     AMBIENT = "ambient"
-
 
 # ---------------------------------------------------------------------------
 # SOP Thresholds (defaults — override per-product from Supabase if needed)
@@ -78,7 +75,6 @@ CCP_RULES = {
     },
 }
 
-
 # ---------------------------------------------------------------------------
 # Data Classes
 # ---------------------------------------------------------------------------
@@ -92,7 +88,6 @@ class CheckResult:
     threshold_max: Optional[float]
     status:        QCStatus
     violation_msg: str = ""
-
 
 # ---------------------------------------------------------------------------
 # Core Validation Logic
@@ -127,7 +122,6 @@ def _check_temperature(
         status        = status,
         violation_msg = violation,
     )
-
 
 # ---------------------------------------------------------------------------
 # MODULE A — Facility Monitoring

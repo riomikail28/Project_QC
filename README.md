@@ -20,10 +20,36 @@ Sistem manajemen mutu (Quality Control) berbasis digital yang dirancang khusus u
 - **Mobile Integration:** PWA, Service Workers, LocalForage.
 - **Tools:** OCR Digital Reader, QR/Barcode Scanner Integration.
 
-## 📁 Struktur Proyek
-- `/main.py` - Core API Server (FastAPI).
-- `/dashboard/` - Antarmuka Dashboard (Login, PWA, Monitoring).
-- `/skills/` - Modul Pintar (OCR Reader, Auto Reporter, Parametric Checker).
+## 📁 Struktur Proyek (Updated)
+```
+Project_QC/
+├── frontend/                  # All UI files
+│   ├── assets/
+│   ├── landing.html
+│   └── dashboard/
+│       ├── index.html
+│       ├── login.html
+│       ├── camera-module.js
+│       ├── manifest.json
+│       └── sw.js
+├── backend/                   # Python backend
+│   ├── main.py
+│   ├── product_catalog.py
+│   ├── staff_manager.py
+│   ├── qc_validator.py
+│   └── skills/
+├── db/                        # SQL schema
+│   ├── schema.sql
+│   └── facility_expansion.sql
+├── integrations/
+│   └── google_apps_script.js
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
+```
+**Run:** `cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000`
+
 
 ---
 *Proyek ini dikembangkan untuk tujuan pemenuhan tugas akhir akademis.bisa dikembangkan lebih lanjut*

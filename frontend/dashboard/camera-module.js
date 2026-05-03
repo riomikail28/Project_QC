@@ -5,11 +5,13 @@
 
 import localforage from 'https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js';
 
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MAX_SIZE_KB   = 800;
 const JPEG_QUALITY  = 0.82;
 const PHOTO_STORE   = 'qc_pending_photos';
 const SYNC_TAG      = 'sync-qc-photos';
+
 
 // ─── 1. Request camera permission with graceful fallback ──────────────────────
 export async function requestCamera(videoEl) {
