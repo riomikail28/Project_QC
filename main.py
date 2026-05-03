@@ -400,11 +400,6 @@ async def create_batch(body: BatchCreateRequest, sb: Client = Depends(get_supaba
         batch_code = body.batch_code,
         message    = "Batch created. Proceed to CCP1.",
     )
-    return BatchCreateResponse(
-        batch_id   = batch_id,
-        batch_code = body.batch_code,
-        message    = "Batch created. Proceed to CCP1.",
-    )
 
 
 @app.get("/batch/{batch_id}", tags=["Batch QC"])

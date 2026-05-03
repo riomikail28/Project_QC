@@ -3267,7 +3267,7 @@
     async function loadBatches() {
       const tb = document.getElementById('batchesTbody');
       try {
-        const r = await fetch(API + '/batches');
+        const r = await fetch(API + '/batches?t=' + Date.now());
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const raw = await r.json();
         const list = Array.isArray(raw) ? raw : (raw.data ?? []);
@@ -3398,6 +3398,7 @@
           activeBatchCode = d.batch_code;
           activeProdId = pval;
           unlockStep(2);
+          loadBatches(); // Refresh list
           toast('✅ Batch ' + d.batch_code + ' dibuat!', 's');
           document.getElementById('panelStep2').scrollIntoView({ behavior: 'smooth' });
         } else {
