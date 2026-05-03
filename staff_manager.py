@@ -49,8 +49,8 @@ async def list_staff(sb: Client = Depends(get_supabase)):
         return res.data
     except Exception as e:
         logger.error(f"Error listing staff: {e}")
-        # Fallback for demo if table doesn't exist yet
         return [
+            {"id": "error-demo", "username": f"Error: {e}", "role": "admin"},
             {"id": "admin-demo", "username": "admin", "role": "admin"},
             {"id": "staff-demo", "username": "staff", "role": "staff"}
         ]
