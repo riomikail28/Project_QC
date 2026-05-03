@@ -2392,51 +2392,76 @@
           <div class="step-panel-header">
             <div>
               <div class="step-panel-title">Step 2 — CCP 2 · Cooking & Sensory</div>
-              <div class="step-panel-sub">Suhu inti, pH, Brix</div>
+              <div class="step-panel-sub">Suhu inti, pH, Brix (Dapat diinput satu per satu oleh staf berbeda)</div>
             </div>
             <span class="badge badge-pend" id="ccp2Badge">Menunggu Step 1</span>
           </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <div class="form-label">Suhu Inti (°C) — SOP: ≥ 75°C *</div>
-              <input type="number" id="ccp2Temp" step="0.1" placeholder="82.5" class="form-input">
-            </div>
-            <div class="form-group" id="wrapPh" style="display:none">
-              <div class="form-label">Nilai pH *</div>
-              <input type="number" id="ccp2Ph" step="0.01" placeholder="4.5" class="form-input">
-            </div>
-            <div class="form-group" id="wrapBrix" style="display:none">
-              <div class="form-label">Kadar Brix (%) *</div>
-              <input type="number" id="ccp2Brix" step="0.1" placeholder="12.5" class="form-input">
-            </div>
-            <div class="form-group" id="wrapPhPhoto" style="display:none">
-              <div class="form-label">Foto LCD pH Meter *</div>
-              <div class="upload-area" onclick="document.getElementById('ccp2PhFile').click()" id="phPhotoArea">
-                <div class="upload-icon">🧪</div>
-                <div class="upload-text">Upload foto LCD pH</div>
+
+          <!-- Mini Form 1: Suhu Inti -->
+          <div class="card mb16" style="box-shadow:none; border:1px solid var(--border)">
+            <div style="font-weight:600; margin-bottom:8px">🌡️ Suhu Inti</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <div class="form-label">Suhu Inti (°C) — SOP: ≥ 75°C</div>
+                <input type="number" id="ccp2Temp" step="0.1" placeholder="82.5" class="form-input">
               </div>
-              <input type="file" id="ccp2PhFile" accept="image/*" capture="environment"
-                onchange="previewUpload('ccp2PhFile','phPhotoArea')">
             </div>
-            <div class="form-group" id="wrapBrixPhoto" style="display:none">
-              <div class="form-label">Foto LCD Refraktometer *</div>
-              <div class="upload-area" onclick="document.getElementById('ccp2BrixFile').click()" id="brixPhotoArea">
-                <div class="upload-icon">🔭</div>
-                <div class="upload-text">Upload foto Brix</div>
-              </div>
-              <input type="file" id="ccp2BrixFile" accept="image/*" capture="environment"
-                onchange="previewUpload('ccp2BrixFile','brixPhotoArea')">
+            <div style="display:flex;justify-content:flex-end;margin-top:8px">
+              <button class="btn btn-blue btn-sm" id="btnSaveTemp" onclick="submitCcp2Partial('temp')">Save Suhu</button>
             </div>
           </div>
+
+          <!-- Mini Form 2: pH Meter -->
+          <div class="card mb16" style="box-shadow:none; border:1px solid var(--border)">
+            <div style="font-weight:600; margin-bottom:8px">🧪 pH Meter</div>
+            <div class="form-grid">
+              <div class="form-group" id="wrapPh" style="display:none">
+                <div class="form-label">Nilai pH</div>
+                <input type="number" id="ccp2Ph" step="0.01" placeholder="4.5" class="form-input">
+              </div>
+              <div class="form-group" id="wrapPhPhoto" style="display:none">
+                <div class="form-label">Foto LCD pH Meter</div>
+                <div class="upload-area" onclick="document.getElementById('ccp2PhFile').click()" id="phPhotoArea">
+                  <div class="upload-icon">📸</div>
+                  <div class="upload-text">Upload foto LCD pH</div>
+                </div>
+                <input type="file" id="ccp2PhFile" accept="image/*" capture="environment" onchange="previewUpload('ccp2PhFile','phPhotoArea')">
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px">
+              <button class="btn btn-blue btn-sm" id="btnSavePh" onclick="submitCcp2Partial('ph')">Save pH</button>
+            </div>
+          </div>
+
+          <!-- Mini Form 3: Brix -->
+          <div class="card mb16" style="box-shadow:none; border:1px solid var(--border)">
+            <div style="font-weight:600; margin-bottom:8px">🔭 Kadar Brix (Kemanisan)</div>
+            <div class="form-grid">
+              <div class="form-group" id="wrapBrix" style="display:none">
+                <div class="form-label">Kadar Brix (%)</div>
+                <input type="number" id="ccp2Brix" step="0.1" placeholder="12.5" class="form-input">
+              </div>
+              <div class="form-group" id="wrapBrixPhoto" style="display:none">
+                <div class="form-label">Foto LCD Refraktometer</div>
+                <div class="upload-area" onclick="document.getElementById('ccp2BrixFile').click()" id="brixPhotoArea">
+                  <div class="upload-icon">📸</div>
+                  <div class="upload-text">Upload foto Brix</div>
+                </div>
+                <input type="file" id="ccp2BrixFile" accept="image/*" capture="environment" onchange="previewUpload('ccp2BrixFile','brixPhotoArea')">
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px">
+              <button class="btn btn-blue btn-sm" id="btnSaveBrix" onclick="submitCcp2Partial('brix')">Save Brix</button>
+            </div>
+          </div>
+
           <div class="ocr-box" id="ocrBox">
             <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:10px">HASIL OCR OTOMATIS</div>
-            <div class="ocr-row"><span class="ocr-lbl">🧪 pH Meter</span><span class="ocr-val"
-                id="ocrPhVal">—</span><span class="badge" id="ocrPhBadge">—</span></div>
-            <div class="ocr-row"><span class="ocr-lbl">🔭 Refraktometer</span><span class="ocr-val"
-                id="ocrBrixVal">—</span><span class="badge" id="ocrBrixBadge">—</span></div>
+            <div class="ocr-row"><span class="ocr-lbl">🧪 pH Meter</span><span class="ocr-val" id="ocrPhVal">—</span><span class="badge" id="ocrPhBadge">—</span></div>
+            <div class="ocr-row"><span class="ocr-lbl">🔭 Refraktometer</span><span class="ocr-val" id="ocrBrixVal">—</span><span class="badge" id="ocrBrixBadge">—</span></div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:16px">
-            <button class="btn btn-green" id="btnCCP2" onclick="submitCCP2()">Submit CCP 2 + OCR →</button>
+            <button class="btn btn-green" id="btnCCP2" onclick="completeCCP2()">Tandai CCP 2 Selesai →</button>
           </div>
         </div>
 
@@ -3260,12 +3285,27 @@
         <td>${b.shift || '—'}</td>
         <td><span class="badge ${bdg}">${st.toUpperCase()}</span></td>
         <td>${b.qc_officer_id || '—'}</td>
-        <td>${b.report_url ? `<a href="${b.report_url}" target="_blank" class="link">📄 PDF</a>` : '—'}</td>
+        <td>${b.report_url ? `<a href="${b.report_url}" target="_blank" class="link">📄 PDF</a>` : 
+             (st === 'in_progress' ? `<button class="btn btn-blue btn-xs" onclick="resumeBatch('${b.id}', '${b.batch_code}', '${b.product_id}')">Lanjutkan</button>` : '—')}</td>
       </tr>`;
         }).join('');
       } catch (e) {
         tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--red)">Gagal: ${e.message}</td></tr>`;
       }
+    }
+
+    function resumeBatch(id, code, prodId) {
+        activeBatchId = id;
+        activeBatchCode = code;
+        activeProdId = prodId;
+        
+        // Show the new batch page
+        showPage('new-batch', document.getElementById('nav-new-batch'));
+        
+        // Skip step 1 and unlock step 2
+        unlockStep(2);
+        toast('Melanjutkan sesi batch: ' + code, 'i');
+        document.getElementById('panelStep2').scrollIntoView({ behavior: 'smooth' });
     }
 
     /* ─────────────────────────────────────
@@ -3274,7 +3314,7 @@
     async function loadStaff() {
       const tb = document.getElementById('staffTbody');
       try {
-        const r = await fetch(API + '/api/staff/');
+        const r = await fetch(API + '/api/staff/?t=' + Date.now());
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const raw = await r.json();
         const list = Array.isArray(raw) ? raw : (raw.data ?? []);
@@ -3290,7 +3330,7 @@
       const opSel = document.getElementById('batchOperator');
       const qcSel = document.getElementById('batchQcOfficer');
       try {
-        const r = await fetch(API + '/api/staff/');
+        const r = await fetch(API + '/api/staff/?t=' + Date.now());
         if (!r.ok) return;
         const raw = await r.json();
         const list = Array.isArray(raw) ? raw : (raw.data ?? []);
@@ -3385,58 +3425,85 @@
     }
 
     /* ─────────────────────────────────────
-       CCP 2
+       CCP 2 (Partial/Incremental)
     ───────────────────────────────────── */
-    async function submitCCP2() {
-      if (!activeBatchId) { toast('Buat batch dulu', 'e'); return; }
-      const temp = document.getElementById('ccp2Temp').value;
-      if (!temp) { toast('Masukkan suhu inti', 'e'); return; }
+    async function submitCcp2Partial(type) {
+      if (!activeBatchId) { toast('Silakan mulai sesi batch (Step 1) terlebih dahulu', 'e'); return; }
+      
+      const fd = new FormData();
+      fd.append('product_id', activeProdId || '');
+      
+      let btnId, successMsg;
+      if (type === 'temp') {
+        const val = document.getElementById('ccp2Temp').value;
+        if (!val) { toast('Masukkan Suhu Inti', 'e'); return; }
+        fd.append('core_temp_c', val);
+        btnId = 'btnSaveTemp';
+        successMsg = 'Suhu Inti tersimpan';
+      } else if (type === 'ph') {
+        const v = document.getElementById('ccp2Ph').value;
+        const f = document.getElementById('ccp2PhFile').files[0];
+        if (!v && !f) { toast('Masukkan nilai manual atau foto pH', 'e'); return; }
+        if (v) fd.append('ph_value', v);
+        if (f) fd.append('ph_photo', f);
+        btnId = 'btnSavePh';
+        successMsg = 'Data pH tersimpan';
+      } else if (type === 'brix') {
+        const v = document.getElementById('ccp2Brix').value;
+        const f = document.getElementById('ccp2BrixFile').files[0];
+        if (!v && !f) { toast('Masukkan nilai manual atau foto Brix', 'e'); return; }
+        if (v) fd.append('brix_value', v);
+        if (f) fd.append('brix_photo', f);
+        btnId = 'btnSaveBrix';
+        successMsg = 'Data Brix tersimpan';
+      }
 
-      const btn = document.getElementById('btnCCP2');
-      btn.innerHTML = '<span class="spin"></span> Proses OCR…';
+      const btn = document.getElementById(btnId);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="spin"></span> Menyimpan...';
       btn.disabled = true;
 
       try {
-        const fd = new FormData();
-        fd.append('core_temp_c', temp);
-        fd.append('product_id', activeProdId || '');
-        const phV = document.getElementById('ccp2Ph').value;
-        const bxV = document.getElementById('ccp2Brix').value;
-        const phF = document.getElementById('ccp2PhFile').files[0];
-        const bxF = document.getElementById('ccp2BrixFile').files[0];
-        if (phV) fd.append('ph_value', phV);
-        if (bxV) fd.append('brix_value', bxV);
-        if (phF) fd.append('ph_photo', phF);
-        if (bxF) fd.append('brix_photo', bxF);
-
         const r = await fetch(API + '/batch/' + activeBatchId + '/ccp2', { method: 'POST', body: fd });
         const d = await r.json();
-
+        
         if (r.ok) {
-          const pass = d.stage_status === 'pass';
-          document.getElementById('ccp2Badge').className = 'badge ' + (pass ? 'badge-ok' : 'badge-fail');
-          document.getElementById('ccp2Badge').textContent = pass ? 'PASS ✓' : 'FAIL ✗';
-
+          toast('✅ ' + successMsg, 's');
+          // Update OCR preview if any
           if (d.ocr_result) {
             document.getElementById('ocrBox').classList.add('show');
-            document.getElementById('ocrPhVal').textContent = d.ocr_result.ph_value ?? '—';
-            document.getElementById('ocrBrixVal').textContent = d.ocr_result.brix_value ?? '—';
-            const cls = d.ocr_result.overall_pass ? 'badge-ok' : 'badge-fail';
-            document.getElementById('ocrPhBadge').className = 'badge ' + cls;
-            document.getElementById('ocrPhBadge').textContent = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
-            document.getElementById('ocrBrixBadge').className = 'badge ' + cls;
-            document.getElementById('ocrBrixBadge').textContent = d.ocr_result.overall_pass ? 'PASS' : 'CHECK';
+            if (d.ocr_result.ph_value !== null) {
+                document.getElementById('ocrPhVal').textContent = d.ocr_result.ph_value;
+                document.getElementById('ocrPhBadge').className = 'badge badge-blue';
+                document.getElementById('ocrPhBadge').textContent = 'OCR OK';
+            }
+            if (d.ocr_result.brix_value !== null) {
+                document.getElementById('ocrBrixVal').textContent = d.ocr_result.brix_value;
+                document.getElementById('ocrBrixBadge').className = 'badge badge-blue';
+                document.getElementById('ocrBrixBadge').textContent = 'OCR OK';
+            }
           }
-
-          lockStep(2);
-          unlockStep(3);
-          toast(pass ? '✅ CCP 2 PASS' : '⚠ CCP 2 FAIL — periksa hasil', pass ? 's' : 'w');
-          document.getElementById('panelStep3').scrollIntoView({ behavior: 'smooth' });
-        } else toast('Error CCP2: ' + (d.detail || ''), 'e');
-      } catch (e) { toast('Gagal CCP2: ' + e.message, 'e'); }
-
-      btn.innerHTML = 'Submit CCP 2 + OCR →';
+          btn.innerHTML = 'Tersimpan ✓';
+          btn.classList.replace('btn-blue', 'btn-green');
+        } else {
+          toast('Error: ' + (d.detail || 'Gagal menyimpan'), 'e');
+          btn.innerHTML = originalText;
+        }
+      } catch (e) {
+        toast('Gagal: ' + e.message, 'e');
+        btn.innerHTML = originalText;
+      }
       btn.disabled = false;
+    }
+
+    function completeCCP2() {
+      if (!activeBatchId) return;
+      document.getElementById('ccp2Badge').className = 'badge badge-ok';
+      document.getElementById('ccp2Badge').textContent = 'Selesai ✓';
+      lockStep(2);
+      unlockStep(3);
+      toast('CCP 2 selesai, lanjut ke Packaging', 's');
+      document.getElementById('panelStep3').scrollIntoView({ behavior: 'smooth' });
     }
 
     /* ─────────────────────────────────────

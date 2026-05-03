@@ -185,7 +185,9 @@ CREATE POLICY "Authenticated insert batch_logs"
 -- -------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;

@@ -466,7 +466,7 @@ async def submit_ccp1(
 @app.post("/batch/{batch_id}/ccp2", response_model=CCPLogResponse, tags=["Batch QC"])
 async def submit_ccp2(
     batch_id:        str,
-    core_temp_c:     float             = Form(..., description="Core temp (≥ 75°C)"),
+    core_temp_c:     Optional[float]    = Form(None, description="Core temp (≥ 75°C)"),
     product_id:      str               = Form(...),
     ph_value:        Optional[float]    = Form(None),
     brix_value:      Optional[float]    = Form(None),
@@ -482,26 +482,37 @@ async def submit_ccp2(
     resolved_product_id = _resolve_product_id(sb, product_id)
 
     try:
-        log_res = sb.table("production_batch_logs").insert([{
-            "batch_id":                 batch_id,
-            "stage":                    "CCP2_POST_COOK",
-            "recorder_id":              _clean_uuid(recorder_id),
-            "ph_meter_photo_path":      ph_path,
-            "refractometer_photo_path": brix_path
-        }]).execute()
-        batch_log_id = log_res.data[0]["id"]
+        log_res = sb.table("production_batch_logs").select("id").eq("batch_id", batch_id).eq("stage", "CCP2_POST_COOK").execute()
+        
+        payload = {
+            "batch_id": batch_id,
+            "stage": "CCP2_POST_COOK"
+        }
+        if recorder_id: payload["recorder_id"] = _clean_uuid(recorder_id)
+        if ph_path: payload["ph_meter_photo_path"] = ph_path
+        if brix_path: payload["refractometer_photo_path"] = brix_path
+
+        if log_res.data:
+            batch_log_id = log_res.data[0]["id"]
+            if len(payload) > 2: # More than just batch_id and stage
+                sb.table("production_batch_logs").update(payload).eq("id", batch_log_id).execute()
+        else:
+            insert_res = sb.table("production_batch_logs").insert([payload]).execute()
+            batch_log_id = insert_res.data[0]["id"]
     except Exception as e:
         logger.error(f"DB Error ccp2: {e}")
         raise HTTPException(503, f"Gagal menyimpan CCP2: {e}")
 
     # Temperature check
+    temp_result = None
     from skills.parametric_checker import check_ccp_temperatures
-    temp_result = check_ccp_temperatures(
-        batch_log_id = batch_log_id,
-        stage        = "CCP2_POST_COOK",
-        temperature  = core_temp_c,
-        recorder_id  = recorder_id,
-    )
+    if core_temp_c is not None:
+        temp_result = check_ccp_temperatures(
+            batch_log_id = batch_log_id,
+            stage        = "CCP2_POST_COOK",
+            temperature  = core_temp_c,
+            recorder_id  = recorder_id,
+        )
 
     # OCR on LCD photos
     from skills.ocr_digital_reader import run_ocr_digital_reader
@@ -550,7 +561,24 @@ async def submit_ccp2(
         brix_status = "pass" if ocr_output["brix_result"].is_valid else "fail"
     ph_status = manual_ph_status or ph_status
     brix_status = manual_brix_status or brix_status
-    stage_status = _stage_status(temp_result.status.value, ph_status, brix_status, manual_tds_status)
+    
+    # We shouldn't overwrite stage_status if it's already pass and we only updated one parameter
+    # Let's read the current statuses from DB to merge them
+    curr_log = sb.table("production_batch_logs").select("*").eq("id", batch_log_id).execute()
+    curr = curr_log.data[0] if curr_log.data else {}
+    
+    if ph_status is None:
+        ph_status = curr.get("ph_value_status")
+    if brix_status is None:
+        brix_status = curr.get("brix_value_status")
+    if manual_tds_status is None:
+        manual_tds_status = curr.get("tds_value_status")
+    
+    curr_temp_status = temp_result.status.value if temp_result else curr.get("stage_qc_status") # fallback for partial temp
+    if curr_temp_status is None:
+        curr_temp_status = "pass" # if not yet recorded, assume ok for the stage calc
+        
+    stage_status = _stage_status(curr_temp_status, ph_status, brix_status, manual_tds_status)
     sb.table("production_batch_logs").update({
         "stage_qc_status": stage_status,
     }).eq("id", batch_log_id).execute()
@@ -558,7 +586,7 @@ async def submit_ccp2(
     return CCPLogResponse(
         batch_log_id = batch_log_id,
         stage        = "CCP2_POST_COOK",
-        checks       = [{"label": temp_result.label, "value": core_temp_c, "status": temp_result.status}],
+        checks       = [{"label": temp_result.label, "value": core_temp_c, "status": temp_result.status}] if temp_result else [],
         ocr_result   = {
             "ph_value":    ocr_output["ph_result"].value if ocr_output.get("ph_result") else None,
             "brix_value":  ocr_output["brix_result"].value if ocr_output.get("brix_result") else None,
