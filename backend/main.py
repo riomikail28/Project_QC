@@ -302,6 +302,48 @@ async def delete_room(room_id: str, sb: Client = Depends(get_supabase)):
     sb.table("facility_rooms").delete().eq("id", room_id).execute()
     return {"status": "deleted"}
 
+@app.post("/facility/{room_id}/devices/adjust", tags=["Facility Monitoring"])
+async def adjust_room_device(
+    room_id: str,
+    device_type: str = Form(..., regex="^(chiller|freezer)$"),
+    action: str = Form(..., regex="^(\+1|-1)$"),
+    sb: Client = Depends(get_supabase)
+):
+    """Adjust chiller/freezer count in room: +1 adds new device, -1 deactivates oldest."""
+    
+    # Verify room exists
+    room = sb.table("facility_rooms").select("id").eq("id", room_id).execute()
+    if not room.data:
+        raise HTTPException(404, "Ruangan tidak ditemukan")
+    
+    if action == "+1":
+        # Create new device
+        name = f"{device_type.title()} {sb.table('facility_devices').select('count(*)').eq('room_id', room_id).eq('type', device_type).execute().count + 1}"
+        res = sb.table("facility_devices").insert({
+            "room_id": room_id,
+            "name": name,
+            "type": device_type,
+            "threshold_c": 4.0 if device_type == "chiller" else -18.0,
+            "is_active": True
+        }).execute()
+        return {"status": "added", "device_id": res.data[0]["id"] if res.data else None}
+    
+    else:  # -1
+        # Deactivate oldest inactive device of this type (or active if none inactive)
+        target = sb.table("facility_devices") \
+            .select("id") \
+            .eq("room_id", room_id) \
+            .eq("type", device_type) \
+            .order("created_at") \
+            .limit(1).execute()
+        
+        if not target.data:
+            raise HTTPException(404, f"Tidak ada {device_type} di ruangan ini")
+        
+        device_id = target.data[0]["id"]
+        sb.table("facility_devices").update({"is_active": False}).eq("id", device_id).execute()
+        return {"status": "deactivated", "device_id": device_id}
+
 @app.post("/facility/log", response_model=FacilityLogResponse, tags=["Facility Monitoring"])
 async def log_facility_temperature(
     device_id:    str   = Form(...),
