@@ -168,6 +168,44 @@ def validate_qc():
 
 
 # ---------------------------------------------------------------------------
+# POST /api/qc/findings — Report finding with photo
+# ---------------------------------------------------------------------------
+@qc_bp.route("/api/qc/findings", methods=["POST"])
+def report_finding():
+    """Report a field finding with optional photo and mandatory reason."""
+    from backend.service.storage_service import upload_photo
+    
+    reason = request.form.get("reason")
+    staff_id = request.form.get("staff_id")
+    photo_file = request.files.get("photo")
+    
+    if not reason:
+        return jsonify({"detail": "Reason is required"}), 400
+        
+    sb = get_client()
+    photo_url = None
+    
+    if photo_file:
+        try:
+            photo_url = upload_photo(photo_file.read(), photo_file.filename)
+        except Exception as e:
+            logger.error("Photo upload failed: %s", e)
+
+    if sb:
+        try:
+            res = sb.table("qc_findings").insert({
+                "staff_id": staff_id,
+                "reason": reason,
+                "photo_url": photo_url
+            }).execute()
+            return jsonify(res.data[0] if res.data else {"success": True})
+        except Exception as e:
+            return jsonify({"detail": str(e)}), 500
+            
+    return jsonify({"success": True, "photo_url": photo_url})
+
+
+# ---------------------------------------------------------------------------
 # GET /api/qc/health — System health check
 # ---------------------------------------------------------------------------
 @qc_bp.route("/api/qc/health", methods=["GET"])

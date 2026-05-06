@@ -62,8 +62,36 @@
             <i class="fas fa-plus"></i>
         </button>
         <div id="fabMenu" style="display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; position: absolute; bottom: 80px; right: 0;">
-            <button onclick="window.location.href='new_batch.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);"><i class="fas fa-box"></i></button>
-            <button onclick="window.location.href='monitoring.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);"><i class="fas fa-thermometer-half"></i></button>
+            <button onclick="openFindingModal()" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: #ef4444; cursor: pointer; box-shadow: var(--shadow-md);" title="Lapor Temuan"><i class="fas fa-camera"></i></button>
+            <button onclick="window.location.href='new_batch.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);" title="Batch Baru"><i class="fas fa-box"></i></button>
+            <button onclick="window.location.href='monitoring.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);" title="Monitoring"><i class="fas fa-thermometer-half"></i></button>
+        </div>
+    </div>
+
+    <!-- Modal Temuan -->
+    <div id="findingModal" class="modal-overlay">
+        <div class="modal-sheet">
+            <div class="modal-drag-handle"></div>
+            <div class="modal-header">
+                <h3>Lapor Temuan QC</h3>
+                <button onclick="closeFindingModal()" class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="findingForm">
+                <div class="form-group">
+                    <label class="input-label">Foto Temuan</label>
+                    <div id="photoPreview" style="width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 12px; cursor: pointer; overflow: hidden;">
+                        <i class="fas fa-camera" style="font-size: 32px; color: #94a3b8; margin-bottom: 8px;"></i>
+                        <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Klik untuk ambil foto</span>
+                        <img id="previewImg" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="findingPhoto" accept="image/*" capture="environment" style="display: none;">
+                </div>
+                <div class="form-group">
+                    <label class="input-label">Alasan / Deskripsi</label>
+                    <textarea id="findingReason" class="input-field" style="height: 120px; resize: none; padding-top: 12px;" placeholder="Jelaskan temuan Anda..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" id="submitFindingBtn">KIRIM LAPORAN</button>
+            </form>
         </div>
     </div>
 
@@ -100,6 +128,79 @@
             const isVisible = menu.style.display === 'flex';
             menu.style.display = isVisible ? 'none' : 'flex';
             fab.style.transform = isVisible ? 'rotate(0)' : 'rotate(45deg)';
+        });
+
+        // Finding Modal Logic
+        const findingModal = document.getElementById('findingModal');
+        const modalSheet = findingModal.querySelector('.modal-sheet');
+        const findingForm = document.getElementById('findingForm');
+        const photoInput = document.getElementById('findingPhoto');
+        const photoPreview = document.getElementById('photoPreview');
+        const previewImg = document.getElementById('previewImg');
+
+        function openFindingModal() {
+            menu.style.display = 'none';
+            fab.style.transform = 'rotate(0)';
+            findingModal.style.display = 'flex';
+            setTimeout(() => modalSheet.classList.add('active'), 10);
+        }
+
+        function closeFindingModal() {
+            modalSheet.classList.remove('active');
+            setTimeout(() => findingModal.style.display = 'none', 400);
+        }
+
+        photoPreview.addEventListener('click', () => photoInput.click());
+
+        photoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (prev) => {
+                    previewImg.src = prev.target.result;
+                    previewImg.style.display = 'block';
+                    photoPreview.querySelector('i').style.display = 'none';
+                    photoPreview.querySelector('span').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        findingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitFindingBtn');
+            const reason = document.getElementById('findingReason').value;
+            const photo = photoInput.files[0];
+
+            if (!reason) return alert("Mohon isi alasan temuan");
+
+            btn.disabled = true;
+            btn.innerText = 'MENGIRIM...';
+
+            try {
+                const formData = new FormData();
+                formData.append('reason', reason);
+                if (photo) formData.append('photo', photo);
+                formData.append('staff_id', JSON.parse(localStorage.getItem('qc_user')).id);
+
+                await API.upload('/qc/findings', formData);
+                
+                alert("Laporan temuan berhasil dikirim!");
+                closeFindingModal();
+                findingForm.reset();
+                previewImg.style.display = 'none';
+                photoPreview.querySelector('i').style.display = 'block';
+                photoPreview.querySelector('span').style.display = 'block';
+            } catch (err) {
+                alert("Gagal mengirim laporan: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'KIRIM LAPORAN';
+            }
+        });
+
+        findingModal.addEventListener('click', (e) => {
+            if (e.target === findingModal) closeFindingModal();
         });
     </script>
 </body>

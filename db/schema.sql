@@ -113,4 +113,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 5. QC FINDINGS (General observations with photo and reason)
+CREATE TABLE IF NOT EXISTS qc_findings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    staff_id UUID REFERENCES staff_accounts(id),
+    reason TEXT NOT NULL,
+    photo_url TEXT,
+    status TEXT DEFAULT 'open', -- open, resolved
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 SELECT seed_facility_data();
