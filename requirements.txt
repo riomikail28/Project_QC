@@ -1,6 +1,6 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
-supabase==2.4.0
+supabase==2.11.0
 python-dotenv==1.0.0
 google-cloud-vision==3.4.5
 gunicorn==21.2.0
