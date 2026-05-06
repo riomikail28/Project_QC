@@ -32,5 +32,10 @@ const Auth = {
     user() {
         const user = localStorage.getItem('qc_user');
         return user ? JSON.parse(user) : null;
+    },
+
+    isAdmin() {
+        const u = this.user();
+        return u && u.role === 'admin';
     }
 };

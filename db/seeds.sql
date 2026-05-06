@@ -5,8 +5,7 @@
 INSERT INTO staff_accounts (username, password_hash, role, full_name)
 VALUES 
 ('admin', 'admin123', 'admin', 'Administrator Utama'),
-('staff_kitchen', 'staff123', 'staff', 'Operator Kitchen 01'),
-('qc_lead', 'qc123', 'qc_lead', 'Kepala Quality Control');
+('staff', 'staff123', 'staff', 'Operator Kitchen');
 
 -- 2. Product Catalog (SOP Thresholds)
 INSERT INTO products (sku_code, product_name, category, brix_min, brix_max, ph_min, ph_max, tds_min, tds_max)

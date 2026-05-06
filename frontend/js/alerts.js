@@ -35,6 +35,14 @@ const AlertsPage = {
 
     renderAlertCard(alert) {
         const time = Utils.formatTime(alert.created_at);
+        const isAdmin = Auth.isAdmin();
+        
+        const resolveBtn = isAdmin ? `
+            <button onclick="AlertsPage.resolve('${alert.id}')" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: 12px; font-weight: 600; margin-top: 8px; cursor: pointer; transition: all 0.3s;">
+                RESOLVE ISSUE
+            </button>
+        ` : '';
+
         return `
             <div class="alert-card fail" style="flex-direction: column; align-items: flex-start; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
@@ -45,13 +53,11 @@ const AlertsPage = {
                     </div>
                     <div class="alert-status fail">CRITICAL</div>
                 </div>
-                <div style="background: var(--status-fail-bg); padding: 12px; border-radius: 12px; font-size: 13px; border-left: 4px solid var(--status-fail); width: 100%;">
+                <div style="background: var(--status-fail-bg); padding: 12px; border-radius: 12px; font-size: 13px; border-left: 4px solid var(--status-fail); width: 100%; color: var(--text-secondary);">
                     <strong>Corrective Action:</strong><br>
                     ${this.getSOPAction(alert.zone)}
                 </div>
-                <button onclick="AlertsPage.resolve('${alert.id}')" style="width: 100%; padding: 12px; background: white; border: 1px solid var(--border-subtle); color: var(--text-primary); border-radius: 12px; font-weight: 600; margin-top: 4px;">
-                    Resolve Issue
-                </button>
+                ${resolveBtn}
             </div>
         `;
     },
