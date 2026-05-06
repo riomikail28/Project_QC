@@ -5,6 +5,7 @@ Handles authentication and staff account CRUD.
 Supports both Supabase-backed accounts and demo fallback.
 """
 
+import os
 import hashlib
 import secrets
 import logging
@@ -77,13 +78,17 @@ def create_staff(data: dict):
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY"))
     
-    sb = get_client()
-    if not sb:
-        error_detail = "Database offline: "
-        if not url: error_detail += "SUPABASE_URL missing. "
-        if not key: error_detail += "SUPABASE_KEY missing. "
-        if url and key: error_detail += "Client initialization failed."
-        raise ValueError(error_detail)
+    try:
+        sb = get_client()
+        if not sb:
+            error_detail = "Database offline: "
+            if not url: error_detail += "SUPABASE_URL missing. "
+            if not key: error_detail += "SUPABASE_KEY missing. "
+            if url and key: error_detail += "Client initialization failed."
+            raise ValueError(error_detail)
+    except Exception as e:
+        if isinstance(e, ValueError): raise e
+        raise ValueError(f"Koneksi database gagal: {str(e)}")
 
     username = data.get("username")
     password = data.get("password")
@@ -108,7 +113,6 @@ def create_staff(data: dict):
         return res.data[0] if res.data else None
     except Exception as e:
         logger.error("Failed to create staff: %s", e)
-        # Check if it's a constraint error or duplicate
         err_msg = str(e)
         if "unique_violation" in err_msg or "duplicate" in err_msg:
             raise ValueError(f"Username '{username}' sudah terdaftar")
