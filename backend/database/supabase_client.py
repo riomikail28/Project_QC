@@ -39,6 +39,10 @@ def get_client() -> Client:
         return None
 
     if _client is None:
+        # Safe Diagnostics
+        key_src = "SUPABASE_SERVICE_ROLE_KEY" if os.getenv("SUPABASE_SERVICE_ROLE_KEY") else "SUPABASE_KEY"
+        print(f"INFO: Supabase using {key_src} (length: {len(os.getenv(key_src, ''))})")
+
         if not SUPABASE_URL or not SUPABASE_KEY:
             logger.warning("Supabase credentials not set — running in offline mode")
             _failed = True
