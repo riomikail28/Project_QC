@@ -3,9 +3,18 @@
  * Handles dynamic room/device loading and logging
  */
 
-let facilityStructure = [];
-let selectedRoom = null;
+// DOM Elements
+const roomList = document.getElementById("room-list");
+const deviceList = document.getElementById("device-list");
+const modal = document.getElementById("log-modal");
+const overlay = document.getElementById("overlay");
+const deviceCountLabel = document.getElementById("deviceCount");
+const currentRoomLabel = document.getElementById("currentRoomName");
 
+let facilityStructure = [];
+let selectedRoomId = null;
+
+// Initialize
 document.addEventListener("DOMContentLoaded", () => {
     loadFacilityStructure();
     loadRecentLogs();
@@ -16,12 +25,9 @@ async function loadFacilityStructure() {
         const res = await fetch("/api/facility/structure");
         facilityStructure = await res.json();
         
-        // Show offline warning if structure looks like fallback
+        // Show offline warning
         if (facilityStructure.some(r => r.id.startsWith('room-'))) {
-            const header = document.querySelector('.header-content');
-            const warn = document.createElement('div');
-            warn.innerHTML = '<span style="background:#fff7e6; color:#d46b08; padding:4px 8px; border-radius:4px; font-size:12px; margin-left:10px;"><i class="fas fa-wifi-slash"></i> Offline Mode</span>';
-            header.appendChild(warn);
+            document.getElementById('offlineIndicator').style.display = 'flex';
         }
 
         renderRoomSelector();
@@ -34,9 +40,8 @@ async function loadFacilityStructure() {
 }
 
 function renderRoomSelector() {
-    const container = document.getElementById("room-list");
-    container.innerHTML = facilityStructure.map(room => `
-        <div class="room-chip ${selectedRoom === room.id ? 'active' : ''}" 
+    roomList.innerHTML = facilityStructure.map(room => `
+        <div class="room-chip ${room.id === selectedRoomId ? 'active' : ''}" 
              onclick="selectRoom('${room.id}')">
             ${room.name}
         </div>
@@ -44,57 +49,63 @@ function renderRoomSelector() {
 }
 
 function selectRoom(roomId) {
-    selectedRoom = roomId;
-    renderRoomSelector();
-    renderDevices();
+    selectedRoomId = roomId;
+    const room = facilityStructure.find(r => r.id === roomId);
+    if (!room) return;
+
+    currentRoomLabel.innerText = room.name;
+    renderRoomSelector(); // Update active chip
+    renderDevices(room.devices);
 }
 
-function renderDevices() {
-    const container = document.getElementById("device-list");
-    const room = facilityStructure.find(r => r.id === selectedRoom);
-    
-    if (!room || !room.devices) {
-        container.innerHTML = '<div class="empty-state">Tidak ada alat di ruangan ini</div>';
-        return;
-    }
+function renderDevices(devices) {
+    deviceCountLabel.innerText = `${devices.length} Unit`;
+    deviceList.innerHTML = devices.map(device => {
+        let icon = "fa-thermometer-half";
+        if (device.type === 'chiller') icon = "fa-refrigerator";
+        if (device.type === 'freezer') icon = "fa-icicles";
+        if (device.type === 'undercounter') icon = "fa-box";
 
-    container.innerHTML = room.devices.map(dev => `
-        <div class="device-card" onclick="openLogModal('${dev.id}', '${dev.name}', '${dev.type}')">
-            <div class="device-icon">
-                <i class="fas ${getDeviceIcon(dev.type)}"></i>
+        return `
+            <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
+                <div class="device-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="device-name">${device.name}</div>
+                <div class="device-target">Target: ${device.threshold_temp}°C</div>
             </div>
-            <div class="device-name">${dev.name}</div>
-            <div class="device-status">Target: ${dev.threshold_temp}°C</div>
-        </div>
-    `).join("");
+        `;
+    }).join("");
 }
 
-function getDeviceIcon(type) {
-    switch(type) {
-        case 'chiller': return 'fa-refrigerator';
-        case 'freezer': return 'fa-snowflake';
-        case 'undercounter': return 'fa-box-open';
-        case 'room_temp': return 'fa-thermometer-half';
-        default: return 'fa-hdd';
-    }
-}
+function openLogModal(deviceId) {
+    const room = facilityStructure.find(r => r.id === selectedRoomId);
+    const device = room.devices.find(d => d.id === deviceId);
+    if (!device) return;
 
-function openLogModal(deviceId, deviceName, type) {
-    document.getElementById("modal-title").innerText = `Log: ${deviceName}`;
+    document.getElementById("modal-title").innerText = `Log ${device.name}`;
     document.getElementById("selected-device-id").value = deviceId;
-    document.getElementById("selected-room-id").value = selectedRoom;
+    document.getElementById("selected-room-id").value = selectedRoomId;
     
-    // Show/hide humidity based on type
-    const humGroup = document.getElementById("humidity-group");
-    humGroup.style.display = (type === 'room_temp') ? 'block' : 'none';
+    // Icon mapping
+    const iconEl = document.getElementById("sheet-icon");
+    if(iconEl) {
+        iconEl.className = "fas";
+        if (device.type === 'chiller') iconEl.classList.add("fa-refrigerator");
+        else if (device.type === 'freezer') iconEl.classList.add("fa-icicles");
+        else iconEl.classList.add("fa-thermometer-half");
+    }
 
-    document.getElementById("overlay").style.display = "block";
-    document.getElementById("log-modal").style.display = "block";
+    // Hide/Show humidity for non-room devices
+    document.getElementById("humidity-group").style.display = device.type === 'room_temp' ? 'block' : 'none';
+
+    modal.classList.add("active");
+    overlay.classList.add("active");
 }
 
 function closeModal() {
-    document.getElementById("overlay").style.display = "none";
-    document.getElementById("log-modal").style.display = "none";
+    modal.classList.remove("active");
+    overlay.classList.remove("active");
     document.getElementById("monitoring-form").reset();
 }
 
