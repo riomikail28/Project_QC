@@ -29,17 +29,27 @@ def get_client():
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
     
-    if not url or not key:
-        _last_error = "SUPABASE_URL or KEY is missing in environment"
-        return None
-    
     try:
+        # Standard initialization
         _client = create_client(url, key)
         return _client
     except Exception as e:
-        _last_error = str(e)
-        print(f"CRITICAL: Supabase creation failed: {_last_error}")
-        return None
+        # Fallback for new-format keys (sb_secret_...) which might trip up JWT validation in some SDK versions
+        error_msg = str(e)
+        print(f"DEBUG: Standard creation failed: {error_msg}. Trying fallback...")
+        
+        try:
+            from postgrest import SyncPostgrestClient
+            from gotrue import SyncGoTrueClient
+            from storage3 import SyncStorageClient
+            
+            # Manually construct client components if create_client is too picky
+            _client = Client(url, key)
+            return _client
+        except Exception as e2:
+            _last_error = f"{error_msg} | Fallback failed: {str(e2)}"
+            print(f"CRITICAL: Supabase creation failed: {_last_error}")
+            return None
 
 def get_last_db_error():
     """Return the last encountered database error message."""
