@@ -39,10 +39,6 @@ def get_client():
         print(f"DEBUG: Standard creation failed: {error_msg}. Trying fallback...")
         
         try:
-            from postgrest import SyncPostgrestClient
-            from gotrue import SyncGoTrueClient
-            from storage3 import SyncStorageClient
-            
             # Manually construct client components if create_client is too picky
             _client = Client(url, key)
             return _client
@@ -61,3 +57,37 @@ def reset_client():
     global _client, _failed
     _client = None
     _failed = False
+
+def direct_db_query(table: str, method: str = "GET", payload: dict = None, filters: str = ""):
+    """Perform a direct HTTP query to Supabase (bypass library validation)."""
+    import json
+    from urllib import request, error
+    
+    url = os.getenv("SUPABASE_URL", "").strip().strip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
+    
+    api_url = f"{url}/rest/v1/{table}"
+    if filters:
+        api_url += f"?{filters}"
+        
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    
+    data = json.dumps(payload).encode() if payload else None
+    req = request.Request(api_url, headers=headers, data=data, method=method)
+    
+    try:
+        with request.urlopen(req) as response:
+            res_body = response.read().decode()
+            return json.loads(res_body) if res_body else []
+    except error.HTTPError as e:
+        err_msg = e.read().decode()
+        print(f"Direct DB Error: {e.code} - {err_msg}")
+        raise ValueError(f"Database Error: {err_msg}")
+    except Exception as e:
+        print(f"Direct DB Generic Error: {str(e)}")
+        raise ValueError(f"Koneksi Database Gagal: {str(e)}")

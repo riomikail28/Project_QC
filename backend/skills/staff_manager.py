@@ -78,13 +78,8 @@ def create_staff(data: dict):
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY"))
     
-    from backend.database.supabase_client import get_client, get_last_db_error
+    from backend.database.supabase_client import get_client, get_last_db_error, direct_db_query
     
-    sb = get_client()
-    if not sb:
-        error_detail = get_last_db_error()
-        raise ValueError(f"Database offline: {error_detail}")
-
     username = data.get("username")
     password = data.get("password")
     role_input = data.get("role", "staff").lower()
@@ -104,8 +99,10 @@ def create_staff(data: dict):
             "full_name": full_name,
             "is_active": True
         }
-        res = sb.table("staff_accounts").insert(payload).execute()
-        return res.data[0] if res.data else None
+        
+        # Use direct query to bypass library validation issues
+        res_data = direct_db_query("staff_accounts", method="POST", payload=payload)
+        return res_data[0] if res_data else None
     except Exception as e:
         logger.error("Failed to create staff: %s", e)
         err_msg = str(e)
