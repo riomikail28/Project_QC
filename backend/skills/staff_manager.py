@@ -96,7 +96,6 @@ def create_staff(data: dict):
             "username": username,
             "password_hash": hash_password(password),
             "role": db_role,
-            "full_name": full_name,
             "is_active": True
         }
         
