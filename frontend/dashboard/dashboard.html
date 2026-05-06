@@ -5,108 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dashboard | QC Central Kitchen</title>
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="../css/mobile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header class="header">
         <div>
-            <h2 id="welcomeUser">QC Dashboard</h2>
-            <p id="currentDate">Sistem Monitoring Terpusat</p>
+            <h2>ASTRO QC</h2>
+            <p id="currentDate">Memuat data...</p>
         </div>
         <div class="header-actions">
-            <button class="notif-btn" onclick="window.location.href='alerts.html'">
-                <i class="fas fa-bell"></i>
-                <div class="notif-badge" id="alertBadge" style="display: none;">0</div>
-            </button>
-            <div class="notif-btn" onclick="Auth.logout()">
-                <i class="fas fa-sign-out-alt"></i>
-            </div>
+            <button class="notif-btn" onclick="window.location.href='alerts.html'"><i class="fas fa-bell"></i></button>
         </div>
     </header>
 
     <div class="health-card">
-        <h3>System Health Score</h3>
+        <h3>Facility Health Score</h3>
         <div class="score-ring">
-            <svg viewBox="0 0 120 120">
-                <circle class="bg-circle" cx="60" cy="60" r="54"></circle>
-                <circle class="progress-circle" id="healthProgress" cx="60" cy="60" r="54" style="stroke-dasharray: 339.292; stroke-dashoffset: 339.292;"></circle>
+            <svg viewBox="0 0 100 100">
+                <circle class="bg-circle" cx="50" cy="50" r="45"></circle>
+                <circle id="scoreCircle" class="progress-circle" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"></circle>
             </svg>
-            <div class="score-value"><span id="healthValue">0</span><span>%</span></div>
+            <div class="score-value" id="healthScore">0</div>
         </div>
-        <div class="health-label" id="healthLabel">Menganalisa status...</div>
+        <p style="color: var(--status-pass); font-weight: 700; margin-top: 8px;" id="healthStatus">SYSTEM STABLE</p>
     </div>
 
     <div class="metrics-row">
         <div class="metric-card">
-            <div class="metric-value" id="totalBatches">0</div>
-            <div class="metric-label">Batch</div>
+            <div class="metric-value" id="activeBatches">0</div>
+            <div class="metric-label">Active</div>
         </div>
-        <div class="metric-card" style="border-bottom: 3px solid var(--status-fail);">
-            <div class="metric-value" id="failedBatches" style="color: var(--status-fail);">0</div>
-            <div class="metric-label">Fail</div>
-        </div>
-        <div class="metric-card" style="border-bottom: 3px solid var(--status-warning);">
-            <div class="metric-value" id="activeAlerts" style="color: var(--status-warning);">0</div>
+        <div class="metric-card">
+            <div class="metric-value" id="criticalAlerts" style="color: var(--status-fail);">0</div>
             <div class="metric-label">Alerts</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="dailyScore">0</div>
+            <div class="metric-label">Efficiency</div>
         </div>
     </div>
 
     <section class="section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 class="section-title" style="margin-bottom: 0;">Monitoring Kritis</h3>
-            <a href="monitoring.html" style="font-size: 13px; color: var(--accent-blue); font-weight: 600; text-decoration: none;">Lihat Semua</a>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 class="section-title" style="margin: 0;">Critical Monitoring</h3>
+            <a href="alerts.html" style="color: var(--accent-blue); font-size: 13px; font-weight: 600;">View All</a>
         </div>
-        <div id="criticalList">
-            <!-- Loading state -->
-            <div class="skeleton" style="height: 60px; margin-bottom: 10px; background: #eee; border-radius: 12px;"></div>
+        <div id="recentAlerts">
+            <div class="skeleton" style="height: 80px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border-radius: 16px;"></div>
         </div>
     </section>
 
-    <button class="fab" onclick="UI.toggleSpeedDial()" id="mainFab">
-        <i class="fas fa-plus"></i>
-    </button>
-
-    <!-- Speed Dial Menu (Hidden by default) -->
-    <div id="speedDialMenu" style="position: fixed; bottom: 160px; right: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 99; transform: translateY(20px); opacity: 0; pointer-events: none; transition: all 0.3s ease;">
-        <button onclick="window.location.href='new_batch.html'" style="width: 50px; height: 50px; border-radius: 50%; background: #ffffff; border: 1px solid #e2e8f0; color: #2563eb; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"><i class="fas fa-box"></i></button>
-        <button onclick="window.location.href='monitoring.html'" style="width: 50px; height: 50px; border-radius: 50%; background: #ffffff; border: 1px solid #e2e8f0; color: #2563eb; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"><i class="fas fa-thermometer-half"></i></button>
+    <!-- Speed Dial FAB -->
+    <div id="fabContainer" style="position: fixed; bottom: 100px; right: 24px; z-index: 1001;">
+        <button id="mainFab" class="fab" style="border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all 0.3s;">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div id="fabMenu" style="display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; position: absolute; bottom: 80px; right: 0;">
+            <button onclick="window.location.href='new_batch.html'" style="width: 52px; height: 52px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--glass-border); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);"><i class="fas fa-box"></i></button>
+            <button onclick="window.location.href='monitoring.html'" style="width: 52px; height: 52px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--glass-border); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);"><i class="fas fa-thermometer-half"></i></button>
+        </div>
     </div>
 
-    <style>
-        .fab.active + #speedDialMenu {
-            transform: translateY(0);
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .fab {
-            transition: all 0.3s ease;
-        }
-        .fab.active {
-            background: #64748b !important;
-            transform: rotate(90deg);
-        }
-    </style>
-
-    <nav style="position: fixed; bottom: 0; left: 0; right: 0; height: 72px; display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
-        <a href="dashboard.html" style="color: var(--accent-blue); text-decoration: none; font-size: 20px;"><i class="fas fa-th-large"></i></a>
-        <a href="monitoring.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-thermometer-half"></i></a>
-        <a href="inspection.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-clipboard-check"></i></a>
-        <a href="profile.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-user"></i></a>
+    <nav style="position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
+        <a href="dashboard.html" class="nav-item active" style="text-decoration: none;"><i class="fas fa-th-large"></i></a>
+        <a href="monitoring.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-thermometer-half"></i></a>
+        <a href="inspection.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-clipboard-check"></i></a>
+        <a href="profile.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-user-circle"></i></a>
     </nav>
 
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
     <script src="../js/ui-mobile.js"></script>
     <script src="../js/dashboard.js"></script>
     <script src="../js/mobile-nav.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if (!Auth.check()) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!Auth.check()) window.location.href = 'login.html';
+            document.getElementById('currentDate').innerText = Utils.formatDate(new Date());
             Dashboard.init();
+        });
+
+        // FAB Toggle
+        const fab = document.getElementById('mainFab');
+        const menu = document.getElementById('fabMenu');
+        fab.addEventListener('click', () => {
+            const isVisible = menu.style.display === 'flex';
+            menu.style.display = isVisible ? 'none' : 'flex';
+            fab.style.transform = isVisible ? 'rotate(0)' : 'rotate(45deg)';
         });
     </script>
 </body>

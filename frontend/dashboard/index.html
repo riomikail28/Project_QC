@@ -1,19 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>QC Central Kitchen Redirect</title>
-    <script src="js/auth.js"></script>
-    <script>
-        window.onload = function() {
-            if (Auth.check()) {
-                window.location.href = 'dashboard.html';
-            } else {
-                window.location.href = 'login.html';
-            }
-        };
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroQC | Intelligent Traceability</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body {
+            background: #050b18;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .splash {
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.05);
+            border-top: 4px solid var(--accent-blue);
+            border-radius: 50%;
+            margin: 24px auto;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-    <p>Redirecting...</p>
+    <div class="splash">
+        <h1 style="color: white; font-weight: 800; letter-spacing: -0.05em; font-size: 32px;">ASTRO<span style="color: var(--accent-blue);">QC</span></h1>
+        <div class="loader"></div>
+        <p style="color: var(--text-secondary); font-size: 14px; letter-spacing: 0.1em;">INITIALIZING SYSTEM...</p>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script>
+        window.onload = function() {
+            setTimeout(() => {
+                if (Auth.check()) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    window.location.href = 'login.html';
+                }
+            }, 1500);
+        };
+    </script>
 </body>
 </html>

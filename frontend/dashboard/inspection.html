@@ -3,52 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QC Inspection | QC Central Kitchen</title>
+    <title>Quality Inspection | QC Central Kitchen</title>
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="../css/inspection.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body style="background: var(--bg-primary);">
+<body>
     <header class="header">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-chevron-left"></i></a>
             <div>
-                <h2>QC Traceability</h2>
-                <p>Batch Inspection & Tracking</p>
+                <h2 style="font-size: 20px; font-weight: 800;">QUALITY CONTROL</h2>
+                <p style="font-size: 12px; opacity: 0.7;">Production Batch Inspection</p>
             </div>
         </div>
     </header>
 
     <div class="metrics-row" style="margin-top: 16px;">
-        <div class="metric-card" onclick="window.location.href='new_batch.html'" style="cursor: pointer; border: 2px dashed var(--accent-blue); background: var(--accent-blue-soft);">
-            <div class="metric-value"><i class="fas fa-plus"></i></div>
-            <div class="metric-label" style="color: var(--accent-blue);">New Batch</div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: var(--status-pass);">12</div>
+            <div class="metric-label">Pass</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="runningCount">0</div>
-            <div class="metric-label">Running</div>
+            <div class="metric-value" style="color: var(--status-fail);">1</div>
+            <div class="metric-label">Hold</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="passedCount">0</div>
-            <div class="metric-label">Passed</div>
+            <div class="metric-value">5</div>
+            <div class="metric-label">Active</div>
         </div>
     </div>
 
     <section class="section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 class="section-title" style="margin-bottom: 0;">Active Batches</h3>
-            <div style="font-size: 12px; color: var(--text-muted);">Swipe to see details</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 class="section-title" style="margin: 0;">Active Batches</h3>
+            <button onclick="window.location.href='new_batch.html'" style="padding: 10px 16px; background: var(--accent-blue); border: none; border-radius: 10px; color: white; font-size: 12px; font-weight: 700;">NEW BATCH</button>
         </div>
+        
         <div id="batchList">
-            <div class="skeleton" style="height: 80px; margin-bottom: 12px; background: #eee; border-radius: 16px;"></div>
+            <div class="skeleton" style="height: 100px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border-radius: 16px;"></div>
         </div>
     </section>
 
-    <nav style="position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: white; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
-        <a href="dashboard.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-th-large"></i></a>
-        <a href="monitoring.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-thermometer-half"></i></a>
-        <a href="inspection.html" style="color: var(--accent-blue); text-decoration: none; font-size: 20px;"><i class="fas fa-clipboard-check"></i></a>
-        <a href="profile.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-user"></i></a>
+    <nav style="position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
+        <a href="dashboard.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-th-large"></i></a>
+        <a href="monitoring.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-thermometer-half"></i></a>
+        <a href="inspection.html" class="nav-item active" style="text-decoration: none;"><i class="fas fa-clipboard-check"></i></a>
+        <a href="profile.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-user-circle"></i></a>
     </nav>
 
     <script src="../js/api.js"></script>
@@ -60,7 +60,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
             Inspection.init();
-            UI.toast('Menampilkan batch aktif', 'info');
         });
     </script>
 </body>

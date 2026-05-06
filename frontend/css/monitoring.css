@@ -1,46 +1,93 @@
 /* ==========================================================================
-   QC Central Kitchen — Monitoring Styles (White & Blue Theme)
+   QC Central Kitchen — Monitoring Styles (Industrial Dark Glass)
    ========================================================================== */
 
 .form-card {
-    background: #ffffff;
-    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
-    padding: 28px 20px;
-    margin: 16px;
+    padding: 32px 24px;
+    margin: 20px;
     box-shadow: var(--shadow-md);
+    backdrop-filter: blur(12px);
 }
 
-.input-field {
-    background: #ffffff;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
-}
-
-.input-field:focus {
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+.input-group {
+    margin-bottom: 24px;
 }
 
 .input-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--text-secondary);
-    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-.result-card {
-    background: #ffffff;
+.input-field {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    transition: all 0.3s ease;
 }
 
-.log-entry {
-    background: #ffffff;
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-sm);
+.input-field:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: var(--glow-blue);
 }
 
 .btn-submit {
-    background: var(--accent-blue);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    width: 100%;
+    padding: 18px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: var(--radius-md);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+/* ---- Results Section ---- */
+.result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.log-entry {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    padding: 16px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
