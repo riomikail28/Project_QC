@@ -91,14 +91,23 @@ def _register_staff_routes(app: Flask):
 
     @app.route("/api/staff/login", methods=["POST"])
     def staff_login():
-        data = request.json
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"detail": "Invalid JSON body"}), 400
+            
         try:
             result = login(data.get("username", ""), data.get("password", ""))
             return jsonify(result)
         except ValueError as e:
             return jsonify({"detail": str(e)}), 401
         except Exception as e:
-            return jsonify({"detail": f"Login error: {str(e)}"}), 500
+            import traceback
+            logger.error("Login exception: %s\n%s", e, traceback.format_exc())
+            return jsonify({
+                "detail": "Internal Server Error",
+                "message": str(e),
+                "trace": traceback.format_exc() if app.debug or os.environ.get('VERCEL') else None
+            }), 500
 
     @app.route("/api/staff", methods=["GET"])
     def staff_list():

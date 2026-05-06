@@ -51,7 +51,3 @@ def get_client() -> Client:
             return None
         _client = create_client(SUPABASE_URL, SUPABASE_KEY)
     return _client
-
-
-# Convenience alias
-supabase = property(lambda self: get_client())
