@@ -78,17 +78,12 @@ def create_staff(data: dict):
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY"))
     
-    try:
-        sb = get_client()
-        if not sb:
-            error_detail = "Database offline: "
-            if not url: error_detail += "SUPABASE_URL missing. "
-            if not key: error_detail += "SUPABASE_KEY missing. "
-            if url and key: error_detail += "Client initialization failed."
-            raise ValueError(error_detail)
-    except Exception as e:
-        if isinstance(e, ValueError): raise e
-        raise ValueError(f"Koneksi database gagal: {str(e)}")
+    from backend.database.supabase_client import get_client, get_last_db_error
+    
+    sb = get_client()
+    if not sb:
+        error_detail = get_last_db_error()
+        raise ValueError(f"Database offline: {error_detail}")
 
     username = data.get("username")
     password = data.get("password")
