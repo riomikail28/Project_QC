@@ -295,16 +295,15 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 70px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border-subtle);
+    height: 75px;
+    background: #ffffff;
+    border-top: 1px solid #edf2f7;
     display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 1000;
     padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
 }
 
 .nav-item {
@@ -312,33 +311,33 @@ body {
     flex-direction: column;
     align-items: center;
     text-decoration: none;
-    color: var(--text-muted);
-    gap: 4px;
+    color: #94a3b8;
+    gap: 6px;
     transition: all 0.2s ease;
     flex: 1;
 }
 
 .nav-item i {
-    font-size: 20px;
+    font-size: 22px;
 }
 
 .nav-item span {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.05em;
 }
 
 .nav-item.active {
-    color: var(--accent-blue);
+    color: #2563eb;
 }
 
 .nav-item.active i {
-    filter: drop-shadow(0 0 8px var(--accent-blue-glow));
+    filter: none; /* Removed glow as per photo 2 */
 }
 
 .nav-item:active {
-    transform: scale(0.9);
+    transform: scale(0.92);
 }
 
 /* ---- FAB ---- */
