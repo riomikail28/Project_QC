@@ -16,14 +16,13 @@ from flask_cors import CORS
 import os
 
 
-def create_app() -> Flask:
-    """Flask application factory.
+import logging
 
-    Creates and configures the Flask app with:
-    - CORS enabled for all origins
-    - Three main route blueprints registered
-    - Staff auth routes included
-    """
+logger = logging.getLogger("qc.backend")
+
+
+def create_app() -> Flask:
+    """Flask application factory."""
     app = Flask(__name__)
     CORS(app)
 
@@ -43,7 +42,10 @@ def create_app() -> Flask:
     app.register_blueprint(ccp_bp)
 
     # Register staff auth routes
-    _register_staff_routes(app)
+    try:
+        _register_staff_routes(app)
+    except Exception as e:
+        logger.error("Failed to register staff routes: %s", e)
 
     # Health endpoint at root
     @app.route("/")
@@ -82,12 +84,14 @@ def _ensure_upload_dirs(app: Flask):
 
 
 def _register_staff_routes(app: Flask):
-    """Register staff management routes directly on the app.
-
-    These are thin route handlers that delegate to the staff_manager skill.
-    """
+    """Register staff management routes directly on the app."""
     from flask import request, jsonify
-    from backend.skills.staff_manager import login, list_staff, create_staff, delete_staff
+    
+    try:
+        from backend.skills.staff_manager import login, list_staff, create_staff, delete_staff
+    except ImportError as e:
+        logger.error("Could not import staff_manager: %s", e)
+        return
 
     @app.route("/api/staff/login", methods=["POST"])
     def staff_login():
@@ -102,11 +106,12 @@ def _register_staff_routes(app: Flask):
             return jsonify({"detail": str(e)}), 401
         except Exception as e:
             import traceback
-            logger.error("Login exception: %s\n%s", e, traceback.format_exc())
+            err_msg = traceback.format_exc()
+            logger.error("Login exception: %s\n%s", e, err_msg)
             return jsonify({
                 "detail": "Internal Server Error",
                 "message": str(e),
-                "trace": traceback.format_exc() if app.debug or os.environ.get('VERCEL') else None
+                "trace": err_msg if os.environ.get('VERCEL') else None
             }), 500
 
     @app.route("/api/staff", methods=["GET"])
