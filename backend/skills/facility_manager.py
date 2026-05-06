@@ -86,7 +86,28 @@ def delete_device(device_id: str):
         return False
 
 def get_monitoring_structure():
-    """Returns a nested structure of Rooms -> Devices for the UI."""
+    """Returns a nested structure of Rooms -> Devices for the UI.
+    Includes a hardcoded fallback if the database is offline.
+    """
+    sb = get_client()
+    if not sb:
+        # RETURN HARDCODED FALLBACK (Based on requested plan)
+        return [
+            {
+                "id": "room-ppic", "name": "PPIC", "devices": [
+                    {"id": "p-rt", "name": "Suhu Ruangan", "type": "room_temp", "threshold_temp": 25.0},
+                    {"id": "p-c1", "name": "Chiller 1", "type": "chiller", "threshold_temp": 5.0},
+                    {"id": "p-f1", "name": "Freezer 1", "type": "freezer", "threshold_temp": -18.0}
+                ]
+            },
+            {
+                "id": "room-kitchen", "name": "Kitchen", "devices": [
+                    {"id": "k-rt", "name": "Suhu Ruangan", "type": "room_temp", "threshold_temp": 25.0},
+                    {"id": "k-u1", "name": "Undercounter 1", "type": "undercounter", "threshold_temp": 5.0}
+                ]
+            }
+        ]
+    
     rooms = list_rooms()
     devices = list_devices()
     

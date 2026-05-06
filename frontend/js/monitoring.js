@@ -15,6 +15,15 @@ async function loadFacilityStructure() {
     try {
         const res = await fetch("/api/facility/structure");
         facilityStructure = await res.json();
+        
+        // Show offline warning if structure looks like fallback
+        if (facilityStructure.some(r => r.id.startsWith('room-'))) {
+            const header = document.querySelector('.header-content');
+            const warn = document.createElement('div');
+            warn.innerHTML = '<span style="background:#fff7e6; color:#d46b08; padding:4px 8px; border-radius:4px; font-size:12px; margin-left:10px;"><i class="fas fa-wifi-slash"></i> Offline Mode</span>';
+            header.appendChild(warn);
+        }
+
         renderRoomSelector();
         if (facilityStructure.length > 0) {
             selectRoom(facilityStructure[0].id);
