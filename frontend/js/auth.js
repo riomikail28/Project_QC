@@ -10,9 +10,9 @@ const Auth = {
             if (data && data.token) {
                 localStorage.setItem('qc_token', data.token);
                 localStorage.setItem('qc_user', JSON.stringify(data));
-                return true;
+                return data;
             }
-            return false;
+            return null;
         } catch (error) {
             console.error('Login failed:', error);
             throw error;

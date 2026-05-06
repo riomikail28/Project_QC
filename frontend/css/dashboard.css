@@ -7,43 +7,43 @@
 }
 
 :root {
-    /* Core palette - Premium Dark Industrial */
-    --bg-primary: #050b18;
-    --bg-secondary: #0d1425;
-    --bg-card: rgba(255, 255, 255, 0.05);
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-active: #3b82f6;
+    /* Core palette - Premium Blue & White */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #eff6ff;
+    --bg-card: #ffffff;
+    --border-subtle: #e2e8f0;
+    --border-active: #2563eb;
 
-    /* Status colors - Neon style */
-    --status-pass: #10b981;
-    --status-pass-bg: rgba(16, 185, 129, 0.1);
-    --status-pass-border: rgba(16, 185, 129, 0.2);
-    --status-warning: #f59e0b;
-    --status-warning-bg: rgba(245, 158, 11, 0.1);
-    --status-warning-border: rgba(245, 158, 11, 0.2);
-    --status-fail: #ef4444;
-    --status-fail-bg: rgba(239, 68, 68, 0.1);
-    --status-fail-border: rgba(239, 68, 68, 0.2);
+    /* Status colors - Refined */
+    --status-pass: #059669;
+    --status-pass-bg: #ecfdf5;
+    --status-pass-border: #10b98120;
+    --status-warning: #d97706;
+    --status-warning-bg: #fffbeb;
+    --status-warning-border: #f59e0b20;
+    --status-fail: #dc2626;
+    --status-fail-bg: #fef2f2;
+    --status-fail-border: #ef444420;
 
-    /* Accent - Electric Blue */
-    --accent-blue: #3b82f6;
-    --accent-blue-glow: rgba(59, 130, 246, 0.5);
-    --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    /* Accent - Deep Blue */
+    --accent-blue: #2563eb;
+    --accent-blue-glow: rgba(37, 99, 235, 0.2);
+    --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 
     /* Text */
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
 
     /* Spacing & Effects */
     --radius-md: 14px;
     --radius-lg: 20px;
     --radius-xl: 32px;
     --nav-height: 80px;
-    --glass-bg: rgba(13, 20, 37, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --shadow-md: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --glow-blue: 0 0 15px rgba(59, 130, 246, 0.3);
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: #e2e8f0;
+    --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    --glow-blue: 0 0 15px rgba(37, 99, 235, 0.15);
 }
 
 body {
@@ -111,8 +111,8 @@ body {
 
 /* ---- Health Score Card ---- */
 .health-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
-    border: 1px solid var(--glass-border);
+    background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
     padding: 40px 24px;
     margin: 20px;
@@ -151,7 +151,7 @@ body {
 
 .score-ring .bg-circle {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.05);
+    stroke: #f1f5f9;
     stroke-width: 8;
 }
 
@@ -160,7 +160,7 @@ body {
     stroke: var(--accent-blue);
     stroke-width: 8;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 8px var(--accent-blue));
+    filter: drop-shadow(0 0 4px var(--accent-blue-glow));
     transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -171,8 +171,7 @@ body {
     transform: translate(-50%, -50%);
     font-size: 42px;
     font-weight: 800;
-    color: #ffffff;
-    text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    color: var(--text-primary);
 }
 
 /* ---- Metrics Row ---- */
@@ -194,9 +193,10 @@ body {
 }
 
 .metric-card:hover {
-    background: rgba(255,255,255,0.08);
+    background: #ffffff;
     transform: translateY(-4px);
     border-color: var(--accent-blue);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.05);
 }
 
 .metric-value {
@@ -240,9 +240,10 @@ body {
 }
 
 .alert-card:hover {
-    background: rgba(255,255,255,0.08);
-    border-color: var(--glass-border);
+    background: #ffffff;
+    border-color: var(--accent-blue);
     transform: translateX(8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 
 .alert-card:active {
@@ -293,8 +294,8 @@ nav {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border-top: 1px solid var(--glass-border) !important;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+    border-top: 1px solid var(--border-subtle) !important;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.03);
     height: var(--nav-height) !important;
 }
 

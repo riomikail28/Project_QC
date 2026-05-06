@@ -64,13 +64,21 @@ def create_app() -> Flask:
 
 def _ensure_upload_dirs(app: Flask):
     """Ensure upload directories exist."""
+    # Skip directory creation if running on Vercel (Read-only filesystem)
+    if os.environ.get('VERCEL'):
+        return
+
     paths = [
         os.path.join(app.config['UPLOAD_FOLDER'], 'qc_photos'),
         os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
     ]
     for path in paths:
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+        except OSError:
+            # Fallback for other read-only environments
+            pass
 
 
 def _register_staff_routes(app: Flask):

@@ -21,14 +21,16 @@ def hash_password(password: str) -> str:
 
 
 def password_matches(user: dict, password: str) -> bool:
-    """Check if a password matches the stored hash.
-
-    Supports both password_hash and legacy plaintext password fields.
-    """
-    if user.get("password_hash"):
-        return secrets.compare_digest(user["password_hash"], hash_password(password))
-    # Backward compatibility for older demo rows
-    return secrets.compare_digest(str(user.get("password", "")), password)
+    """Check if a password matches the stored hash or plaintext."""
+    stored = user.get("password_hash") or user.get("password", "")
+    
+    # 1. Cek Hash SHA-256
+    if secrets.compare_digest(str(stored), hash_password(password)):
+        return True
+    # 2. Cek Plaintext
+    if secrets.compare_digest(str(stored), password):
+        return True
+    return False
 
 
 def login(username: str, password: str) -> dict:

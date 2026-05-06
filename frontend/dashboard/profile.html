@@ -16,22 +16,23 @@
             height: 100px;
             background: var(--accent-gradient);
             border-radius: 50%;
-            margin: 0 auto 20px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 40px;
             color: white;
-            box-shadow: var(--glow-blue);
-            border: 4px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+            border: 4px solid #ffffff;
         }
         .info-card {
-            background: var(--bg-card);
-            border: 1px solid var(--glass-border);
+            background: #ffffff;
+            border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             padding: 24px;
             margin-top: 32px;
             text-align: left;
+            box-shadow: var(--shadow-md);
         }
         .info-item {
             margin-bottom: 20px;
@@ -52,8 +53,8 @@
         .btn-logout {
             width: 100%;
             padding: 16px;
-            background: var(--status-fail-bg);
-            border: 1px solid var(--status-fail-border);
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
             color: var(--status-fail);
             border-radius: var(--radius-md);
             font-weight: 700;
@@ -70,7 +71,7 @@
 <body>
     <header class="header">
         <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-chevron-left"></i></a>
+            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i class="fas fa-chevron-left"></i></a>
             <h2 style="font-size: 20px; font-weight: 800;">USER PROFILE</h2>
         </div>
     </header>

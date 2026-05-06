@@ -6,7 +6,7 @@ CREATE TABLE staff_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role TEXT CHECK (role IN ('admin', 'staff', 'qc_lead')) DEFAULT 'staff',
+    role TEXT CHECK (role IN ('admin', 'staff')) DEFAULT 'staff',
     full_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -53,19 +53,35 @@ CREATE TABLE facility_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     zone TEXT NOT NULL,
     temperature_c DECIMAL NOT NULL,
+    threshold_c DECIMAL,
+    is_normal BOOLEAN DEFAULT TRUE,
     status TEXT, -- PASS, WARNING, FAIL
     logged_by UUID REFERENCES staff_accounts(id),
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 6. Alerts & Corrective Actions
-CREATE TABLE alerts (
+CREATE TABLE facility_alerts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type TEXT NOT NULL,
-    zone TEXT,
-    batch_id UUID REFERENCES production_batches(id),
-    description TEXT,
-    status TEXT DEFAULT 'active', -- active, resolved
+    log_id UUID REFERENCES facility_logs(id),
+    zone TEXT NOT NULL,
+    temperature_c DECIMAL NOT NULL,
+    threshold_c DECIMAL NOT NULL,
+    deviation_c DECIMAL,
+    status TEXT DEFAULT 'open', -- open, resolved
+    notes TEXT,
+    alert_sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    acknowledged_by UUID REFERENCES staff_accounts(id),
+    acknowledged_at TIMESTAMP WITH TIME ZONE,
     resolved_at TIMESTAMP WITH TIME ZONE,
-    resolved_by UUID REFERENCES staff_accounts(id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE corrective_actions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_log_id UUID,
+    action_text TEXT NOT NULL,
+    created_by UUID REFERENCES staff_accounts(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

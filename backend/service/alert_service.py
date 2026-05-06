@@ -96,6 +96,7 @@ def save_alert_to_db(
             "zone": zone,
             "temperature_c": temperature,
             "threshold_c": threshold,
+            "deviation_c": round(temperature - threshold, 2),
             "status": "open",
         }
         if log_id:

@@ -3,13 +3,12 @@
    ========================================================================== */
 
 .form-card {
-    background: var(--bg-card);
-    border: 1px solid var(--glass-border);
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
     padding: 32px 24px;
     margin: 20px;
     box-shadow: var(--shadow-md);
-    backdrop-filter: blur(12px);
 }
 
 .input-group {
@@ -28,7 +27,7 @@
 
 .input-field {
     width: 100%;
-    background: rgba(255, 255, 255, 0.03);
+    background: #f8fafc;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 16px;
@@ -41,8 +40,8 @@
 .input-field:focus {
     outline: none;
     border-color: var(--accent-blue);
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: var(--glow-blue);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
 .btn-submit {
@@ -82,7 +81,7 @@
 }
 
 .log-entry {
-    background: rgba(255, 255, 255, 0.02);
+    background: #ffffff;
     border: 1px solid var(--border-subtle);
     padding: 16px;
     margin-bottom: 8px;
