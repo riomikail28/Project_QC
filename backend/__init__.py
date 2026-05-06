@@ -124,6 +124,15 @@ def _register_staff_routes(app: Flask):
             return jsonify(create_staff(request.json))
         except ValueError as e:
             return jsonify({"detail": str(e)}), 400
+        except Exception as e:
+            import traceback
+            err_msg = traceback.format_exc()
+            logger.error("Staff create exception: %s\n%s", e, err_msg)
+            return jsonify({
+                "detail": "Internal Server Error",
+                "message": str(e),
+                "trace": err_msg if os.environ.get('VERCEL') else None
+            }), 500
 
     @app.route("/api/staff/<staff_id>", methods=["DELETE"])
     def staff_delete(staff_id):
