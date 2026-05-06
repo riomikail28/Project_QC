@@ -43,7 +43,7 @@ def login(username: str, password: str) -> dict:
     # Demo fallback
     demo_users = {
         "admin": {"password": "admin123", "role": "admin", "id": "admin-uuid", "name": "System Admin"},
-        "staff": {"password": "staff123", "role": "staff", "id": "staff-uuid", "name": "Kitchen Staff"},
+        "staff": {"password": "staff123", "role": "staff", "id": "staff-uuid", "name": "QC Staff"},
     }
 
     demo = demo_users.get(username)

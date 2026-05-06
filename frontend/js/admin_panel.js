@@ -145,7 +145,7 @@ function openAddStaff() {
         <div class="form-group">
             <label class="input-label">Role</label>
             <select id="staff-role" class="input-field">
-                <option value="staff">Staff Kitchen</option>
+                <option value="staff">QC Staff</option>
                 <option value="admin">Administrator</option>
             </select>
         </div>
