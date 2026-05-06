@@ -61,13 +61,12 @@ def login(username: str, password: str) -> dict:
 
 def list_staff():
     """List all staff accounts (Admin only)."""
-    sb = get_client()
-    if not sb:
-        return []
+    from backend.database.supabase_client import direct_db_query
     
     try:
-        res = sb.table("staff_accounts").select("id, username, role, full_name, created_at").execute()
-        return res.data or []
+        # Use direct query to bypass library validation
+        res_data = direct_db_query("staff_accounts", method="GET")
+        return res_data or []
     except Exception as e:
         logger.error("Failed to list staff: %s", e)
         return []
@@ -75,6 +74,7 @@ def list_staff():
 def create_staff(data: dict):
     """Create a new staff account."""
     # Check database connectivity with detailed info
+    import os
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY"))
     
@@ -111,12 +111,12 @@ def create_staff(data: dict):
 
 def delete_staff(staff_id: str):
     """Delete a staff account."""
-    sb = get_client()
-    if not sb:
-        return False
+    from backend.database.supabase_client import direct_db_query
     
     try:
-        sb.table("staff_accounts").delete().eq("id", staff_id).execute()
+        # PostgREST format for filters
+        filters = f"id=eq.{staff_id}"
+        direct_db_query("staff_accounts", method="DELETE", filters=filters)
         return True
     except Exception as e:
         logger.error("Failed to delete staff: %s", e)
