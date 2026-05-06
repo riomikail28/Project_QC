@@ -51,15 +51,15 @@ def log_facility_data():
         unit_type = "ambient"
         room_name = "Unknown"
         
-        room_res = sb.table("facility_rooms").select("name").eq("id", room_id).execute()
+        room_res = sb.table("rooms").select("name").eq("id", room_id).execute()
         if room_res.data:
             room_name = room_res.data[0]["name"]
 
         if device_id:
-            dev_res = sb.table("facility_devices").select("*").eq("id", device_id).execute()
+            dev_res = sb.table("storage_units").select("*").eq("id", device_id).execute()
             if dev_res.data:
                 device_info = dev_res.data[0]
-                unit_type = device_info["type"]
+                unit_type = device_info["unit_type"]
 
         # 2. Validate
         status = validate_temperature(unit_type, float(temperature))
@@ -67,16 +67,20 @@ def log_facility_data():
 
         # 3. Save Log
         log_payload = {
-            "room_id": room_id,
-            "device_id": device_id,
-            "staff_id": staff_id,
+            "zone": room_name,
             "temperature_c": float(temperature),
-            "humidity_rh": float(humidity) if humidity is not None else None,
+            "threshold_c": float(device_info["unit_type"] if device_info else 25.0), # Temporary mapping
             "is_normal": is_normal,
-            "reason": reason,
-            "photo_url": photo_url
+            "recorder_id": staff_id,
+            "notes": reason
         }
         
+        # We need to handle the case where threshold_c is numeric but we might not have it
+        if device_info and "threshold_temp" in device_info:
+            log_payload["threshold_c"] = float(device_info["threshold_temp"])
+        elif "threshold" in data:
+            log_payload["threshold_c"] = float(data["threshold"])
+
         res = sb.table("facility_logs").insert(log_payload).execute()
         log_data = res.data[0] if res.data else None
 
@@ -110,7 +114,7 @@ def get_latest_logs():
     if not sb: return jsonify([])
     try:
         res = (sb.table("facility_logs")
-               .select("*, facility_rooms(name), facility_devices(name)")
+               .select("*, rooms(name), storage_units(unit_name)")
                .order("recorded_at", desc=True)
                .limit(50)
                .execute())

@@ -79,8 +79,11 @@ def create_staff(data: dict):
 
     username = data.get("username")
     password = data.get("password")
-    role = data.get("role", "staff")
+    role_input = data.get("role", "staff").lower()
     full_name = data.get("full_name", username)
+
+    # Database constraint only allows 'admin' or 'staff'
+    db_role = "admin" if "admin" in role_input else "staff"
 
     if not username or not password:
         raise ValueError("Username dan Password wajib diisi")
@@ -89,14 +92,19 @@ def create_staff(data: dict):
         payload = {
             "username": username,
             "password_hash": hash_password(password),
-            "role": role,
-            "full_name": full_name
+            "role": db_role,
+            "full_name": full_name,
+            "is_active": True
         }
         res = sb.table("staff_accounts").insert(payload).execute()
         return res.data[0] if res.data else None
     except Exception as e:
         logger.error("Failed to create staff: %s", e)
-        raise ValueError(f"Gagal menambah staf: {str(e)}")
+        # Check if it's a constraint error or duplicate
+        err_msg = str(e)
+        if "unique_violation" in err_msg or "duplicate" in err_msg:
+            raise ValueError(f"Username '{username}' sudah terdaftar")
+        raise ValueError(f"Gagal menambah staf: {err_msg}")
 
 def delete_staff(staff_id: str):
     """Delete a staff account."""

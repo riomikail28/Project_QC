@@ -11,6 +11,31 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+-- 1b. STAFF & AUTH
+CREATE TABLE IF NOT EXISTS staff_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role staff_role DEFAULT 'staff',
+    full_name TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 1c. PRODUCT CATALOG
+CREATE TABLE IF NOT EXISTS products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sku_code TEXT UNIQUE NOT NULL,
+    product_name TEXT NOT NULL,
+    category TEXT,
+    brix_min NUMERIC,
+    brix_max NUMERIC,
+    ph_min NUMERIC,
+    ph_max NUMERIC,
+    tds_min NUMERIC,
+    tds_max NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 2. FACILITY STRUCTURE
 CREATE TABLE IF NOT EXISTS facility_rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
