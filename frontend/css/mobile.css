@@ -1,0 +1,6 @@
+/* Mobile-specific styles and overrides */
+@media (max-width: 768px) {
+    .hide-on-mobile { display: none !important; }
+    .show-on-mobile { display: block !important; }
+    .container { padding-left: 12px; padding-right: 12px; }
+}

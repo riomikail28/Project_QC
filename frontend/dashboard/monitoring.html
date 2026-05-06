@@ -1,4 +1,87 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monitoring | QC Central Kitchen</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/monitoring.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background: var(--bg-primary);">
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+            <div>
+                <h2>Facility Monitor</h2>
+                <p>Real-time Temperature Tracking</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="form-card">
+        <h3 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Log Suhu Baru</h3>
+        <div style="margin-bottom: 16px;">
+            <label class="input-label">Pilih Area / Unit</label>
+            <select id="zoneSelect" class="input-field" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-top: 8px;">
+                <option value="Chiller Kitchen">Chiller Kitchen</option>
+                <option value="Freezer Central">Freezer Central</option>
+                <option value="Ambient Storage">Ambient Storage</option>
+            </select>
+        </div>
+        <div style="margin-bottom: 24px;">
+            <label class="input-label">Suhu (°C)</label>
+            <input type="number" id="tempInput" class="input-field" step="0.1" placeholder="Contoh: 4.2" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-top: 8px;">
+        </div>
+        <button id="submitTemp" class="btn-submit" style="width: 100%; padding: 16px; border-radius: 12px; border: none; color: white; font-weight: 700; cursor: pointer;">Submit Log</button>
+    </div>
+
+    <section class="section">
+        <h3 class="section-title">Log Terakhir</h3>
+        <div id="monitoringList">
+            <div class="skeleton" style="height: 60px; margin-bottom: 10px; background: #eee; border-radius: 12px;"></div>
+        </div>
+    </section>
+
+    <nav style="position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: white; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
+        <a href="dashboard.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-th-large"></i></a>
+        <a href="monitoring.html" style="color: var(--accent-blue); text-decoration: none; font-size: 20px;"><i class="fas fa-thermometer-half"></i></a>
+        <a href="inspection.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-clipboard-check"></i></a>
+        <a href="profile.html" style="color: var(--text-muted); text-decoration: none; font-size: 20px;"><i class="fas fa-user"></i></a>
+    </nav>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/ui-mobile.js"></script>
+    <script src="../js/monitoring.js"></script>
+    <script src="../js/mobile-nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.check()) window.location.href = 'login.html';
+            Monitoring.init();
+        });
+
+        document.getElementById('submitTemp').addEventListener('click', async () => {
+            const zone = document.getElementById('zoneSelect').value;
+            const temp = document.getElementById('tempInput').value;
+            if (!temp) return;
+
+            const btn = document.getElementById('submitTemp');
+            btn.disabled = true;
+            btn.innerText = 'Submitting...';
+
+            try {
+                await Monitoring.submit(zone, parseFloat(temp));
+                document.getElementById('tempInput').value = '';
+                UI.toast('Log berhasil disimpan!', 'success');
+                btn.disabled = false;
+                btn.innerText = 'Submit Log';
+            } catch (err) {
+                UI.toast('Gagal menyimpan log', 'error');
+                btn.disabled = false;
+                btn.innerText = 'Submit Log';
+            }
+        });
+    </script>
+</body>
+</html>

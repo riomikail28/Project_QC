@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CCP Inspection | QC Central Kitchen</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/monitoring.css">
+    <link rel="stylesheet" href="css/inspection.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a id="backBtn" href="#" style="color: white; font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+            <div>
+                <h2 id="stageTitle">CCP Stage</h2>
+                <p id="batchCodeLabel">Loading...</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="form-card">
+        <h3 id="stageInstruction">Melakukan pengecekan parameter QC</h3>
+        
+        <div id="dynamicFields">
+            <!-- Dynamic parameters will be injected here -->
+        </div>
+
+        <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+            <input type="file" id="photoInput" accept="image/*" capture="environment">
+            <div id="photoPreview" style="display: none; margin-bottom: 12px;">
+                <img id="previewImg" src="" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-subtle);">
+            </div>
+            <div id="uploadPrompt">
+                <i class="fas fa-camera" style="font-size: 24px; margin-bottom: 8px;"></i>
+                <p>Ambil Foto Bukti (CCP Evidence)</p>
+            </div>
+        </div>
+
+        <button id="ocrBtn" class="btn-submit" style="background: var(--bg-card); border: 1px solid var(--border-active); color: var(--accent-blue); margin-top: 12px; display: none;">
+            <i class="fas fa-magic"></i> Jalankan OCR (Ekstrak Teks)
+        </button>
+
+        <button id="submitBtn" class="btn-submit" style="margin-top: 20px;">Submit Inspection</button>
+    </div>
+
+    <div id="validationResult" style="display: none;"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/ccp.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const batchId = params.get('batch_id');
+        const stageNum = parseInt(params.get('stage'));
+
+        document.getElementById('backBtn').href = `batch_detail.html?id=${batchId}`;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.check()) window.location.href = 'login.html';
+            CCP.initStage(batchId, stageNum);
+        });
+
+        document.getElementById('photoInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('photoPreview').style.display = 'block';
+                    document.getElementById('uploadPrompt').style.display = 'none';
+                    if (stageNum === 2 || stageNum === 4) {
+                        document.getElementById('ocrBtn').style.display = 'block';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('ocrBtn').addEventListener('click', async () => {
+            const photo = document.getElementById('photoInput').files[0];
+            const btn = document.getElementById('ocrBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
+            
+            try {
+                const result = await CCP.runOCR(photo);
+                CCP.applyOCR(result);
+            } catch (err) {
+                alert('OCR Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic"></i> Jalankan OCR (Ekstrak Teks)';
+            }
+        });
+
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = 'Submitting...';
+
+            try {
+                const res = await CCP.submit(batchId, stageNum);
+                if (res.success) {
+                    window.location.href = `batch_detail.html?id=${batchId}`;
+                }
+            } catch (err) {
+                alert('Submission Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerText = 'Submit Inspection';
+            }
+        });
+    </script>
+</body>
+</html>

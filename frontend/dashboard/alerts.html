@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Alerts | QC Central Kitchen</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="dashboard.html" style="color: white; font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+            <div>
+                <h2>Active Alerts</h2>
+                <p>Corrective Actions Required</p>
+            </div>
+        </div>
+    </header>
+
+    <div id="alertList" class="section" style="margin-top: 10px;">
+        <!-- Alerts will be loaded here -->
+        <div class="skeleton" style="height: 100px; margin-bottom: 12px;"></div>
+        <div class="skeleton" style="height: 100px; margin-bottom: 12px;"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        async function loadAlerts() {
+            if (!Auth.check()) window.location.href = 'login.html';
+            const container = document.getElementById('alertList');
+            
+            try {
+                const alerts = await API.get('/alerts');
+                container.innerHTML = '';
+
+                if (alerts.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle" style="font-size: 40px; color: var(--status-pass); opacity: 0.8;"></i>
+                            <p>Semua sistem normal. Tidak ada alert aktif.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    container.innerHTML += `
+                        <div class="alert-card fail" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                                <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                                <div class="alert-info">
+                                    <h4 style="color: var(--status-fail);">${alert.zone}</h4>
+                                    <p>${Utils.formatTime(alert.created_at)} • Temperature: ${alert.temperature_c}°C</p>
+                                </div>
+                                <div class="alert-status fail">CRITICAL</div>
+                            </div>
+                            <div style="background: rgba(239, 68, 68, 0.05); padding: 12px; border-radius: 8px; font-size: 12px; border-left: 2px solid var(--status-fail); margin-top: 4px; width: 100%;">
+                                <strong>Tindakan Korektif:</strong><br>
+                                Segera periksa unit pendingin dan pastikan pintu tertutup rapat.
+                            </div>
+                            <button onclick="resolve('${alert.id}')" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-primary); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px;">
+                                Tandai Selesai / Resolved
+                            </button>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                container.innerHTML = '<p class="error">Gagal memuat alert.</p>';
+            }
+        }
+
+        async function resolve(id) {
+            if (!confirm('Tandai alert ini sebagai selesai?')) return;
+            try {
+                await API.post(`/alerts/${id}/resolve`, {});
+                loadAlerts();
+            } catch (err) {
+                alert('Gagal menyelesaikan alert');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAlerts);
+    </script>
+</body>
+</html>

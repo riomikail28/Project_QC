@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Batch Detail | QC Central Kitchen</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/inspection.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="inspection.html" style="color: white; font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+            <div>
+                <h2 id="batchCodeTitle">Batch Record</h2>
+                <p id="productNameTitle">Loading...</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="health-card" id="statusCard" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
+        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Final QC Status</div>
+        <div id="finalStatus" class="status-badge" style="margin-top: 0; font-size: 20px;">PENDING</div>
+    </div>
+
+    <section class="section">
+        <h3 class="section-title">Critical Control Points</h3>
+        <div id="ccpTimeline">
+            <!-- Stage 1 -->
+            <div class="alert-card" onclick="goToStage(1)">
+                <div class="alert-icon"><i class="fas fa-truck-loading"></i></div>
+                <div class="alert-info">
+                    <h4>Stage 1: Material Incoming</h4>
+                    <p id="s1_status">Not started</p>
+                </div>
+                <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-muted);"></i>
+            </div>
+
+            <!-- Stage 2 -->
+            <div class="alert-card" onclick="goToStage(2)">
+                <div class="alert-icon"><i class="fas fa-fire"></i></div>
+                <div class="alert-info">
+                    <h4>Stage 2: Cooking/Processing</h4>
+                    <p id="s2_status">Locked</p>
+                </div>
+                <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-muted);"></i>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="alert-card" onclick="goToStage(3)">
+                <div class="alert-icon"><i class="fas fa-snowflake"></i></div>
+                <div class="alert-info">
+                    <h4>Stage 3: Cooling / Storage</h4>
+                    <p id="s3_status">Locked</p>
+                </div>
+                <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-muted);"></i>
+            </div>
+
+            <!-- Stage 4 -->
+            <div class="alert-card" onclick="goToStage(4)">
+                <div class="alert-icon"><i class="fas fa-barcode"></i></div>
+                <div class="alert-info">
+                    <h4>Stage 4: Packaging & Release</h4>
+                    <p id="s4_status">Locked</p>
+                </div>
+                <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-muted);"></i>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let currentBatchId = new URLSearchParams(window.location.search).get('id');
+
+        async function init() {
+            if (!Auth.check()) window.location.href = 'login.html';
+            if (!currentBatchId) {
+                window.location.href = 'inspection.html';
+                return;
+            }
+
+            try {
+                const detail = await API.get(`/batch/${currentBatchId}`);
+                const batch = detail.batch;
+                const logs = detail.ccp_logs;
+
+                document.getElementById('batchCodeTitle').innerText = batch.batch_code;
+                document.getElementById('productNameTitle').innerText = batch.products?.product_name || 'Production Run';
+                
+                const statusEl = document.getElementById('finalStatus');
+                statusEl.innerText = (batch.final_qc_status || 'pending').toUpperCase();
+                statusEl.className = 'status-badge ' + (batch.final_qc_status || 'pending');
+
+                // Map logs to UI
+                const stages = {1: 'Incoming', 2: 'Cooking', 3: 'Cooling', 4: 'Packaging'};
+                Object.entries(stages).forEach(([num, name]) => {
+                    const log = logs.find(l => l.stage.includes(name));
+                    const el = document.getElementById(`s${num}_status`);
+                    if (log) {
+                        el.innerText = `Completed: ${log.stage_qc_status.toUpperCase()}`;
+                        el.parentElement.parentElement.classList.add(log.stage_qc_status);
+                    }
+                });
+
+            } catch (err) {
+                console.error('Failed to load batch detail', err);
+            }
+        }
+
+        function goToStage(num) {
+            window.location.href = `ccp_stage.html?batch_id=${currentBatchId}&stage=${num}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

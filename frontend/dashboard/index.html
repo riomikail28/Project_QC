@@ -1,2 +1,19 @@
 <!DOCTYPE html>
-<html lang="
+<html>
+<head>
+    <title>QC Central Kitchen Redirect</title>
+    <script src="js/auth.js"></script>
+    <script>
+        window.onload = function() {
+            if (Auth.check()) {
+                window.location.href = 'dashboard.html';
+            } else {
+                window.location.href = 'login.html';
+            }
+        };
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>

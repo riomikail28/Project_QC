@@ -1,5 +1,13 @@
-from __future__ import annotations
+"""
+Product Catalog
+===============
+Local product SKU database for Central Kitchen.
+Used as fallback when Supabase products table is unavailable.
 
+Each product has SOP thresholds for pH, Brix, and/or TDS validation.
+"""
+
+from __future__ import annotations
 from typing import Optional
 
 
@@ -31,10 +39,12 @@ CENTRAL_KITCHEN_PRODUCTS: list[dict] = [
 
 
 def product_by_code(product_code: str) -> Optional[dict]:
+    """Look up a product by its SKU code."""
     return next((p for p in CENTRAL_KITCHEN_PRODUCTS if p["product_code"] == product_code), None)
 
 
 def sop_params(product: dict) -> dict:
+    """Extract SOP parameter ranges from a product dict."""
     params = {}
     for key, unit in [("brix", "%"), ("ph", "pH"), ("tds", "ppm")]:
         lo = product.get(f"{key}_min")

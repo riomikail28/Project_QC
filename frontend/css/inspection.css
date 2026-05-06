@@ -1,0 +1,31 @@
+/* ==========================================================================
+   QC Central Kitchen — Inspection Styles (White & Blue Theme)
+   ========================================================================== */
+
+.card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.check-item {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.photo-upload {
+    background: #f8fafc;
+    border: 2px dashed var(--border-subtle);
+    color: var(--text-secondary);
+}
+
+.photo-upload:hover {
+    border-color: var(--accent-blue);
+    background: var(--accent-blue-soft);
+    color: var(--accent-blue);
+}
+
+.btn-qc-submit {
+    background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25);
+}

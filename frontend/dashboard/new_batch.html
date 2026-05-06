@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>New Batch | QC Central Kitchen</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/monitoring.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="dashboard.html" style="color: white; font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+            <div>
+                <h2>New Production</h2>
+                <p>Register Batch Record</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="form-card">
+        <form id="newBatchForm">
+            <label class="input-label">Select Product</label>
+            <select id="productId" class="input-field" required>
+                <option value="">Loading products...</option>
+            </select>
+
+            <label class="input-label">Batch Code</label>
+            <input type="text" id="batchCode" class="input-field" placeholder="e.g. BATCH-20240507-001" required>
+
+            <label class="input-label">Production Date</label>
+            <input type="date" id="productionDate" class="input-field" required>
+
+            <label class="input-label">Shift</label>
+            <select id="shift" class="input-field">
+                <option value="Pagi">Shift Pagi (06:00 - 14:00)</option>
+                <option value="Siang">Shift Siang (14:00 - 22:00)</option>
+                <option value="Malam">Shift Malam (22:00 - 06:00)</option>
+            </select>
+
+            <button type="submit" class="btn-submit">Start Inspection</button>
+        </form>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.check()) window.location.href = 'login.html';
+            
+            // Set default date
+            document.getElementById('productionDate').value = new Date().toISOString().split('T')[0];
+            
+            // Load products
+            try {
+                const products = await API.get('/products');
+                const select = document.getElementById('productId');
+                select.innerHTML = '<option value="">Select Product</option>';
+                products.forEach(p => {
+                    select.innerHTML += `<option value="${p.product_code}">${p.product_code} - ${p.product_name}</option>`;
+                });
+            } catch (err) {
+                console.error('Failed to load products');
+            }
+        });
+
+        document.getElementById('newBatchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = 'Creating...';
+
+            const payload = {
+                product_id: document.getElementById('productId').value,
+                batch_code: document.getElementById('batchCode').value,
+                production_date: document.getElementById('productionDate').value,
+                shift: document.getElementById('shift').value,
+                operator_id: Auth.user().id
+            };
+
+            try {
+                const res = await API.post('/batch/create', payload);
+                if (res.success) {
+                    window.location.href = `batch_detail.html?id=${res.batch.id}`;
+                }
+            } catch (err) {
+                alert('Gagal membuat batch: ' + err.message);
+                btn.disabled = false;
+                btn.innerText = 'Start Inspection';
+            }
+        });
+    </script>
+</body>
+</html>

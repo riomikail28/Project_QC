@@ -1,0 +1,46 @@
+/* ==========================================================================
+   QC Central Kitchen — Monitoring Styles (White & Blue Theme)
+   ========================================================================== */
+
+.form-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 28px 20px;
+    margin: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.input-field {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.input-field:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.input-label {
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.result-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
+}
+
+.log-entry {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-submit {
+    background: var(--accent-blue);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
