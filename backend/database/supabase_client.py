@@ -26,8 +26,8 @@ def get_client():
         
     if _client is None:
         # Fetch environment variables dynamically (ensures Vercel updates are picked up)
-        url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
+        url = os.getenv("SUPABASE_URL", "").strip().strip("/")
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
         
         # Safe Diagnostics (Does not leak the key itself)
         key_src = "SUPABASE_SERVICE_ROLE_KEY" if os.getenv("SUPABASE_SERVICE_ROLE_KEY") else "SUPABASE_KEY"
