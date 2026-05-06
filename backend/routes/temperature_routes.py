@@ -1,233 +1,133 @@
 """
-Temperature Routes
-==================
-Blueprint for facility temperature monitoring endpoints.
-Handles temperature logging, validation, and alert generation.
-
-Supabase tables: facility_logs, facility_alerts
+Temperature & Facility Monitoring Routes
+========================================
+Handles temperature/humidity logging for specific devices and rooms.
+Supports photo uploads for findings and optional reason for abnormalities.
 """
 
 from flask import Blueprint, request, jsonify
 import logging
-
+import os
 from backend.service.qc_engine import validate_temperature
 from backend.service.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.database.supabase_client import get_client
 
-logger = logging.getLogger("qc.routes.temperature")
+logger = logging.getLogger("qc.routes.monitoring")
 
-temperature_bp = Blueprint("temperature_bp", __name__)
+monitoring_bp = Blueprint("monitoring_bp", __name__)
 
-
-# ---------------------------------------------------------------------------
-# POST /api/temperature — Log a temperature reading
-# ---------------------------------------------------------------------------
-@temperature_bp.route("/api/temperature", methods=["POST"])
-def create_temperature_log():
-    """Log a temperature reading and return validation result with alert.
-
+@monitoring_bp.route("/api/monitoring/log", methods=["POST"])
+def log_facility_data():
+    """Log data for a specific device or room.
+    
     Request JSON:
-        room_name (str): Zone/room name
-        unit_type (str): 'chiller', 'freezer', or 'ambient'
-        temperature (float): Temperature reading in °C
-
-    Returns:
-        JSON with status, alert info, and validation result
+        device_id (uuid)
+        room_id (uuid)
+        staff_id (uuid)
+        temperature (float)
+        humidity (float, optional)
+        reason (str, optional)
+        photo_url (str, optional)
     """
     data = request.json
-
-    # Validate input
-    room_name = data.get("room_name")
-    unit_type = data.get("unit_type")
+    device_id = data.get("device_id")
+    room_id = data.get("room_id")
+    staff_id = data.get("staff_id")
     temperature = data.get("temperature")
+    humidity = data.get("humidity")
+    reason = data.get("reason")
+    photo_url = data.get("photo_url")
 
-    if not all([room_name, unit_type, temperature is not None]):
-        return jsonify({"success": False, "error": "Missing required fields"}), 400
+    if not all([room_id, temperature is not None]):
+        return jsonify({"success": False, "error": "Room and Temperature are required"}), 400
 
-    temperature = float(temperature)
-
-    # Run QC validation
-    status = validate_temperature(unit_type, temperature)
-
-    # Generate alert
-    alert = generate_temperature_alert(room_name, unit_type, temperature, status)
-
-    # Determine threshold for the unit type
-    threshold = _get_threshold(unit_type)
-
-    # Persist to Supabase
     sb = get_client()
-    log_id = None
-    if sb:
-        try:
-            res = sb.table("facility_logs").insert({
-                "zone": room_name,
-                "temperature_c": temperature,
-                "threshold_c": threshold,
-                "is_normal": status == "PASS",
-            }).execute()
+    if not sb:
+        return jsonify({"success": False, "error": "Database offline"}), 503
 
-            if res.data:
-                log_id = res.data[0].get("id")
-        except Exception as e:
-            logger.error("Failed to persist temperature log: %s", e)
+    try:
+        # 1. Get device/room info for validation
+        device_info = None
+        unit_type = "ambient"
+        room_name = "Unknown"
+        
+        room_res = sb.table("facility_rooms").select("name").eq("id", room_id).execute()
+        if room_res.data:
+            room_name = room_res.data[0]["name"]
 
-    # Save alert if status is not PASS
-    if status != "PASS" and log_id:
-        save_alert_to_db(
-            zone=room_name,
-            temperature=temperature,
-            threshold=threshold,
-            log_id=log_id,
-        )
+        if device_id:
+            dev_res = sb.table("facility_devices").select("*").eq("id", device_id).execute()
+            if dev_res.data:
+                device_info = dev_res.data[0]
+                unit_type = device_info["type"]
 
-    return jsonify({
-        "success": True,
-        "data": {
-            "room_name": room_name,
-            "unit_type": unit_type,
-            "temperature": temperature,
-            "threshold": threshold,
+        # 2. Validate
+        status = validate_temperature(unit_type, float(temperature))
+        is_normal = (status == "PASS")
+
+        # 3. Save Log
+        log_payload = {
+            "room_id": room_id,
+            "device_id": device_id,
+            "staff_id": staff_id,
+            "temperature_c": float(temperature),
+            "humidity_rh": float(humidity) if humidity is not None else None,
+            "is_normal": is_normal,
+            "reason": reason,
+            "photo_url": photo_url
+        }
+        
+        res = sb.table("facility_logs").insert(log_payload).execute()
+        log_data = res.data[0] if res.data else None
+
+        # 4. Generate Alert if abnormal
+        alert = None
+        if not is_normal:
+            alert = generate_temperature_alert(room_name, unit_type, float(temperature), status)
+            if log_data:
+                save_alert_to_db(
+                    zone=room_name,
+                    temperature=float(temperature),
+                    threshold=device_info["threshold_temp"] if device_info else 25.0,
+                    log_id=log_data["id"]
+                )
+
+        return jsonify({
+            "success": True,
             "status": status,
             "alert": alert,
-        }
-    })
+            "log_id": log_data["id"] if log_data else None
+        })
 
-
-# ---------------------------------------------------------------------------
-# GET /api/temperature/latest — Get latest readings per zone
-# ---------------------------------------------------------------------------
-@temperature_bp.route("/api/temperature/latest", methods=["GET"])
-def get_latest_temperatures():
-    """Fetch the most recent temperature reading per zone.
-
-    Returns:
-        JSON list of latest readings
-    """
-    sb = get_client()
-    if not sb:
-        return jsonify([])
-
-    try:
-        res = (
-            sb.table("facility_logs")
-            .select("zone, temperature_c, threshold_c, is_normal, recorded_at")
-            .order("recorded_at", desc=True)
-            .limit(100)
-            .execute()
-        )
-        # Deduplicate: keep only latest per zone
-        latest = {}
-        for row in (res.data or []):
-            latest.setdefault(row["zone"], row)
-
-        return jsonify(list(latest.values()))
     except Exception as e:
-        logger.error("Failed to fetch latest temperatures: %s", e)
-        return jsonify([])
+        logger.error("Logging error: %s", e)
+        return jsonify({"success": False, "error": str(e)}), 500
 
-
-# ---------------------------------------------------------------------------
-# GET /api/temperature/history — Get temperature history for a zone
-# ---------------------------------------------------------------------------
-@temperature_bp.route("/api/temperature/history", methods=["GET"])
-def get_temperature_history():
-    """Fetch temperature history for a specific zone.
-
-    Query params:
-        zone (str): Zone name to filter by
-        limit (int): Max number of records (default 50)
-
-    Returns:
-        JSON list of historical readings
-    """
-    zone = request.args.get("zone")
-    limit = int(request.args.get("limit", 50))
-
+@monitoring_bp.route("/api/monitoring/latest", methods=["GET"])
+def get_latest_logs():
+    """Fetch latest logs for the dashboard."""
     sb = get_client()
-    if not sb:
-        return jsonify([])
-
+    if not sb: return jsonify([])
     try:
-        query = (
-            sb.table("facility_logs")
-            .select("zone, temperature_c, threshold_c, is_normal, recorded_at")
-            .order("recorded_at", desc=True)
-            .limit(limit)
-        )
-        if zone:
-            query = query.eq("zone", zone)
-
-        res = query.execute()
+        res = (sb.table("facility_logs")
+               .select("*, facility_rooms(name), facility_devices(name)")
+               .order("recorded_at", desc=True)
+               .limit(50)
+               .execute())
         return jsonify(res.data or [])
     except Exception as e:
-        logger.error("Failed to fetch temperature history: %s", e)
+        logger.error("Fetch logs error: %s", e)
         return jsonify([])
 
-
-# ---------------------------------------------------------------------------
-# GET /api/alerts — Get open alerts
-# ---------------------------------------------------------------------------
-@temperature_bp.route("/api/alerts", methods=["GET"])
-def get_open_alerts():
-    """Fetch all open facility alerts.
-
-    Returns:
-        JSON list of open alerts
-    """
+@monitoring_bp.route("/api/monitoring/stats", methods=["GET"])
+def get_monitoring_stats():
+    """Aggregate stats for analytics charts."""
     sb = get_client()
-    if not sb:
-        return jsonify([])
-
+    if not sb: return jsonify({})
     try:
-        res = (
-            sb.table("facility_alerts")
-            .select("*")
-            .eq("status", "open")
-            .order("created_at", desc=True)
-            .execute()
-        )
+        # Simple daily count for now
+        res = sb.table("facility_logs").select("is_normal, recorded_at").execute()
+        # In a real app, we would do SQL aggregation here
         return jsonify(res.data or [])
     except Exception as e:
-        logger.error("Failed to fetch alerts: %s", e)
-        return jsonify([])
-
-
-# ---------------------------------------------------------------------------
-# POST /api/alerts/<alert_id>/resolve — Resolve an alert
-# ---------------------------------------------------------------------------
-@temperature_bp.route("/api/alerts/<alert_id>/resolve", methods=["POST"])
-def resolve_alert(alert_id):
-    """Mark an alert as resolved.
-
-    Returns:
-        JSON with updated alert status
-    """
-    sb = get_client()
-    if not sb:
-        return jsonify({"error": "Database offline"}), 503
-
-    try:
-        res = (
-            sb.table("facility_alerts")
-            .update({"status": "resolved"})
-            .eq("id", alert_id)
-            .execute()
-        )
-        return jsonify({"success": True, "alert_id": alert_id, "status": "resolved"})
-    except Exception as e:
-        logger.error("Failed to resolve alert: %s", e)
         return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-def _get_threshold(unit_type: str) -> float:
-    """Return the SOP threshold for a given unit type."""
-    thresholds = {
-        "chiller": 5.0,
-        "freezer": -18.0,
-        "ambient": 25.0,
-    }
-    return thresholds.get(unit_type, 5.0)

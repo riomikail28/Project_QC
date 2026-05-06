@@ -1,62 +1,150 @@
 /**
- * QC Central Kitchen — Monitoring Controller
+ * Monitoring Logic JS
+ * Handles dynamic room/device loading and logging
  */
 
-const Monitoring = {
-    async init() {
-        this.loadHistory();
-    },
+let facilityStructure = [];
+let selectedRoom = null;
 
-    async submit(payload) {
-        return await API.post('/temperature', payload);
-    },
+document.addEventListener("DOMContentLoaded", () => {
+    loadFacilityStructure();
+    loadRecentLogs();
+});
 
-    async loadHistory() {
-        const list = document.getElementById('historyList');
-        try {
-            const data = await API.get('/temperature/latest');
-            list.innerHTML = '';
-            
-            if (data.length === 0) {
-                list.innerHTML = '<p class="empty-state">No readings recorded yet.</p>';
-                return;
-            }
-
-            data.forEach(row => {
-                const statusClass = row.is_normal ? 'pass' : 'fail';
-                const time = new Date(row.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                list.innerHTML += `
-                    <div class="log-entry">
-                        <div class="log-dot ${statusClass}"></div>
-                        <div class="log-zone">${row.zone}</div>
-                        <div class="log-temp">${row.temperature_c}°C</div>
-                        <div class="log-time">${time}</div>
-                    </div>
-                `;
-            });
-        } catch (error) {
-            list.innerHTML = '<p class="error">Failed to load history.</p>';
+async function loadFacilityStructure() {
+    try {
+        const res = await fetch("/api/facility/structure");
+        facilityStructure = await res.json();
+        renderRoomSelector();
+        if (facilityStructure.length > 0) {
+            selectRoom(facilityStructure[0].id);
         }
-    },
-
-    displayResult(res) {
-        const container = document.getElementById('resultContainer');
-        const data = res.data;
-        const statusClass = data.status.toLowerCase();
-        
-        container.innerHTML = `
-            <div class="result-card ${statusClass}">
-                <div class="result-info">
-                    <strong>${data.room_name} (${data.unit_type})</strong>
-                    <p>Status: ${data.status}</p>
-                    <p style="color: var(--text-muted)">${data.alert.message}</p>
-                </div>
-                <div class="result-temp">${data.temperature}°C</div>
-            </div>
-        `;
-
-        // Refresh list
-        this.loadHistory();
+    } catch (err) {
+        console.error("Gagal memuat struktur fasilitas", err);
     }
-};
+}
+
+function renderRoomSelector() {
+    const container = document.getElementById("room-list");
+    container.innerHTML = facilityStructure.map(room => `
+        <div class="room-chip ${selectedRoom === room.id ? 'active' : ''}" 
+             onclick="selectRoom('${room.id}')">
+            ${room.name}
+        </div>
+    `).join("");
+}
+
+function selectRoom(roomId) {
+    selectedRoom = roomId;
+    renderRoomSelector();
+    renderDevices();
+}
+
+function renderDevices() {
+    const container = document.getElementById("device-list");
+    const room = facilityStructure.find(r => r.id === selectedRoom);
+    
+    if (!room || !room.devices) {
+        container.innerHTML = '<div class="empty-state">Tidak ada alat di ruangan ini</div>';
+        return;
+    }
+
+    container.innerHTML = room.devices.map(dev => `
+        <div class="device-card" onclick="openLogModal('${dev.id}', '${dev.name}', '${dev.type}')">
+            <div class="device-icon">
+                <i class="fas ${getDeviceIcon(dev.type)}"></i>
+            </div>
+            <div class="device-name">${dev.name}</div>
+            <div class="device-status">Target: ${dev.threshold_temp}°C</div>
+        </div>
+    `).join("");
+}
+
+function getDeviceIcon(type) {
+    switch(type) {
+        case 'chiller': return 'fa-refrigerator';
+        case 'freezer': return 'fa-snowflake';
+        case 'undercounter': return 'fa-box-open';
+        case 'room_temp': return 'fa-thermometer-half';
+        default: return 'fa-hdd';
+    }
+}
+
+function openLogModal(deviceId, deviceName, type) {
+    document.getElementById("modal-title").innerText = `Log: ${deviceName}`;
+    document.getElementById("selected-device-id").value = deviceId;
+    document.getElementById("selected-room-id").value = selectedRoom;
+    
+    // Show/hide humidity based on type
+    const humGroup = document.getElementById("humidity-group");
+    humGroup.style.display = (type === 'room_temp') ? 'block' : 'none';
+
+    document.getElementById("overlay").style.display = "block";
+    document.getElementById("log-modal").style.display = "block";
+}
+
+function closeModal() {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("log-modal").style.display = "none";
+    document.getElementById("monitoring-form").reset();
+}
+
+function triggerPhoto() {
+    document.getElementById("photo-input").click();
+}
+
+document.getElementById("monitoring-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
+    const payload = {
+        device_id: document.getElementById("selected-device-id").value,
+        room_id: document.getElementById("selected-room-id").value,
+        staff_id: user.id || null,
+        temperature: document.getElementById("input-temp").value,
+        humidity: document.getElementById("input-rh").value || null,
+        reason: document.getElementById("input-reason").value,
+        photo_url: "" // To be implemented with actual upload
+    };
+
+    try {
+        const res = await fetch("/api/monitoring/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await res.json();
+        if (result.success) {
+            alert(`Berhasil! Status: ${result.status}`);
+            closeModal();
+            loadRecentLogs();
+        } else {
+            alert("Gagal menyimpan data: " + result.error);
+        }
+    } catch (err) {
+        alert("Gagal menghubungi server");
+    }
+});
+
+async function loadRecentLogs() {
+    try {
+        const res = await fetch("/api/monitoring/latest");
+        const logs = await res.json();
+        const container = document.getElementById("recent-logs");
+        
+        container.innerHTML = logs.map(log => `
+            <div class="log-item ${log.is_normal ? '' : 'alert'}">
+                <div class="log-info">
+                    <div class="log-title">${log.facility_rooms?.name} - ${log.facility_devices?.name || 'Suhu Ruang'}</div>
+                    <div class="log-meta">${new Date(log.recorded_at).toLocaleTimeString()} • ${log.temperature_c}°C ${log.humidity_rh ? ' • ' + log.humidity_rh + '%RH' : ''}</div>
+                </div>
+                <div class="log-status ${log.is_normal ? 'pass' : 'fail'}">
+                    ${log.is_normal ? 'NORMAL' : 'ABNORMAL'}
+                </div>
+            </div>
+        `).join("");
+    } catch (err) {
+        console.error("Gagal memuat log", err);
+    }
+}

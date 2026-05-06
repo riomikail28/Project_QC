@@ -2,93 +2,175 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Monitoring | QC Central Kitchen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Fasilitas | Intelligent QC</title>
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="../css/monitoring.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .room-selector {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-bottom: 20px;
+            scrollbar-width: none;
+        }
+        .room-chip {
+            padding: 10px 20px;
+            background: white;
+            border-radius: 30px;
+            border: 1px solid #e0e0e0;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .room-chip.active {
+            background: #0052cc;
+            color: white;
+            border-color: #0052cc;
+            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.2);
+        }
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+        }
+        .device-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #f0f0f0;
+            text-align: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .device-card:active { transform: scale(0.95); }
+        .device-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #0052cc;
+        }
+        .device-name { font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+        .device-status { font-size: 12px; color: #666; }
+
+        /* Form Modal */
+        #log-modal {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            padding: 30px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+        .photo-upload {
+            border: 2px dashed #0052cc;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: #0052cc;
+            cursor: pointer;
+            background: #f0f7ff;
+        }
+    </style>
 </head>
-<body>
-    <header class="header">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-chevron-left"></i></a>
-            <div>
-                <h2 style="font-size: 20px; font-weight: 800;">FACILITY MONITOR</h2>
-                <p style="font-size: 12px; opacity: 0.7;">Real-time Temperature Tracking</p>
+<body class="bg-light">
+    <div class="app-container">
+        <!-- Sidebar placeholder -->
+        <header class="page-header">
+            <div class="header-content">
+                <a href="dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+                <h1>Monitoring Fasilitas</h1>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <div class="form-card">
-        <h3 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Log Suhu Baru</h3>
-        
-        <div class="input-group">
-            <label class="input-label">Pilih Area / Unit</label>
-            <select id="zoneSelect" class="input-field">
-                <option value="Chiller Kitchen">Chiller Kitchen</option>
-                <option value="Freezer Central">Freezer Central</option>
-                <option value="Ambient Storage">Ambient Storage</option>
-            </select>
-        </div>
+        <main class="content p-20">
+            <!-- Room Selection -->
+            <section class="room-selector" id="room-list">
+                <!-- Chips will be loaded here -->
+                <div class="room-chip active">PPIC</div>
+                <div class="room-chip">Kitchen</div>
+                <div class="room-chip">Grouper</div>
+            </section>
 
-        <div class="input-group">
-            <label class="input-label">Suhu Terukur (°C)</label>
-            <input type="number" id="tempInput" class="input-field" step="0.1" placeholder="Contoh: 4.2">
-        </div>
+            <!-- Device List -->
+            <section class="device-grid" id="device-list">
+                <!-- Devices will be loaded here -->
+                <div class="loading-state">Memuat data fasilitas...</div>
+            </section>
 
-        <button id="submitTemp" class="btn-submit">SIMPAN DATA LOG</button>
+            <!-- Latest Logs -->
+            <section class="section mt-30">
+                <div class="section-header">
+                    <h2>Log Terakhir</h2>
+                    <a href="#" class="view-all">Lihat Semua</a>
+                </div>
+                <div id="recent-logs" class="log-list">
+                    <!-- Logs will be loaded here -->
+                </div>
+            </section>
+        </main>
     </div>
 
-    <section class="section">
-        <h3 class="section-title" style="margin-top: 12px;">Riwayat Log Terakhir</h3>
-        <div id="monitoringList">
-            <div class="skeleton" style="height: 80px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border-radius: 16px;"></div>
+    <!-- Log Modal -->
+    <div class="modal-overlay" id="overlay"></div>
+    <div id="log-modal">
+        <div class="modal-header">
+            <h3 id="modal-title">Input Data Chiller</h3>
+            <button onclick="closeModal()" class="close-btn"><i class="fas fa-times"></i></button>
         </div>
-    </section>
+        <form id="monitoring-form">
+            <input type="hidden" id="selected-device-id">
+            <input type="hidden" id="selected-room-id">
+            
+            <div class="form-group">
+                <label>Suhu (°C)</label>
+                <input type="number" step="0.1" id="input-temp" placeholder="Contoh: 4.5" required>
+            </div>
 
-    <nav style="position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; z-index: 1000;">
-        <a href="dashboard.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-th-large"></i></a>
-        <a href="monitoring.html" class="nav-item active" style="text-decoration: none;"><i class="fas fa-thermometer-half"></i></a>
-        <a href="inspection.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-clipboard-check"></i></a>
-        <a href="profile.html" class="nav-item" style="text-decoration: none;"><i class="fas fa-user-circle"></i></a>
-    </nav>
+            <div class="form-group" id="humidity-group" style="display: none;">
+                <label>Kelembapan (%RH)</label>
+                <input type="number" step="1" id="input-rh" placeholder="Contoh: 65">
+            </div>
 
-    <script src="../js/api.js"></script>
-    <script src="../js/auth.js"></script>
-    <script src="../js/ui-mobile.js"></script>
+            <div class="form-group">
+                <label>Catatan / Temuan (Opsional)</label>
+                <textarea id="input-reason" rows="3" placeholder="Sebutkan jika ada temuan atau alasan suhu tidak normal..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Foto Temuan</label>
+                <div class="photo-upload" onclick="triggerPhoto()">
+                    <i class="fas fa-camera"></i> Ambil Foto
+                </div>
+                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full mt-10">Simpan Data</button>
+        </form>
+    </div>
+
     <script src="../js/monitoring.js"></script>
-    <script src="../js/mobile-nav.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!Auth.check()) window.location.href = 'login.html';
-            Monitoring.init();
-        });
-
-        document.getElementById('submitTemp').addEventListener('click', async () => {
-            const zone = document.getElementById('zoneSelect').value;
-            const temp = document.getElementById('tempInput').value;
-            if (!temp) {
-                UI.toast('Input suhu tidak boleh kosong', 'warning');
-                return;
-            }
-
-            const btn = document.getElementById('submitTemp');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = 'MEMPROSES...';
-
-            try {
-                await Monitoring.submit(zone, parseFloat(temp));
-                document.getElementById('tempInput').value = '';
-                UI.toast('Data log berhasil disimpan!', 'success');
-                btn.disabled = false;
-                btn.innerText = originalText;
-            } catch (err) {
-                UI.toast('Gagal menyimpan data log', 'error');
-                btn.disabled = false;
-                btn.innerText = originalText;
-            }
-        });
-    </script>
 </body>
 </html>

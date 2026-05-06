@@ -14,6 +14,7 @@
             <p id="currentDate">Memuat data...</p>
         </div>
         <div class="header-actions">
+            <button id="adminBtn" class="notif-btn" onclick="window.location.href='admin_panel.html'" style="display: none; background: #f0f7ff; color: #0052cc; margin-right: 8px;"><i class="fas fa-cog"></i></button>
             <button class="notif-btn" onclick="window.location.href='alerts.html'"><i class="fas fa-bell"></i></button>
         </div>
     </header>
@@ -82,6 +83,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
+            
+            const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
+            if (user.role === 'admin') {
+                document.getElementById('adminBtn').style.display = 'flex';
+            }
+
             document.getElementById('currentDate').innerText = Utils.formatDate(new Date());
             Dashboard.init();
         });

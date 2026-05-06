@@ -120,20 +120,48 @@ def _register_staff_routes(app: Flask):
 
     @app.route("/api/staff", methods=["POST"])
     def staff_create():
-        data = request.json
         try:
-            result = create_staff(
-                username=data.get("username"),
-                password=data.get("password"),
-                role=data.get("role", "staff"),
-            )
-            return jsonify(result), 201
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify(create_staff(request.json))
+        except ValueError as e:
+            return jsonify({"detail": str(e)}), 400
 
     @app.route("/api/staff/<staff_id>", methods=["DELETE"])
     def staff_delete(staff_id):
-        success = delete_staff(staff_id)
-        if success:
-            return jsonify({"message": "Staff deleted successfully"})
-        return jsonify({"error": "Failed to delete staff"}), 500
+        return jsonify({"success": delete_staff(staff_id)})
+
+    # --- Facility Management Routes ---
+    @app.route("/api/facility/structure", methods=["GET"])
+    def facility_structure():
+        from backend.skills.facility_manager import get_monitoring_structure
+        return jsonify(get_monitoring_structure())
+
+    @app.route("/api/facility/rooms", methods=["GET", "POST"])
+    def facility_rooms():
+        from backend.skills.facility_manager import list_rooms, add_room
+        if request.method == "POST":
+            data = request.json
+            return jsonify(add_room(data.get("name"), data.get("description", "")))
+        return jsonify(list_rooms())
+
+    @app.route("/api/facility/rooms/<room_id>", methods=["DELETE"])
+    def facility_room_delete(room_id):
+        from backend.skills.facility_manager import delete_room
+        return jsonify({"success": delete_room(room_id)})
+
+    @app.route("/api/facility/devices", methods=["GET", "POST"])
+    def facility_devices():
+        from backend.skills.facility_manager import list_devices, add_device
+        if request.method == "POST":
+            data = request.json
+            return jsonify(add_device(
+                data.get("room_id"), 
+                data.get("name"), 
+                data.get("type"), 
+                data.get("threshold", 5.0)
+            ))
+        return jsonify(list_devices(request.args.get("room_id")))
+
+    @app.route("/api/facility/devices/<device_id>", methods=["DELETE"])
+    def facility_device_delete(device_id):
+        from backend.skills.facility_manager import delete_device
+        return jsonify({"success": delete_device(device_id)})

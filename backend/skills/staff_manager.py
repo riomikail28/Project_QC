@@ -1,10 +1,8 @@
 """
-Staff Manager
-=============
-Authentication and staff account management.
-Handles login, registration, and staff CRUD.
-
-Supabase table: staff_accounts
+Staff Management Skill
+======================
+Handles authentication and staff account CRUD.
+Supports both Supabase-backed accounts and demo fallback.
 """
 
 import hashlib
@@ -14,33 +12,19 @@ from backend.database.supabase_client import get_client
 
 logger = logging.getLogger("qc.staff")
 
-
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
+    """Generate SHA-256 hash of password."""
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def password_matches(user: dict, password: str) -> bool:
-    """Check if a password matches the stored hash or plaintext."""
+    """Check if provided password matches the stored hash."""
     stored = user.get("password_hash") or user.get("password", "")
-    
-    # 1. Cek Hash SHA-256
-    if secrets.compare_digest(str(stored), hash_password(password)):
-        return True
-    # 2. Cek Plaintext
-    if secrets.compare_digest(str(stored), password):
-        return True
-    return False
-
+    return secrets.compare_digest(str(stored), hash_password(password))
 
 def login(username: str, password: str) -> dict:
-    """Authenticate a staff member.
-
-    Returns user data with a session token on success.
-    Raises ValueError on invalid credentials.
-    """
+    """Validate credentials and return user session data."""
     sb = get_client()
-
+    
     if sb:
         try:
             res = sb.table("staff_accounts").select("*").eq("username", username).execute()
@@ -50,15 +34,16 @@ def login(username: str, password: str) -> dict:
                     "id": user["id"],
                     "username": user["username"],
                     "role": user["role"],
-                    "token": secrets.token_urlsafe(32),
+                    "name": user.get("full_name", user["username"]),
+                    "token": f"session-{secrets.token_hex(16)}"
                 }
         except Exception as e:
             logger.error("Login DB error: %s", e)
 
-    # Demo fallback credentials (hanya Admin dan Staff)
+    # Demo fallback
     demo_users = {
-        "admin": {"password": "admin123", "role": "admin", "id": "admin-uuid"},
-        "staff": {"password": "staff123", "role": "staff", "id": "staff-uuid"},
+        "admin": {"password": "admin123", "role": "admin", "id": "admin-uuid", "name": "System Admin"},
+        "staff": {"password": "staff123", "role": "staff", "id": "staff-uuid", "name": "Kitchen Staff"},
     }
 
     demo = demo_users.get(username)
@@ -67,62 +52,61 @@ def login(username: str, password: str) -> dict:
             "id": demo["id"],
             "username": username,
             "role": demo["role"],
-            "token": secrets.token_urlsafe(32),
+            "name": demo["name"],
+            "token": f"demo-token-{secrets.token_hex(8)}"
         }
 
     raise ValueError("Username atau Password salah")
 
-
-def list_staff() -> list:
-    """Fetch all staff accounts (without sensitive fields)."""
+def list_staff():
+    """List all staff accounts (Admin only)."""
     sb = get_client()
     if not sb:
         return []
-
+    
     try:
-        res = sb.table("staff_accounts").select("id, username, role, created_at").execute()
+        res = sb.table("staff_accounts").select("id, username, role, full_name, created_at").execute()
         return res.data or []
     except Exception as e:
-        logger.error("Error listing staff: %s", e)
+        logger.error("Failed to list staff: %s", e)
         return []
 
-
-def create_staff(username: str, password: str, role: str = "staff") -> dict:
-    """Create a new staff account.
-
-    Returns the created user record (without password hash).
-    """
+def create_staff(data: dict):
+    """Create a new staff account."""
     sb = get_client()
     if not sb:
-        raise ConnectionError("Database offline")
+        raise ValueError("Database offline")
+
+    username = data.get("username")
+    password = data.get("password")
+    role = data.get("role", "staff")
+    full_name = data.get("full_name", username)
+
+    if not username or not password:
+        raise ValueError("Username dan Password wajib diisi")
 
     try:
-        res = sb.table("staff_accounts").insert([{
+        payload = {
             "username": username,
             "password_hash": hash_password(password),
             "role": role,
-        }]).execute()
-        if res.data:
-            row = res.data[0]
-            row.pop("password_hash", None)
-            row.pop("password", None)
-            return row
+            "full_name": full_name
+        }
+        res = sb.table("staff_accounts").insert(payload).execute()
+        return res.data[0] if res.data else None
     except Exception as e:
-        logger.error("Error creating staff: %s", e)
-        raise
+        logger.error("Failed to create staff: %s", e)
+        raise ValueError(f"Gagal menambah staf: {str(e)}")
 
-    return {"error": "Failed to create staff"}
-
-
-def delete_staff(staff_id: str) -> bool:
-    """Delete a staff account by ID."""
+def delete_staff(staff_id: str):
+    """Delete a staff account."""
     sb = get_client()
     if not sb:
         return False
-
+    
     try:
         sb.table("staff_accounts").delete().eq("id", staff_id).execute()
         return True
     except Exception as e:
-        logger.error("Error deleting staff: %s", e)
+        logger.error("Failed to delete staff: %s", e)
         return False
