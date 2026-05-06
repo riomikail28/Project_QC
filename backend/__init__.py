@@ -31,12 +31,12 @@ def create_app() -> Flask:
     _ensure_upload_dirs(app)
 
     # Register route blueprints
-    from backend.routes.temperature_routes import temperature_bp
+    from backend.routes.temperature_routes import monitoring_bp
     from backend.routes.batch_routes import batch_bp
     from backend.routes.qc_routes import qc_bp
     from backend.routes.ccp_routes import ccp_bp
 
-    app.register_blueprint(temperature_bp)
+    app.register_blueprint(monitoring_bp)
     app.register_blueprint(batch_bp)
     app.register_blueprint(qc_bp)
     app.register_blueprint(ccp_bp)

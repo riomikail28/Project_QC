@@ -22,10 +22,10 @@ SUPABASE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_K
 STORAGE_BUCKET: str = "qc-photos"
 
 # ---------------------------------------------------------------------------
-# Singleton client (lazy-initialized)
+# Singleton client state
 # ---------------------------------------------------------------------------
 _client: Client = None
-
+_failed: bool = False
 
 def get_client() -> Client:
     """Return the initialized Supabase client.
@@ -33,10 +33,15 @@ def get_client() -> Client:
     If credentials are invalid or missing, returns None to allow 
     fallback to offline/demo modes.
     """
-    global _client
+    global _client, _failed
+    
+    if _failed:
+        return None
+
     if _client is None:
         if not SUPABASE_URL or not SUPABASE_KEY:
             logger.warning("Supabase credentials not set — running in offline mode")
+            _failed = True
             return None
         
         try:
@@ -44,6 +49,7 @@ def get_client() -> Client:
         except Exception as e:
             # Catching invalid API keys or malformed URLs
             logger.error("Supabase initialization failed (check your API keys): %s", e)
+            _failed = True
             return None
             
     return _client
