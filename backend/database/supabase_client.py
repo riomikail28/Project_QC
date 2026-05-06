@@ -46,9 +46,12 @@ def get_client() -> Client:
         
         try:
             _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            # Verify connectivity with a ping
+            _client.table("staff_accounts").select("id").limit(1).execute()
         except Exception as e:
             # Catching invalid API keys or malformed URLs
-            logger.error("Supabase initialization failed (check your API keys): %s", e)
+            print(f"CRITICAL: Supabase initialization failed: {str(e)}")
+            logger.error("Supabase initialization failed: %s", e)
             _failed = True
             return None
             
