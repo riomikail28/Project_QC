@@ -1,60 +1,55 @@
 """
 Supabase Client Singleton
 =========================
-Centralized database connection for QC Central Kitchen.
-Uses environment variables from .env for credentials.
+Manages the connection to the Supabase database.
+Ensures only one client instance exists throughout the application.
 """
 
 import os
 import logging
 from supabase import create_client, Client
-from dotenv import load_dotenv
 
-load_dotenv()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("qc.db.supabase")
 
-logger = logging.getLogger("qc.database")
-
-# ---------------------------------------------------------------------------
-# Supabase Credentials
-# ---------------------------------------------------------------------------
-SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
-STORAGE_BUCKET: str = "qc-photos"
-
-# ---------------------------------------------------------------------------
-# Singleton client state
-# ---------------------------------------------------------------------------
+# Shared singleton instance
 _client: Client = None
 _failed: bool = False
 
-def get_client() -> Client:
-    """Return the initialized Supabase client.
-    
-    If credentials are invalid or missing, returns None to allow 
-    fallback to offline/demo modes.
-    """
+def get_client():
+    """Get or initialize the Supabase client singleton."""
     global _client, _failed
     
     if _failed:
         return None
-
+        
     if _client is None:
-        # Safe Diagnostics
+        # Fetch environment variables dynamically (ensures Vercel updates are picked up)
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
+        
+        # Safe Diagnostics (Does not leak the key itself)
         key_src = "SUPABASE_SERVICE_ROLE_KEY" if os.getenv("SUPABASE_SERVICE_ROLE_KEY") else "SUPABASE_KEY"
-        print(f"INFO: Supabase using {key_src} (length: {len(os.getenv(key_src, ''))})")
+        print(f"INFO: Supabase URL found: {bool(url)}, Key found: {key_src} (len: {len(key)})")
 
-        if not SUPABASE_URL or not SUPABASE_KEY:
-            logger.warning("Supabase credentials not set — running in offline mode")
-            _failed = True
+        if not url or not key:
+            print("CRITICAL: Supabase credentials missing in get_client!")
+            # We don't set _failed = True here to allow retry if env vars are populated later
             return None
         
         try:
-            _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            _client = create_client(url, key)
+            print("✅ Supabase client created successfully.")
         except Exception as e:
-            # Catching invalid API keys or malformed URLs
-            print(f"CRITICAL: Supabase initialization failed: {str(e)}")
-            logger.error("Supabase initialization failed: %s", e)
+            print(f"CRITICAL: Supabase creation failed: {str(e)}")
             _failed = True
             return None
             
     return _client
+
+def reset_client():
+    """Reset the singleton instance (useful for testing or reconnecting)."""
+    global _client, _failed
+    _client = None
+    _failed = False
