@@ -53,10 +53,11 @@ def login(username: str, password: str) -> dict:
         except Exception as e:
             logger.error("Login DB error: %s", e)
 
-    # Demo fallback credentials
+    # Demo fallback credentials (untuk testing tanpa database)
     demo_users = {
         "admin": {"password": "admin123", "role": "admin", "id": "admin-uuid"},
-        "staff": {"password": "1234", "role": "staff", "id": "staff-uuid"},
+        "staff_kitchen": {"password": "staff123", "role": "staff", "id": "staff-uuid"},
+        "qc_lead": {"password": "qc123", "role": "qc_lead", "id": "qc-uuid"},
     }
 
     demo = demo_users.get(username)
