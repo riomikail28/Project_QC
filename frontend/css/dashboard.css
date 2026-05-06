@@ -353,3 +353,71 @@ body {
 .fab:hover {
     transform: scale(1.1) rotate(90deg);
 }
+
+/* ---- Form Elements ---- */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.input-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 8px;
+    padding-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.input-field {
+    width: 100%;
+    padding: 16px;
+    background: #f1f5f9;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 800;
+    border: none;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:active {
+    transform: scale(0.96);
+}
+
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.form-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px;
+    margin: 20px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+}

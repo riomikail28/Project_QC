@@ -1,51 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>New Batch | QC Central Kitchen</title>
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/monitoring.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header class="header">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="dashboard.html" style="color: white; font-size: 18px;"><i class="fas fa-chevron-left"></i></a>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i class="fas fa-chevron-left"></i></a>
             <div>
-                <h2>New Production</h2>
-                <p>Register Batch Record</p>
+                <h2 style="font-size: 20px; font-weight: 800;">NEW PRODUCTION</h2>
+                <p style="font-size: 12px; opacity: 0.7;">Register Batch Record</p>
             </div>
         </div>
     </header>
 
     <div class="form-card">
         <form id="newBatchForm">
-            <label class="input-label">Select Product</label>
-            <select id="productId" class="input-field" required>
-                <option value="">Loading products...</option>
-            </select>
+            <div class="form-group">
+                <label class="input-label">Select Product</label>
+                <select id="productId" class="input-field" required>
+                    <option value="">Loading products...</option>
+                </select>
+            </div>
 
-            <label class="input-label">Batch Code</label>
-            <input type="text" id="batchCode" class="input-field" placeholder="e.g. BATCH-20240507-001" required>
+            <div class="form-group">
+                <label class="input-label">Batch Code</label>
+                <input type="text" id="batchCode" class="input-field" placeholder="e.g. BATCH-20240507-001" required>
+            </div>
 
-            <label class="input-label">Production Date</label>
-            <input type="date" id="productionDate" class="input-field" required>
+            <div class="form-group">
+                <label class="input-label">Production Date</label>
+                <input type="date" id="productionDate" class="input-field" required>
+            </div>
 
-            <label class="input-label">Shift</label>
-            <select id="shift" class="input-field">
-                <option value="Pagi">Shift Pagi (06:00 - 14:00)</option>
-                <option value="Siang">Shift Siang (14:00 - 22:00)</option>
-                <option value="Malam">Shift Malam (22:00 - 06:00)</option>
-            </select>
+            <div class="form-group">
+                <label class="input-label">Shift</label>
+                <select id="shift" class="input-field">
+                    <option value="Pagi">Shift Pagi (06:00 - 14:00)</option>
+                    <option value="Siang">Shift Siang (14:00 - 22:00)</option>
+                    <option value="Malam">Shift Malam (22:00 - 06:00)</option>
+                </select>
+            </div>
 
-            <button type="submit" class="btn-submit">Start Inspection</button>
+            <button type="submit" class="btn-primary" style="margin-top: 12px;">START INSPECTION</button>
         </form>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             if (!Auth.check()) window.location.href = 'login.html';
@@ -59,7 +66,10 @@
                 const select = document.getElementById('productId');
                 select.innerHTML = '<option value="">Select Product</option>';
                 products.forEach(p => {
-                    select.innerHTML += `<option value="${p.product_code}">${p.product_code} - ${p.product_name}</option>`;
+                    const opt = document.createElement('option');
+                    opt.value = p.product_code;
+                    opt.textContent = `${p.product_code} - ${p.product_name}`;
+                    select.appendChild(opt);
                 });
             } catch (err) {
                 console.error('Failed to load products');
@@ -69,8 +79,9 @@
         document.getElementById('newBatchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
             btn.disabled = true;
-            btn.innerText = 'Creating...';
+            btn.innerText = 'CREATING...';
 
             const payload = {
                 product_id: document.getElementById('productId').value,
@@ -84,11 +95,13 @@
                 const res = await API.post('/batch/create', payload);
                 if (res.success) {
                     window.location.href = `batch_detail.html?id=${res.batch.id}`;
+                } else {
+                    throw new Error(res.error || 'Unknown error');
                 }
             } catch (err) {
                 alert('Gagal membuat batch: ' + err.message);
                 btn.disabled = false;
-                btn.innerText = 'Start Inspection';
+                btn.innerText = originalText;
             }
         });
     </script>
