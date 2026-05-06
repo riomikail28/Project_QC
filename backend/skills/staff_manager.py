@@ -73,9 +73,17 @@ def list_staff():
 
 def create_staff(data: dict):
     """Create a new staff account."""
+    # Check database connectivity with detailed info
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY"))
+    
     sb = get_client()
     if not sb:
-        raise ValueError("Database offline")
+        error_detail = "Database offline: "
+        if not url: error_detail += "SUPABASE_URL missing. "
+        if not key: error_detail += "SUPABASE_KEY missing. "
+        if url and key: error_detail += "Client initialization failed."
+        raise ValueError(error_detail)
 
     username = data.get("username")
     password = data.get("password")
