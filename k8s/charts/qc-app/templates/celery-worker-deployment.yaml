@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qc-app.fullname" . }}-worker
+  labels:
+    app.kubernetes.io/name: qc-app-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qc-app-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qc-app-worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["celery", "-A", "backend.workers.celery_app.celery_app", "worker", "--loglevel=info"]
+          env:
+            - name: REDIS_URL
+              value: redis://{{ include "qc-app.fullname" . }}-redis:6379/0
+            - name: DATABASE_URL
+              value: postgresql://qc_user:{{ .Values.postgres.password }}@{{ include "qc-app.fullname" . }}-postgres:5432/qc_db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

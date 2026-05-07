@@ -35,6 +35,33 @@ find "$BACKUP_DIR" -type f -name 'qc_db_*.dump.gz' -mtime +${RETENTION_DAYS} -pr
 
 echo "Backup completed: $COMPRESSED"
 
+# Send success alert if configured
+if [ -n "${SLACK_WEBHOOK_URL:-}" ] || [ -n "${PAGERDUTY_INTEGRATION_KEY:-}" ]; then
+  python3 -c "
+import os, json, http.client, datetime
+slack_webhook = os.environ.get('SLACK_WEBHOOK_URL')
+pagerduty_key = os.environ.get('PAGERDUTY_INTEGRATION_KEY')
+message = f'Backup completed successfully: $COMPRESSED'
+if slack_webhook:
+    payload = {
+        'text': '[INFO] QC Backup Success',
+        'attachments': [{
+            'color': 'good',
+            'fields': [{'title': 'Status', 'value': message, 'short': False}],
+            'footer': 'QC System',
+            'ts': datetime.datetime.now().timestamp()
+        }]
+    }
+    conn = http.client.HTTPSConnection('hooks.slack.com')
+    conn.request('POST', slack_webhook, json.dumps(payload), {'Content-Type': 'application/json'})
+    conn.getresponse()
+    conn.close()
+if pagerduty_key:
+    # Only send alerts on errors for PagerDuty
+    pass
+"
+fi
+
 # WAL archive upload (tar and upload if PRESIGNED_WAL_URL provided)
 WAL_DIR="${WAL_DIR:-/backups/wal}"
 if [ -n "${PRESIGNED_WAL_URL:-}" ] && [ -d "$WAL_DIR" ]; then

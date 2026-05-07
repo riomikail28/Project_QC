@@ -1,0 +1,40 @@
+name: Helm CD Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  helm-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > kubeconfig
+          mkdir -p $HOME/.kube
+          mv kubeconfig $HOME/.kube/config
+
+      - name: Deploy Helm chart (upgrade)
+        env:
+          HELM_NAMESPACE: ${HELM_NAMESPACE:-default}
+        run: |
+          helm upgrade --install qc-app k8s/charts/qc-app -n ${HELM_NAMESPACE} --create-namespace
+
+      - name: Wait rollout
+        run: |
+          kubectl rollout status deployment/qc-app -n ${HELM_NAMESPACE} --timeout=120s || true

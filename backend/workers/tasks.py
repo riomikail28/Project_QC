@@ -23,7 +23,11 @@ def send_finding_async(self, finding):
 
     finding: dict-like payload
     """
+    import logging
+    from backend.notifications.alert_service import alert_service
+    
     task_name = 'send_finding_async'
+    backup_logger = logging.getLogger('qc.workers.send_finding')
     try:
         # Import inside task to avoid heavy imports at module load
         from integrations.google_sheets_service import send_finding
@@ -31,9 +35,24 @@ def send_finding_async(self, finding):
         logger.info("send_finding_async: success for %s", finding.get('id'))
         TASK_SUCCESS.labels(task=task_name).inc()
     except Exception as exc:
-        logger.warning("send_finding_async failed: %s", exc)
+        failed_count = self.request.retries + 1
+        logger.warning(f"send_finding_async failed, attempt {failed_count}: {str(exc)}")
         TASK_FAILURE.labels(task=task_name).inc()
         TASK_RETRY.labels(task=task_name).inc()
+        
+        # Check if this is the final retry
+        if failed_count >= self.max_retries:
+            backup_logger.error(f"send_finding_async failed after all retries: {str(exc)}")
+            alert_service.send_task_failure_alert(
+                task_name=task_name,
+                error=f"Failed after {failed_count} attempts: {str(exc)}",
+                context={
+                    'finding_id': finding.get('id') if finding else None,
+                    'retry_count': failed_count,
+                    'last_error': str(exc)
+                }
+            )
+        
         try:
             raise self.retry(exc=exc, countdown=min(60, 2 ** self.request.retries))
         except Retry:
@@ -114,12 +133,19 @@ def verify_backups():
     This is a lightweight integrity check: `pg_restore -l` and `tar -tzf`.
     """
     import subprocess
+    from backend.notifications.alert_service import alert_service
+    
     script = os.path.join(os.getcwd(), 'scripts', 'verify_backup.sh')
     try:
         subprocess.check_call([script])
         return {'status': 'ok'}
     except subprocess.CalledProcessError as e:
-        # Emit a metric or log; for now raise to let Celery mark failure
+        # Send alert on backup verification failure
+        alert_service.send_backup_failure_alert(
+            backup_type="verification",
+            error=f"Backup verification script failed with exit code {e.returncode}",
+            context={'exit_code': e.returncode, 'script': script}
+        )
         raise
 
 
@@ -131,11 +157,61 @@ def wal_g_base_backup():
     The task will raise on non-zero exit to mark failure.
     """
     import subprocess
+    from backend.notifications.alert_service import alert_service
+    
     script = os.path.join(os.getcwd(), 'scripts', 'wal_g_backup.sh')
     if not os.path.exists(script):
-        raise FileNotFoundError(f"wal-g backup script not found: {script}")
+        error_msg = f"wal-g backup script not found: {script}"
+        alert_service.send_backup_failure_alert(
+            backup_type="wal-g-base",
+            error=error_msg
+        )
+        raise FileNotFoundError(error_msg)
+    
     try:
         subprocess.check_call([script])
         return {'status': 'ok'}
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        # Send alert on backup failure
+        alert_service.send_backup_failure_alert(
+            backup_type="wal-g-base",
+            error=f"wal-g base backup failed with exit code {e.returncode}",
+            context={'exit_code': e.returncode}
+        )
         raise
+
+
+@celery_app.task(bind=True, name='backend.workers.tasks.full_restore_smoke_test')
+def full_restore_smoke_test(self):
+    """Fetch latest wal-g backup and perform a lightweight smoke verification.
+
+    This task fetches the latest backup into a temporary directory using
+    `scripts/wal_g_restore.sh` and verifies that files were fetched.
+    It does not attempt to start Postgres in this environment; the GitHub
+    Actions workflow performs a full-restore verification there.
+    """
+    import subprocess
+    import tempfile
+    import shutil
+    from backend.notifications.alert_service import alert_service
+
+    script = os.path.join(os.getcwd(), 'scripts', 'wal_g_restore.sh')
+    if not os.path.exists(script):
+        error_msg = f"wal-g restore script not found: {script}"
+        alert_service.send_backup_failure_alert('full-restore-smoke', error_msg)
+        raise FileNotFoundError(error_msg)
+
+    tmpdir = tempfile.mkdtemp(prefix='qc_restore_')
+    try:
+        subprocess.check_call([script, tmpdir])
+        # Verify the restore directory contains files
+        has_files = any(os.scandir(tmpdir))
+        if not has_files:
+            raise RuntimeError('Restore fetched no files')
+        return {'status': 'ok', 'restored_to': tmpdir}
+    except Exception as e:
+        alert_service.send_backup_failure_alert('full-restore-smoke', str(e))
+        raise
+    finally:
+        # Keep artifacts for debugging; caller/CI can clean up if desired
+        pass

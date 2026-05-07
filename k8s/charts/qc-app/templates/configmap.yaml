@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qc-app.fullname" . | trunc 63 | trimSuffix "-" }}-config
+data:
+  # Example: application config keys
+  APP_ENV: "production"
+  # Add other config values here or mount as files
