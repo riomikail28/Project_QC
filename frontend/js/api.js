@@ -34,6 +34,33 @@ const API = {
         }
     },
 
+    async patch(endpoint, data) {
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'PATCH',
+                headers: this._headers(),
+                body: JSON.stringify(data)
+            });
+            return await this._handleResponse(response);
+        } catch (error) {
+            console.error(`PATCH ${endpoint} failed:`, error);
+            throw error;
+        }
+    },
+
+    async delete(endpoint) {
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'DELETE',
+                headers: this._headers()
+            });
+            return await this._handleResponse(response);
+        } catch (error) {
+            console.error(`DELETE ${endpoint} failed:`, error);
+            throw error;
+        }
+    },
+
     async upload(endpoint, formData) {
         try {
             const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -58,7 +85,8 @@ const API = {
     },
 
     async _handleResponse(response) {
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         if (!response.ok) {
             const error = new Error(data.detail || data.error || 'Request failed');
             error.status = response.status;

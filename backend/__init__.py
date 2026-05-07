@@ -88,7 +88,7 @@ def _register_staff_routes(app: Flask):
     from flask import request, jsonify
     
     try:
-        from backend.skills.staff_manager import login, list_staff, create_staff, delete_staff
+        from backend.skills.staff_manager import login, list_staff, create_staff, delete_staff, update_staff
     except ImportError as e:
         logger.error("Could not import staff_manager: %s", e)
         return
@@ -125,8 +125,13 @@ def _register_staff_routes(app: Flask):
         except ValueError as e:
             return jsonify({"detail": str(e)}), 400
 
-    @app.route("/api/staff/<staff_id>", methods=["DELETE"])
-    def staff_delete(staff_id):
+    @app.route("/api/staff/<staff_id>", methods=["PATCH", "PUT", "DELETE"])
+    def staff_detail(staff_id):
+        if request.method in ("PATCH", "PUT"):
+            try:
+                return jsonify(update_staff(staff_id, request.json or {}))
+            except ValueError as e:
+                return jsonify({"detail": str(e)}), 400
         return jsonify({"success": delete_staff(staff_id)})
 
     # --- Facility Management Routes ---
@@ -143,9 +148,11 @@ def _register_staff_routes(app: Flask):
             return jsonify(add_room(data.get("name"), data.get("description", "")))
         return jsonify(list_rooms())
 
-    @app.route("/api/facility/rooms/<room_id>", methods=["DELETE"])
-    def facility_room_delete(room_id):
-        from backend.skills.facility_manager import delete_room
+    @app.route("/api/facility/rooms/<room_id>", methods=["PATCH", "PUT", "DELETE"])
+    def facility_room_detail(room_id):
+        from backend.skills.facility_manager import delete_room, update_room
+        if request.method in ("PATCH", "PUT"):
+            return jsonify(update_room(room_id, request.json or {}))
         return jsonify({"success": delete_room(room_id)})
 
     @app.route("/api/facility/devices", methods=["GET", "POST"])
@@ -161,7 +168,9 @@ def _register_staff_routes(app: Flask):
             ))
         return jsonify(list_devices(request.args.get("room_id")))
 
-    @app.route("/api/facility/devices/<device_id>", methods=["DELETE"])
-    def facility_device_delete(device_id):
-        from backend.skills.facility_manager import delete_device
+    @app.route("/api/facility/devices/<device_id>", methods=["PATCH", "PUT", "DELETE"])
+    def facility_device_detail(device_id):
+        from backend.skills.facility_manager import delete_device, update_device
+        if request.method in ("PATCH", "PUT"):
+            return jsonify(update_device(device_id, request.json or {}))
         return jsonify({"success": delete_device(device_id)})

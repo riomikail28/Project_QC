@@ -10,6 +10,7 @@ import logging
 import uuid
 from datetime import datetime
 from backend.database.supabase_client import get_client
+from backend.service.storage_service import upload_photo as upload_general_photo
 from backend.service.qc_engine import determine_overall_status
 
 logger = logging.getLogger("qc.ccp")
@@ -28,7 +29,7 @@ def upload_photo(file_bytes: bytes, filename: str, folder: str = "ccp") -> str:
     sb = get_client()
     if not sb:
         logger.warning("Supabase offline - photo not uploaded")
-        return None
+        return upload_general_photo(file_bytes, filename)
 
     try:
         path = f"{folder}/{datetime.now().strftime('%Y%m%d')}/{uuid.uuid4()}_{filename}"
@@ -37,7 +38,7 @@ def upload_photo(file_bytes: bytes, filename: str, folder: str = "ccp") -> str:
         return res
     except Exception as e:
         logger.error("Photo upload failed: %s", e)
-        return None
+        return upload_general_photo(file_bytes, filename)
 
 
 def process_ocr(image_content: bytes) -> dict:

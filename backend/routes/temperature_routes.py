@@ -11,6 +11,7 @@ import os
 from backend.service.qc_engine import validate_temperature
 from backend.service.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.database.supabase_client import get_client
+from backend.service.storage_service import upload_photo
 
 logger = logging.getLogger("qc.routes.monitoring")
 
@@ -29,7 +30,11 @@ def log_facility_data():
         reason (str, optional)
         photo_url (str, optional)
     """
-    data = request.json
+    if request.content_type and request.content_type.startswith("multipart/form-data"):
+        data = request.form
+    else:
+        data = request.get_json(silent=True) or {}
+
     device_id = data.get("device_id")
     room_id = data.get("room_id")
     staff_id = data.get("staff_id")
@@ -37,6 +42,7 @@ def log_facility_data():
     humidity = data.get("humidity")
     reason = data.get("reason")
     photo_url = data.get("photo_url")
+    photo_file = request.files.get("photo")
 
     if not all([room_id, temperature is not None]):
         return jsonify({"success": False, "error": "Room and Temperature are required"}), 400
@@ -51,35 +57,40 @@ def log_facility_data():
         unit_type = "ambient"
         room_name = "Unknown"
         
-        room_res = sb.table("rooms").select("name").eq("id", room_id).execute()
+        room_res = sb.table("facility_rooms").select("name").eq("id", room_id).execute()
         if room_res.data:
             room_name = room_res.data[0]["name"]
 
         if device_id:
-            dev_res = sb.table("storage_units").select("*").eq("id", device_id).execute()
+            dev_res = sb.table("facility_devices").select("*").eq("id", device_id).execute()
             if dev_res.data:
                 device_info = dev_res.data[0]
-                unit_type = device_info["unit_type"]
+                unit_type = device_info["type"]
+                if unit_type == "undercounter":
+                    unit_type = "chiller"
+                elif unit_type == "room_temp":
+                    unit_type = "ambient"
 
         # 2. Validate
         status = validate_temperature(unit_type, float(temperature))
         is_normal = (status == "PASS")
 
         # 3. Save Log
+        if photo_file:
+            photo_url = upload_photo(photo_file.read(), photo_file.filename)
+
+        threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.get("threshold", 25.0))
+
         log_payload = {
-            "zone": room_name,
+            "device_id": device_id or None,
+            "room_id": room_id,
             "temperature_c": float(temperature),
-            "threshold_c": float(device_info["unit_type"] if device_info else 25.0), # Temporary mapping
+            "humidity_rh": float(humidity) if humidity not in (None, "") else None,
             "is_normal": is_normal,
-            "recorder_id": staff_id,
-            "notes": reason
+            "staff_id": staff_id or None,
+            "reason": reason,
+            "photo_url": photo_url,
         }
-        
-        # We need to handle the case where threshold_c is numeric but we might not have it
-        if device_info and "threshold_temp" in device_info:
-            log_payload["threshold_c"] = float(device_info["threshold_temp"])
-        elif "threshold" in data:
-            log_payload["threshold_c"] = float(data["threshold"])
 
         res = sb.table("facility_logs").insert(log_payload).execute()
         log_data = res.data[0] if res.data else None
@@ -92,8 +103,9 @@ def log_facility_data():
                 save_alert_to_db(
                     zone=room_name,
                     temperature=float(temperature),
-                    threshold=device_info["threshold_temp"] if device_info else 25.0,
-                    log_id=log_data["id"]
+                    threshold=threshold,
+                    log_id=log_data["id"],
+                    device_id=device_id,
                 )
 
         return jsonify({
@@ -108,13 +120,14 @@ def log_facility_data():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @monitoring_bp.route("/api/monitoring/latest", methods=["GET"])
+@monitoring_bp.route("/api/temperature/history", methods=["GET"])
 def get_latest_logs():
     """Fetch latest logs for the dashboard."""
     sb = get_client()
     if not sb: return jsonify([])
     try:
         res = (sb.table("facility_logs")
-               .select("*, rooms(name), storage_units(unit_name)")
+               .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
                .order("recorded_at", desc=True)
                .limit(50)
                .execute())
@@ -130,7 +143,7 @@ def get_monitoring_stats():
     if not sb: return jsonify({})
     try:
         # Simple daily count for now
-        res = sb.table("facility_logs").select("is_normal, recorded_at").execute()
+        res = sb.table("facility_logs").select("is_normal, recorded_at, temperature_c, facility_rooms(name)").execute()
         # In a real app, we would do SQL aggregation here
         return jsonify(res.data or [])
     except Exception as e:

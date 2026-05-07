@@ -50,7 +50,7 @@ def dashboard():
         # Fetch latest facility logs
         logs = (
             sb.table("facility_logs")
-            .select("zone, temperature_c, threshold_c, is_normal, recorded_at")
+            .select("temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)")
             .order("recorded_at", desc=True)
             .limit(100)
             .execute()
@@ -69,7 +69,9 @@ def dashboard():
         # Deduplicate: latest reading per zone
         latest_by_zone = {}
         for row in logs:
-            latest_by_zone.setdefault(row["zone"], row)
+            room_name = (row.get("facility_rooms") or {}).get("name") or "Unknown"
+            device_name = (row.get("facility_devices") or {}).get("name") or "Suhu Ruangan"
+            latest_by_zone.setdefault(f"{room_name} - {device_name}", row)
 
         # Build temperature rooms data
         temperature_rooms = []
@@ -80,15 +82,14 @@ def dashboard():
 
         for zone, reading in latest_by_zone.items():
             temp = reading["temperature_c"]
-            threshold = reading["threshold_c"]
+            device = reading.get("facility_devices") or {}
+            threshold = device.get("threshold_temp", 25.0)
             is_normal = reading.get("is_normal", True)
 
-            # Determine unit type from threshold
-            if threshold <= -10:
-                unit_type = "freezer"
-            elif threshold <= 10:
+            unit_type = device.get("type") or "ambient"
+            if unit_type == "undercounter":
                 unit_type = "chiller"
-            else:
+            elif unit_type == "room_temp":
                 unit_type = "ambient"
 
             status = validate_temperature(unit_type, temp)
@@ -131,6 +132,49 @@ def dashboard():
         logger.error("Dashboard data error: %s", e)
 
     return jsonify(response)
+
+
+@qc_bp.route("/api/alerts", methods=["GET"])
+def list_alerts():
+    """List active facility alerts for the alerts page."""
+    sb = get_client()
+    if not sb:
+        return jsonify([])
+    try:
+        status = request.args.get("status", "open")
+        res = (
+            sb.table("facility_alerts")
+            .select("*")
+            .eq("status", status)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        return jsonify(res.data or [])
+    except Exception as e:
+        logger.error("Alerts list error: %s", e)
+        return jsonify([])
+
+
+@qc_bp.route("/api/alerts/<alert_id>/resolve", methods=["POST"])
+def resolve_alert(alert_id):
+    """Mark an alert as resolved."""
+    sb = get_client()
+    if not sb:
+        return jsonify({"success": False, "error": "Database offline"}), 503
+    try:
+        payload = request.get_json(silent=True) or {}
+        update = {
+            "status": "resolved",
+            "resolved_at": payload.get("resolved_at"),
+            "corrective_action": payload.get("corrective_action", "Resolved from admin panel"),
+        }
+        update = {key: value for key, value in update.items() if value is not None}
+        res = sb.table("facility_alerts").update(update).eq("id", alert_id).execute()
+        return jsonify({"success": True, "alert": res.data[0] if res.data else None})
+    except Exception as e:
+        logger.error("Resolve alert error: %s", e)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------

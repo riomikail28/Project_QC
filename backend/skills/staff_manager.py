@@ -20,26 +20,29 @@ def hash_password(password: str) -> str:
 def password_matches(user: dict, password: str) -> bool:
     """Check if provided password matches the stored hash."""
     stored = user.get("password_hash") or user.get("password", "")
-    return secrets.compare_digest(str(stored), hash_password(password))
+    stored = str(stored)
+    return secrets.compare_digest(stored, hash_password(password)) or secrets.compare_digest(stored, password)
 
 def login(username: str, password: str) -> dict:
     """Validate credentials and return user session data."""
-    sb = get_client()
+    from backend.database.supabase_client import direct_db_query
     
-    if sb:
-        try:
-            res = sb.table("staff_accounts").select("*").eq("username", username).execute()
-            if res.data and password_matches(res.data[0], password):
-                user = res.data[0]
-                return {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "role": user["role"],
-                    "name": user.get("full_name", user["username"]),
-                    "token": f"session-{secrets.token_hex(16)}"
-                }
-        except Exception as e:
-            logger.error("Login DB error: %s", e)
+    try:
+        # Use direct query with filter
+        filters = f"username=eq.{username}"
+        res_data = direct_db_query("staff_accounts", method="GET", filters=filters)
+        
+        if res_data and password_matches(res_data[0], password):
+            user = res_data[0]
+            return {
+                "id": user["id"],
+                "username": user["username"],
+                "role": user["role"],
+                "name": user.get("full_name", user["username"]),
+                "token": f"session-{secrets.token_hex(16)}"
+            }
+    except Exception as e:
+        logger.error("Login DB error: %s", e)
 
     # Demo fallback
     demo_users = {
@@ -96,7 +99,7 @@ def create_staff(data: dict):
             "username": username,
             "password_hash": hash_password(password),
             "role": db_role,
-            "is_active": True
+            "full_name": full_name,
         }
         
         # Use direct query to bypass library validation issues
@@ -121,3 +124,33 @@ def delete_staff(staff_id: str):
     except Exception as e:
         logger.error("Failed to delete staff: %s", e)
         return False
+
+def update_staff(staff_id: str, data: dict):
+    """Update an existing staff account."""
+    from backend.database.supabase_client import direct_db_query
+
+    payload = {}
+    if data.get("username"):
+        payload["username"] = data["username"]
+    if data.get("full_name"):
+        payload["full_name"] = data["full_name"]
+    if data.get("role"):
+        role_input = data["role"].lower()
+        payload["role"] = "admin" if "admin" in role_input else "staff"
+    if data.get("password"):
+        payload["password_hash"] = hash_password(data["password"])
+
+    if not payload:
+        raise ValueError("Tidak ada data yang diubah")
+
+    try:
+        res_data = direct_db_query(
+            "staff_accounts",
+            method="PATCH",
+            payload=payload,
+            filters=f"id=eq.{staff_id}",
+        )
+        return res_data[0] if res_data else {"id": staff_id, **payload}
+    except Exception as e:
+        logger.error("Failed to update staff: %s", e)
+        raise ValueError(f"Gagal mengubah staf: {str(e)}")

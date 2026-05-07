@@ -19,6 +19,7 @@ from backend.service.batch_service import (
     get_daily_summary,
 )
 from backend.database.supabase_client import get_client
+from backend.service.storage_service import upload_photo
 
 logger = logging.getLogger("qc.routes.batch")
 
@@ -38,7 +39,10 @@ def batch_status():
     Returns:
         JSON with batch_status and qc_score
     """
-    data = request.json
+    if request.content_type and request.content_type.startswith("multipart/form-data"):
+        data = request.form
+    else:
+        data = request.get_json(silent=True) or {}
     results = data.get("results", [])
 
     status = determine_batch_status(results)
@@ -58,6 +62,7 @@ def batch_status():
 # GET /api/batches — List recent production batches
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/batches", methods=["GET"])
+@batch_bp.route("/api/batch/list", methods=["GET"])
 def list_batches():
     """Fetch recent production batches with product details.
 
@@ -115,6 +120,11 @@ def create_new_batch():
         return jsonify({"error": "product_id and batch_code are required"}), 400
 
     try:
+        photo_url = None
+        photo = request.files.get("photo")
+        if photo:
+            photo_url = upload_photo(photo.read(), photo.filename)
+
         batch = create_batch(
             product_id=product_id,
             batch_code=batch_code,
@@ -122,6 +132,7 @@ def create_new_batch():
             shift=data.get("shift"),
             operator_id=data.get("operator_id"),
             qc_officer_id=data.get("qc_officer_id"),
+            photo_url=photo_url,
         )
         return jsonify({
             "success": True,
@@ -174,6 +185,9 @@ def list_products():
                 .execute()
             )
             if res.data:
+                for item in res.data:
+                    if "product_code" not in item and item.get("sku_code"):
+                        item["product_code"] = item["sku_code"]
                 return jsonify(res.data)
         except Exception as e:
             logger.warning("Product DB unavailable, using local catalog: %s", e)

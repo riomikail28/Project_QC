@@ -7,9 +7,18 @@ Handles batch creation, status determination, and QC scoring.
 
 import logging
 from datetime import date
+from uuid import UUID
 from backend.database.supabase_client import get_client
 
 logger = logging.getLogger("qc.batch")
+
+
+def _looks_like_uuid(value: str) -> bool:
+    try:
+        UUID(str(value))
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 def determine_batch_status(results: list) -> str:
@@ -58,7 +67,7 @@ def get_batches(limit: int = 50) -> list:
             .select(
                 "id, batch_code, production_date, shift, status, "
                 "final_qc_status, report_url, created_at, "
-                "products(product_code, product_name)"
+                "products(*)"
             )
             .order("created_at", desc=True)
             .limit(limit)
@@ -107,6 +116,7 @@ def create_batch(
     shift: str = None,
     operator_id: str = None,
     qc_officer_id: str = None,
+    photo_url: str = None,
 ) -> dict:
     """Create a new production batch record in Supabase.
 
@@ -116,8 +126,25 @@ def create_batch(
     if not sb:
         return {"error": "Database offline"}
 
+    resolved_product_id = product_id
+    if product_id and not _looks_like_uuid(product_id):
+        for code_column in ("product_code", "sku_code"):
+            try:
+                product_res = (
+                    sb.table("products")
+                    .select("id")
+                    .eq(code_column, product_id)
+                    .limit(1)
+                    .execute()
+                )
+                if product_res.data:
+                    resolved_product_id = product_res.data[0]["id"]
+                    break
+            except Exception as e:
+                logger.warning("Could not resolve product code via %s: %s", code_column, e)
+
     payload = {
-        "product_id": product_id,
+        "product_id": resolved_product_id,
         "batch_code": batch_code,
         "production_date": production_date or date.today().isoformat(),
     }
@@ -127,9 +154,18 @@ def create_batch(
         payload["operator_id"] = operator_id
     if qc_officer_id:
         payload["qc_officer_id"] = qc_officer_id
+    if photo_url:
+        payload["photo_url"] = photo_url
 
     try:
-        res = sb.table("production_batches").insert([payload]).execute()
+        try:
+            res = sb.table("production_batches").insert([payload]).execute()
+        except Exception as e:
+            if "photo_url" in payload and "photo_url" in str(e):
+                payload.pop("photo_url")
+                res = sb.table("production_batches").insert([payload]).execute()
+            else:
+                raise
         if res.data:
             logger.info("Batch created: %s", batch_code)
             return res.data[0]
@@ -158,7 +194,7 @@ def get_daily_summary(day: str = None) -> dict:
             .select(
                 "id, batch_code, production_date, shift, status, "
                 "final_qc_status, created_at, "
-                "products(product_code, product_name)"
+                "products(*)"
             )
             .eq("production_date", selected_day)
             .order("created_at", desc=True)
@@ -176,7 +212,7 @@ def get_daily_summary(day: str = None) -> dict:
         # Latest facility readings
         facility_logs = (
             sb.table("facility_logs")
-            .select("zone, temperature_c, threshold_c, is_normal, recorded_at")
+            .select("temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)")
             .order("recorded_at", desc=True)
             .limit(50)
             .execute()
@@ -185,7 +221,16 @@ def get_daily_summary(day: str = None) -> dict:
         # Deduplicate: latest per zone
         latest_by_zone = {}
         for row in facility_logs:
-            latest_by_zone.setdefault(row["zone"], row)
+            room_name = (row.get("facility_rooms") or {}).get("name") or "Unknown"
+            device = row.get("facility_devices") or {}
+            zone = f"{room_name} - {device.get('name', 'Suhu Ruangan')}"
+            latest_by_zone.setdefault(zone, {
+                "zone": zone,
+                "temperature_c": row.get("temperature_c"),
+                "threshold_c": device.get("threshold_temp", 25.0),
+                "is_normal": row.get("is_normal", True),
+                "recorded_at": row.get("recorded_at"),
+            })
 
         return {
             "date": selected_day,

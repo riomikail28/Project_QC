@@ -15,7 +15,7 @@ def list_rooms():
     sb = get_client()
     if not sb: return []
     try:
-        res = sb.table("rooms").select("*").order("name").execute()
+        res = sb.table("facility_rooms").select("*").order("name").execute()
         return res.data or []
     except Exception as e:
         logger.error("List rooms error: %s", e)
@@ -26,7 +26,7 @@ def add_room(name: str, description: str = ""):
     sb = get_client()
     if not sb: return None
     try:
-        res = sb.table("rooms").insert({"name": name}).execute()
+        res = sb.table("facility_rooms").insert({"name": name, "description": description}).execute()
         return res.data[0] if res.data else None
     except Exception as e:
         logger.error("Add room error: %s", e)
@@ -37,7 +37,7 @@ def delete_room(room_id: str):
     sb = get_client()
     if not sb: return False
     try:
-        sb.table("rooms").delete().eq("id", room_id).execute()
+        sb.table("facility_rooms").delete().eq("id", room_id).execute()
         return True
     except Exception as e:
         logger.error("Delete room error: %s", e)
@@ -48,10 +48,10 @@ def list_devices(room_id: str = None):
     sb = get_client()
     if not sb: return []
     try:
-        query = sb.table("storage_units").select("*, rooms(name)")
+        query = sb.table("facility_devices").select("*, facility_rooms(name)")
         if room_id:
             query = query.eq("room_id", room_id)
-        res = query.order("unit_name").execute()
+        res = query.order("name").execute()
         return res.data or []
     except Exception as e:
         logger.error("List devices error: %s", e)
@@ -63,11 +63,12 @@ def add_device(room_id: str, name: str, device_type: str, threshold: float):
     if not sb: return None
     try:
         payload = {
-            "room_id": int(room_id),
-            "unit_name": name,
-            "unit_type": device_type
+            "room_id": room_id,
+            "name": name,
+            "type": device_type,
+            "threshold_temp": threshold,
         }
-        res = sb.table("storage_units").insert(payload).execute()
+        res = sb.table("facility_devices").insert(payload).execute()
         return res.data[0] if res.data else None
     except Exception as e:
         logger.error("Add device error: %s", e)
@@ -78,7 +79,7 @@ def delete_device(device_id: str):
     sb = get_client()
     if not sb: return False
     try:
-        sb.table("storage_units").delete().eq("id", device_id).execute()
+        sb.table("facility_devices").delete().eq("id", device_id).execute()
         return True
     except Exception as e:
         logger.error("Delete device error: %s", e)
@@ -164,3 +165,43 @@ def get_monitoring_structure():
             "devices": room_devices
         })
     return structure
+
+def update_room(room_id: str, data: dict):
+    """Update a monitoring room."""
+    sb = get_client()
+    if not sb: return None
+    payload = {}
+    if data.get("name"):
+        payload["name"] = data["name"]
+    if "description" in data:
+        payload["description"] = data.get("description") or ""
+    if not payload:
+        return None
+    try:
+        res = sb.table("facility_rooms").update(payload).eq("id", room_id).execute()
+        return res.data[0] if res.data else {"id": room_id, **payload}
+    except Exception as e:
+        logger.error("Update room error: %s", e)
+        return None
+
+def update_device(device_id: str, data: dict):
+    """Update a facility device."""
+    sb = get_client()
+    if not sb: return None
+    payload = {}
+    if data.get("name"):
+        payload["name"] = data["name"]
+    if data.get("type"):
+        payload["type"] = data["type"]
+    if "threshold" in data:
+        payload["threshold_temp"] = data.get("threshold")
+    if "threshold_temp" in data:
+        payload["threshold_temp"] = data.get("threshold_temp")
+    if not payload:
+        return None
+    try:
+        res = sb.table("facility_devices").update(payload).eq("id", device_id).execute()
+        return res.data[0] if res.data else {"id": device_id, **payload}
+    except Exception as e:
+        logger.error("Update device error: %s", e)
+        return None

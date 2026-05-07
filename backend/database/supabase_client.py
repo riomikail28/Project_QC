@@ -7,11 +7,16 @@ Ensures only one client instance exists throughout the application.
 
 import os
 import logging
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client
+except ImportError:
+    create_client = None
+    Client = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("qc.db.supabase")
+STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-photos")
 
 # Shared singleton instance
 _client: Client = None
@@ -28,6 +33,16 @@ def get_client():
     # Fetch environment variables dynamically
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
+
+    if not create_client or not Client:
+        _last_error = "Package supabase belum terinstall"
+        logger.warning(_last_error)
+        return None
+
+    if not url or not key:
+        _last_error = "SUPABASE_URL atau SUPABASE_KEY belum dikonfigurasi"
+        logger.warning(_last_error)
+        return None
     
     try:
         # Standard initialization

@@ -67,6 +67,20 @@ CREATE TABLE IF NOT EXISTS facility_logs (
     recorded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS facility_alerts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    log_id UUID REFERENCES facility_logs(id) ON DELETE SET NULL,
+    device_id UUID REFERENCES facility_devices(id) ON DELETE SET NULL,
+    zone TEXT,
+    temperature_c NUMERIC,
+    threshold_c NUMERIC,
+    deviation_c NUMERIC,
+    status TEXT DEFAULT 'open',
+    corrective_action TEXT,
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 4. SEED INITIAL DATA (Based on User Requirements)
 -- We use a function to safely seed data without duplicates
 CREATE OR REPLACE FUNCTION seed_facility_data() RETURNS void AS $$
