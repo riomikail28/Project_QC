@@ -18,6 +18,9 @@ from backend.service.ccp_service import upload_photo, submit_ccp_log, process_oc
 from backend.skills.parameter_checker import check_temperature, check_product_parameters
 from backend.skills.product_catalog import product_by_code
 from backend.database.supabase_client import get_client
+from backend.middleware.security_middleware import require_auth
+from backend.service.audit_service import current_actor_id, write_audit
+from backend.service.request_validation import RequestValidationError, parse_form_json
 
 logger = logging.getLogger("qc.routes.ccp")
 
@@ -28,6 +31,7 @@ ccp_bp = Blueprint("ccp_bp", __name__)
 # POST /api/ccp/submit-stage — Generic CCP stage submission
 # ---------------------------------------------------------------------------
 @ccp_bp.route("/api/ccp/submit-stage", methods=["POST"])
+@require_auth
 def submit_stage():
     """Submit a CCP inspection stage.
 
@@ -40,7 +44,7 @@ def submit_stage():
     """
     batch_id = request.form.get("batch_id")
     stage = request.form.get("stage")
-    operator_id = request.form.get("operator_id")
+    operator_id = request.form.get("operator_id") or current_actor_id()
     
     if not batch_id or not stage:
         return jsonify({"error": "batch_id and stage are required"}), 400
@@ -52,8 +56,9 @@ def submit_stage():
         photo_url = upload_photo(photo.read(), photo.filename)
 
     # 2. Parse Metrics
-    import json
-    metrics_raw = json.loads(request.form.get("metrics", "{}"))
+    metrics_raw = parse_form_json("metrics", {})
+    if not isinstance(metrics_raw, dict):
+        raise RequestValidationError({"metrics": "metrics must be a JSON object"})
     
     # 3. Validate Metrics based on stage
     # (Simplified for the blueprint, delegating to skills)
@@ -68,6 +73,7 @@ def submit_stage():
             photo_url=photo_url,
             metrics=metrics_raw
         )
+        write_audit("create", "production_batch_log", str(log.get("id")) if isinstance(log, dict) else None, after=log)
         return jsonify({"success": True, "log": log})
     except Exception as e:
         logger.error("CCP submission failed: %s", e)
@@ -78,6 +84,7 @@ def submit_stage():
 # POST /api/ccp/ocr — Process OCR for a photo
 # ---------------------------------------------------------------------------
 @ccp_bp.route("/api/ccp/ocr", methods=["POST"])
+@require_auth
 def run_ocr():
     """Run OCR on an uploaded image and return extracted text."""
     if "photo" not in request.files:

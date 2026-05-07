@@ -51,7 +51,7 @@ def get_client():
     except Exception as e:
         # Fallback for new-format keys (sb_secret_...) which might trip up JWT validation in some SDK versions
         error_msg = str(e)
-        print(f"DEBUG: Standard creation failed: {error_msg}. Trying fallback...")
+        logger.warning("Supabase standard client creation failed; trying fallback: %s", error_msg)
         
         try:
             # Manually construct client components if create_client is too picky
@@ -59,7 +59,7 @@ def get_client():
             return _client
         except Exception as e2:
             _last_error = f"{error_msg} | Fallback failed: {str(e2)}"
-            print(f"CRITICAL: Supabase creation failed: {_last_error}")
+            logger.error("Supabase creation failed: %s", _last_error)
             return None
 
 def get_last_db_error():
@@ -80,6 +80,8 @@ def direct_db_query(table: str, method: str = "GET", payload: dict = None, filte
     
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
+    if not url or not key:
+        raise ValueError("SUPABASE_URL atau SUPABASE_KEY belum dikonfigurasi")
     
     api_url = f"{url}/rest/v1/{table}"
     if filters:
@@ -101,8 +103,8 @@ def direct_db_query(table: str, method: str = "GET", payload: dict = None, filte
             return json.loads(res_body) if res_body else []
     except error.HTTPError as e:
         err_msg = e.read().decode()
-        print(f"Direct DB Error: {e.code} - {err_msg}")
+        logger.error("Direct DB Error: %s - %s", e.code, err_msg)
         raise ValueError(f"Database Error: {err_msg}")
     except Exception as e:
-        print(f"Direct DB Generic Error: {str(e)}")
+        logger.error("Direct DB Generic Error: %s", e)
         raise ValueError(f"Koneksi Database Gagal: {str(e)}")

@@ -19,7 +19,12 @@ const Auth = {
         }
     },
 
-    logout() {
+    async logout() {
+        try {
+            await API.post('/staff/logout', {});
+        } catch (e) {
+            // ignore errors
+        }
         localStorage.removeItem('qc_token');
         localStorage.removeItem('qc_user');
         window.location.href = 'login.html';

@@ -5,92 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Control Panel | Intelligent QC</title>
     <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/admin_panel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .admin-tabs {
-            display: flex;
-            background: white;
-            padding: 5px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: none;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-        .tab-btn.active {
-            background: #0052cc;
-            color: white;
-        }
-        .admin-section { display: none; }
-        .admin-section.active { display: block; }
-        
-        .data-table {
-            width: 100%;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-        }
-        .data-table th, .data-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .data-table th { background: #f8f9fa; font-weight: 600; }
-        
-        .action-btns { display: flex; gap: 10px; }
-        .btn-sm { padding: 8px 12px; font-size: 12px; }
-        .btn-danger { background: #ff4d4f; color: white; }
-
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid #e0e0e0;
-            margin-bottom: 20px;
-        }
-        .btn-secondary { background: #eef2ff; color: #1d4ed8; }
-        .device-list-admin { list-style: none; padding: 0; margin: 12px 0 0; }
-        .device-list-admin li {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 0;
-            border-top: 1px solid #eef2f7;
-        }
-        .icon-btn {
-            width: 34px;
-            height: 34px;
-            border: 0;
-            border-radius: 10px;
-            background: #eef2ff;
-            color: #1d4ed8;
-        }
-        .icon-btn.danger { background: #fee2e2; color: #dc2626; }
-        @media (max-width: 640px) {
-            .content.p-20 { padding: 14px !important; }
-            .admin-tabs { position: sticky; top: 0; z-index: 5; border-radius: 0; margin: 0 -14px 16px; }
-            .tab-btn { padding: 12px 8px; font-size: 13px; }
-            .section-header { align-items: flex-start; gap: 10px; flex-direction: column; }
-            .section-header .btn, .section-header .btn-primary { width: 100%; }
-            .data-table, .data-table thead, .data-table tbody, .data-table th, .data-table td, .data-table tr { display: block; }
-            .data-table thead { display: none; }
-            .data-table tr { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-            .data-table td { border: 0; padding: 6px 0; }
-            .action-btns { flex-wrap: wrap; width: 100%; }
-            .action-btns .btn { flex: 1; }
-            .modal-sheet { max-height: 88vh; overflow-y: auto; border-radius: 24px 24px 0 0 !important; }
-        }
-    </style>
 </head>
 <body class="bg-light">
     <div class="app-container">
@@ -155,22 +72,24 @@
     </div>
 
     <!-- Modal Overlay -->
-    <div id="modal-overlay" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: flex-end;">
-        <div class="modal-sheet" style="background: white; width: 100%; max-width: 500px; border-radius: 32px 32px 0 0; padding: 32px 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.3s ease-out;">
-            <div style="width: 40px; height: 5px; background: #e2e8f0; border-radius: 10px; margin: 0 auto 24px;"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <h3 id="modal-title" style="font-size: 20px; font-weight: 800;">Tambah Staf</h3>
-                <button onclick="closeModal()" style="background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fas fa-times"></i></button>
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h3 id="modal-title">Tambah Staf</h3>
+                <button onclick="closeModal()" class="modal-close"><i class="fas fa-times"></i></button>
             </div>
             
             <form id="admin-form">
                 <div id="modal-form-content">
                     <!-- Dynamic form fields -->
                 </div>
-                <button type="submit" class="btn-primary" style="margin-top: 12px;">SIMPAN DATA</button>
+                <button type="submit" class="btn-primary admin-submit">SIMPAN DATA</button>
             </form>
         </div>
     </div>
+
+    <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
 
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>

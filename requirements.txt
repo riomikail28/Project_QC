@@ -4,4 +4,10 @@ supabase==2.11.0
 python-dotenv==1.0.0
 google-cloud-vision==3.4.5
 gunicorn==21.2.0
-pydantic==2.5.0
+PyJWT==2.8.0
+redis==5.0.1
+alembic==1.11.1
+psycopg2-binary==2.9.6
+prometheus_client==0.16.0
+fakeredis==2.1.0
+celery==5.3.1

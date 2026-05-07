@@ -5,6 +5,7 @@
 
 let currentAction = "";
 let currentId = null;
+let adminToastTimer = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
@@ -18,6 +19,21 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFacilities();
     loadAnalytics();
 });
+
+function notify(message, type = "success") {
+    const toast = document.getElementById("admin-toast");
+    if (!toast) {
+        alert(message);
+        return;
+    }
+
+    clearTimeout(adminToastTimer);
+    toast.textContent = message;
+    toast.className = `admin-toast ${type} show`;
+    adminToastTimer = setTimeout(() => {
+        toast.className = `admin-toast ${type}`;
+    }, 2600);
+}
 
 function showSection(sectionId) {
     document.querySelectorAll(".admin-section").forEach(section => section.classList.remove("active"));
@@ -54,6 +70,7 @@ async function loadStaff() {
         `).join("");
     } catch (err) {
         console.error("Gagal memuat staf", err);
+        notify("Gagal memuat daftar staf", "error");
     }
 }
 
@@ -61,9 +78,11 @@ async function deleteStaff(id) {
     if (!confirm("Hapus staf ini?")) return;
     try {
         const result = await API.delete(`/staff/${id}`);
-        if (result.success) loadStaff();
+        if (!result.success) throw new Error("Delete gagal");
+        await loadStaff();
+        notify("Staf berhasil dihapus");
     } catch (err) {
-        alert("Gagal menghapus staf");
+        notify("Gagal menghapus staf", "error");
     }
 }
 
@@ -101,19 +120,32 @@ async function loadFacilities() {
         `).join("");
     } catch (err) {
         console.error("Gagal memuat fasilitas", err);
+        notify("Gagal memuat fasilitas", "error");
     }
 }
 
 async function deleteRoom(id) {
     if (!confirm("Hapus ruangan ini dan semua alat di dalamnya?")) return;
-    await API.delete(`/facility/rooms/${id}`);
-    loadFacilities();
+    try {
+        const result = await API.delete(`/facility/rooms/${id}`);
+        if (!result.success) throw new Error("Delete gagal");
+        await loadFacilities();
+        notify("Ruangan berhasil dihapus");
+    } catch (err) {
+        notify("Gagal menghapus ruangan", "error");
+    }
 }
 
 async function deleteDevice(id) {
     if (!confirm("Hapus alat ini?")) return;
-    await API.delete(`/facility/devices/${id}`);
-    loadFacilities();
+    try {
+        const result = await API.delete(`/facility/devices/${id}`);
+        if (!result.success) throw new Error("Delete gagal");
+        await loadFacilities();
+        notify("Unit berhasil dihapus");
+    } catch (err) {
+        notify("Gagal menghapus unit", "error");
+    }
 }
 
 const overlay = document.getElementById("modal-overlay");
@@ -236,6 +268,7 @@ adminForm.addEventListener("submit", async event => {
     btn.innerText = "MENYIMPAN...";
 
     try {
+        let message = "Data berhasil disimpan";
         if (currentAction === "ADD_STAFF" || currentAction === "EDIT_STAFF") {
             const payload = {
                 full_name: document.getElementById("staff-name").value,
@@ -244,17 +277,27 @@ adminForm.addEventListener("submit", async event => {
             };
             const password = document.getElementById("staff-password").value;
             if (password) payload.password = password;
-            if (currentAction === "ADD_STAFF") await API.post("/staff", payload);
-            else await API.patch(`/staff/${currentId}`, payload);
-            loadStaff();
+            if (currentAction === "ADD_STAFF") {
+                await API.post("/staff", payload);
+                message = "Staf berhasil ditambahkan";
+            } else {
+                await API.patch(`/staff/${currentId}`, payload);
+                message = "Staf berhasil diperbarui";
+            }
+            await loadStaff();
         } else if (currentAction === "ADD_ROOM" || currentAction === "EDIT_ROOM") {
             const payload = {
                 name: document.getElementById("room-name").value,
                 description: document.getElementById("room-desc").value,
             };
-            if (currentAction === "ADD_ROOM") await API.post("/facility/rooms", payload);
-            else await API.patch(`/facility/rooms/${currentId}`, payload);
-            loadFacilities();
+            if (currentAction === "ADD_ROOM") {
+                await API.post("/facility/rooms", payload);
+                message = "Ruangan berhasil ditambahkan";
+            } else {
+                await API.patch(`/facility/rooms/${currentId}`, payload);
+                message = "Ruangan berhasil diperbarui";
+            }
+            await loadFacilities();
         } else if (currentAction === "ADD_DEVICE" || currentAction === "EDIT_DEVICE") {
             const payload = {
                 name: document.getElementById("device-name").value,
@@ -264,14 +307,17 @@ adminForm.addEventListener("submit", async event => {
             if (currentAction === "ADD_DEVICE") {
                 payload.room_id = document.getElementById("device-room-id").value;
                 await API.post("/facility/devices", payload);
+                message = "Unit berhasil ditambahkan";
             } else {
                 await API.patch(`/facility/devices/${currentId}`, payload);
+                message = "Unit berhasil diperbarui";
             }
-            loadFacilities();
+            await loadFacilities();
         }
         closeModal();
+        notify(message);
     } catch (err) {
-        alert(`Gagal menyimpan data: ${err.message}`);
+        notify(`Gagal menyimpan data: ${err.message}`, "error");
     } finally {
         btn.disabled = false;
         btn.innerText = "SIMPAN DATA";

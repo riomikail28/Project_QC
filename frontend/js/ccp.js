@@ -10,7 +10,7 @@ const CCP = {
         1: { name: 'Incoming', label: 'Material Incoming', instruction: 'Periksa suhu bahan baku saat diterima.' },
         2: { name: 'Cooking', label: 'Cooking / Processing', instruction: 'Periksa suhu core produk saat dimasak.' },
         3: { name: 'Cooling', label: 'Cooling / Storage', instruction: 'Periksa suhu penurunan setelah dimasak.' },
-        4: { name: 'Packaging', label: 'Packaging & Quality', instruction: 'Periksa parameter kimia (Brix/pH/TDS).' }
+        4: { name: 'Packaging', label: 'Packaging & Bundling', instruction: 'Periksa parameter akhir, label produk, dan barcode setelah bundling.' }
     },
 
     async initStage(batchId, stageNum) {

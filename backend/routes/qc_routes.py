@@ -13,6 +13,9 @@ import logging
 from backend.service.qc_engine import validate_temperature, calculate_health_score, determine_overall_status
 from backend.service.batch_service import get_daily_summary
 from backend.database.supabase_client import get_client
+from backend.middleware.security_middleware import require_auth
+from backend.service.audit_service import current_actor_id, write_audit
+from backend.service.request_validation import QCValidateRequest, validate_model
 
 logger = logging.getLogger("qc.routes.qc")
 
@@ -23,6 +26,7 @@ qc_bp = Blueprint("qc_bp", __name__)
 # GET /api/qc/dashboard — Main QC decision dashboard
 # ---------------------------------------------------------------------------
 @qc_bp.route("/api/qc/dashboard", methods=["GET"])
+@require_auth
 def dashboard():
     """Return QC decision dashboard data.
 
@@ -135,6 +139,7 @@ def dashboard():
 
 
 @qc_bp.route("/api/alerts", methods=["GET"])
+@require_auth
 def list_alerts():
     """List active facility alerts for the alerts page."""
     sb = get_client()
@@ -157,6 +162,7 @@ def list_alerts():
 
 
 @qc_bp.route("/api/alerts/<alert_id>/resolve", methods=["POST"])
+@require_auth
 def resolve_alert(alert_id):
     """Mark an alert as resolved."""
     sb = get_client()
@@ -171,6 +177,7 @@ def resolve_alert(alert_id):
         }
         update = {key: value for key, value in update.items() if value is not None}
         res = sb.table("facility_alerts").update(update).eq("id", alert_id).execute()
+        write_audit("resolve", "facility_alert", alert_id, after=update)
         return jsonify({"success": True, "alert": res.data[0] if res.data else None})
     except Exception as e:
         logger.error("Resolve alert error: %s", e)
@@ -181,6 +188,7 @@ def resolve_alert(alert_id):
 # POST /api/qc/validate — Inline QC validation
 # ---------------------------------------------------------------------------
 @qc_bp.route("/api/qc/validate", methods=["POST"])
+@require_auth
 def validate_qc():
     """Validate a single QC parameter against SOP rules.
 
@@ -191,9 +199,13 @@ def validate_qc():
     Returns:
         JSON with status and recommendation
     """
-    data = request.json
-    unit_type = data.get("unit_type", "chiller")
-    temperature = float(data.get("temperature", 0))
+    data = validate_model(QCValidateRequest, request.get_json(silent=True) or {})
+    unit_type = data.unit_type
+    if unit_type == "undercounter":
+        unit_type = "chiller"
+    elif unit_type == "room_temp":
+        unit_type = "ambient"
+    temperature = data.temperature
 
     status = validate_temperature(unit_type, temperature)
 
@@ -215,38 +227,62 @@ def validate_qc():
 # POST /api/qc/findings — Report finding with photo
 # ---------------------------------------------------------------------------
 @qc_bp.route("/api/qc/findings", methods=["POST"])
+@require_auth
 def report_finding():
     """Report a field finding with optional photo and mandatory reason."""
-    from backend.service.storage_service import upload_photo
-    
+    # Use DI-resolved service when available; otherwise construct a conservative fallback
+    from backend.core.di import resolve
+    from backend.repositories.qc_repository import QCRepository
+    from backend.services.qc_service import QCService
+
     reason = request.form.get("reason")
-    staff_id = request.form.get("staff_id")
+    staff_id = request.form.get("staff_id") or current_actor_id()
     photo_file = request.files.get("photo")
-    
+
     if not reason:
         return jsonify({"detail": "Reason is required"}), 400
-        
-    sb = get_client()
-    photo_url = None
-    
-    if photo_file:
-        try:
-            photo_url = upload_photo(photo_file.read(), photo_file.filename)
-        except Exception as e:
-            logger.error("Photo upload failed: %s", e)
 
-    if sb:
+    # Try resolve a pre-registered service from DI container
+    qc_service = resolve("qc_service")
+
+    if qc_service is None:
+        # Fallback: create minimal dependencies
+        sb = get_client()
+        repo = QCRepository(sb)
+
+        # Storage wrapper around existing upload helper if available
+        storage = None
         try:
-            res = sb.table("qc_findings").insert({
-                "staff_id": staff_id,
-                "reason": reason,
-                "photo_url": photo_url
-            }).execute()
-            return jsonify(res.data[0] if res.data else {"success": True})
-        except Exception as e:
-            return jsonify({"detail": str(e)}), 500
-            
-    return jsonify({"success": True, "photo_url": photo_url})
+            from backend.service.storage_service import upload_photo as _upload_fn
+
+            class _StorageWrap:
+                def upload_photo(self, data, filename):
+                    return _upload_fn(data, filename)
+
+            storage = _StorageWrap()
+        except Exception:
+            storage = None
+
+        # Audit module provides write_audit
+        try:
+            from backend.service import audit_service as audit_mod
+        except Exception:
+            audit_mod = None
+
+        # External sync (best-effort)
+        try:
+            import integrations.google_sheets_service as external_sync
+        except Exception:
+            external_sync = None
+
+        qc_service = QCService(repo, storage_service=storage, audit_service=audit_mod, external_sync=external_sync)
+
+    try:
+        result = qc_service.report_finding(staff_id, reason, photo_file)
+        return jsonify(result)
+    except Exception as e:
+        logger.exception("Report finding failed: %s", e)
+        return jsonify({"detail": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------

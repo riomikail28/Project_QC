@@ -1,33 +1,16 @@
-import httpx
-import logging
-import os
-from typing import Dict, Any
+"""
+Compatibility wrapper for Google Sheets sync.
+New code should import integrations.google_sheets_service directly.
+"""
 
-logger = logging.getLogger(__name__)
+from __future__ import annotations
 
-# URL Web App dari Google Apps Script yang di-deploy (Diset di env var atau config)
-# Contoh: https://script.google.com/macros/s/AKfycby.../exec
-APPSCRIPT_WEB_APP_URL = os.environ.get("APPSCRIPT_WEB_APP_URL", "")
+from typing import Any
 
-async def send_to_google_sheets(batch_data: Dict[str, Any]):
-    """
-    Mengirim data batch ke Google Spreadsheet melalui Google Apps Script Web App.
-    """
-    if not APPSCRIPT_WEB_APP_URL:
-        logger.warning("APPSCRIPT_WEB_APP_URL tidak diatur. Melewati sinkronisasi Google Sheets.")
-        return False
+from integrations.google_sheets_service import send_event
 
-    try:
-        # Menggunakan httpx async agar tidak memblokir FastAPI
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                APPSCRIPT_WEB_APP_URL,
-                json=batch_data,
-                timeout=10.0
-            )
-            response.raise_for_status()
-            logger.info(f"Berhasil menyimpan data batch ke Google Sheets: {batch_data.get('batch_code')}")
-            return True
-    except Exception as e:
-        logger.error(f"Gagal mengirim data ke Google Sheets: {e}")
-        return False
+
+def send_to_google_sheets(batch_data: dict[str, Any]) -> bool:
+    """Send batch data to Google Sheets through Apps Script."""
+    result = send_event("batch_created", {"batch": batch_data})
+    return bool(result.get("success"))

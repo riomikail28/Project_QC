@@ -26,19 +26,7 @@ def upload_photo(file_bytes: bytes, filename: str, folder: str = "ccp") -> str:
 
     Returns the public URL of the uploaded file.
     """
-    sb = get_client()
-    if not sb:
-        logger.warning("Supabase offline - photo not uploaded")
-        return upload_general_photo(file_bytes, filename)
-
-    try:
-        path = f"{folder}/{datetime.now().strftime('%Y%m%d')}/{uuid.uuid4()}_{filename}"
-        sb.storage.from_(STORAGE_BUCKET).upload(path, file_bytes)
-        res = sb.storage.from_(STORAGE_BUCKET).get_public_url(path)
-        return res
-    except Exception as e:
-        logger.error("Photo upload failed: %s", e)
-        return upload_general_photo(file_bytes, filename)
+    return upload_general_photo(file_bytes, filename)
 
 
 def process_ocr(image_content: bytes) -> dict:
@@ -105,6 +93,7 @@ def submit_ccp_log(
         "operator_id": operator_id,
         "photo_url": photo_url,
         "stage_qc_status": overall_status.lower(),
+        "metrics": metrics,
         "recorded_at": datetime.utcnow().isoformat(),
     }
 

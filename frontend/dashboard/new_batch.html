@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>New Batch | QC Central Kitchen</title>
     <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/new_batch.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header class="header">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i class="fas fa-chevron-left"></i></a>
+        <div class="new-batch-header-content">
+            <a href="dashboard.html" class="new-batch-back"><i class="fas fa-chevron-left"></i></a>
             <div>
-                <h2 style="font-size: 20px; font-weight: 800;">NEW PRODUCTION</h2>
-                <p style="font-size: 12px; opacity: 0.7;">Register Batch Record</p>
+                <h2 class="new-batch-title">NEW PRODUCTION</h2>
+                <p class="new-batch-subtitle">Register Batch Record</p>
             </div>
         </div>
     </header>
@@ -37,25 +38,7 @@
                 <input type="date" id="productionDate" class="input-field" required>
             </div>
 
-            <div class="form-group">
-                <label class="input-label">Shift</label>
-                <select id="shift" class="input-field">
-                    <option value="Pagi">Shift Pagi (06:00 - 14:00)</option>
-                    <option value="Siang">Shift Siang (14:00 - 22:00)</option>
-                    <option value="Malam">Shift Malam (22:00 - 06:00)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="input-label">Foto Batch / Label Produk</label>
-                <div id="batchPhotoBox" style="width: 100%; min-height: 150px; background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; overflow: hidden;">
-                    <i class="fas fa-camera" style="font-size: 22px; color: #64748b;"></i>
-                    <span style="font-size: 13px; color: #64748b; font-weight: 700;">Ambil / Upload Foto</span>
-                </div>
-                <input type="file" id="batchPhoto" accept="image/*" capture="environment" style="display:none">
-            </div>
-
-            <button type="submit" class="btn-primary" style="margin-top: 12px;">START INSPECTION</button>
+            <button type="submit" class="btn-primary new-batch-submit">START INSPECTION</button>
         </form>
     </div>
 
@@ -68,16 +51,6 @@
             
             // Set default date
             document.getElementById('productionDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('batchPhotoBox').addEventListener('click', () => document.getElementById('batchPhoto').click());
-            document.getElementById('batchPhoto').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = event => {
-                    document.getElementById('batchPhotoBox').innerHTML = `<img src="${event.target.result}" style="width:100%;height:180px;object-fit:cover;">`;
-                };
-                reader.readAsDataURL(file);
-            });
             
             // Load products
             try {
@@ -102,17 +75,15 @@
             btn.disabled = true;
             btn.innerText = 'CREATING...';
 
-            const formData = new FormData();
-            formData.append('product_id', document.getElementById('productId').value);
-            formData.append('batch_code', document.getElementById('batchCode').value);
-            formData.append('production_date', document.getElementById('productionDate').value);
-            formData.append('shift', document.getElementById('shift').value);
-            formData.append('operator_id', Auth.user().id);
-            const photo = document.getElementById('batchPhoto').files[0];
-            if (photo) formData.append('photo', photo);
+            const payload = {
+                product_id: document.getElementById('productId').value,
+                batch_code: document.getElementById('batchCode').value,
+                production_date: document.getElementById('productionDate').value,
+                operator_id: Auth.user().id
+            };
 
             try {
-                const res = await API.upload('/batch/create', formData);
+                const res = await API.post('/batch/create', payload);
                 if (res.success) {
                     window.location.href = `batch_detail.html?id=${res.batch.id}`;
                 } else {

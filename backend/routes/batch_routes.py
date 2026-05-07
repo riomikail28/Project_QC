@@ -20,6 +20,9 @@ from backend.service.batch_service import (
 )
 from backend.database.supabase_client import get_client
 from backend.service.storage_service import upload_photo
+from backend.middleware.security_middleware import require_auth, require_role
+from backend.service.audit_service import write_audit
+from backend.service.request_validation import BatchCreateRequest, request_payload, validate_model
 
 logger = logging.getLogger("qc.routes.batch")
 
@@ -63,6 +66,7 @@ def batch_status():
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/batches", methods=["GET"])
 @batch_bp.route("/api/batch/list", methods=["GET"])
+@require_auth
 def list_batches():
     """Fetch recent production batches with product details.
 
@@ -72,7 +76,7 @@ def list_batches():
     Returns:
         JSON list of batch records
     """
-    limit = int(request.args.get("limit", 50))
+    limit = min(max(int(request.args.get("limit", 50)), 1), 200)
     batches = get_batches(limit=limit)
     return jsonify(batches)
 
@@ -81,6 +85,7 @@ def list_batches():
 # GET /api/batch/<batch_id> — Get batch detail with CCP logs
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/batch/<batch_id>", methods=["GET"])
+@require_auth
 def get_batch(batch_id):
     """Fetch a single batch with all CCP inspection logs.
 
@@ -97,6 +102,7 @@ def get_batch(batch_id):
 # POST /api/batch/create — Create a new production batch
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/batch/create", methods=["POST"])
+@require_auth
 def create_new_batch():
     """Create a new production batch record.
 
@@ -111,10 +117,10 @@ def create_new_batch():
     Returns:
         JSON with created batch record
     """
-    data = request.json
+    data = validate_model(BatchCreateRequest, request_payload())
 
-    product_id = data.get("product_id")
-    batch_code = data.get("batch_code")
+    product_id = data.product_id
+    batch_code = data.batch_code
 
     if not product_id or not batch_code:
         return jsonify({"error": "product_id and batch_code are required"}), 400
@@ -128,12 +134,21 @@ def create_new_batch():
         batch = create_batch(
             product_id=product_id,
             batch_code=batch_code,
-            production_date=data.get("production_date"),
-            shift=data.get("shift"),
-            operator_id=data.get("operator_id"),
-            qc_officer_id=data.get("qc_officer_id"),
+            production_date=data.production_date,
+            shift=data.shift,
+            operator_id=data.operator_id,
+            qc_officer_id=data.qc_officer_id,
             photo_url=photo_url,
         )
+        if isinstance(batch, dict) and batch.get("error"):
+            return jsonify({"success": False, "error": batch["error"]}), 503
+        write_audit("create", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
+        try:
+            from integrations.google_sheets_service import send_batch_created
+            send_batch_created(batch)
+        except Exception as sync_error:
+            logger.warning("Google Sheets batch sync skipped: %s", sync_error)
+
         return jsonify({
             "success": True,
             "batch": batch,
@@ -148,6 +163,7 @@ def create_new_batch():
 # GET /api/analytics/summary — Dashboard analytics summary
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/analytics/summary", methods=["GET"])
+@require_auth
 def analytics_summary():
     """Fetch aggregated dashboard summary for a given day.
 
@@ -166,6 +182,7 @@ def analytics_summary():
 # GET /api/products — List active products
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/products", methods=["GET"])
+@require_auth
 def list_products():
     """Fetch all active products with SOP thresholds.
 

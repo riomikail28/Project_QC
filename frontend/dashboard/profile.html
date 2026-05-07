@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,6 +12,7 @@
             padding: 24px 20px;
             text-align: center;
         }
+
         .avatar-circle {
             width: 100px;
             height: 100px;
@@ -25,6 +27,7 @@
             box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
             border: 4px solid #ffffff;
         }
+
         .info-card {
             background: #ffffff;
             border: 1px solid var(--border-subtle);
@@ -34,9 +37,11 @@
             text-align: left;
             box-shadow: var(--shadow-md);
         }
+
         .info-item {
             margin-bottom: 20px;
         }
+
         .info-item label {
             display: block;
             font-size: 12px;
@@ -45,11 +50,13 @@
             letter-spacing: 0.1em;
             margin-bottom: 4px;
         }
+
         .info-item p {
             font-size: 16px;
             font-weight: 600;
             color: var(--text-primary);
         }
+
         .btn-logout {
             width: 100%;
             padding: 16px;
@@ -62,16 +69,20 @@
             margin-top: 32px;
             transition: all 0.3s;
         }
+
         .btn-logout:hover {
             background: var(--status-fail);
             color: white;
         }
     </style>
 </head>
+
 <body>
     <header class="header">
         <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i class="fas fa-chevron-left"></i></a>
+            <a href="dashboard.html"
+                style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i
+                    class="fas fa-chevron-left"></i></a>
             <h2 style="font-size: 20px; font-weight: 800;">USER PROFILE</h2>
         </div>
     </header>
@@ -122,13 +133,14 @@
 
             document.getElementById('displayUsername').innerText = user.username.toUpperCase();
             document.getElementById('accountId').innerText = user.id;
-            
+
             const roleEl = document.getElementById('displayRole');
             roleEl.innerText = user.role.toUpperCase();
             roleEl.className = 'alert-status ' + (user.role === 'admin' ? 'fail' : 'pass');
-            
+
             document.getElementById('accessLevel').innerText = user.role === 'admin' ? 'Administrator (Full Control)' : 'Staff (Operations Only)';
         });
     </script>
 </body>
+
 </html>

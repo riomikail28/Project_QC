@@ -104,6 +104,20 @@ def save_alert_to_db(
         if device_id:
             payload["device_id"] = device_id
 
+        if device_id:
+            existing = (
+                sb.table("facility_alerts")
+                .select("id")
+                .eq("device_id", device_id)
+                .eq("status", "open")
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                alert_id = existing.data[0]["id"]
+                res = sb.table("facility_alerts").update(payload).eq("id", alert_id).execute()
+                return res.data[0] if res.data else None
+
         res = sb.table("facility_alerts").insert(payload).execute()
         if res.data:
             logger.info("Alert created: zone=%s temp=%.1f°C", zone, temperature)

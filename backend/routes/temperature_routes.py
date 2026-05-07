@@ -12,12 +12,16 @@ from backend.service.qc_engine import validate_temperature
 from backend.service.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.database.supabase_client import get_client
 from backend.service.storage_service import upload_photo
+from backend.middleware.security_middleware import require_auth
+from backend.service.audit_service import current_actor_id, write_audit
+from backend.service.request_validation import TemperatureLogRequest, request_payload, validate_model
 
 logger = logging.getLogger("qc.routes.monitoring")
 
 monitoring_bp = Blueprint("monitoring_bp", __name__)
 
 @monitoring_bp.route("/api/monitoring/log", methods=["POST"])
+@require_auth
 def log_facility_data():
     """Log data for a specific device or room.
     
@@ -30,18 +34,15 @@ def log_facility_data():
         reason (str, optional)
         photo_url (str, optional)
     """
-    if request.content_type and request.content_type.startswith("multipart/form-data"):
-        data = request.form
-    else:
-        data = request.get_json(silent=True) or {}
+    data = validate_model(TemperatureLogRequest, request_payload())
 
-    device_id = data.get("device_id")
-    room_id = data.get("room_id")
-    staff_id = data.get("staff_id")
-    temperature = data.get("temperature")
-    humidity = data.get("humidity")
-    reason = data.get("reason")
-    photo_url = data.get("photo_url")
+    device_id = data.device_id
+    room_id = data.room_id
+    staff_id = data.staff_id or current_actor_id()
+    temperature = data.temperature
+    humidity = data.humidity
+    reason = data.reason
+    photo_url = data.photo_url
     photo_file = request.files.get("photo")
 
     if not all([room_id, temperature is not None]):
@@ -79,7 +80,7 @@ def log_facility_data():
         if photo_file:
             photo_url = upload_photo(photo_file.read(), photo_file.filename)
 
-        threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.get("threshold", 25.0))
+        threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.threshold or 25.0)
 
         log_payload = {
             "device_id": device_id or None,
@@ -94,6 +95,7 @@ def log_facility_data():
 
         res = sb.table("facility_logs").insert(log_payload).execute()
         log_data = res.data[0] if res.data else None
+        write_audit("create", "facility_log", str(log_data.get("id")) if log_data else None, after=log_data or log_payload)
 
         # 4. Generate Alert if abnormal
         alert = None
@@ -108,6 +110,12 @@ def log_facility_data():
                     device_id=device_id,
                 )
 
+        try:
+            from integrations.google_sheets_service import send_monitoring_log
+            send_monitoring_log(log_data or log_payload, alert)
+        except Exception as sync_error:
+            logger.warning("Google Sheets monitoring sync skipped: %s", sync_error)
+
         return jsonify({
             "success": True,
             "status": status,
@@ -121,6 +129,7 @@ def log_facility_data():
 
 @monitoring_bp.route("/api/monitoring/latest", methods=["GET"])
 @monitoring_bp.route("/api/temperature/history", methods=["GET"])
+@require_auth
 def get_latest_logs():
     """Fetch latest logs for the dashboard."""
     sb = get_client()
@@ -137,6 +146,7 @@ def get_latest_logs():
         return jsonify([])
 
 @monitoring_bp.route("/api/monitoring/stats", methods=["GET"])
+@require_auth
 def get_monitoring_stats():
     """Aggregate stats for analytics charts."""
     sb = get_client()

@@ -34,7 +34,7 @@
             </div>
             <div id="uploadPrompt">
                 <i class="fas fa-camera" style="font-size: 24px; margin-bottom: 8px;"></i>
-                <p>Ambil Foto Bukti (CCP Evidence)</p>
+                <p id="photoPromptText">Ambil Foto Bukti (CCP Evidence)</p>
             </div>
         </div>
 
@@ -61,6 +61,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
             CCP.initStage(batchId, stageNum);
+            if (stageNum === 4) {
+                document.getElementById('photoPromptText').innerText = 'Ambil Foto Label / Barcode Produk Akhir';
+            }
         });
 
         document.getElementById('photoInput').addEventListener('change', (e) => {

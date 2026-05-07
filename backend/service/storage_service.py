@@ -14,6 +14,35 @@ from backend.database.supabase_client import get_client, STORAGE_BUCKET
 
 logger = logging.getLogger("qc.service.storage")
 
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
+ALLOWED_IMAGE_TYPES = {
+    "jpg": b"\xff\xd8\xff",
+    "png": b"\x89PNG\r\n\x1a\n",
+    "webp": b"RIFF",
+}
+
+
+def _detect_image_ext(file_bytes: bytes) -> str:
+    if not file_bytes:
+        raise ValueError("Photo is empty")
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
+        raise ValueError("Photo exceeds maximum size")
+    if file_bytes.startswith(ALLOWED_IMAGE_TYPES["jpg"]):
+        return ".jpg"
+    if file_bytes.startswith(ALLOWED_IMAGE_TYPES["png"]):
+        return ".png"
+    if file_bytes.startswith(ALLOWED_IMAGE_TYPES["webp"]) and file_bytes[8:12] == b"WEBP":
+        return ".webp"
+    raise ValueError("Unsupported photo type")
+
+
+def _content_type(ext: str) -> str:
+    return {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }.get(ext, "application/octet-stream")
+
 def _local_photo_url(file_bytes: bytes, filename: str, folder: str = "qc_photos") -> str:
     """Save upload locally for development when Supabase Storage is unavailable."""
     if os.environ.get("VERCEL"):
@@ -25,8 +54,7 @@ def _local_photo_url(file_bytes: bytes, filename: str, folder: str = "qc_photos"
 
     target_dir = os.path.join(upload_root, folder)
     os.makedirs(target_dir, exist_ok=True)
-    _, ext = os.path.splitext(secure_filename(filename or "photo.jpg"))
-    ext = ext or ".jpg"
+    ext = _detect_image_ext(file_bytes)
     unique_name = f"{datetime.now().strftime('%Y%m%d')}_{uuid.uuid4().hex}{ext}"
     path = os.path.join(target_dir, unique_name)
     with open(path, "wb") as fh:
@@ -47,8 +75,7 @@ def upload_photo(file_bytes, filename: str) -> str:
     if not sb:
         return _local_photo_url(file_bytes, filename)
 
-    # Generate a unique path: findings/2026/05/uuid.jpg
-    ext = os.path.splitext(filename)[1] or ".jpg"
+    ext = _detect_image_ext(file_bytes)
     unique_name = f"findings/{uuid.uuid4()}{ext}"
 
     try:
@@ -57,7 +84,7 @@ def upload_photo(file_bytes, filename: str) -> str:
         res = sb.storage.from_(STORAGE_BUCKET).upload(
             path=unique_name,
             file=file_bytes,
-            file_options={"content-type": "image/jpeg"} # Assuming JPEG for camera
+            file_options={"content-type": _content_type(ext)}
         )
         
         # Get public URL

@@ -6,22 +6,29 @@ Supports both Supabase-backed accounts and demo fallback.
 """
 
 import os
-import hashlib
+from urllib.parse import quote
 import secrets
 import logging
+from werkzeug.security import check_password_hash, generate_password_hash
 from backend.database.supabase_client import get_client
 
 logger = logging.getLogger("qc.staff")
 
 def hash_password(password: str) -> str:
-    """Generate SHA-256 hash of password."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Generate a modern salted password hash."""
+    return generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
 
 def password_matches(user: dict, password: str) -> bool:
     """Check if provided password matches the stored hash."""
     stored = user.get("password_hash") or user.get("password", "")
     stored = str(stored)
-    return secrets.compare_digest(stored, hash_password(password)) or secrets.compare_digest(stored, password)
+    if stored.startswith("pbkdf2:") or stored.startswith("scrypt:"):
+        return check_password_hash(stored, password)
+
+    # Backward compatibility for legacy/demo rows. Do not create new plain hashes.
+    import hashlib
+    legacy_sha256 = hashlib.sha256(password.encode()).hexdigest()
+    return secrets.compare_digest(stored, legacy_sha256) or secrets.compare_digest(stored, password)
 
 def login(username: str, password: str) -> dict:
     """Validate credentials and return user session data."""
@@ -29,7 +36,7 @@ def login(username: str, password: str) -> dict:
     
     try:
         # Use direct query with filter
-        filters = f"username=eq.{username}"
+        filters = f"username=eq.{quote(username, safe='')}"
         res_data = direct_db_query("staff_accounts", method="GET", filters=filters)
         
         if res_data and password_matches(res_data[0], password):
@@ -39,26 +46,9 @@ def login(username: str, password: str) -> dict:
                 "username": user["username"],
                 "role": user["role"],
                 "name": user.get("full_name", user["username"]),
-                "token": f"session-{secrets.token_hex(16)}"
             }
     except Exception as e:
         logger.error("Login DB error: %s", e)
-
-    # Demo fallback
-    demo_users = {
-        "admin": {"password": "admin123", "role": "admin", "id": "admin-uuid", "name": "System Admin"},
-        "staff": {"password": "staff123", "role": "staff", "id": "staff-uuid", "name": "QC Staff"},
-    }
-
-    demo = demo_users.get(username)
-    if demo and demo["password"] == password:
-        return {
-            "id": demo["id"],
-            "username": username,
-            "role": demo["role"],
-            "name": demo["name"],
-            "token": f"demo-token-{secrets.token_hex(8)}"
-        }
 
     raise ValueError("Username atau Password salah")
 
@@ -69,7 +59,11 @@ def list_staff():
     try:
         # Use direct query to bypass library validation
         res_data = direct_db_query("staff_accounts", method="GET")
-        return res_data or []
+        staff = res_data or []
+        for item in staff:
+            item.pop("password_hash", None)
+            item.pop("password", None)
+        return staff
     except Exception as e:
         logger.error("Failed to list staff: %s", e)
         return []
@@ -154,3 +148,18 @@ def update_staff(staff_id: str, data: dict):
     except Exception as e:
         logger.error("Failed to update staff: %s", e)
         raise ValueError(f"Gagal mengubah staf: {str(e)}")
+
+
+def get_staff_by_id(staff_id: str):
+    """Retrieve a single staff account by id."""
+    from backend.database.supabase_client import direct_db_query
+    try:
+        res = direct_db_query('staff_accounts', method='GET', filters=f'id=eq.{staff_id}')
+        if res:
+            user = res[0]
+            user.pop('password_hash', None)
+            user.pop('password', None)
+            return user
+    except Exception as e:
+        logger.error("Failed to get staff by id: %s", e)
+    return None
