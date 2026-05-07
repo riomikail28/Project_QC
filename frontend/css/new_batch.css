@@ -1,0 +1,33 @@
+.new-batch-header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.new-batch-back {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 18px;
+    text-decoration: none;
+}
+
+.new-batch-title {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.new-batch-subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.new-batch-submit {
+    margin-top: 12px;
+}
