@@ -1,3 +1,4 @@
+{{- if .Values.postgres.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -20,9 +21,9 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: qc_db
+              value: {{ .Values.postgres.database | quote }}
             - name: POSTGRES_USER
-              value: qc_user
+              value: {{ .Values.postgres.username | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -33,7 +34,7 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["/bin/sh","-c","pg_isready -U qc_user -d qc_db"]
+              command: ["/bin/sh","-c","pg_isready -U {{ .Values.postgres.username }} -d {{ .Values.postgres.database }}"]
             initialDelaySeconds: 10
             periodSeconds: 10
   volumeClaimTemplates:
@@ -43,4 +44,5 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 10Gi
+            storage: {{ .Values.postgres.storage }}
+{{- end }}

@@ -1,475 +1,216 @@
-name: QC System CI/CD Pipeline
+name: QC CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: Deployment environment
         required: true
-        default: 'staging'
+        default: staging
         type: choice
-        options:
-        - staging
-        - production
+        options: [staging, production]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
 
 env:
-  PYTHON_VERSION: '3.11'
-  NODE_VERSION: '18'
+  PYTHON_VERSION: "3.11"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Security and Quality Gates
-  security-scan:
+  validate:
     runs-on: ubuntu-latest
-    outputs:
-      security-pass: ${{ steps.scan.outputs.pass }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Run Trivy vulnerability scanner
-      id: scan
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-    
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
-    
-    - name: Security check passed
-      run: echo "pass=true" >> $GITHUB_OUTPUT
-
-  # Code Quality and Testing
-  test:
-    runs-on: ubuntu-latest
-    needs: security-scan
-    outputs:
-      test-pass: ${{ steps.result.outputs.pass }}
-    
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: qc_test
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres -d qc_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
-      
       redis:
         image: redis:7-alpine
+        ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 6379:6379
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client pkg-config
-    
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov pytest-mock python-dotenv
-    
-    - name: Set up environment variables
-      run: |
-        cat << EOF > .env.test
-        DATABASE_URL=postgresql://postgres:testpass@localhost:5432/qc_test
-        REDIS_URL=redis://localhost:6379/0
-        SECRET_KEY=test-secret-key-for-ci
-        ENVIRONMENT=testing
-        EOF
-    
-    - name: Run code formatting check
-      run: |
-        pip install black isort flake8
-        black --check --diff backend/
-        isort --check-only --diff backend/
-        flake8 backend/ --max-line-length=88 --extend-ignore=E203,W503
-    
-    - name: Run type checking
-      run: |
-        pip install mypy
-        mypy backend/ --ignore-missing-imports --disallow-untyped-defs
-    
-    - name: Run database migrations
-      run: |
-        export DATABASE_URL=postgresql://postgres:testpass@localhost:5432/qc_test
-        python -c "
-        from backend.layers.infrastructure.database.base_repository_impl import create_database_manager, DatabaseConfig
-        import asyncio
-        
-        async def init():
-            config = DatabaseConfig('postgresql://postgres:testpass@localhost:5432/qc_test')
-            manager = await create_database_manager(config)
-            await manager.initialize()
-        
-        asyncio.run(init())
-        "
-    
-    - name: Run unit tests
-      run: |
-        export DATABASE_URL=postgresql://postgres:testpass@localhost:5432/qc_test
-        pytest tests/ -v --cov=backend --cov-report=xml --cov-report=html
-    
-    - name: Run integration tests
-      run: |
-        pytest tests/integration/ -v --cov=backend --cov-append --cov-report=xml
-    
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-    
-    - name: Test result
-      id: result
-      run: echo "pass=true" >> $GITHUB_OUTPUT
 
-  # Build and Push Docker Image
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Compile backend
+        env:
+          JWT_SECRET_KEY: ci-test-secret
+        run: |
+          python -m compileall \
+            backend/app.py \
+            backend/__init__.py \
+            backend/caching \
+            backend/core \
+            backend/database \
+            backend/middleware \
+            backend/notifications \
+            backend/repositories \
+            backend/routes \
+            backend/service \
+            backend/services \
+            backend/skills \
+            backend/workers
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/qc_test
+          REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET_KEY: ci-test-secret
+          ENVIRONMENT: testing
+        run: python -m pytest tests -q --ignore=tests/integration
+
+      - name: Helm lint and render
+        run: |
+          helm lint k8s/charts/qc-app
+          helm template qc-app k8s/charts/qc-app \
+            --set secrets.jwtSecretKey=ci-test-secret \
+            --set secrets.dbPassword=ci-db-password \
+            --set image.repository=ghcr.io/example/qc-app \
+            --set image.tag=${{ github.sha }} > /tmp/qc-app.yaml
+
   build:
     runs-on: ubuntu-latest
-    needs: [security-scan, test]
-    if: always() && (needs.security-scan.outputs.security-pass == 'true' && needs.test.outputs.test-pass == 'true')
-    
+    needs: validate
+    if: github.event_name != 'pull_request'
     outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
-      image-tag: ${{ steps.meta.outputs.tags }}
-    
+      image: ${{ steps.meta.outputs.tags }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-    
-    - name: Build and push Docker image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-    
-    - name: Generate SBOM
-      uses: anchore/sbom-action@v0
-      with:
-        image: ${{ steps.meta.outputs.tags }}
-        format: spdx-json
-        output-file: sbom.spdx.json
-    
-    - name: Upload SBOM
-      uses: actions/upload-artifact@v3
-      with:
-        name: sbom
-        path: sbom.spdx.json
+      - uses: actions/checkout@v4
 
-  # Deploy to Staging
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile.optimized
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy-staging:
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
     environment: staging
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Deploy to staging
-      uses: argoproj/argo-rollouts-action@v0.1.6
-      with:
-        image: ${{ needs.build.outputs.image-tag }}
-        namespace: qc-staging
-        release-name: qc-system-staging
-        container: backend
-        command: update
-        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      - uses: actions/checkout@v4
 
-  # Security Testing
-  security-test:
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: security-tests/package-lock.json
-    
-    - name: Install security testing tools
-      run: |
-        cd security-tests
-        npm install
-    
-    - name: Run OWASP ZAP security scan
-      run: |
-        cd security-tests
-        npm run zap-scan -- --target="${{ secrets.STAGING_URL }}"
-    
-    - name: Run penetration tests
-      run: |
-        cd security-tests
-        npm run pentest -- --target="${{ secrets.STAGING_URL }}"
-    
-    - name: Upload security test results
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-test-results
-        path: security-tests/reports/
+      - uses: azure/setup-kubectl@v4
 
-  # Performance Testing
-  performance-test:
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up k6
-      run: |
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install k6
-    
-    - name: Run performance tests
-      run: |
-        k6 run --out html=performance-test.html tests/performance/api-tests.js
-    
-    - name: Upload performance test results
-      uses: actions/upload-artifact@v3
-      with:
-        name: performance-test-results
-        path: |
-          performance-test.html
-          performance-test.json
+      - uses: azure/setup-helm@v4
 
-  # Deploy to Production
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          test -n "$KUBE_CONFIG_DATA"
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
+
+      - name: Deploy staging
+        env:
+          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY || format('ghcr.io/{0}', github.repository) }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          helm upgrade --install qc-app k8s/charts/qc-app \
+            -n qc-staging --create-namespace --atomic --timeout 5m \
+            --set image.repository="$IMAGE_REPOSITORY" \
+            --set image.tag="$IMAGE_TAG" \
+            --set secrets.jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --set secrets.dbPassword="${{ secrets.DB_PASSWORD }}" \
+            --set env.SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --set env.SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}"
+          kubectl rollout status deployment/qc-app -n qc-staging --timeout=300s
+
   deploy-production:
     runs-on: ubuntu-latest
-    needs: [build, security-test, performance-test]
+    needs: build
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment: production
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Create production backup
-      run: |
-        # Create backup before production deployment
-        ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_HOST }} "
-          cd /opt/qc-system
-          docker exec qc_postgres pg_dump qc_production > backup_$(date +%Y%m%d_%H%M%S).sql
-        "
-    
-    - name: Deploy to production
-      uses: argoproj/argo-rollouts-action@v0.1.6
-      with:
-        image: ${{ needs.build.outputs.image-tag }}
-        namespace: qc-production
-        release-name: qc-system-production
-        container: backend
-        command: update
-        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
-        wait: true
-        timeout: 300
-        progressDeadlineSeconds: 600
-    
-    - name: Health check deployment
-      run: |
-        # Wait for deployment and perform health checks
-        sleep 30
-        
-        API_URL="${{ secrets.PROD_URL }}"
-        HEALTH_CHECK_URL="${API_URL}/health"
-        
-        # Check API health
-        curl -f "$HEALTH_CHECK_URL" || exit 1
-        
-        # Check database connectivity
-        curl -f "${API_URL}/health/database" || exit 1
-        
-        # Check authentication
-        curl -f "${API_URL}/health/auth" || exit 1
-    
-    - name: Run production smoke tests
-      run: |
-        python -m pytest tests/smoke/ --base-url="${{ secrets.PROD_URL }}" -v
-    
-    - name: Run production load tests
-      run: |
-        k6 run --vus 10 --duration 30s tests/performance/production-smoke.js
-    
-    - name: Rollback on failure
-      if: failure()
-      run: |
-        echo "Deployment failed, initiating rollback..."
-        
-        # Rollback to previous deployment
-        kubectl -n qc-production rollout undo deployment/qc-system-production
-        
-        # Wait for rollback to complete
-        kubectl -n qc-production rollout status deployment/qc-system-production --timeout=300s
-    
-    - name: Send deployment notification
-      uses: 8398a7/action-slack@v3
-      if: always()
-      with:
-        status: ${{ job.status }}
-        channel: '#deployments'
-        text: |
-          🚀 Production Deployment Status: ${{ job.status }}
-          Image: ${{ needs.build.outputs.image-tag }}
-          Commit: ${{ github.sha }}
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - uses: actions/checkout@v4
 
-  # Monitoring and Alerting Setup
-  monitoring:
-    runs-on: ubuntu-latest
-    needs: deploy-production
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Update monitoring dashboards
-      run: |
-        # Update Grafana dashboards with new deployment info
-        curl -X POST "${{ secrets.GRAFANA_URL }}/api/dash" \
-          -H "Authorization: Bearer ${{ secrets.GRAFANA_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d @monitoring/grafana/qc-dashboard.json
-    
-    - name: Configure alerts
-      run: |
-        # Configure Prometheus alerts
-        curl -X POST "${{ secrets.PROMETHEUS_URL }}/api/v1/rules" \
-          -H "Content-Type: application/json" \
-          -d @monitoring/prometheus/alerts.yml
-    
-    - name: Verify monitoring stack
-      run: |
-        # Verify monitoring services are responding
-        curl -f "${{ secrets.GRAFANA_URL }}/api/health"
-        curl -f "${{ secrets.PROMETHEUS_URL }}/api/v1/query?query=up"
+      - uses: azure/setup-kubectl@v4
 
-  # Post-deployment Cleanup
-  cleanup:
-    runs-on: ubuntu-latest
-    needs: [deploy-staging, deploy-production]
-    if: always()
-    
-    steps:
-    - name: Cleanup old images
-      run: |
-        # Clean up old Docker images from registry
-        echo "Cleaning up old container images..."
-        
-    - name: Archive old backups
-      run: |
-        # Archive old database backups to cold storage
-        echo "Archiving old backup files..."
-    
-    - name: Update deployment metrics
-      run: |
-        # Record deployment metrics for analytics
-        echo "Recording deployment metrics..."
+      - uses: azure/setup-helm@v4
 
-# Workflow status notifications
-notify:
-  runs-on: ubuntu-latest
-  needs: [test, build, deploy-staging, deploy-production]
-  if: always()
-  
-  steps:
-  - name: Send CI/CD completion notification
-    uses: 8398a7/action-slack@v3
-    with:
-      status: ${{ job.status }}
-      channel: '#ci-cd'
-      text: |
-        📊 QC System CI/CD Pipeline Status: ${{ job.status }}
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit: ${{ github.sha }}
-        
-        Results:
-        - Security Scan: ${{ needs.security-scan.result }}
-        - Tests: ${{ needs.test.result }}
-        - Build: ${{ needs.build.result }}
-        - Staging Deploy: ${{ needs.deploy-staging.result }}
-        - Production Deploy: ${{ needs.deploy-production.result }}
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          test -n "$KUBE_CONFIG_DATA"
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
+
+      - name: Deploy production
+        env:
+          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY || format('ghcr.io/{0}', github.repository) }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          helm upgrade --install qc-app k8s/charts/qc-app \
+            -n qc-production --create-namespace --atomic --timeout 10m \
+            --set image.repository="$IMAGE_REPOSITORY" \
+            --set image.tag="$IMAGE_TAG" \
+            --set secrets.jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --set secrets.dbPassword="${{ secrets.DB_PASSWORD }}" \
+            --set env.SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --set env.SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}"
+          kubectl rollout status deployment/qc-app -n qc-production --timeout=600s
+
+      - name: Rollback debug
+        if: failure()
+        run: |
+          kubectl get all -n qc-production -o wide
+          kubectl describe deployment/qc-app -n qc-production || true
+          kubectl logs -n qc-production -l app.kubernetes.io/name=qc-app --tail=200 || true

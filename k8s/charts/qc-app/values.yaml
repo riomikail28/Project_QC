@@ -43,8 +43,28 @@ ingress:
         - /
 
 env:
-  - name: FLASK_ENV
-    value: production
+  FLASK_ENV: production
+  ENVIRONMENT: staging
+  SUPABASE_URL: ""
+  SUPABASE_KEY: ""
+  SUPABASE_STORAGE_BUCKET: qc-photos
+  REDIS_URL: redis://qc-app-redis:6379/0
+
+secrets:
+  jwtSecretKey: ""
+  dbPassword: ""
+
+postgres:
+  enabled: true
+  database: qc_db
+  username: qc_user
+  storage: 10Gi
+
+worker:
+  enabled: false
+
+beat:
+  enabled: false
 
 pdb:
   minAvailable: 1

@@ -1,3 +1,4 @@
+{{- if .Values.beat.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,7 +23,11 @@ spec:
             - name: REDIS_URL
               value: redis://{{ include "qc-app.fullname" . }}-redis:6379/0
             - name: DATABASE_URL
-              value: postgresql://qc_user:{{ .Values.postgres.password }}@{{ include "qc-app.fullname" . }}-postgres:5432/qc_db
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qc-app.fullname" . }}-secrets
+                  key: DATABASE_URL
+{{- end }}
           resources:
             requests:
               cpu: 100m
