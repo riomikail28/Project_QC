@@ -1,13 +1,16 @@
-"""Database utilities for administrative operations (DDL) using psycopg2.
+"""Database utilities for administrative operations (DDL) using psycopg (v3).
 
 Provides helpers to create partitions and run maintenance SQL that cannot
 be performed via Supabase REST API.
+
+Migration: Upgraded from psycopg2-binary to psycopg v3 for better Python 3.12+
+compatibility and native support on serverless platforms like Vercel.
 """
 import os
 import logging
 from contextlib import contextmanager
-import psycopg2
-import psycopg2.extras
+import psycopg
+import psycopg.extras
 
 logger = logging.getLogger('qc.db.utils')
 
@@ -16,14 +19,14 @@ def get_conn():
     dsn = os.environ.get('DATABASE_URL')
     if not dsn:
         raise RuntimeError('DATABASE_URL is not configured')
-    return psycopg2.connect(dsn)
+    return psycopg.connect(dsn)
 
 
 @contextmanager
 def db_cursor(commit: bool = True):
     conn = get_conn()
     try:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur = conn.cursor(row_factory=psycopg.extras.DictCursor)
         yield cur
         if commit:
             conn.commit()

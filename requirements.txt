@@ -11,7 +11,7 @@ fakeredis==2.22.0
 # Database & Async
 supabase==2.11.0
 alembic==1.11.1
-psycopg2-binary==2.9.6
+psycopg[binary]>=3.1.8,<4.0.0
 SQLAlchemy==2.0.23
 
 # Caching & Message Queue

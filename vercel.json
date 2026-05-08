@@ -1,9 +1,26 @@
 {
   "version": 2,
+  "buildCommand": "echo 'Build: No build command needed'",
+  "outputDirectory": ".",
+  "runtimeVersion": "3.11.9",
+  "pythonVersion": "3.11",
+  "functions": {
+    "backend/app.py": {
+      "runtime": "python3.11",
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "backend/**",
+      "excludeFiles": "tests/**"
+    }
+  },
   "builds": [
     {
       "src": "backend/app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python@4.5.0",
+      "config": {
+        "runtime": "python3.11",
+        "pythonVersion": "3.11.9"
+      }
     },
     {
       "src": "frontend/**",
@@ -43,5 +60,11 @@
       "src": "/(.*)",
       "dest": "frontend/dashboard/login.html"
     }
-  ]
+  ],
+  "env": {
+    "FLASK_ENV": "@vercel_flask_env",
+    "ENVIRONMENT": "@vercel_environment",
+    "LOG_LEVEL": "@vercel_log_level"
+  }
 }
+
