@@ -6,7 +6,7 @@ import os
 from celery.exceptions import Retry
 import time
 from prometheus_client import Counter
-from backend.workers.idempotency import idempotent_task
+from .idempotency import idempotent_task
 
 logger = get_task_logger(__name__)
 
@@ -24,7 +24,7 @@ def send_finding_async(self, finding):
     finding: dict-like payload
     """
     import logging
-    from backend.notifications.alert_service import alert_service
+    from ..notifications.alert_service import alert_service
     
     task_name = 'send_finding_async'
     backup_logger = logging.getLogger('qc.workers.send_finding')
@@ -133,7 +133,7 @@ def verify_backups():
     This is a lightweight integrity check: `pg_restore -l` and `tar -tzf`.
     """
     import subprocess
-    from backend.notifications.alert_service import alert_service
+    from ..notifications.alert_service import alert_service
     
     script = os.path.join(os.getcwd(), 'scripts', 'verify_backup.sh')
     try:
@@ -157,7 +157,7 @@ def wal_g_base_backup():
     The task will raise on non-zero exit to mark failure.
     """
     import subprocess
-    from backend.notifications.alert_service import alert_service
+    from ..notifications.alert_service import alert_service
     
     script = os.path.join(os.getcwd(), 'scripts', 'wal_g_backup.sh')
     if not os.path.exists(script):
@@ -193,7 +193,7 @@ def full_restore_smoke_test(self):
     import subprocess
     import tempfile
     import shutil
-    from backend.notifications.alert_service import alert_service
+    from ..notifications.alert_service import alert_service
 
     script = os.path.join(os.getcwd(), 'scripts', 'wal_g_restore.sh')
     if not os.path.exists(script):
