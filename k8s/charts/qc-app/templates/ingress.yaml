@@ -14,7 +14,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "qc-app.fullname" $. | trunc 63 | trimSuffix "-" }}
+                name: {{ include "qc-app.fullname" $ | trunc 63 | trimSuffix "-" }}
                 port:
                   number: {{ $.Values.service.port }}
         {{- end }}

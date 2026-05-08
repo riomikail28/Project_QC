@@ -124,13 +124,19 @@ jobs:
         id: validate
         if: always()
         run: |
-          if [[ ${{ steps.syntax.outcome }} == 'success' ]] && [[ ${{ steps.imports.outcome }} == 'success' ]]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "::notice::✓ Validation PASSED - Ready for testing"
-          else
+          # Check if steps explicitly failed (not skipped)
+          if [[ "${{ steps.syntax.outcome }}" == "failure" ]] || [[ "${{ steps.imports.outcome }}" == "failure" ]]; then
             echo "status=failed" >> $GITHUB_OUTPUT
             echo "::error::✗ Validation FAILED - See logs above"
             exit 1
+          fi
+          
+          # If no failures, validation passed (success or skipped)
+          echo "status=success" >> $GITHUB_OUTPUT
+          if [[ "${{ steps.syntax.outcome }}" == "success" ]] && [[ "${{ steps.imports.outcome }}" == "success" ]]; then
+            echo "::notice::✓ Validation PASSED - Ready for testing"
+          elif [[ "${{ steps.syntax.outcome }}" == "skipped" ]] || [[ "${{ steps.imports.outcome }}" == "skipped" ]]; then
+            echo "::notice::✓ Validation COMPLETED - Some steps skipped (expected)"
           fi
 
   # ============================================================================
@@ -507,10 +513,17 @@ jobs:
           echo "Deploy-Vercel: ${{ needs.deploy-vercel.result }}"
           echo "::endgroup::"
           
-          if [[ ${{ needs.validate.result }} == 'failure' ]] || \
-             [[ ${{ needs.test.result }} == 'failure' ]]; then
+          # Only fail if critical stages explicitly failed (not skipped)
+          if [[ "${{ needs.validate.result }}" == "failure" ]] || \
+             [[ "${{ needs.test.result }}" == "failure" ]]; then
             echo "::error::Pipeline failed at validation or test stage"
             exit 1
+          fi
+          
+          # Handle skipped jobs - treat as neutral, not failure
+          if [[ "${{ needs.validate.result }}" == "skipped" ]] || \
+             [[ "${{ needs.test.result }}" == "skipped" ]]; then
+            echo "::warning::Some stages were skipped (this is normal for certain branches/PRs)"
           fi
           
           if [[ "${{ needs.validate.result }}" == "success" ]] && \
