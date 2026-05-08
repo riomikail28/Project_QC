@@ -513,20 +513,27 @@ jobs:
           echo "Deploy-Vercel: ${{ needs.deploy-vercel.result }}"
           echo "::endgroup::"
           
+          # Get actual job results
+          VALIDATE_RESULT="${{ needs.validate.result }}"
+          TEST_RESULT="${{ needs.test.result }}"
+          
+          echo "Debug: Validation result is '${VALIDATE_RESULT}'"
+          echo "Debug: Test result is '${TEST_RESULT}'"
+          
           # Only fail if critical stages explicitly failed (not skipped)
-          if [[ "${{ needs.validate.result }}" == "failure" ]] || \
-             [[ "${{ needs.test.result }}" == "failure" ]]; then
+          if [[ "${VALIDATE_RESULT}" == "failure" ]] || [[ "${TEST_RESULT}" == "failure" ]]; then
             echo "::error::Pipeline failed at validation or test stage"
+            echo "failed" >> $GITHUB_OUTPUT
             exit 1
           fi
           
           # Handle skipped jobs - treat as neutral, not failure
-          if [[ "${{ needs.validate.result }}" == "skipped" ]] || \
-             [[ "${{ needs.test.result }}" == "skipped" ]]; then
+          if [[ "${VALIDATE_RESULT}" == "skipped" ]] || [[ "${TEST_RESULT}" == "skipped" ]]; then
             echo "::warning::Some stages were skipped (this is normal for certain branches/PRs)"
           fi
           
-          if [[ "${{ needs.validate.result }}" == "success" ]] && \
-             [[ "${{ needs.test.result }}" == "success" ]]; then
+          if [[ "${VALIDATE_RESULT}" == "success" ]] && [[ "${TEST_RESULT}" == "success" ]]; then
             echo "::notice::✓ All critical stages passed - Pipeline healthy"
           fi
+          
+          echo "success" >> $GITHUB_OUTPUT
