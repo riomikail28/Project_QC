@@ -1,0 +1,519 @@
+name: QC CI/CD Pipeline
+
+# Trigger Configuration
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: Deployment environment
+        required: false
+        default: staging
+        type: choice
+        options: [staging, production]
+
+# Global Environment
+env:
+  PYTHON_VERSION: "3.11"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# Permissions
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  # ============================================================================
+  # STAGE 1: VALIDATE - Python Syntax, Dependencies, Imports
+  # ============================================================================
+  validate:
+    name: Validate (Python Syntax & Dependencies)
+    runs-on: ubuntu-latest
+    outputs:
+      validation_status: ${{ steps.validate.outputs.status }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        id: deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          echo "Dependencies installed successfully"
+          pip list | grep -E "Flask|pytest|redis|gunicorn|celery"
+
+      - name: Validate Python syntax
+        id: syntax
+        run: |
+          echo "::group::Compile Check (Production Code Only)"
+          python -m compileall \
+            backend/app.py \
+            backend/__init__.py \
+            backend/caching \
+            backend/core \
+            backend/database \
+            backend/middleware \
+            backend/notifications \
+            backend/repositories \
+            backend/routes \
+            backend/service \
+            backend/skills \
+            backend/workers \
+            -q --invalidation-mode=checked || exit 1
+          echo "✓ All production code compiled successfully"
+          echo "::endgroup::"
+
+      - name: Check imports and dependencies
+        id: imports
+        env:
+          JWT_SECRET_KEY: ci-test-secret
+          SUPABASE_URL: https://test.supabase.co
+          SUPABASE_KEY: test-key
+        run: |
+          echo "::group::Import Validation"
+          python -c "
+          import sys
+          import os
+          os.environ['JWT_SECRET_KEY'] = 'ci-test-secret'
+          os.environ['DATABASE_URL'] = 'postgresql://test@localhost/test'
+          os.environ['REDIS_URL'] = 'redis://localhost:6379'
+          
+          critical_imports = [
+              'backend.create_app',
+              'backend.service.qc_engine',
+              'backend.database.supabase_client',
+              'backend.routes.qc_routes',
+          ]
+          
+          failed = []
+          for module in critical_imports:
+              try:
+                  parts = module.rsplit('.', 1)
+                  if len(parts) == 2:
+                      mod_name, attr = parts
+                      mod = __import__(mod_name, fromlist=[attr])
+                      getattr(mod, attr)
+                  else:
+                      __import__(module, fromlist=[''])
+                  print(f'✓ {module}')
+              except Exception as e:
+                  print(f'✗ {module}: {str(e)[:100]}')
+                  failed.append(module)
+          
+          sys.exit(len(failed))
+          "
+          echo "::endgroup::"
+
+      - name: Validation Summary
+        id: validate
+        if: always()
+        run: |
+          if [[ ${{ steps.syntax.outcome }} == 'success' ]] && [[ ${{ steps.imports.outcome }} == 'success' ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "::notice::✓ Validation PASSED - Ready for testing"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "::error::✗ Validation FAILED - See logs above"
+            exit 1
+          fi
+
+  # ============================================================================
+  # STAGE 2: TEST - Unit Tests & Code Quality
+  # ============================================================================
+  test:
+    name: Test (Unit Tests)
+    needs: validate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov pytest-xdist
+
+      - name: Run unit tests
+        id: pytest
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/test_db
+          REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET_KEY: ci-test-secret
+          ENVIRONMENT: testing
+          SUPABASE_URL: https://test.supabase.co
+          SUPABASE_KEY: test-key
+        run: |
+          echo "::group::Running pytest (unit tests only)"
+          python -m pytest tests/ \
+            --ignore=tests/integration \
+            -v \
+            --tb=short \
+            --color=yes \
+            -x \
+            -q \
+            --co 2>/dev/null | head -20
+          
+          python -m pytest tests/ \
+            --ignore=tests/integration \
+            -v \
+            --tb=short \
+            --color=yes \
+            -x \
+            --cov=backend \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=html:htmlcov
+          
+          echo "::endgroup::"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./htmlcov/index.html
+          flags: unittests
+          name: coverage-report
+
+      - name: Test Summary
+        if: always()
+        run: |
+          if [[ ${{ steps.pytest.outcome }} == 'success' ]]; then
+            echo "::notice::✓ All tests PASSED"
+          else
+            echo "::error::✗ Tests FAILED - Review logs above"
+            exit 1
+          fi
+
+  # ============================================================================
+  # STAGE 3: VALIDATE KUBERNETES - Helm & K8s configs
+  # ============================================================================
+  validate-k8s:
+    name: Validate Kubernetes (Helm & Config)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Helm lint
+        id: helm-lint
+        run: |
+          echo "::group::Helm Lint Validation"
+          if [ -d "k8s/charts/qc-app" ]; then
+            helm lint k8s/charts/qc-app --strict
+            echo "✓ Helm chart linting passed"
+          else
+            echo "⚠ Helm chart not found at k8s/charts/qc-app"
+          fi
+          echo "::endgroup::"
+
+      - name: Helm template render
+        id: helm-template
+        env:
+          TEST_IMAGE_TAG: test-${{ github.sha }}
+        run: |
+          echo "::group::Helm Template Rendering"
+          helm template qc-app k8s/charts/qc-app \
+            --namespace qc-staging \
+            --set image.repository="$REGISTRY/$IMAGE_NAME" \
+            --set image.tag="$TEST_IMAGE_TAG" \
+            --set secrets.jwtSecretKey="test-secret" \
+            --set secrets.dbPassword="test-password" \
+            --values k8s/charts/qc-app/values.yaml \
+            > /tmp/qc-app-rendered.yaml
+          
+          echo "✓ Template rendered successfully"
+          echo "Generated YAML size: $(wc -c < /tmp/qc-app-rendered.yaml) bytes"
+          echo "::endgroup::"
+
+      - name: Validate rendered YAML
+        run: |
+          echo "::group::YAML Validation"
+          kubectl apply -f /tmp/qc-app-rendered.yaml --dry-run=client -o yaml > /dev/null
+          echo "✓ Kubernetes YAML validation passed"
+          echo "::endgroup::"
+
+  # ============================================================================
+  # STAGE 4: BUILD - Docker image build and push
+  # ============================================================================
+  build:
+    name: Build (Docker Image)
+    needs: [validate, test, validate-k8s]
+    if: github.event_name != 'pull_request' && success()
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=ref,event=branch
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile.optimized
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Summary
+        run: |
+          echo "::notice::✓ Docker image built and pushed successfully"
+          echo "Image: ${{ steps.meta.outputs.tags }}"
+          echo "Digest: ${{ steps.build.outputs.digest }}"
+
+  # ============================================================================
+  # STAGE 5: DEPLOY-STAGING - Deploy to staging
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    if: github.ref == 'refs/heads/develop' && success()
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Helm & kubectl
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          if [ -z "$KUBE_CONFIG_DATA" ]; then
+            echo "::error::KUBE_CONFIG_DATA secret not configured"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          kubectl cluster-info
+
+      - name: Deploy via Helm
+        env:
+          HELM_NAMESPACE: qc-staging
+          IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "::group::Helm Deployment (Staging)"
+          helm upgrade --install qc-app k8s/charts/qc-app \
+            --namespace "$HELM_NAMESPACE" \
+            --create-namespace \
+            --set image.repository="$IMAGE_REPOSITORY" \
+            --set image.tag="$IMAGE_TAG" \
+            --set secrets.jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --set secrets.dbPassword="${{ secrets.DB_PASSWORD }}" \
+            --set env.SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --set env.SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}" \
+            --atomic \
+            --timeout 5m \
+            --wait
+          echo "::endgroup::"
+
+      - name: Verify deployment
+        env:
+          HELM_NAMESPACE: qc-staging
+        run: |
+          echo "::group::Deployment Verification"
+          kubectl rollout status deployment/qc-app -n "$HELM_NAMESPACE" --timeout=300s
+          kubectl get pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app -o wide
+          echo "::endgroup::"
+
+      - name: Debug on failure
+        if: failure()
+        env:
+          HELM_NAMESPACE: qc-staging
+        run: |
+          echo "::group::Debug Information"
+          kubectl get all -n "$HELM_NAMESPACE" -o wide || true
+          kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
+          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=100 || true
+          echo "::endgroup::"
+
+  # ============================================================================
+  # STAGE 6: DEPLOY-VERCEL - Deploy frontend to Vercel
+  # ============================================================================
+  deploy-vercel:
+    name: Deploy to Vercel
+    needs: [validate, test]
+    if: github.ref == 'refs/heads/main' && success()
+    runs-on: ubuntu-latest
+    environment:
+      name: production-frontend
+      url: https://${{ env.VERCEL_DOMAIN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate Vercel configuration
+        id: vercel-check
+        run: |
+          echo "::group::Vercel Configuration Validation"
+          if [ ! -f "vercel.json" ]; then
+            echo "::error::vercel.json not found"
+            exit 1
+          fi
+          
+          if [ ! -f "runtime.txt" ]; then
+            echo "::error::runtime.txt not found"
+            exit 1
+          fi
+          
+          if [ ! -f "backend/app.py" ]; then
+            echo "::error::backend/app.py entry point not found"
+            exit 1
+          fi
+          
+          echo "✓ vercel.json exists"
+          echo "✓ runtime.txt exists"
+          echo "✓ backend/app.py exists"
+          echo "::endgroup::"
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::VERCEL_TOKEN not configured - skipping deployment"
+            exit 0
+          fi
+          
+          npm install -g vercel
+          vercel deploy --prod \
+            --token="$VERCEL_TOKEN" \
+            --confirm || echo "::warning::Vercel deployment skipped or failed"
+
+  # ============================================================================
+  # STAGE 7: SUMMARY & STATUS
+  # ============================================================================
+  pipeline-summary:
+    name: Pipeline Status Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [validate, test, validate-k8s, build, deploy-staging, deploy-vercel]
+    steps:
+      - name: Check pipeline status
+        run: |
+          echo "::group::CI/CD Pipeline Status"
+          echo "Validate: ${{ needs.validate.result }}"
+          echo "Test: ${{ needs.test.result }}"
+          echo "Validate-K8s: ${{ needs.validate-k8s.result }}"
+          echo "Build: ${{ needs.build.result }}"
+          echo "Deploy-Staging: ${{ needs.deploy-staging.result }}"
+          echo "Deploy-Vercel: ${{ needs.deploy-vercel.result }}"
+          echo "::endgroup::"
+          
+          if [[ ${{ needs.validate.result }} == 'failure' ]] || \
+             [[ ${{ needs.test.result }} == 'failure' ]]; then
+            echo "::error::Pipeline failed at validation or test stage"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.validate.result }}" == "success" ]] && \
+             [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "::notice::✓ All critical stages passed - Pipeline healthy"
+          fi
