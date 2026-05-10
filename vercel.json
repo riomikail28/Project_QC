@@ -1,12 +1,14 @@
 {
   "version": 2,
-  "functions": {
-    "backend/app.py": {
-      "runtime": "@vercel/python@latest",
-      "memory": 1024,
-      "maxDuration": 60
+  "builds": [
+    {
+      "src": "backend/app.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxDuration": 60
+      }
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -33,7 +35,7 @@
       "dest": "frontend/dashboard/$1"
     },
     {
-      "src": "/(.*).html",
+      "src": "/(.*)\\.html",
       "dest": "frontend/dashboard/$1.html"
     },
     {
