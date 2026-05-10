@@ -430,10 +430,10 @@ jobs:
           HELM_NAMESPACE: qc-staging
         run: |
           echo "::group::Debug Information"
-          kubectl get all -n "$HELM_NAMESPACE" -o wide || true
-          kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
-          kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
-          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
+          # kubectl get all -n "$HELM_NAMESPACE" -o wide || true
+          # kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
+          # kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
+          # kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
           echo "::endgroup::"
 
   # ============================================================================
@@ -515,10 +515,10 @@ jobs:
           HELM_NAMESPACE: qc-production
         run: |
           echo "::group::Debug Information"
-          kubectl get all -n "$HELM_NAMESPACE" -o wide || true
-          kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
-          kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
-          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
+          # kubectl get all -n "$HELM_NAMESPACE" -o wide || true
+          # kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
+          # kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
+          # kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
           helm rollback qc-app 0 -n "$HELM_NAMESPACE" || true
           echo "::endgroup::"
 
