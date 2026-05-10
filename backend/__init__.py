@@ -55,6 +55,7 @@ def create_app() -> Flask:
     from backend.routes.batch_routes import batch_bp
     from backend.routes.qc_routes import qc_bp
     from backend.routes.ccp_routes import ccp_bp
+    from backend.routes.admin_routes import admin_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -99,6 +100,7 @@ def create_app() -> Flask:
     app.register_blueprint(batch_bp)
     app.register_blueprint(qc_bp)
     app.register_blueprint(ccp_bp)
+    app.register_blueprint(admin_bp)
 
     # Register staff auth routes
     try:

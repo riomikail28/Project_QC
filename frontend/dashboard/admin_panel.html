@@ -3,96 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Control Panel | Intelligent QC</title>
-    <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="../css/admin_panel.css">
+    <title>Enterprise QC Admin | Dashboard</title>
+    <link rel="stylesheet" href="../css/admin_enterprise.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-light">
-    <div class="app-container">
-        <header class="page-header">
-            <div class="header-content">
-                <a href="dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-                <h1>Admin Control Panel</h1>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt text-primary"></i>
+                <span>QC Enterprise</span>
             </div>
-        </header>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="sidebar-item active" data-target="overview"><i class="fas fa-home"></i> Overview</a></li>
+                <li><a href="#" class="sidebar-item" data-target="monitoring"><i class="fas fa-thermometer-half"></i> Live Monitoring</a></li>
+                <li><a href="#" class="sidebar-item" data-target="reports"><i class="fas fa-file-alt"></i> QC Reports</a></li>
+                <li><a href="#" class="sidebar-item" data-target="traceability"><i class="fas fa-qrcode"></i> Traceability</a></li>
+                <li><a href="#" class="sidebar-item" data-target="approval"><i class="fas fa-check-double"></i> Approvals</a></li>
+                <li><a href="#" class="sidebar-item" data-target="audit"><i class="fas fa-history"></i> Audit Trail</a></li>
+                <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </aside>
 
-        <main class="content p-20">
-            <div class="admin-tabs">
-                <button class="tab-btn active" data-section="analytics" onclick="showSection('analytics')">Analytics</button>
-                <button class="tab-btn" data-section="staff" onclick="showSection('staff')">Staff</button>
-                <button class="tab-btn" data-section="facilities" onclick="showSection('facilities')">Fasilitas</button>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Topbar -->
+            <header class="admin-topbar">
+                <div class="topbar-left">
+                    <h2 id="page-title" style="margin:0; font-size: 1.2rem;">Overview</h2>
+                </div>
+                <div class="topbar-right">
+                    <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="icon-btn" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge" id="alert-badge">0</span>
+                    </button>
+                    <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:var(--primary-color); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">A</div>
+                        <span style="font-size:0.9rem; font-weight:500;">Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Area -->
+            <div class="admin-content">
+                
+                <!-- SECTION: Overview -->
+                <section id="section-overview" class="dashboard-section active">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>Total Batch (Hari Ini)</span>
+                                <i class="fas fa-box metric-icon" style="color: var(--primary-color)"></i>
+                            </div>
+                            <div class="metric-value" id="metric-batches">...</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>QC Completed</span>
+                                <i class="fas fa-check-circle metric-icon" style="color: var(--success-color)"></i>
+                            </div>
+                            <div class="metric-value" id="metric-qc-done">...</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>QC Pending / Failed</span>
+                                <i class="fas fa-exclamation-triangle metric-icon" style="color: var(--warning-color)"></i>
+                            </div>
+                            <div class="metric-value" id="metric-qc-pending">...</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>Abnormal Alerts (Open)</span>
+                                <i class="fas fa-fire metric-icon" style="color: var(--danger-color)"></i>
+                            </div>
+                            <div class="metric-value" id="metric-alerts">...</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3 class="card-title">Tren Produksi & QC (7 Hari)</h3>
+                            <canvas id="chart-qc-trend"></canvas>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">Distribusi Status Batch</h3>
+                            <div style="width: 100%; max-width: 300px; margin: 0 auto;">
+                                <canvas id="chart-qc-status"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: Live Monitoring -->
+                <section id="section-monitoring" class="dashboard-section">
+                    <div class="card" style="margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center;">
+                        <h3 class="card-title" style="margin:0;">Status Suhu Fasilitas (Real-time)</h3>
+                        <button class="btn-primary" onclick="adminApp.loadMonitoring()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                    <div class="metric-grid" id="monitoring-grid">
+                        <!-- Devices loaded via JS -->
+                    </div>
+                </section>
+
+                <!-- SECTION: QC Reports -->
+                <section id="section-reports" class="dashboard-section">
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                            <h3 class="card-title" style="margin:0;">Laporan QC Batch</h3>
+                            <select id="filter-qc-status" onchange="adminApp.loadQCReports()" style="padding: 5px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                <option value="">Semua Status</option>
+                                <option value="pass">Pass</option>
+                                <option value="warning">Warning</option>
+                                <option value="fail">Fail</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="enterprise-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Batch Code</th>
+                                        <th>Produk</th>
+                                        <th>Operator</th>
+                                        <th>Status QC</th>
+                                        <th>Foto Evidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-qc-reports">
+                                    <!-- Filled via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- SECTION: Audit Trail -->
+                <section id="section-audit" class="dashboard-section">
+                    <div class="card">
+                        <h3 class="card-title">Audit Trail & System Logs</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="enterprise-table">
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Actor (User)</th>
+                                        <th>Action</th>
+                                        <th>Entity</th>
+                                        <th>IP / User-Agent</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-audit-trail">
+                                    <!-- Filled via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
-
-            <!-- Analytics Section -->
-            <section id="section-analytics" class="admin-section active">
-                <div class="chart-container">
-                    <h3>Tren Suhu Harian</h3>
-                    <canvas id="tempTrendChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>Distribusi Alert (Normal vs Abnormal)</h3>
-                    <canvas id="alertDistChart"></canvas>
-                </div>
-            </section>
-
-            <!-- Staff Section -->
-            <section id="section-staff" class="admin-section">
-                <div class="section-header">
-                    <h2>Daftar Staf</h2>
-                    <button class="btn btn-primary" onclick="openAddStaff()">+ Tambah Staf</button>
-                </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Nama</th>
-                            <th>Role</th>
-                            <th>Username</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="staff-table-body">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
-            </section>
-
-            <!-- Facilities Section -->
-            <section id="section-facilities" class="admin-section">
-                <div class="section-header">
-                    <h2>Daftar Ruangan</h2>
-                    <button class="btn btn-primary" onclick="openAddRoom()">+ Tambah Ruangan</button>
-                </div>
-                <div id="room-manage-list">
-                    <!-- Rooms and their devices will be loaded here -->
-                </div>
-            </section>
         </main>
     </div>
 
-    <!-- Modal Overlay -->
-    <div id="modal-overlay" class="modal-overlay">
-        <div class="modal-sheet">
-            <div class="modal-handle"></div>
+    <!-- Image Preview Modal -->
+    <div class="enterprise-modal" id="image-modal">
+        <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modal-title">Tambah Staf</h3>
-                <button onclick="closeModal()" class="modal-close"><i class="fas fa-times"></i></button>
+                <h3 style="margin:0;">Evidence Preview</h3>
+                <button class="icon-btn" onclick="document.getElementById('image-modal').classList.remove('active')"><i class="fas fa-times"></i></button>
             </div>
-            
-            <form id="admin-form">
-                <div id="modal-form-content">
-                    <!-- Dynamic form fields -->
-                </div>
-                <button type="submit" class="btn-primary admin-submit">SIMPAN DATA</button>
-            </form>
+            <div class="modal-body" style="text-align:center;">
+                <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px;">
+            </div>
         </div>
     </div>
 
-    <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
-
+    <!-- Scripts -->
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
-    <script src="../js/admin_panel.js"></script>
+    <script src="../js/admin_app.js"></script>
 </body>
 </html>
