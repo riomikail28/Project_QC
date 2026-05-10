@@ -197,12 +197,11 @@ jobs:
       - name: Run unit tests
         id: pytest
         env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/test_db
-          REDIS_URL: redis://127.0.0.1:6379/0
-          JWT_SECRET_KEY: ci-test-secret
-          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret
           SUPABASE_URL: https://test.supabase.co
           SUPABASE_KEY: test-key
+          DATABASE_URL: sqlite:///:memory:
+          ENVIRONMENT: testing
         run: |
           echo "::group::Running pytest (unit tests only)"
           python -m pytest tests/ \
@@ -573,44 +572,29 @@ jobs:
   # ============================================================================
   # STAGE 7: SUMMARY & STATUS
   # ============================================================================
-  pipeline-summary:
+  summary:
     name: Pipeline Status Summary
     runs-on: ubuntu-latest
+    needs:
+      - validate
+      - test
+      - validate-k8s
+
     if: always()
-    needs: [validate, test, validate-k8s, build, deploy-staging, deploy-production, deploy-vercel]
+
     steps:
-      - name: Check pipeline status
+      - name: Pipeline Summary
         run: |
-          echo "::group::CI/CD Pipeline Status"
-          echo "Validate: ${{ needs.validate.result }}"
-          echo "Test: ${{ needs.test.result }}"
-          echo "Validate-K8s: ${{ needs.validate-k8s.result }}"
-          echo "Build: ${{ needs.build.result }}"
-          echo "Deploy-Staging: ${{ needs.deploy-staging.result }}"
-          echo "Deploy-Vercel: ${{ needs.deploy-vercel.result }}"
-          echo "::endgroup::"
-          
-          # Get actual job results
-          VALIDATE_RESULT="${{ needs.validate.result }}"
-          TEST_RESULT="${{ needs.test.result }}"
-          
-          echo "Debug: Validation result is '${VALIDATE_RESULT}'"
-          echo "Debug: Test result is '${TEST_RESULT}'"
-          
-          # Only fail if critical stages explicitly failed (not skipped)
-          if [[ "${VALIDATE_RESULT}" == "failure" ]] || [[ "${TEST_RESULT}" == "failure" ]]; then
-            echo "::error::Pipeline failed at validation or test stage"
-            echo "status=failed" >> $GITHUB_OUTPUT
+          echo "Pipeline completed"
+
+          if [[ "${{ needs.validate.result }}" != "success" ]]; then
+            echo "Validation failed"
             exit 1
           fi
-          
-          # Handle skipped jobs - treat as neutral, not failure
-          if [[ "${VALIDATE_RESULT}" == "skipped" ]] || [[ "${TEST_RESULT}" == "skipped" ]]; then
-            echo "::warning::Some stages were skipped (this is normal for certain branches/PRs)"
+
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "Tests failed"
+            exit 1
           fi
-          
-          if [[ "${VALIDATE_RESULT}" == "success" ]] && [[ "${TEST_RESULT}" == "success" ]]; then
-            echo "::notice::✓ All critical stages passed - Pipeline healthy"
-          fi
-          
-          echo "status=success" >> $GITHUB_OUTPUT
+
+          echo "Pipeline successful"

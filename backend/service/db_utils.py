@@ -10,7 +10,7 @@ import os
 import logging
 from contextlib import contextmanager
 import psycopg
-import psycopg.extras
+from psycopg.rows import dict_row
 
 logger = logging.getLogger('qc.db.utils')
 
@@ -26,7 +26,7 @@ def get_conn():
 def db_cursor(commit: bool = True):
     conn = get_conn()
     try:
-        cur = conn.cursor(row_factory=psycopg.extras.DictCursor)
+        cur = conn.cursor(row_factory=dict_row)
         yield cur
         if commit:
             conn.commit()
