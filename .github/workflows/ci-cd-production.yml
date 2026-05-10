@@ -377,19 +377,23 @@ jobs:
           sudo mv kubectl /usr/local/bin/
 
       - name: Configure kubeconfig
+        id: kubeconfig
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         run: |
           if [ -z "$KUBE_CONFIG_DATA" ]; then
-            echo "::error::KUBE_CONFIG_DATA secret not configured"
-            exit 1
+            echo "::warning::KUBE_CONFIG_DATA secret not configured. Skipping deployment."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          echo "skip=false" >> $GITHUB_OUTPUT
           mkdir -p "$HOME/.kube"
           echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
           kubectl cluster-info
 
       - name: Deploy via Helm
+        if: steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-staging
           IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -411,6 +415,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Verify deployment
+        if: steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-staging
         run: |
@@ -419,15 +424,16 @@ jobs:
           kubectl get pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app -o wide
           echo "::endgroup::"
 
-      - name: Debug on failure
-        if: failure()
+      - name: Kubernetes Debug Info
+        if: failure() && steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-staging
         run: |
           echo "::group::Debug Information"
           kubectl get all -n "$HELM_NAMESPACE" -o wide || true
           kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
-          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=100 || true
+          kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
+          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
           echo "::endgroup::"
 
   # ============================================================================
@@ -456,19 +462,23 @@ jobs:
           sudo mv kubectl /usr/local/bin/
 
       - name: Configure kubeconfig
+        id: kubeconfig
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         run: |
           if [ -z "$KUBE_CONFIG_DATA" ]; then
-            echo "::error::KUBE_CONFIG_DATA secret not configured"
-            exit 1
+            echo "::warning::KUBE_CONFIG_DATA secret not configured. Skipping deployment."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          echo "skip=false" >> $GITHUB_OUTPUT
           mkdir -p "$HOME/.kube"
           echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
           kubectl cluster-info
 
       - name: Deploy via Helm
+        if: steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-production
           IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -490,6 +500,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Verify deployment
+        if: steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-production
         run: |
@@ -498,15 +509,16 @@ jobs:
           kubectl get pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app -o wide
           echo "::endgroup::"
 
-      - name: Debug on failure
-        if: failure()
+      - name: Kubernetes Debug Info
+        if: failure() && steps.kubeconfig.outputs.skip != 'true'
         env:
           HELM_NAMESPACE: qc-production
         run: |
           echo "::group::Debug Information"
           kubectl get all -n "$HELM_NAMESPACE" -o wide || true
           kubectl describe deployment qc-app -n "$HELM_NAMESPACE" || true
-          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=100 || true
+          kubectl describe pods -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app || true
+          kubectl logs -n "$HELM_NAMESPACE" -l app.kubernetes.io/name=qc-app --tail=200 || true
           helm rollback qc-app 0 -n "$HELM_NAMESPACE" || true
           echo "::endgroup::"
 
