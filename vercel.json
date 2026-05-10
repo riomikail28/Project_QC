@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "backend/app.py": {
-      "runtime": "python3.11",
+      "runtime": "@vercel/python@latest",
       "memory": 1024,
       "maxDuration": 60
     }
