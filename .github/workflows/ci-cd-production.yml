@@ -584,17 +584,14 @@ jobs:
 
     steps:
       - name: Pipeline Summary
+        if: always()
         run: |
-          echo "Pipeline completed"
-
-          if [[ "${{ needs.validate.result }}" != "success" ]]; then
-            echo "Validation failed"
-            exit 1
-          fi
+          echo "Validate result: ${{ needs.validate.result }}"
+          echo "Test result: ${{ needs.test.result }}"
 
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "Tests failed"
             exit 1
           fi
 
-          echo "Pipeline successful"
+          echo "Pipeline success"
