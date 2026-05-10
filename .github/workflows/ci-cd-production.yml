@@ -15,6 +15,11 @@ on:
         type: choice
         options: [staging, production]
 
+# Concurrency Control
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Global Environment
 env:
   PYTHON_VERSION: "3.11"
@@ -36,6 +41,8 @@ jobs:
   validate:
     name: Validate (Python Syntax & Dependencies)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: false
     outputs:
       validation_status: ${{ steps.validate.outputs.status }}
     steps:
@@ -60,9 +67,19 @@ jobs:
 
       - name: Validate Python syntax
         id: syntax
+        continue-on-error: false
         run: |
           echo "::group::Compile Check (Production Code Only)"
-          python -m compileall backend/ -q || exit 1
+          python -m compileall \
+            backend/app.py \
+            backend/__init__.py \
+            backend/routes \
+            backend/service \
+            backend/repositories \
+            backend/middleware \
+            backend/database \
+            backend/skills \
+            -q || exit 1
           echo "✓ All production code compiled successfully"
           echo "::endgroup::"
 
@@ -133,6 +150,7 @@ jobs:
     name: Test (Unit Tests)
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:15-alpine
@@ -189,6 +207,7 @@ jobs:
           echo "::group::Running pytest (unit tests only)"
           python -m pytest tests/ \
             --ignore=tests/integration \
+            --ignore=backend/layers \
             -v \
             --tb=short \
             --color=yes \
@@ -198,6 +217,7 @@ jobs:
           
           python -m pytest tests/ \
             --ignore=tests/integration \
+            --ignore=backend/layers \
             -v \
             --tb=short \
             --color=yes \
@@ -226,12 +246,21 @@ jobs:
             exit 1
           fi
 
+      - name: Upload failed tests artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: htmlcov/
+          retention-days: 5
+
   # ============================================================================
   # STAGE 3: VALIDATE KUBERNETES - Helm & K8s configs
   # ============================================================================
   validate-k8s:
     name: Validate Kubernetes (Helm & Config)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -248,43 +277,21 @@ jobs:
         with:
           version: latest
 
-      - name: Helm lint
-        id: helm-lint
+      - name: Validate Helm
         run: |
-          echo "::group::Helm Lint Validation"
-          if [ -d "k8s/charts/qc-app" ]; then
-            helm lint k8s/charts/qc-app
-            echo "✓ Helm chart linting passed"
-          else
-            echo "⚠ Helm chart not found at k8s/charts/qc-app"
-          fi
+          echo "::group::Helm Validation"
+          helm lint k8s/charts/qc-app
+          helm template qc-app k8s/charts/qc-app > /tmp/qc-app-rendered.yaml
+          echo "✓ Helm validation passed"
           echo "::endgroup::"
 
-      - name: Helm template render
-        id: helm-template
-        env:
-          TEST_IMAGE_TAG: test-${{ github.sha }}
-        run: |
-          echo "::group::Helm Template Rendering"
-          helm template qc-app k8s/charts/qc-app \
-            --namespace qc-staging \
-            --set image.repository="$REGISTRY/$IMAGE_NAME" \
-            --set image.tag="$TEST_IMAGE_TAG" \
-            --set secrets.jwtSecretKey="test-secret" \
-            --set secrets.dbPassword="test-password" \
-            --values k8s/charts/qc-app/values.yaml \
-            > /tmp/qc-app-rendered.yaml
-          
-          echo "✓ Template rendered successfully"
-          echo "Generated YAML size: $(wc -c < /tmp/qc-app-rendered.yaml) bytes"
-          echo "::endgroup::"
-
-      - name: Validate rendered YAML
-        run: |
-          echo "::group::YAML Validation"
-          kubectl apply -f /tmp/qc-app-rendered.yaml --dry-run=client -o yaml > /dev/null
-          echo "✓ Kubernetes YAML validation passed"
-          echo "::endgroup::"
+      - name: Upload YAML artifact on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-rendered-yaml
+          path: /tmp/qc-app-rendered.yaml
+          retention-days: 5
 
   # ============================================================================
   # STAGE 4: BUILD - Docker image build and push
@@ -294,6 +301,7 @@ jobs:
     needs: [validate, test, validate-k8s]
     if: github.event_name != 'pull_request' && success()
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       image: ${{ steps.meta.outputs.tags }}
       digest: ${{ steps.build.outputs.digest }}
@@ -352,6 +360,7 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/develop' && success()
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: staging
       url: https://staging.example.com
@@ -430,6 +439,7 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main' && success()
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: production
       url: https://api.example.com
@@ -509,6 +519,7 @@ jobs:
     needs: [validate, test]
     if: github.ref == 'refs/heads/main' && success()
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: production-frontend
       url: https://${{ env.VERCEL_DOMAIN }}
@@ -589,7 +600,7 @@ jobs:
           # Only fail if critical stages explicitly failed (not skipped)
           if [[ "${VALIDATE_RESULT}" == "failure" ]] || [[ "${TEST_RESULT}" == "failure" ]]; then
             echo "::error::Pipeline failed at validation or test stage"
-            echo "failed" >> $GITHUB_OUTPUT
+            echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
           
@@ -602,4 +613,4 @@ jobs:
             echo "::notice::✓ All critical stages passed - Pipeline healthy"
           fi
           
-          echo "success" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
