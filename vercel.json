@@ -39,7 +39,7 @@
       "dest": "frontend/dashboard/$1.html"
     },
     {
-      "src": "/(.*)",
+      "src": "/",
       "dest": "frontend/dashboard/login.html"
     }
   ]
