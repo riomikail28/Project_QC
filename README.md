@@ -108,25 +108,12 @@ Project ini sudah disiapkan untuk:
 - GitHub Actions validation, test, dan deploy
 - Struktur clean architecture
 
-## Setup Singkat
-
-```bash
-pip install -r requirements.txt
-python -m backend.app
-```
-
-Salin `.env.example` menjadi `.env`, lalu isi konfigurasi Supabase dan JWT.
-
-Jalankan SQL berikut di Supabase:
-
-```text
-supabase/migrations/001_production_schema.sql
-supabase/policies/001_rls_policies.sql
-supabase/seed/001_demo_seed.sql
-```
 
 ## Dibangun Untuk QC Yang Lebih Cepat, Rapi, dan Terukur
 
 AstroQC membantu tim QC bergerak dari pencatatan manual menuju sistem digital yang lebih transparan, terdokumentasi, dan siap audit.
 
-**Quality control tidak harus lambat. Dengan AstroQC, data produksi bisa langsung terlihat, terlacak, dan ditindaklanjuti.**
+**PROJECT INI DI BUAT OLEH RIO..**
+
+USERNAME admin  
+PASSWORD admin123
