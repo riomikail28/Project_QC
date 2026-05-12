@@ -26,6 +26,10 @@ import jwt
 
 logger = logging.getLogger("qc.backend")
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+DASHBOARD_DIR = os.path.join(FRONTEND_DIR, "dashboard")
+
 
 def create_app() -> Flask:
     """Flask application factory."""
@@ -108,14 +112,46 @@ def create_app() -> Flask:
     except Exception as e:
         logger.error("Failed to register staff routes: %s", e)
 
-    # Health endpoint at root
+    # Frontend routes for Vercel/serverless deployment.
     @app.route("/")
     def home():
+        return send_from_directory(DASHBOARD_DIR, "login.html")
+
+    @app.route("/api")
+    def api_home():
         return {
             "message": "QC Central Kitchen API Running",
             "version": "2.0.0",
             "docs": "/api/qc/health",
         }
+
+    @app.route("/dashboard/")
+    def dashboard_index():
+        return send_from_directory(DASHBOARD_DIR, "index.html")
+
+    @app.route("/dashboard/<path:filename>")
+    def dashboard_file(filename):
+        return send_from_directory(DASHBOARD_DIR, filename)
+
+    @app.route("/<path:filename>.html")
+    def dashboard_html(filename):
+        return send_from_directory(DASHBOARD_DIR, f"{filename}.html")
+
+    @app.route("/css/<path:filename>")
+    def frontend_css(filename):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "css"), filename)
+
+    @app.route("/js/<path:filename>")
+    def frontend_js(filename):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "js"), filename)
+
+    @app.route("/manifest.json")
+    def manifest():
+        return send_from_directory(FRONTEND_DIR, "manifest.json")
+
+    @app.route("/sw.js")
+    def service_worker():
+        return send_from_directory(FRONTEND_DIR, "sw.js")
 
     @app.route("/api/integrations/google-sheets/test", methods=["POST", "GET"])
     @require_role("admin")

@@ -11,36 +11,8 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/(.*)",
       "dest": "api/app.py"
-    },
-    {
-      "src": "/css/(.*)",
-      "dest": "frontend/css/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "frontend/js/$1"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "frontend/manifest.json"
-    },
-    {
-      "src": "/sw.js",
-      "dest": "frontend/sw.js"
-    },
-    {
-      "src": "/dashboard/(.*)",
-      "dest": "frontend/dashboard/$1"
-    },
-    {
-      "src": "/(.*)\\.html",
-      "dest": "frontend/dashboard/$1.html"
-    },
-    {
-      "src": "/",
-      "dest": "frontend/dashboard/login.html"
     }
   ]
 }
