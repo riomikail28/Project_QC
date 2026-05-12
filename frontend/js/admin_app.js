@@ -19,7 +19,7 @@ const adminApp = {
     checkAuth() {
         if (!Auth.check() || !Auth.isAdmin()) {
             alert("Akses ditolak. Anda harus login sebagai admin.");
-            window.location.href = 'login.html';
+            window.location.href = '/login.html';
             return;
         }
 
@@ -93,8 +93,9 @@ const adminApp = {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
             case 'reports': this.loadQCReports(); break;
+            case 'traceability': this.loadTraceability(); break;
+            case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
-            // Add traceability and approval later
         }
     },
 
@@ -230,17 +231,19 @@ const adminApp = {
         res.data.forEach(batch => {
             const tr = document.createElement('tr');
             
-            let badgeClass = `status-badge status-${batch.final_qc_status}`;
-            let evidenceBtn = batch.photo_url 
-                ? `<button class="btn-primary" onclick="adminApp.previewImage('${batch.photo_url}')" style="padding: 4px 8px; font-size:0.8rem;"><i class="fas fa-image"></i> Lihat</button>`
+            const status = batch.status || batch.final_qc_status || 'pending';
+            const evidence = batch.product_photo_url || batch.temperature_photo_url || batch.barcode_photo_url || batch.photo_url;
+            let badgeClass = `status-badge status-${status}`;
+            let evidenceBtn = evidence 
+                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i class="fas fa-image"></i> Lihat</button>`
                 : '-';
 
             tr.innerHTML = `
                 <td>${new Date(batch.created_at).toLocaleString('id-ID')}</td>
-                <td><strong>${batch.batch_code}</strong></td>
-                <td>${batch.products?.product_name || '-'}</td>
-                <td>${batch.staff_accounts?.full_name || batch.staff_accounts?.username || '-'}</td>
-                <td><span class="${badgeClass}">${batch.final_qc_status.toUpperCase()}</span></td>
+                <td><strong>${batch.batch_code || batch.batch_id || '-'}</strong></td>
+                <td>${batch.product_name || batch.product_id || '-'}</td>
+                <td>${batch.inspector_name || batch.staff_id || '-'}</td>
+                <td><span class="${badgeClass}">${status.toUpperCase()}</span></td>
                 <td>${evidenceBtn}</td>
             `;
             tbody.appendChild(tr);
@@ -268,6 +271,55 @@ const adminApp = {
                 <td><span style="font-family:monospace; background:var(--bg-color); padding:2px 4px; border-radius:4px;">${log.action.toUpperCase()}</span></td>
                 <td>${log.entity_type} (${log.entity_id || '-'})</td>
                 <td style="font-size:0.8rem; color:var(--text-secondary);">${log.ip_address || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    async loadTraceability() {
+        const tbody = document.getElementById('table-traceability');
+        const barcode = document.getElementById('traceability-barcode')?.value?.trim();
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading traceability...</td></tr>';
+        const url = `${this.apiBase}/traceability?limit=50${barcode ? `&barcode=${encodeURIComponent(barcode)}` : ''}`;
+        const res = await this.fetchAdminData(url);
+        if (!res) return;
+        tbody.innerHTML = '';
+        if (res.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada data traceability.</td></tr>';
+            return;
+        }
+        res.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${row.barcode_value || '-'}</strong></td>
+                <td>${row.batch_code || row.batch_id || '-'}</td>
+                <td>${row.product_name || row.product_id || '-'}</td>
+                <td>${row.staff_name || row.staff_id || '-'}</td>
+                <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    async loadApprovals() {
+        const tbody = document.getElementById('table-approvals');
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading approvals...</td></tr>';
+        const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
+        if (!res) return;
+        tbody.innerHTML = '';
+        if (res.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada approval pending.</td></tr>';
+            return;
+        }
+        res.forEach(row => {
+            const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
+                <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
+                <td>${row.inspector_name || row.staff_id || '-'}</td>
+                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i class="fas fa-image"></i> Lihat</button>` : '-'}</td>
+                <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
             `;
             tbody.appendChild(tr);
         });

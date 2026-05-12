@@ -160,7 +160,7 @@ const API = {
                 localStorage.removeItem('qc_token');
                 localStorage.removeItem('qc_user');
                 if (!window.location.pathname.endsWith('login.html')) {
-                    window.location.href = 'login.html';
+                    window.location.href = '/login.html';
                 }
             }
             throw error;

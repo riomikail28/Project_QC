@@ -6,22 +6,19 @@ os.environ["JWT_SECRET_KEY"] = "test-secret"
 from unittest.mock import patch
 
 from backend import create_app
+from backend.services.session_store import MemoryStore
 
 
 class TestAuthFlow(unittest.TestCase):
     def setUp(self):
-        # Use fake redis for tests
-        import fakeredis
+        self.session_store = MemoryStore()
 
-        self.fake_redis = fakeredis.FakeRedis()
-
-        # Patch get_redis to return fake redis
-        patcher = patch('backend.service.redis_client.get_redis', lambda: self.fake_redis)
+        patcher = patch('backend.services.session_store.get_session_store', lambda: self.session_store)
         patcher.start()
         self.addCleanup(patcher.stop)
 
         # Patch staff_manager.login to return a valid user
-        self.login_patcher = patch('backend.skills.staff_manager.login', lambda u, p: {"id": "user-1", "username": "user-1", "role": "staff"})
+        self.login_patcher = patch('backend.auth.staff_manager.login', lambda u, p: {"id": "user-1", "username": "user-1", "role": "staff"})
         self.login_patcher.start()
         self.addCleanup(self.login_patcher.stop)
 

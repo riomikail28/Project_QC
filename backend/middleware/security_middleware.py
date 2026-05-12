@@ -47,13 +47,13 @@ class SecurityMiddleware:
         self.max_login_attempts = int(os.getenv("LOGIN_RATE_LIMIT_ATTEMPTS", "5"))
         self.login_window_seconds = int(os.getenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "900"))
         self.revoked_jti: set[str] = set()
-        # Optional Redis-backed counters for distributed rate limiting
+        # Optional session-store counters for distributed rate limiting
         try:
-            from backend.service.redis_client import get_redis
+            from backend.services.session_store import get_session_store
 
-            self.redis = get_redis()
+            self.session_store = get_session_store()
         except Exception:
-            self.redis = None
+            self.session_store = None
         if app is not None:
             self.init_app(app)
 
@@ -109,11 +109,11 @@ class SecurityMiddleware:
         except jwt.PyJWTError as exc:
             logger.info("JWT rejected: %s", exc)
             return None
-        # Check Redis-backed revoked jti set when available
+        # Check session-store revoked jti set when available
         jti = payload.get("jti")
-        if self.redis and jti:
+        if self.session_store and jti:
             try:
-                if self.redis.sismember("revoked_access_jti", jti):
+                if self.session_store.sismember("revoked_access_jti", jti):
                     return None
             except Exception:
                 pass
@@ -123,14 +123,14 @@ class SecurityMiddleware:
         return payload
 
     def register_failed_login(self, identity: str) -> None:
-        # Prefer Redis-backed counter for distributed deployments
-        if self.redis:
+        # Prefer session-store counter for distributed deployments
+        if self.session_store:
             key = f"login:{identity}"
             try:
-                cnt = self.redis.incr(key)
+                cnt = self.session_store.incr(key)
                 # set expiry window on first increment
                 if cnt == 1:
-                    self.redis.expire(key, self.login_window_seconds)
+                    self.session_store.expire(key, self.login_window_seconds)
             except Exception:
                 pass
             return
@@ -141,9 +141,9 @@ class SecurityMiddleware:
         self._trim_bucket(bucket, now)
 
     def clear_failed_logins(self, identity: str) -> None:
-        if self.redis:
+        if self.session_store:
             try:
-                self.redis.delete(f"login:{identity}")
+                self.session_store.delete(f"login:{identity}")
             except Exception:
                 pass
             self.failed_logins.pop(identity, None)
@@ -151,9 +151,9 @@ class SecurityMiddleware:
         self.failed_logins.pop(identity, None)
 
     def is_login_limited(self, identity: str) -> bool:
-        if self.redis:
+        if self.session_store:
             try:
-                val = int(self.redis.get(f"login:{identity}") or 0)
+                val = int(self.session_store.get(f"login:{identity}") or 0)
                 return val >= self.max_login_attempts
             except Exception:
                 pass

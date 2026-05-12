@@ -1,6 +1,0 @@
-apiVersion: v2
-name: qc-app
-description: QC Application Helm chart (backend + worker)
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

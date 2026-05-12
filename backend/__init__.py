@@ -28,7 +28,8 @@ logger = logging.getLogger("qc.backend")
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
-DASHBOARD_DIR = os.path.join(FRONTEND_DIR, "dashboard")
+ADMIN_DIR = os.path.join(FRONTEND_DIR, "admin")
+STAFF_DIR = os.path.join(FRONTEND_DIR, "staff")
 
 
 def create_app() -> Flask:
@@ -38,7 +39,7 @@ def create_app() -> Flask:
     CORS(app, origins=[origin.strip() for origin in allowed_origins if origin.strip()])
 
     from backend.middleware.security_middleware import SecurityMiddleware, require_role
-    from backend.service.error_handlers import register_error_handlers
+    from backend.services.error_handlers import register_error_handlers
     SecurityMiddleware(app)
     register_error_handlers(app)
 
@@ -55,11 +56,11 @@ def create_app() -> Flask:
     _ensure_upload_dirs(app)
 
     # Register route blueprints
-    from backend.routes.temperature_routes import monitoring_bp
-    from backend.routes.batch_routes import batch_bp
-    from backend.routes.qc_routes import qc_bp
-    from backend.routes.ccp_routes import ccp_bp
-    from backend.routes.admin_routes import admin_bp
+    from backend.api.temperature_routes import monitoring_bp
+    from backend.api.batch_routes import batch_bp
+    from backend.api.qc_routes import qc_bp
+    from backend.api.ccp_routes import ccp_bp
+    from backend.api.admin_routes import admin_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -74,7 +75,7 @@ def create_app() -> Flask:
 
             # storage wrapper
             try:
-                from backend.service.storage_service import upload_photo as _upload_fn
+                from backend.services.storage_service import upload_photo as _upload_fn
 
                 class _StorageWrap:
                     def upload_photo(self, data, filename):
@@ -85,16 +86,11 @@ def create_app() -> Flask:
                 storage = None
 
             try:
-                from backend.service import audit_service as audit_mod
+                from backend.services import audit_service as audit_mod
             except Exception:
                 audit_mod = None
 
-            try:
-                import integrations.google_sheets_service as external_sync
-            except Exception:
-                external_sync = None
-
-            return QCService(repo, storage_service=storage, audit_service=audit_mod, external_sync=external_sync)
+            return QCService(repo, storage_service=storage, audit_service=audit_mod, external_sync=None)
 
         register("qc_service", _qc_service_provider)
     except Exception as e:
@@ -115,7 +111,7 @@ def create_app() -> Flask:
     # Frontend routes for Vercel/serverless deployment.
     @app.route("/")
     def home():
-        return send_from_directory(DASHBOARD_DIR, "login.html")
+        return send_from_directory(STAFF_DIR, "login.html")
 
     @app.route("/api")
     def api_home():
@@ -125,17 +121,28 @@ def create_app() -> Flask:
             "docs": "/api/qc/health",
         }
 
-    @app.route("/dashboard/")
-    def dashboard_index():
-        return send_from_directory(DASHBOARD_DIR, "index.html")
+    @app.route("/admin/")
+    def admin_index():
+        return send_from_directory(ADMIN_DIR, "admin_panel.html")
 
-    @app.route("/dashboard/<path:filename>")
-    def dashboard_file(filename):
-        return send_from_directory(DASHBOARD_DIR, filename)
+    @app.route("/admin/<path:filename>")
+    def admin_file(filename):
+        return send_from_directory(ADMIN_DIR, filename)
+
+    @app.route("/staff/")
+    def staff_index():
+        return send_from_directory(STAFF_DIR, "index.html")
+
+    @app.route("/staff/<path:filename>")
+    def staff_file(filename):
+        return send_from_directory(STAFF_DIR, filename)
 
     @app.route("/<path:filename>.html")
-    def dashboard_html(filename):
-        return send_from_directory(DASHBOARD_DIR, f"{filename}.html")
+    def frontend_html(filename):
+        admin_path = os.path.join(ADMIN_DIR, f"{filename}.html")
+        if os.path.exists(admin_path):
+            return send_from_directory(ADMIN_DIR, f"{filename}.html")
+        return send_from_directory(STAFF_DIR, f"{filename}.html")
 
     @app.route("/css/<path:filename>")
     def frontend_css(filename):
@@ -152,26 +159,6 @@ def create_app() -> Flask:
     @app.route("/sw.js")
     def service_worker():
         return send_from_directory(FRONTEND_DIR, "sw.js")
-
-    @app.route("/api/integrations/google-sheets/test", methods=["POST", "GET"])
-    @require_role("admin")
-    def google_sheets_test():
-        from flask import jsonify
-        from integrations.google_sheets_service import get_web_app_url, send_event
-        configured = bool(get_web_app_url())
-        if not configured:
-            return jsonify({
-                "success": False,
-                "configured": False,
-                "detail": "APPSCRIPT_WEB_APP_URL belum diisi di .env",
-            }), 400
-
-        result = send_event("connection_test", {
-            "message": "QC system connected to Google Apps Script",
-            "source": "backend",
-        })
-        status = 200 if result.get("success") else 502
-        return jsonify({"configured": True, **result}), status
 
     # Serve uploaded files (for development)
     @app.route("/uploads/<path:filename>")
@@ -204,11 +191,11 @@ def _register_staff_routes(app: Flask):
     """Register staff management routes directly on the app."""
     from flask import request, jsonify
     from backend.middleware.security_middleware import get_security, require_auth, require_role
-    from backend.service.audit_service import write_audit
-    from backend.service.request_validation import LoginRequest, request_payload, validate_model
+    from backend.services.audit_service import write_audit
+    from backend.services.request_validation import LoginRequest, request_payload, validate_model
     
     try:
-        from backend.skills.staff_manager import login, list_staff, create_staff, delete_staff, update_staff
+        from backend.auth.staff_manager import login, list_staff, create_staff, delete_staff, update_staff
     except ImportError as e:
         logger.error("Could not import staff_manager: %s", e)
         return
@@ -228,7 +215,7 @@ def _register_staff_routes(app: Flask):
 
             # Create refresh token and set as secure HttpOnly cookie
             try:
-                from backend.service.auth_service import AuthService
+                from backend.services.auth_service import AuthService
                 authsvc = AuthService()
                 refresh_token = authsvc.create_refresh_token(result.get("id"))
             except Exception:
@@ -263,7 +250,7 @@ def _register_staff_routes(app: Flask):
 
     @app.route('/api/staff/refresh', methods=['POST'])
     def staff_refresh():
-        from backend.service.auth_service import AuthService
+        from backend.services.auth_service import AuthService
         cookie_name = os.environ.get("REFRESH_TOKEN_COOKIE", "refresh_token")
         token = request.cookies.get(cookie_name)
         if not token:
@@ -280,7 +267,7 @@ def _register_staff_routes(app: Flask):
             user_id = None
         # For safety, fetch user info via staff manager
         try:
-            from backend.skills.staff_manager import get_staff_by_id
+            from backend.auth.staff_manager import get_staff_by_id
             user = get_staff_by_id(user_id) if user_id else None
         except Exception:
             user = None
@@ -294,7 +281,7 @@ def _register_staff_routes(app: Flask):
     @app.route('/api/staff/logout', methods=['POST'])
     @require_auth
     def staff_logout():
-        from backend.service.auth_service import AuthService
+        from backend.services.auth_service import AuthService
         cookie_name = os.environ.get("REFRESH_TOKEN_COOKIE", "refresh_token")
         token = request.cookies.get(cookie_name)
         authsvc = AuthService()
@@ -343,13 +330,13 @@ def _register_staff_routes(app: Flask):
     @app.route("/api/facility/structure", methods=["GET"])
     @require_auth
     def facility_structure():
-        from backend.skills.facility_manager import get_monitoring_structure
+        from backend.monitoring.facility_manager import get_monitoring_structure
         return jsonify(get_monitoring_structure())
 
     @app.route("/api/facility/rooms", methods=["GET", "POST"])
     @require_auth
     def facility_rooms():
-        from backend.skills.facility_manager import list_rooms, add_room
+        from backend.monitoring.facility_manager import list_rooms, add_room
         if request.method == "POST":
             if (g.current_user or {}).get("role") != "admin":
                 return jsonify({"detail": "Insufficient permissions"}), 403
@@ -364,7 +351,7 @@ def _register_staff_routes(app: Flask):
     @app.route("/api/facility/rooms/<room_id>", methods=["PATCH", "PUT", "DELETE"])
     @require_role("admin")
     def facility_room_detail(room_id):
-        from backend.skills.facility_manager import delete_room, update_room
+        from backend.monitoring.facility_manager import delete_room, update_room
         if request.method in ("PATCH", "PUT"):
             room = update_room(room_id, request.get_json(silent=True) or {})
             if not room:
@@ -379,7 +366,7 @@ def _register_staff_routes(app: Flask):
     @app.route("/api/facility/devices", methods=["GET", "POST"])
     @require_auth
     def facility_devices():
-        from backend.skills.facility_manager import list_devices, add_device
+        from backend.monitoring.facility_manager import list_devices, add_device
         if request.method == "POST":
             if (g.current_user or {}).get("role") != "admin":
                 return jsonify({"detail": "Insufficient permissions"}), 403
@@ -399,7 +386,7 @@ def _register_staff_routes(app: Flask):
     @app.route("/api/facility/devices/<device_id>", methods=["PATCH", "PUT", "DELETE"])
     @require_role("admin")
     def facility_device_detail(device_id):
-        from backend.skills.facility_manager import delete_device, update_device
+        from backend.monitoring.facility_manager import delete_device, update_device
         if request.method in ("PATCH", "PUT"):
             device = update_device(device_id, request.get_json(silent=True) or {})
             if not device:

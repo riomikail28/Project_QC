@@ -1,35 +1,11 @@
-# Core Framework
 Flask==3.0.0
 Flask-CORS==4.0.0
 Werkzeug==3.0.0
-
-# Testing & Development
-pytest==7.4.3
-pytest-cov==4.1.0
-fakeredis==2.22.0
-
-# Database & Async
 supabase==2.11.0
-alembic==1.11.1
-psycopg[binary]>=3.1.8,<4.0.0
-SQLAlchemy==2.0.23
-
-# Caching & Message Queue
-redis==5.0.1
-celery==5.3.1
-
-# Authentication & Security
 PyJWT==2.8.0
-cryptography==41.0.7
-
-# External Services
-google-cloud-vision==3.4.5
 python-dotenv==1.0.0
-
-# Monitoring & Observability
 prometheus_client==0.16.0
-
-# Deployment
 gunicorn==21.2.0
 python-multipart==0.0.6
-email-validator==2.1.0
+pytest==7.4.3
+pytest-cov==4.1.0

@@ -1,6 +1,6 @@
 import unittest
 
-from backend.service.qc_engine import calculate_health_score, determine_overall_status, validate_temperature
+from backend.services.qc_engine import calculate_health_score, determine_overall_status, validate_temperature
 
 
 class TestQCEngine(unittest.TestCase):

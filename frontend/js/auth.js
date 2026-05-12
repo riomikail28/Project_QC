@@ -31,7 +31,7 @@ const Auth = {
         localStorage.removeItem('qc_token');
         localStorage.removeItem('qc_user');
         localStorage.removeItem('qc_role');
-        window.location.href = 'login.html';
+        window.location.href = '/login.html';
     },
 
     check() {
