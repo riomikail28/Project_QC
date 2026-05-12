@@ -76,7 +76,8 @@ create table if not exists public.audit_logs (
 
 create index if not exists idx_qc_reports_created_at on public.qc_reports (created_at desc);
 create index if not exists idx_qc_reports_status on public.qc_reports (status, approval_status);
-create index if not exists idx_temperature_logs_recorded_at on public.temperature_logs (recorded_at desc);
+-- Index for temperature_logs will be created in separate migration to avoid dependency issues
+-- create index if not exists idx_temperature_logs_recorded_at on public.temperature_logs (recorded_at desc);
 create index if not exists idx_temperature_logs_zone on public.temperature_logs (zone, device_type);
 create index if not exists idx_barcode_labels_value on public.barcode_labels (barcode_value);
 create index if not exists idx_audit_logs_created_at on public.audit_logs (created_at desc);
