@@ -1,35 +1,132 @@
-# AstroQC — Intelligent Traceability System
+# AstroQC
 
-A modular, service-oriented QC monitoring system for central kitchen facilities.
+**Enterprise Quality Control & Traceability System untuk central kitchen, food production, dan operasional QC modern.**
 
-## 🚀 Quick Start
+AstroQC membantu tim operasional memantau kualitas produksi secara real time, mencatat bukti inspeksi, melacak batch dengan barcode, mengelola approval, dan menjaga audit trail dalam satu dashboard yang siap dipakai untuk produksi.
 
-1. **Backend**:
-   ```bash
-   pip install -r requirements.txt
-   python -m backend.app
-   ```
-   API runs at `http://localhost:5000`
+## Kenapa AstroQC?
 
-2. **Frontend**:
-   Open `frontend/dashboard/login.html` or run via local server.
-   Default Login: `admin` / `admin123`
+Operasional QC sering tersebar di form manual, foto WhatsApp, spreadsheet, dan laporan yang terlambat. AstroQC menyatukan proses itu menjadi sistem digital yang rapi, cepat, dan mudah diaudit.
 
-## 🏗️ Architecture
+- Monitoring suhu freezer, chiller, dan ruangan
+- Inspeksi batch dengan bukti foto
+- Traceability berbasis barcode
+- Dashboard analytics untuk admin QC
+- Approval dan rejection flow
+- Audit trail aktivitas staff
+- Penyimpanan foto QC di Supabase Storage
+- Deploy ringan di Vercel
 
-- **`backend/`**: Flask-based REST API using Blueprints.
-- **`frontend/`**: Mobile-first PWA with Dark Industrial Glass aesthetic.
-- **`db/`**: SQL schemas and seeds for Supabase.
-- **`integrations/`**: Third-party services (GCP Vision, WhatsApp).
-- **`docs/`**: API specifications and Architecture SOPs.
-- **`tests/`**: Unit and Integration test suite.
+## Fitur Utama
 
-## 📱 Features
+### Admin Dashboard
 
-- **Facility Monitor**: Real-time temperature tracking for Chillers/Freezers.
-- **Batch Inspection**: 4-stage CCP traceability with photo evidence.
-- **AI OCR**: Automatic reading of thermometers via Google Cloud Vision.
-- **Critical Alerts**: Real-time violation alerts with corrective action tracking.
+Admin mendapatkan tampilan enterprise untuk memantau:
 
----
-© 2026 PT Astro Teknologi Indonesia
+- Total batch hari ini
+- Batch gagal
+- Suhu abnormal
+- Pending approval
+- Staff aktif
+- QC reports
+- Traceability batch
+- Audit trail
+
+### Realtime Monitoring
+
+Pantau suhu kritikal dari area produksi:
+
+- Freezer
+- Chiller
+- Ruang preparation
+- Area produksi
+
+Setiap data suhu dapat dikaitkan dengan staff, waktu pencatatan, status abnormal, dan foto pengecekan.
+
+### QC Reports
+
+Setiap inspeksi dapat menyimpan:
+
+- Foto pengecekan suhu
+- Foto label barcode
+- Foto produk
+- Hasil inspeksi
+- Status approval atau rejection
+
+### Traceability
+
+Cari histori batch dari barcode untuk melihat:
+
+- Produk
+- Staff yang menangani
+- Riwayat suhu
+- Riwayat inspeksi
+- Bukti foto
+- Audit aktivitas
+
+## Stack Produksi
+
+AstroQC dirancang untuk stack cloud yang simpel dan efisien:
+
+- **Frontend:** HTML, CSS, JavaScript
+- **Backend:** Flask API
+- **Database:** Supabase Postgres
+- **Storage:** Supabase Storage
+- **Deployment:** Vercel
+- **CI/CD:** GitHub Actions
+
+Tidak bergantung pada Kubernetes, Helm, Docker deployment, AWS S3, atau workflow lama yang rumit.
+
+## Cocok Untuk
+
+- Central kitchen
+- Catering skala besar
+- Food manufacturing
+- Cloud kitchen
+- QA/QC production team
+- Operasional cold-chain
+- Tim audit internal
+
+## Quick Preview
+
+Setelah deploy:
+
+- Staff Login: `/login.html`
+- Staff Dashboard: `/dashboard.html`
+- Admin Dashboard: `/admin_panel.html`
+- API Health: `/api/qc/health`
+
+## Production Ready
+
+Project ini sudah disiapkan untuk:
+
+- Vercel deployment
+- Supabase database migration
+- Supabase storage buckets
+- Role-based admin access
+- JWT authentication
+- GitHub Actions validation, test, dan deploy
+- Struktur clean architecture
+
+## Setup Singkat
+
+```bash
+pip install -r requirements.txt
+python -m backend.app
+```
+
+Salin `.env.example` menjadi `.env`, lalu isi konfigurasi Supabase dan JWT.
+
+Jalankan SQL berikut di Supabase:
+
+```text
+supabase/migrations/001_production_schema.sql
+supabase/policies/001_rls_policies.sql
+supabase/seed/001_demo_seed.sql
+```
+
+## Dibangun Untuk QC Yang Lebih Cepat, Rapi, dan Terukur
+
+AstroQC membantu tim QC bergerak dari pencatatan manual menuju sistem digital yang lebih transparan, terdokumentasi, dan siap audit.
+
+**Quality control tidak harus lambat. Dengan AstroQC, data produksi bisa langsung terlihat, terlacak, dan ditindaklanjuti.**
