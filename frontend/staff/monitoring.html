@@ -14,9 +14,13 @@
         <header class="header sticky-header">
             <div class="header-content">
                 <a href="dashboard.html" class="back-btn"><i class="fas fa-chevron-left"></i></a>
+                <div class="monitor-logo">
+                    <i class="fas fa-temperature-half"></i>
+                </div>
                 <div class="title-group">
-                    <h2>Monitoring</h2>
-                    <p id="currentRoomName">Pilih Ruangan</p>
+                    <span class="eyebrow">AstroQC</span>
+                    <h2>Monitoring Suhu</h2>
+                    <p id="currentRoomName">Pilih area pengecekan</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -27,14 +31,41 @@
         </header>
 
         <main class="content">
+            <section class="monitor-hero">
+                <div>
+                    <p>Kontrol fasilitas</p>
+                    <h1>Catat suhu freezer, chiller, dan ruangan dengan cepat.</h1>
+                </div>
+                <div class="hero-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>QC</span>
+                </div>
+            </section>
+
             <!-- Room Selection (Horizontal Scroll) -->
             <div class="room-selector-wrapper">
+                <div class="selector-label">Pilih Ruangan</div>
                 <div class="room-selector" id="room-list">
                     <!-- Dynamic Chips -->
                 </div>
             </div>
 
             <div class="container p-20">
+                <div class="monitor-summary">
+                    <div class="summary-card">
+                        <span>Unit</span>
+                        <strong id="summaryUnitCount">0</strong>
+                    </div>
+                    <div class="summary-card">
+                        <span>Status</span>
+                        <strong id="summaryStatus">Siap</strong>
+                    </div>
+                    <div class="summary-card">
+                        <span>Log</span>
+                        <strong id="summaryLogCount">0</strong>
+                    </div>
+                </div>
+
                 <div class="section-header">
                     <h3>Daftar Unit</h3>
                     <span class="device-count" id="deviceCount">0 Unit</span>

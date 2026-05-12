@@ -19,9 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
     loadRecentLogs();
 });
 
+function authHeaders() {
+    const token = localStorage.getItem("qc_token");
+    return token ? { "Authorization": `Bearer ${token}` } : {};
+}
+
 async function loadFacilityStructure() {
     try {
-        const res = await fetch("/api/facility/structure");
+        const res = await fetch("/api/facility/structure", { headers: authHeaders() });
+        if (res.status === 401) {
+            window.location.href = "/login.html";
+            return;
+        }
         facilityStructure = await res.json();
 
         if (facilityStructure.some(room => String(room.id).startsWith("room-"))) {
@@ -30,12 +39,20 @@ async function loadFacilityStructure() {
 
         renderRoomSelector();
         if (facilityStructure.length > 0) selectRoom(facilityStructure[0].id);
+        if (!facilityStructure.length) renderDevices([]);
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
+        renderDevices([]);
     }
 }
 
 function renderRoomSelector() {
+    if (!facilityStructure.length) {
+        roomList.innerHTML = `<div class="room-chip active">Belum ada ruangan</div>`;
+        currentRoomLabel.innerText = "Setup fasilitas belum tersedia";
+        return;
+    }
+
     roomList.innerHTML = facilityStructure.map(room => `
         <div class="room-chip ${room.id === selectedRoomId ? "active" : ""}" onclick="selectRoom('${room.id}')">
             ${room.name}
@@ -62,6 +79,20 @@ function iconForType(type) {
 
 function renderDevices(devices) {
     deviceCountLabel.innerText = `${devices.length} Unit`;
+    document.getElementById("summaryUnitCount").innerText = devices.length;
+    document.getElementById("summaryStatus").innerText = devices.length ? "Aktif" : "Kosong";
+
+    if (!devices.length) {
+        deviceList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-temperature-half"></i>
+                <h4>Belum ada unit monitoring</h4>
+                <p>Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu.</p>
+            </div>
+        `;
+        return;
+    }
+
     deviceList.innerHTML = devices.map(device => `
         <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
             <div class="device-icon">
@@ -137,7 +168,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     if (selectedPhotoFile) formData.append("photo", selectedPhotoFile);
 
     try {
-        const res = await fetch("/api/monitoring/log", { method: "POST", body: formData });
+        const res = await fetch("/api/monitoring/log", { method: "POST", body: formData, headers: authHeaders() });
         const result = await res.json();
         if (result.success) {
             alert(`Berhasil! Status: ${result.status}`);
@@ -153,12 +184,23 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
 async function loadRecentLogs() {
     try {
-        const res = await fetch("/api/monitoring/latest");
+        const res = await fetch("/api/monitoring/latest", { headers: authHeaders() });
+        if (res.status === 401) {
+            window.location.href = "/login.html";
+            return;
+        }
         const logs = await res.json();
         const container = document.getElementById("recent-logs");
+        document.getElementById("summaryLogCount").innerText = logs.length || 0;
 
         if (!logs.length) {
-            container.innerHTML = `<div class="log-item"><div class="log-info"><div class="log-title">Belum ada log</div></div></div>`;
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h4>Belum ada log suhu</h4>
+                    <p>Log terbaru akan muncul setelah staff menyimpan laporan suhu pertama.</p>
+                </div>
+            `;
             return;
         }
 
