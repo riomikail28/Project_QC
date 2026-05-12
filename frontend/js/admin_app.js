@@ -17,20 +17,16 @@ const adminApp = {
     },
 
     checkAuth() {
-        const token = localStorage.getItem('qc_token');
-        const role = localStorage.getItem('qc_role');
-        
-        if (!token || role !== 'admin') {
+        if (!Auth.check() || !Auth.isAdmin()) {
             alert("Akses ditolak. Anda harus login sebagai admin.");
             window.location.href = 'login.html';
+            return;
         }
 
         // Setup Logout
         document.getElementById('btn-logout').addEventListener('click', (e) => {
             e.preventDefault();
-            localStorage.removeItem('qc_token');
-            localStorage.removeItem('qc_role');
-            window.location.href = 'login.html';
+            Auth.logout();
         });
     },
 
@@ -85,8 +81,7 @@ const adminApp = {
 
     async fetchAdminData(endpoint) {
         try {
-            const res = await apiCall(endpoint, 'GET');
-            return res;
+            return await API.get(endpoint);
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
             return null;
@@ -106,7 +101,7 @@ const adminApp = {
     // --- Data Loaders ---
 
     async loadOverview() {
-        const res = await this.fetchAdminData('/admin/analytics/overview');
+        const res = await this.fetchAdminData(`${this.apiBase}/analytics/overview`);
         if (res) {
             document.getElementById('metric-batches').innerText = res.total_batches_today || 0;
             document.getElementById('metric-qc-done').innerText = res.total_qc_completed || 0;
@@ -176,7 +171,7 @@ const adminApp = {
         const grid = document.getElementById('monitoring-grid');
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
         
-        const res = await this.fetchAdminData('/admin/monitoring/realtime');
+        const res = await this.fetchAdminData(`${this.apiBase}/monitoring/realtime`);
         if (!res) return;
 
         grid.innerHTML = '';
@@ -220,7 +215,7 @@ const adminApp = {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading reports...</td></tr>';
         
         const statusFilter = document.getElementById('filter-qc-status').value;
-        let url = '/admin/qc-reports?limit=20';
+        let url = `${this.apiBase}/qc-reports?limit=20`;
         if (statusFilter) url += `&status=${statusFilter}`;
 
         const res = await this.fetchAdminData(url);
@@ -256,7 +251,7 @@ const adminApp = {
         const tbody = document.getElementById('table-audit-trail');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading audit logs...</td></tr>';
         
-        const res = await this.fetchAdminData('/admin/audit-trail?limit=50');
+        const res = await this.fetchAdminData(`${this.apiBase}/audit-trail?limit=50`);
         if (!res) return;
 
         tbody.innerHTML = '';
