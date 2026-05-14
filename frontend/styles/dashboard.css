@@ -150,7 +150,7 @@
   aspect-ratio: 1;
   border-radius: 50%;
   background: conic-gradient(var(--success) 0 72%, var(--warning) 72% 86%, var(--danger) 86% 92%, var(--muted) 92%);
-  box-shadow: inset 0 0 0 18px rgba(15,23,42,.9);
+  box-shadow: inset 0 0 0 18px rgba(255,255,255,.92);
 }
 
 .activity-list,

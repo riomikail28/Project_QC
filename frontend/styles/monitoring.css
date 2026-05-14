@@ -28,7 +28,7 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 10px 13px;
-  background: rgba(30, 41, 59, .66);
+  background: rgba(255, 255, 255, .82);
   color: var(--muted);
   font-weight: 800;
   font-size: 12px;
@@ -46,7 +46,7 @@
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(15, 23, 42, .55);
+  background: rgba(255, 255, 255, .82);
 }
 
 .summary-card span {
@@ -74,7 +74,7 @@
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgba(17,24,39,.9), rgba(30,41,59,.65));
+  background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(239,246,255,.82));
   box-shadow: var(--shadow);
   transition: transform .22s ease, border-color .22s ease;
 }
@@ -148,7 +148,7 @@
   border-radius: 10px;
   background:
     linear-gradient(135deg, transparent 0 18%, rgba(59,130,246,.9) 18% 21%, transparent 21% 38%, rgba(16,185,129,.9) 38% 41%, transparent 41% 58%, rgba(59,130,246,.9) 58% 61%, transparent 61% 78%, rgba(16,185,129,.9) 78% 81%, transparent 81%),
-    rgba(15, 23, 42, .52);
+    rgba(239, 246, 255, .72);
 }
 
 .bottom-sheet {
@@ -162,7 +162,7 @@
   padding: 10px 16px 22px;
   border-radius: 26px 26px 0 0;
   border: 1px solid var(--border);
-  background: rgba(15, 23, 42, .96);
+  background: rgba(255, 255, 255, .98);
   transform: translateY(110%);
   transition: transform .32s ease;
 }
@@ -224,7 +224,7 @@
   padding: 15px 48px 15px 14px;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(30,41,59,.72);
+  background: rgba(255,255,255,.92);
   color: var(--text);
 }
 
@@ -251,7 +251,7 @@
   display: grid;
   place-items: center;
   color: var(--muted);
-  background: rgba(30,41,59,.48);
+  background: rgba(239,246,255,.76);
   overflow: hidden;
 }
 
@@ -259,7 +259,7 @@
 .close-sheet {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(30,41,59,.76);
+  background: rgba(239,246,255,.95);
   color: var(--text);
   width: 38px;
   height: 38px;
