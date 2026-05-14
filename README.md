@@ -1,119 +1,102 @@
-# AstroQC
+# 🚀 ASTRO QC Enterprise
+### Intelligent Quality Control & Traceability System for Central Kitchen
 
-**Enterprise Quality Control & Traceability System untuk central kitchen, food production, dan operasional QC modern.**
+ASTRO QC Enterprise adalah sistem informasi **Quality Control (QC) dan Traceability berbasis web** yang dirancang untuk membantu operasional **Central Kitchen PT Astro Technologies Indonesia** dalam melakukan monitoring, pencatatan, validasi, dan pengawasan proses produksi secara real-time.
 
-AstroQC membantu tim operasional memantau kualitas produksi secara real time, mencatat bukti inspeksi, melacak batch dengan barcode, mengelola approval, dan menjaga audit trail dalam satu dashboard yang siap dipakai untuk produksi.
+Proyek ini dikembangkan sebagai **Tugas Akhir/Skripsi** dengan tujuan meningkatkan efisiensi proses QC lapangan, mengurangi kesalahan pencatatan manual, serta menyediakan dashboard monitoring yang terintegrasi antara **staff operasional** dan **administrator**.
 
-## Kenapa AstroQC?
+---
 
-Operasional QC sering tersebar di form manual, foto WhatsApp, spreadsheet, dan laporan yang terlambat. AstroQC menyatukan proses itu menjadi sistem digital yang rapi, cepat, dan mudah diaudit.
+## ✨ Fitur Utama
 
-- Monitoring suhu freezer, chiller, dan ruangan
-- Inspeksi batch dengan bukti foto
-- Traceability berbasis barcode
-- Dashboard analytics untuk admin QC
-- Approval dan rejection flow
-- Audit trail aktivitas staff
-- Penyimpanan foto QC di Supabase Storage
-- Deploy ringan di Vercel
+### 👨‍🍳 Staff QC Features
+- 🌡️ Monitoring suhu Chiller & Freezer real-time
+- 📸 Upload foto bukti pengecekan
+- 🏷️ Barcode produk & traceability
+- 📝 Input data QC lapangan
+- 📊 Dashboard aktivitas staff
+- 🔔 Alert dan notifikasi otomatis
+- 📱 Mobile-first interface untuk penggunaan di lapangan
 
-## Fitur Utama
+### 👨‍💼 Admin Features
+- 📈 Dashboard analytics
+- 📋 Laporan QC seluruh staff
+- 📷 Monitoring foto evidence
+- 🏷️ Tracking barcode produk
+- ✅ Approval & review sistem
+- 🧾 Audit trail
+- 🚨 Critical alert monitoring
+- 📊 Statistik performa operasional
 
-### Admin Dashboard
+---
 
-Admin mendapatkan tampilan enterprise untuk memantau:
+## 🛠️ Technology Stack
 
-- Total batch hari ini
-- Batch gagal
-- Suhu abnormal
-- Pending approval
-- Staff aktif
-- QC reports
-- Traceability batch
-- Audit trail
+### Frontend
+- HTML5
+- CSS3
+- JavaScript
+- Responsive Mobile UI
 
-### Realtime Monitoring
+### Backend
+- Python
+- Flask REST API
+- JWT Authentication
+- RBAC (Role-Based Access Control)
 
-Pantau suhu kritikal dari area produksi:
+### Database & Cloud
+- Supabase
+- PostgreSQL
+- Supabase Storage
+- Realtime Database
 
-- Freezer
-- Chiller
-- Ruang preparation
-- Area produksi
+### Deployment
+- Vercel
+- GitHub Actions
+- Docker
+- Kubernetes
 
-Setiap data suhu dapat dikaitkan dengan staff, waktu pencatatan, status abnormal, dan foto pengecekan.
+---
 
-### QC Reports
+## 🎯 Tujuan Sistem
 
-Setiap inspeksi dapat menyimpan:
+Sistem ini dirancang untuk:
 
-- Foto pengecekan suhu
-- Foto label barcode
-- Foto produk
-- Hasil inspeksi
-- Status approval atau rejection
+✔ Mengurangi pencatatan manual  
+✔ Mempercepat proses monitoring QC  
+✔ Meningkatkan akurasi data produksi  
+✔ Mempermudah pelacakan produk (Traceability)  
+✔ Membantu pengambilan keputusan berbasis data  
+✔ Mendukung transformasi digital operasional Central Kitchen
 
-### Traceability
+---
 
-Cari histori batch dari barcode untuk melihat:
+## 📱 Tampilan Sistem
 
-- Produk
-- Staff yang menangani
-- Riwayat suhu
-- Riwayat inspeksi
-- Bukti foto
-- Audit aktivitas
+- Dashboard Monitoring
+- Monitoring Suhu
+- Quality Control Inspection
+- Staff Profile
+- Admin Analytics
+- Audit Trail
+- Traceability System
 
-## Stack Produksi
+---
 
-AstroQC dirancang untuk stack cloud yang simpel dan efisien:
+## 📚 Tugas Akhir / Skripsi
 
-- **Frontend:** HTML, CSS, JavaScript
-- **Backend:** Flask API
-- **Database:** Supabase Postgres
-- **Storage:** Supabase Storage
-- **Deployment:** Vercel
-- **CI/CD:** GitHub Actions
+**Judul Penelitian:**
 
-Tidak bergantung pada Kubernetes, Helm, Docker deployment, AWS S3, atau workflow lama yang rumit.
+**PERANCANGAN SISTEM INFORMASI QUALITY CONTROL TRACEABILITY BERBASIS WEB PADA CENTRAL KITCHEN PT ASTRO TECHNOLOGIES INDONESIA MENGGUNAKAN METODE AGILE DEVELOPMENT**
 
-## Cocok Untuk
+---
 
-- Central kitchen
-- Catering skala besar
-- Food manufacturing
-- Cloud kitchen
-- QA/QC production team
-- Operasional cold-chain
-- Tim audit internal
+## 👨‍💻 Developer
 
-## Quick Preview
+Rio Mikail  
+Program Studi Sistem Informasi  
+Universitas Indraprasta PGRI (UNINDRA)
 
-Setelah deploy:
+---
 
-- Staff Login: `/login.html`
-- Staff Dashboard: `/dashboard.html`
-- Admin Dashboard: `/admin_panel.html`
-- API Health: `/api/qc/health`
-
-## Production Ready
-
-Project ini sudah disiapkan untuk:
-
-- Vercel deployment
-- Supabase database migration
-- Supabase storage buckets
-- Role-based admin access
-- JWT authentication
-- GitHub Actions validation, test, dan deploy
-- Struktur clean architecture
-
-
-## Dibangun Untuk QC Yang Lebih Cepat, Rapi, dan Terukur
-
-AstroQC membantu tim QC bergerak dari pencatatan manual menuju sistem digital yang lebih transparan, terdokumentasi, dan siap audit.
-
-**PROJECT INI DI BUAT OLEH RIO..**
-
-USERNAME admin  
-PASSWORD admin123
+### "Transforming Quality Control Into Intelligent Digital Operations"
