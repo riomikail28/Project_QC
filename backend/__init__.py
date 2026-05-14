@@ -130,6 +130,8 @@ def create_app() -> Flask:
 
     @app.route("/admin/<path:filename>")
     def admin_file(filename):
+        if filename == "admin_panel.html":
+            return send_from_directory(ADMIN_DIR, "admin_panel.html")
         return send_from_directory(ADMIN_DIR, filename)
 
     @app.route("/staff/")

@@ -34,7 +34,7 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html">Profile</a>
-            <a href="#" id="adminNavToggle" onclick="toggleInlineAdmin(event)">Admin</a>
+            <a href="/admin/" class="admin-link">Admin</a>
         </nav>
         <div class="nav-actions">
             <div class="nav-clock">
@@ -72,41 +72,6 @@
                     <p>Skor fasilitas dihitung dari compliance batch, alert suhu, dan status monitoring.</p>
                     <span class="status-badge success"><span class="online-dot"></span>Live Sync</span>
                 </div>
-            </div>
-        </section>
-
-        <section class="panel-card inline-admin-panel is-hidden" id="inlineAdminPanel" aria-label="Admin quick panel">
-            <div class="section-header">
-                <div>
-                    <span class="eyebrow">Admin Control Center</span>
-                    <h3 class="section-title">Admin tetap di Dashboard</h3>
-                </div>
-                <button class="section-link inline-admin-close" onclick="toggleInlineAdmin(event, false)">Close</button>
-            </div>
-            <div class="inline-admin-grid">
-                <button class="inline-admin-card" onclick="showAdminQuickInfo('overview')">
-                    <span class="inline-admin-icon"></span>
-                    <strong>Overview</strong>
-                    <small>Ringkasan QC enterprise</small>
-                </button>
-                <button class="inline-admin-card" onclick="showAdminQuickInfo('sku')">
-                    <span class="inline-admin-icon"></span>
-                    <strong>SKU Produk</strong>
-                    <small>Tambah, edit, hapus SKU</small>
-                </button>
-                <button class="inline-admin-card" onclick="showAdminQuickInfo('staff')">
-                    <span class="inline-admin-icon"></span>
-                    <strong>Staff</strong>
-                    <small>Kelola akun lapangan</small>
-                </button>
-                <button class="inline-admin-card" onclick="showAdminQuickInfo('approval')">
-                    <span class="inline-admin-icon"></span>
-                    <strong>Approvals</strong>
-                    <small>Pending QC approval</small>
-                </button>
-            </div>
-            <div class="inline-admin-note" id="inlineAdminNote">
-                Pilih menu admin untuk melihat ringkasan cepat tanpa meninggalkan dashboard.
             </div>
         </section>
 
@@ -337,26 +302,6 @@
             loadAlertDrawer();
         }
 
-        function toggleInlineAdmin(event, forceState) {
-            if (event) event.preventDefault();
-            const panel = document.getElementById('inlineAdminPanel');
-            const toggle = document.getElementById('adminNavToggle');
-            const shouldOpen = typeof forceState === 'boolean' ? forceState : panel.classList.contains('is-hidden');
-            panel.classList.toggle('is-hidden', !shouldOpen);
-            toggle.classList.toggle('active', shouldOpen);
-            if (shouldOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function showAdminQuickInfo(type) {
-            const labels = {
-                overview: 'Overview admin siap di dashboard: batch hari ini, alert aktif, approval, dan health score tetap terlihat.',
-                sku: 'SKU Produk tersedia dari menu admin utama. Panel ini menjaga dashboard tetap terbuka sebelum Anda masuk ke pekerjaan detail.',
-                staff: 'Staff management: gunakan untuk audit akses dan status tim QC tanpa meninggalkan konteks dashboard.',
-                approval: 'Approvals: pantau queue supervisor dan lanjutkan review saat diperlukan.'
-            };
-            document.getElementById('inlineAdminNote').innerText = labels[type] || labels.overview;
-        }
-
         function closeAlertDrawer() {
             document.getElementById('alertDrawerOverlay').classList.remove('active');
             document.getElementById('alertDrawer').classList.remove('active');
@@ -385,6 +330,10 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
+            if (window.location.hash === '#admin') {
+                window.location.replace('/admin/');
+                return;
+            }
             if (!Auth.check()) window.location.href = 'login.html';
             setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);
             const tick = () => {
@@ -407,9 +356,6 @@
                 document.querySelectorAll('.fab-mini').forEach((btn, i) => setTimeout(() => btn.classList.toggle('visible'), i * 45));
             });
             Dashboard.init();
-            if (window.location.hash === '#admin') {
-                window.setTimeout(() => toggleInlineAdmin(null, true), 250);
-            }
         });
     </script>
 </body>

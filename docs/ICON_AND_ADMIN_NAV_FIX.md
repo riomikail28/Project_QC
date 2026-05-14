@@ -52,8 +52,8 @@
 
 - `/admin` dan `/admin/` sekarang melayani `admin_panel.html`.
 - `/admin_panel.html` tetap dilayani oleh fallback HTML app.
-- Link admin dari staff Monitor, Inspection, dan Profile diarahkan ke `dashboard.html#admin` supaya tidak masuk ke layer admin penuh secara tidak sengaja.
-- Dashboard membuka panel admin inline saat hash `#admin` terdeteksi.
+- Link admin dari staff Monitor, Inspection, dan Profile kini diarahkan langsung ke `/admin/`.
+- Hash routing `#admin` sudah dipisahkan lagi melalui `docs/ADMIN_ROUTE_SEPARATION_FIX.md`; `dashboard.html#admin` redirect ke `/admin/`.
 
 ## File Diubah
 
@@ -91,4 +91,3 @@ Checklist:
 
 - `py -m pytest tests\test_api.py tests\test_dashboard.py`
 - Hasil: 10 passed.
-

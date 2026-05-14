@@ -274,95 +274,6 @@
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 21a2 2 0 0 0 3.4 0'/%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-.inline-admin-panel {
-  border: 1px solid rgba(96, 165, 250, .36);
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.9), rgba(239,246,255,.74)),
-    radial-gradient(circle at 92% 10%, rgba(59,130,246,.16), transparent 28%);
-  animation: adminPanelIn .28s ease both;
-}
-
-.inline-admin-panel.is-hidden {
-  display: none;
-}
-
-.inline-admin-close {
-  border: 0;
-  background: rgba(219, 234, 254, .78);
-  border-radius: 999px;
-  padding: 8px 13px;
-}
-
-.inline-admin-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.inline-admin-card {
-  min-height: 108px;
-  padding: 14px;
-  display: grid;
-  justify-items: start;
-  align-content: start;
-  gap: 7px;
-  border: 1px solid rgba(191,219,254,.78);
-  border-radius: 18px;
-  background: rgba(255,255,255,.72);
-  color: var(--text);
-  text-align: left;
-  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-
-.inline-admin-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(37,99,235,.48);
-  box-shadow: 0 14px 30px rgba(37,99,235,.12);
-}
-
-.inline-admin-card strong {
-  font-size: 14px;
-}
-
-.inline-admin-card small,
-.inline-admin-note {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.inline-admin-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
-  background:
-    linear-gradient(135deg, rgba(37,99,235,.18), rgba(14,165,233,.14)),
-    rgba(219,234,254,.88);
-  position: relative;
-}
-
-.inline-admin-icon::before {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  background: var(--primary);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h10'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h10'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.inline-admin-note {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(219,234,254,.54);
-  border: 1px solid rgba(191,219,254,.72);
-}
-
-@keyframes adminPanelIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @media (min-width: 860px) {
   .welcome-banner {
     min-height: 220px;
@@ -410,7 +321,4 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .inline-admin-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
