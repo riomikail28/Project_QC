@@ -11,6 +11,22 @@ create table if not exists public.staff_activity (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.products (
+  id uuid primary key default gen_random_uuid(),
+  product_code text not null unique,
+  sku_code text unique,
+  product_name text not null,
+  ph_min numeric(8,2),
+  ph_max numeric(8,2),
+  brix_min numeric(8,2),
+  brix_max numeric(8,2),
+  tds_min numeric(10,2),
+  tds_max numeric(10,2),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.qc_reports (
   id uuid primary key default gen_random_uuid(),
   batch_id uuid,
@@ -76,6 +92,7 @@ create table if not exists public.audit_logs (
 
 create index if not exists idx_qc_reports_created_at on public.qc_reports (created_at desc);
 create index if not exists idx_qc_reports_status on public.qc_reports (status, approval_status);
+create index if not exists idx_products_active_code on public.products (is_active, product_code);
 -- Index for temperature_logs will be created in separate migration to avoid dependency issues
 -- create index if not exists idx_temperature_logs_recorded_at on public.temperature_logs (recorded_at desc);
 create index if not exists idx_temperature_logs_zone on public.temperature_logs (zone, device_type);

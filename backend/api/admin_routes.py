@@ -10,6 +10,40 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
 def get_admin_service():
     return AdminService()
 
+
+def _nullable_number(value):
+    if value in ("", None):
+        return None
+    return float(value)
+
+
+def _nullable_bool(value, default=True):
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.lower() not in ("false", "0", "no", "off")
+    return bool(value)
+
+
+def _product_payload(data):
+    code = (data.get("product_code") or data.get("sku_code") or "").strip()
+    name = (data.get("product_name") or "").strip()
+    if not code or not name:
+        raise ValueError("Kode SKU dan nama produk wajib diisi")
+
+    return {
+        "product_code": code,
+        "sku_code": code,
+        "product_name": name,
+        "ph_min": _nullable_number(data.get("ph_min")),
+        "ph_max": _nullable_number(data.get("ph_max")),
+        "brix_min": _nullable_number(data.get("brix_min")),
+        "brix_max": _nullable_number(data.get("brix_max")),
+        "tds_min": _nullable_number(data.get("tds_min")),
+        "tds_max": _nullable_number(data.get("tds_max")),
+        "is_active": _nullable_bool(data.get("is_active"), True),
+    }
+
 @admin_bp.route("/analytics/overview", methods=["GET"])
 @require_role("admin")
 def analytics_overview():
@@ -73,3 +107,45 @@ def approvals():
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error fetching approvals")}), 500
+
+
+@admin_bp.route("/products", methods=["GET", "POST"])
+@require_role("admin")
+def products():
+    service = get_admin_service()
+    if request.method == "POST":
+        try:
+            payload = _product_payload(request.get_json(silent=True) or {})
+        except (TypeError, ValueError) as exc:
+            return jsonify({"detail": str(exc)}), 400
+
+        res = service.create_product(payload)
+        if res.get("success"):
+            return jsonify(res["data"]), 201
+        return jsonify({"detail": res.get("detail", "Error creating product")}), 500
+
+    res = service.list_products()
+    if res.get("success"):
+        return jsonify(res["data"])
+    return jsonify({"detail": res.get("detail", "Error fetching products")}), 500
+
+
+@admin_bp.route("/products/<product_id>", methods=["PATCH", "PUT", "DELETE"])
+@require_role("admin")
+def product_detail(product_id):
+    service = get_admin_service()
+    if request.method in ("PATCH", "PUT"):
+        try:
+            payload = _product_payload(request.get_json(silent=True) or {})
+        except (TypeError, ValueError) as exc:
+            return jsonify({"detail": str(exc)}), 400
+
+        res = service.update_product(product_id, payload)
+        if res.get("success"):
+            return jsonify(res["data"])
+        return jsonify({"detail": res.get("detail", "Error updating product")}), 500
+
+    res = service.delete_product(product_id)
+    if res.get("success"):
+        return jsonify(res["data"])
+    return jsonify({"detail": res.get("detail", "Error deleting product")}), 500

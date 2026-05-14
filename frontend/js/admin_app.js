@@ -96,6 +96,7 @@ const adminApp = {
         switch(target) {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
+            case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadQCReports(); break;
@@ -295,6 +296,13 @@ const adminApp = {
         return JSON.stringify(value || {}).replace(/'/g, '&apos;');
     },
 
+    formatRange(min, max, unit = '') {
+        const hasMin = min !== null && min !== undefined && min !== '';
+        const hasMax = max !== null && max !== undefined && max !== '';
+        if (!hasMin && !hasMax) return '-';
+        return `${hasMin ? min : '-'} - ${hasMax ? max : '-'}${unit ? ` ${unit}` : ''}`;
+    },
+
     setupCrudForm() {
         const form = document.getElementById('crud-form');
         if (!form) return;
@@ -374,6 +382,47 @@ const adminApp = {
         `, { id: item.id, roomId });
     },
 
+    openSkuModal(product = null) {
+        const item = product || {};
+        this.openCrudModal(item.id ? 'Edit SKU Produk' : 'Tambah SKU Produk', item.id ? 'editSku' : 'addSku', `
+            <label>Kode SKU
+                <input id="sku-code" value="${item.product_code || item.sku_code || ''}" required>
+            </label>
+            <label>Nama Produk
+                <input id="sku-name" value="${item.product_name || ''}" required>
+            </label>
+            <label>pH Min
+                <input id="sku-ph-min" type="number" step="0.01" value="${item.ph_min ?? ''}">
+            </label>
+            <label>pH Max
+                <input id="sku-ph-max" type="number" step="0.01" value="${item.ph_max ?? ''}">
+            </label>
+            <label>Brix Min
+                <input id="sku-brix-min" type="number" step="0.01" value="${item.brix_min ?? ''}">
+            </label>
+            <label>Brix Max
+                <input id="sku-brix-max" type="number" step="0.01" value="${item.brix_max ?? ''}">
+            </label>
+            <label>TDS Min
+                <input id="sku-tds-min" type="number" step="0.01" value="${item.tds_min ?? ''}">
+            </label>
+            <label>TDS Max
+                <input id="sku-tds-max" type="number" step="0.01" value="${item.tds_max ?? ''}">
+            </label>
+            <label>Status
+                <select id="sku-is-active">
+                    <option value="true" ${item.is_active === false ? '' : 'selected'}>Aktif</option>
+                    <option value="false" ${item.is_active === false ? 'selected' : ''}>Nonaktif</option>
+                </select>
+            </label>
+        `, { id: item.id });
+    },
+
+    numberOrNull(id) {
+        const value = document.getElementById(id).value;
+        return value === '' ? null : Number(value);
+    },
+
     async submitCrudForm() {
         try {
             if (this.crudMode === 'addStaff' || this.crudMode === 'editStaff') {
@@ -414,6 +463,23 @@ const adminApp = {
                 await this.loadFacilityManager();
             }
 
+            if (this.crudMode === 'addSku' || this.crudMode === 'editSku') {
+                const payload = {
+                    product_code: document.getElementById('sku-code').value.trim(),
+                    product_name: document.getElementById('sku-name').value.trim(),
+                    ph_min: this.numberOrNull('sku-ph-min'),
+                    ph_max: this.numberOrNull('sku-ph-max'),
+                    brix_min: this.numberOrNull('sku-brix-min'),
+                    brix_max: this.numberOrNull('sku-brix-max'),
+                    tds_min: this.numberOrNull('sku-tds-min'),
+                    tds_max: this.numberOrNull('sku-tds-max'),
+                    is_active: document.getElementById('sku-is-active').value === 'true',
+                };
+                if (this.crudMode === 'addSku') await API.post('/v1/admin/products', payload);
+                else await API.patch(`/v1/admin/products/${this.crudId}`, payload);
+                await this.loadSku();
+            }
+
             this.closeCrudModal();
         } catch (error) {
             alert(`Gagal menyimpan data: ${error.message}`);
@@ -436,6 +502,43 @@ const adminApp = {
         if (!confirm('Hapus unit monitoring ini?')) return;
         await API.delete(`/facility/devices/${id}`);
         await this.loadFacilityManager();
+    },
+
+    async loadSku() {
+        const tbody = document.getElementById('table-sku');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
+        try {
+            const products = await API.get('/v1/admin/products');
+            if (!products.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada SKU produk.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = products.map(item => `
+                <tr>
+                    <td><strong>${item.product_code || item.sku_code || '-'}</strong></td>
+                    <td>${item.product_name || '-'}</td>
+                    <td>${this.formatRange(item.ph_min, item.ph_max, 'pH')}</td>
+                    <td>${this.formatRange(item.brix_min, item.brix_max, '%')}</td>
+                    <td>${this.formatRange(item.tds_min, item.tds_max, 'ppm')}</td>
+                    <td><span class="status-badge status-${item.is_active === false ? 'pending' : 'pass'}">${item.is_active === false ? 'NONAKTIF' : 'AKTIF'}</span></td>
+                    <td>
+                        <span class="row-actions">
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openSkuModal(${this.safeJson(item)})'><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteSku('${item.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Gagal memuat SKU.</td></tr>';
+        }
+    },
+
+    async deleteSku(id) {
+        if (!confirm('Hapus SKU produk ini?')) return;
+        await API.delete(`/v1/admin/products/${id}`);
+        await this.loadSku();
     },
 
     async loadQCReports() {

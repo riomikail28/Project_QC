@@ -20,6 +20,7 @@
             <ul class="sidebar-menu">
                 <li><a href="#" class="sidebar-item active" data-target="overview"><i class="fas fa-home"></i> Overview</a></li>
                 <li><a href="#" class="sidebar-item" data-target="monitoring"><i class="fas fa-thermometer-half"></i> Live Monitoring</a></li>
+                <li><a href="#" class="sidebar-item" data-target="sku"><i class="fas fa-boxes-stacked"></i> SKU Produk</a></li>
                 <li><a href="#" class="sidebar-item" data-target="staff"><i class="fas fa-users-gear"></i> Staff</a></li>
                 <li><a href="#" class="sidebar-item" data-target="facility"><i class="fas fa-warehouse"></i> Facility Setup</a></li>
                 <li><a href="#" class="sidebar-item" data-target="reports"><i class="fas fa-file-alt"></i> QC Reports</a></li>
@@ -110,6 +111,35 @@
                     </div>
                     <div class="metric-grid" id="monitoring-grid">
                         <!-- Devices loaded via JS -->
+                    </div>
+                </section>
+
+                <!-- SECTION: SKU Management -->
+                <section id="section-sku" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">SKU Produk</h3>
+                                <p class="admin-muted">Kelola master produk dan standar QC pH, Brix, serta TDS.</p>
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.openSkuModal()"><i class="fas fa-plus"></i> Tambah SKU</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="enterprise-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kode SKU</th>
+                                        <th>Nama Produk</th>
+                                        <th>pH</th>
+                                        <th>Brix</th>
+                                        <th>TDS</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-sku"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 

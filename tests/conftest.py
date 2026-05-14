@@ -36,9 +36,14 @@ class FakeQuery:
         self.payload = payload
         return self
 
+    def delete(self):
+        self.payload = {}
+        return self
+
     def execute(self):
         if self.payload is not None:
-            return SimpleNamespace(data=[{"id": f"{self.table_name}-1", **self.payload}])
+            payload = self.payload[0] if isinstance(self.payload, list) else self.payload
+            return SimpleNamespace(data=[{"id": f"{self.table_name}-1", **payload}])
         return SimpleNamespace(data=self.fixtures.get(self.table_name, []))
 
 
