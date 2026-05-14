@@ -148,9 +148,17 @@ def create_app() -> Flask:
     def frontend_css(filename):
         return send_from_directory(os.path.join(FRONTEND_DIR, "css"), filename)
 
+    @app.route("/styles/<path:filename>")
+    def frontend_styles(filename):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "styles"), filename)
+
     @app.route("/js/<path:filename>")
     def frontend_js(filename):
         return send_from_directory(os.path.join(FRONTEND_DIR, "js"), filename)
+
+    @app.route("/assets/<path:filename>")
+    def frontend_assets(filename):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "assets"), filename)
 
     @app.route("/manifest.json")
     def manifest():
