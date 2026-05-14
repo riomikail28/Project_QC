@@ -63,11 +63,15 @@ const Dashboard = {
     },
 
     renderMetrics(data) {
-        document.getElementById('totalBatches').innerText = data.total_batches || 0;
-        document.getElementById('failedBatches').innerText = data.failed_batches || 0;
-        document.getElementById('activeAlerts').innerText = data.open_alerts || 0;
+        const totalBatches = document.getElementById('totalBatches');
+        const failedBatches = document.getElementById('failedBatches');
+        const activeAlerts = document.getElementById('activeAlerts');
+        if (totalBatches) totalBatches.innerText = data.total_batches || 0;
+        if (failedBatches) failedBatches.innerText = data.failed_batches || 0;
+        if (activeAlerts) activeAlerts.innerText = data.open_alerts || 0;
         
         const badge = document.getElementById('alertBadge');
+        if (!badge) return;
         if (data.open_alerts > 0) {
             badge.innerText = data.open_alerts;
             badge.style.display = 'flex';

@@ -33,14 +33,14 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html">Profile</a>
-            <a href="/admin/">Admin</a>
+            <a href="#" id="adminNavToggle" onclick="toggleInlineAdmin(event)">Admin</a>
         </nav>
         <div class="nav-actions">
             <div class="nav-clock">
                 <div class="time" id="clockTime">00:00:00</div>
                 <div id="clockDate">-- -- ----</div>
             </div>
-            <button class="nav-btn" onclick="openAlertDrawer()" aria-label="Notifications">
+            <button class="nav-btn notification-btn" onclick="openAlertDrawer()" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
                 <span class="badge" id="alertBadge" style="display:none">0</span>
             </button>
@@ -71,6 +71,41 @@
                     <p>Skor fasilitas dihitung dari compliance batch, alert suhu, dan status monitoring.</p>
                     <span class="status-badge success"><span class="online-dot"></span>Live Sync</span>
                 </div>
+            </div>
+        </section>
+
+        <section class="panel-card inline-admin-panel is-hidden" id="inlineAdminPanel" aria-label="Admin quick panel">
+            <div class="section-header">
+                <div>
+                    <span class="eyebrow">Admin Control Center</span>
+                    <h3 class="section-title">Admin tetap di Dashboard</h3>
+                </div>
+                <button class="section-link inline-admin-close" onclick="toggleInlineAdmin(event, false)">Close</button>
+            </div>
+            <div class="inline-admin-grid">
+                <button class="inline-admin-card" onclick="showAdminQuickInfo('overview')">
+                    <span class="inline-admin-icon"></span>
+                    <strong>Overview</strong>
+                    <small>Ringkasan QC enterprise</small>
+                </button>
+                <button class="inline-admin-card" onclick="showAdminQuickInfo('sku')">
+                    <span class="inline-admin-icon"></span>
+                    <strong>SKU Produk</strong>
+                    <small>Tambah, edit, hapus SKU</small>
+                </button>
+                <button class="inline-admin-card" onclick="showAdminQuickInfo('staff')">
+                    <span class="inline-admin-icon"></span>
+                    <strong>Staff</strong>
+                    <small>Kelola akun lapangan</small>
+                </button>
+                <button class="inline-admin-card" onclick="showAdminQuickInfo('approval')">
+                    <span class="inline-admin-icon"></span>
+                    <strong>Approvals</strong>
+                    <small>Pending QC approval</small>
+                </button>
+            </div>
+            <div class="inline-admin-note" id="inlineAdminNote">
+                Pilih menu admin untuk melihat ringkasan cepat tanpa meninggalkan dashboard.
             </div>
         </section>
 
@@ -305,6 +340,26 @@
             document.getElementById('alertDrawerOverlay').classList.add('active');
             document.getElementById('alertDrawer').classList.add('active');
             loadAlertDrawer();
+        }
+
+        function toggleInlineAdmin(event, forceState) {
+            if (event) event.preventDefault();
+            const panel = document.getElementById('inlineAdminPanel');
+            const toggle = document.getElementById('adminNavToggle');
+            const shouldOpen = typeof forceState === 'boolean' ? forceState : panel.classList.contains('is-hidden');
+            panel.classList.toggle('is-hidden', !shouldOpen);
+            toggle.classList.toggle('active', shouldOpen);
+            if (shouldOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showAdminQuickInfo(type) {
+            const labels = {
+                overview: 'Overview admin siap di dashboard: batch hari ini, alert aktif, approval, dan health score tetap terlihat.',
+                sku: 'SKU Produk tersedia dari menu admin utama. Panel ini menjaga dashboard tetap terbuka sebelum Anda masuk ke pekerjaan detail.',
+                staff: 'Staff management: gunakan untuk audit akses dan status tim QC tanpa meninggalkan konteks dashboard.',
+                approval: 'Approvals: pantau queue supervisor dan lanjutkan review saat diperlukan.'
+            };
+            document.getElementById('inlineAdminNote').innerText = labels[type] || labels.overview;
         }
 
         function closeAlertDrawer() {
