@@ -26,9 +26,26 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_temperature_logs_recorded_at 
 ON public.temperature_logs (recorded_at DESC);
 
--- Also ensure other important indexes exist
-CREATE INDEX IF NOT EXISTS idx_temperature_logs_zone 
-ON public.temperature_logs (zone, device_type);
+-- Check if zone column exists before creating the index
+DO $$
+BEGIN
+    -- Check if the zone column exists
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'temperature_logs' 
+        AND column_name = 'zone'
+        AND table_schema = 'public'
+    ) THEN
+        -- Create the index if zone column exists
+        CREATE INDEX IF NOT EXISTS idx_temperature_logs_zone 
+        ON public.temperature_logs (zone, device_type);
+        
+        RAISE NOTICE 'Created idx_temperature_logs_zone index';
+    ELSE
+        RAISE NOTICE 'zone column does not exist in temperature_logs table - skipping index creation';
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_temperature_logs_created_at 
 ON public.temperature_logs (created_at DESC);
