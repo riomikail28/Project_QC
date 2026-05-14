@@ -16,7 +16,7 @@ except ImportError:
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("qc.db.supabase")
-STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-photos")
+STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence")
 
 # Shared singleton instance
 _client: Client = None

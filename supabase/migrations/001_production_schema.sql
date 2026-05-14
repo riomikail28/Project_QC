@@ -85,7 +85,5 @@ create index if not exists idx_staff_activity_created_at on public.staff_activit
 
 insert into storage.buckets (id, name, public)
 values
-  ('qc-photos', 'qc-photos', true),
-  ('barcode-labels', 'barcode-labels', true),
-  ('temperature-checks', 'temperature-checks', true)
+  ('qc-evidence', 'qc-evidence', false)
 on conflict (id) do nothing;

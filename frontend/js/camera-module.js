@@ -10,7 +10,8 @@ import localforage from 'https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/lo
 const MAX_SIZE_KB   = 800;
 const JPEG_QUALITY  = 0.82;
 const PHOTO_STORE   = 'qc_pending_photos';
-const SYNC_TAG      = 'sync-qc-photos';
+const SYNC_TAG      = 'sync-qc-evidence';
+const STORAGE_BUCKET = 'qc-evidence';
 
 
 // ─── 1. Request camera permission with graceful fallback ──────────────────────
@@ -156,7 +157,7 @@ async function uploadToSupabase(blob, meta) {
   const filename = `${meta.stationId}/${meta.batchId}/${meta.ccp}_${Date.now()}.jpg`;
 
   const res = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/qc-photos/${filename}`,
+    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filename}`,
     {
       method : 'POST',
       headers: {
@@ -173,7 +174,7 @@ async function uploadToSupabase(blob, meta) {
     throw new Error(err.message || `HTTP ${res.status}`);
   }
 
-  return `${SUPABASE_URL}/storage/v1/object/public/qc-photos/${filename}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${filename}`;
 }
 
 // ─── 6. Background sync scheduler ────────────────────────────────────────────

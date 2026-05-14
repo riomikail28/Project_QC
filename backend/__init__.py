@@ -139,6 +139,8 @@ def create_app() -> Flask:
 
     @app.route("/<path:filename>.html")
     def frontend_html(filename):
+        if filename == "check":
+            return send_from_directory(STAFF_DIR, "inspection.html")
         admin_path = os.path.join(ADMIN_DIR, f"{filename}.html")
         if os.path.exists(admin_path):
             return send_from_directory(ADMIN_DIR, f"{filename}.html")

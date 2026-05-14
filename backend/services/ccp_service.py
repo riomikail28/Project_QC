@@ -18,7 +18,7 @@ logger = logging.getLogger("qc.ccp")
 # ---------------------------------------------------------------------------
 # OCR and Storage Config
 # ---------------------------------------------------------------------------
-STORAGE_BUCKET = "qc-photos"
+STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence")
 
 
 def upload_photo(file_bytes: bytes, filename: str, folder: str = "ccp") -> str:

@@ -55,12 +55,12 @@ on public.audit_logs for insert
 to authenticated
 with check (true);
 
-create policy "public read qc photos"
+create policy "authenticated read qc evidence"
 on storage.objects for select
-to public
-using (bucket_id in ('qc-photos', 'barcode-labels', 'temperature-checks'));
+to authenticated
+using (bucket_id = 'qc-evidence');
 
-create policy "authenticated upload qc photos"
+create policy "authenticated upload qc evidence"
 on storage.objects for insert
 to authenticated
-with check (bucket_id in ('qc-photos', 'barcode-labels', 'temperature-checks'));
+with check (bucket_id = 'qc-evidence');
