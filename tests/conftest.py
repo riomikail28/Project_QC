@@ -15,11 +15,25 @@ class FakeQuery:
         self.table_name = table_name
         self.fixtures = fixtures
         self.payload = None
+        self.filters = []
 
     def select(self, *args, **kwargs):
         return self
 
-    def eq(self, *args, **kwargs):
+    def eq(self, field, value):
+        self.filters.append(("eq", field, value))
+        return self
+
+    def gte(self, field, value):
+        self.filters.append(("gte", field, value))
+        return self
+
+    def lte(self, field, value):
+        self.filters.append(("lte", field, value))
+        return self
+
+    def neq(self, field, value):
+        self.filters.append(("neq", field, value))
         return self
 
     def order(self, *args, **kwargs):
@@ -44,7 +58,17 @@ class FakeQuery:
         if self.payload is not None:
             payload = self.payload[0] if isinstance(self.payload, list) else self.payload
             return SimpleNamespace(data=[{"id": f"{self.table_name}-1", **payload}])
-        return SimpleNamespace(data=self.fixtures.get(self.table_name, []))
+        rows = list(self.fixtures.get(self.table_name, []))
+        for op, field, value in self.filters:
+            if op == "eq":
+                rows = [row for row in rows if row.get(field) == value]
+            elif op == "neq":
+                rows = [row for row in rows if row.get(field) != value]
+            elif op == "gte":
+                rows = [row for row in rows if str(row.get(field, "")) >= str(value)]
+            elif op == "lte":
+                rows = [row for row in rows if str(row.get(field, "")) <= str(value)]
+        return SimpleNamespace(data=rows)
 
 
 class FakeSupabase:

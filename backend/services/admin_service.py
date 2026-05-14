@@ -24,15 +24,17 @@ class AdminService:
         return res.count if getattr(res, "count", None) is not None else len(res.data or [])
 
     def get_dashboard_overview(self):
-        today = datetime.now(timezone.utc).date().isoformat()
         try:
+            from backend.services.dashboard_service import DashboardService
+            summary = DashboardService(self.sb).summary().get("data", {})
             data = {
-                "total_batches_today": self._count("qc_reports", [("gte", "created_at", f"{today}T00:00:00Z")]),
+                "total_batches_today": summary.get("total_batches_today", 0),
                 "total_failed_batches": self._count("qc_reports", [("eq", "status", "failed")]),
-                "total_qc_pending": self._count("qc_reports", [("eq", "approval_status", "pending")]),
+                "total_qc_pending": summary.get("pending_approval", 0),
                 "total_qc_completed": self._count("qc_reports", [("neq", "approval_status", "pending")]),
-                "total_open_alerts": self._count("temperature_logs", [("eq", "is_abnormal", True)]),
-                "total_active_staff": self._count("staff_activity", [("gte", "created_at", f"{today}T00:00:00Z")]),
+                "total_open_alerts": summary.get("total_alerts", 0),
+                "total_active_staff": self._count("staff_activity", [("gte", "created_at", f"{datetime.now(timezone.utc).date().isoformat()}T00:00:00Z")]),
+                "qc_success_rate": summary.get("qc_success_rate"),
             }
             return self._empty(data)
         except Exception as exc:

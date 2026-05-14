@@ -119,25 +119,25 @@
             </div>
             <div class="analytics-card animate-in">
                 <div class="card-icon danger"><i class="fas fa-triangle-exclamation"></i></div>
-                <div class="card-value" id="failedBatches">0</div>
+                <div class="card-value" id="totalAlerts">0</div>
                 <div class="card-label">Total Alert</div>
                 <div class="card-trend" style="color:var(--danger)">Needs review</div>
             </div>
             <div class="analytics-card animate-in">
                 <div class="card-icon success"><i class="fas fa-clipboard-check"></i></div>
-                <div class="card-value">98%</div>
+                <div class="card-value" id="qcSuccessRate">--</div>
                 <div class="card-label">QC Success Rate</div>
                 <div class="card-trend">Above target</div>
             </div>
             <div class="analytics-card animate-in">
                 <div class="card-icon warning"><i class="fas fa-user-clock"></i></div>
-                <div class="card-value">4</div>
+                <div class="card-value" id="pendingApproval">0</div>
                 <div class="card-label">Pending Approval</div>
                 <div class="card-trend" style="color:var(--warning)">Supervisor queue</div>
             </div>
             <div class="analytics-card animate-in">
                 <div class="card-icon"><i class="fas fa-temperature-half"></i></div>
-                <div class="card-value">-18.4</div>
+                <div class="card-value" id="avgFreezerTemp">--</div>
                 <div class="card-label">Avg Freezer C</div>
                 <div class="card-trend">Stable range</div>
             </div>
@@ -147,9 +147,9 @@
             <div class="panel-card chart-card">
                 <div class="section-header">
                     <h3 class="section-title">Produksi 7 Hari</h3>
-                    <span class="status-badge muted">Auto fallback</span>
+                    <span class="status-badge muted">Live data</span>
                 </div>
-                <div class="fake-line-chart" aria-label="Line chart produksi 7 hari"></div>
+                <div class="fake-line-chart" id="productionTrendChart" aria-label="Line chart produksi 7 hari"></div>
             </div>
             <div class="panel-card chart-card">
                 <div class="section-header">
@@ -157,12 +157,9 @@
                     <span class="section-link">Today</span>
                 </div>
                 <div class="pie-wrap">
-                    <div class="pie-chart"></div>
-                    <div class="activity-list">
-                        <span class="status-badge success">Pass 72%</span>
-                        <span class="status-badge warning">Warning 14%</span>
-                        <span class="status-badge danger">Fail 6%</span>
-                        <span class="status-badge muted">Pending 8%</span>
+                    <div class="pie-chart" id="qcStatusPie"></div>
+                    <div class="activity-list" id="qcStatusList">
+                        <span class="status-badge muted">Loading...</span>
                     </div>
                 </div>
             </div>
@@ -174,10 +171,8 @@
                     <h3 class="section-title">Realtime Monitoring</h3>
                     <span class="online-dot"></span>
                 </div>
-                <div class="activity-list">
-                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-snowflake"></i></div><div><strong>Freezer Line A</strong><p class="card-label">Main storage</p></div><div class="temp-value">-18C</div></div>
-                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-temperature-low"></i></div><div><strong>Chiller Prep</strong><p class="card-label">Kitchen prep</p></div><div class="temp-value">3C</div></div>
-                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-fan"></i></div><div><strong>Blast Chiller</strong><p class="card-label">Cooling station</p></div><div class="temp-value">1C</div></div>
+                <div class="activity-list" id="realtimeMonitoringList">
+                    <div class="skeleton skeleton-card"></div>
                 </div>
             </div>
             <div class="panel-card">
@@ -195,10 +190,8 @@
                     <h3 class="section-title">Today QC Summary</h3>
                     <span class="section-link">Shift A</span>
                 </div>
-                <div class="approval-list">
-                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-camera"></i></div><div class="alert-info"><h4>Photo inspection</h4><p>24 evidence uploaded</p></div><span class="status-badge success">OK</span></div>
-                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-robot"></i></div><div class="alert-info"><h4>AI validation</h4><p>2 items need human review</p></div><span class="status-badge warning">Review</span></div>
-                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-check-double"></i></div><div class="alert-info"><h4>Approval queue</h4><p>Supervisor pending list</p></div><span class="status-badge muted">4</span></div>
+                <div class="approval-list" id="todaySummaryList">
+                    <div class="skeleton skeleton-card"></div>
                 </div>
             </div>
             <div class="panel-card finding-card is-hidden" id="qcFindingCard">
@@ -299,7 +292,8 @@
             const container = document.getElementById('alertDrawerList');
             container.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
             try {
-                const alerts = await API.get('/alerts');
+                const alertResponse = await API.get('/dashboard/alerts');
+                const alerts = alertResponse?.success ? alertResponse.data : [];
                 if (!alerts || alerts.length === 0) {
                     container.innerHTML = `
                         <div class="empty-state">

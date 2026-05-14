@@ -140,7 +140,11 @@ const adminApp = {
     // --- Data Loaders ---
 
     async loadOverview() {
-        const res = await this.fetchAdminData(`${this.apiBase}/analytics/overview`);
+        const [res, trendEnvelope, statusEnvelope] = await Promise.all([
+            this.fetchAdminData(`${this.apiBase}/analytics/overview`),
+            this.fetchAdminData('/dashboard/production-trend'),
+            this.fetchAdminData('/dashboard/qc-status'),
+        ]);
         if (res) {
             document.getElementById('metric-batches').innerText = res.total_batches_today || 0;
             document.getElementById('metric-qc-done').innerText = res.total_qc_completed || 0;
@@ -148,12 +152,11 @@ const adminApp = {
             document.getElementById('metric-alerts').innerText = res.total_open_alerts || 0;
             document.getElementById('alert-badge').innerText = res.total_open_alerts || 0;
 
-            this.initCharts(res);
+            this.initCharts(res, trendEnvelope?.data || [], statusEnvelope?.data || {});
         }
     },
 
-    initCharts(data) {
-        // Mock data for charts if API doesn't provide history yet
+    initCharts(data, trendRows = [], qcStatus = {}) {
         const rootStyles = getComputedStyle(document.documentElement);
         const textColor = rootStyles.getPropertyValue('--text-primary').trim();
         const gridColor = rootStyles.getPropertyValue('--border-color').trim();
@@ -165,10 +168,10 @@ const adminApp = {
         this.charts.trend = new Chart(ctxTrend, {
             type: 'line',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: trendRows.map(row => new Date(row.date).toLocaleDateString('id-ID', { weekday: 'short' })),
                 datasets: [{
                     label: 'Batch Produksi',
-                    data: [12, 19, 15, 22, 20, 10, 5],
+                    data: trendRows.map(row => row.count || 0),
                     borderColor: '#2563eb',
                     tension: 0.3,
                     fill: false
@@ -191,14 +194,9 @@ const adminApp = {
         this.charts.status = new Chart(ctxStatus, {
             type: 'doughnut',
             data: {
-                labels: ['Pass', 'Warning', 'Fail', 'Pending'],
+                labels: (qcStatus.items || []).map(item => item.status.toUpperCase()),
                 datasets: [{
-                    data: [
-                        data.total_qc_completed || 10, 
-                        2, 
-                        1, 
-                        data.total_qc_pending || 5
-                    ],
+                    data: (qcStatus.items || []).map(item => item.count || 0),
                     backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#64748b']
                 }]
             },
