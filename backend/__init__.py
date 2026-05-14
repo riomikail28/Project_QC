@@ -121,6 +121,7 @@ def create_app() -> Flask:
             "docs": "/api/qc/health",
         }
 
+    @app.route("/admin")
     @app.route("/admin/")
     def admin_index():
         return send_from_directory(ADMIN_DIR, "admin_panel.html")

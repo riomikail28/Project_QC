@@ -5,29 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise QC Admin | Dashboard</title>
     <link rel="stylesheet" href="../css/admin_enterprise.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+    <div class="admin-drawer-overlay" id="admin-drawer-overlay"></div>
     <div class="admin-layout">
         <!-- Sidebar -->
-        <aside class="admin-sidebar">
+        <aside class="admin-sidebar" id="admin-sidebar">
             <div class="sidebar-header">
-                <i class="fas fa-shield-alt text-primary"></i>
+                <span class="admin-brand-icon"><i data-lucide="shield-check"></i></span>
                 <span>QC Enterprise</span>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="#" class="sidebar-item active" data-target="overview"><i class="fas fa-home"></i> Overview</a></li>
-                <li><a href="#" class="sidebar-item" data-target="monitoring"><i class="fas fa-thermometer-half"></i> Live Monitoring</a></li>
-                <li><a href="#" class="sidebar-item" data-target="sku"><i class="fas fa-boxes-stacked"></i> SKU Produk</a></li>
-                <li><a href="#" class="sidebar-item" data-target="staff"><i class="fas fa-users-gear"></i> Staff</a></li>
-                <li><a href="#" class="sidebar-item" data-target="facility"><i class="fas fa-warehouse"></i> Facility Setup</a></li>
-                <li><a href="#" class="sidebar-item" data-target="reports"><i class="fas fa-file-alt"></i> QC Reports</a></li>
-                <li><a href="#" class="sidebar-item" data-target="traceability"><i class="fas fa-qrcode"></i> Traceability</a></li>
-                <li><a href="#" class="sidebar-item" data-target="approval"><i class="fas fa-check-double"></i> Approvals</a></li>
-                <li><a href="#" class="sidebar-item" data-target="audit"><i class="fas fa-history"></i> Audit Trail</a></li>
-                <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Temperature Logs</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>SKU Produk</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff Reports</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="warehouse"></i><span>Settings</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Evidence</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
+                <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>
         </aside>
 
@@ -36,14 +37,15 @@
             <!-- Topbar -->
             <header class="admin-topbar">
                 <div class="topbar-left">
+                    <button class="icon-btn admin-menu-toggle" id="admin-menu-toggle" aria-label="Open admin menu"><i data-lucide="menu"></i></button>
                     <h2 id="page-title" style="margin:0; font-size: 1.2rem;">Overview</h2>
                 </div>
                 <div class="topbar-right">
                     <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
-                        <i class="fas fa-moon"></i>
+                        <i data-lucide="moon"></i>
                     </button>
                     <button class="icon-btn" title="Notifications">
-                        <i class="fas fa-bell"></i>
+                        <i data-lucide="bell"></i>
                         <span class="badge" id="alert-badge">0</span>
                     </button>
                     <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
@@ -62,28 +64,28 @@
                         <div class="metric-card">
                             <div class="metric-header">
                                 <span>Total Batch (Hari Ini)</span>
-                                <i class="fas fa-box metric-icon" style="color: var(--primary-color)"></i>
+                                <i data-lucide="package" class="metric-icon" style="color: var(--primary-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-batches">...</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-header">
                                 <span>QC Completed</span>
-                                <i class="fas fa-check-circle metric-icon" style="color: var(--success-color)"></i>
+                                <i data-lucide="circle-check" class="metric-icon" style="color: var(--success-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-qc-done">...</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-header">
                                 <span>Pending Approval</span>
-                                <i class="fas fa-exclamation-triangle metric-icon" style="color: var(--warning-color)"></i>
+                                <i data-lucide="triangle-alert" class="metric-icon" style="color: var(--warning-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-qc-pending">...</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-header">
                                 <span>Abnormal Alerts (Open)</span>
-                                <i class="fas fa-fire metric-icon" style="color: var(--danger-color)"></i>
+                                <i data-lucide="flame" class="metric-icon" style="color: var(--danger-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-alerts">...</div>
                         </div>
@@ -107,7 +109,7 @@
                 <section id="section-monitoring" class="dashboard-section">
                     <div class="card" style="margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center;">
                         <h3 class="card-title" style="margin:0;">Status Suhu Fasilitas (Real-time)</h3>
-                        <button class="btn-primary" onclick="adminApp.loadMonitoring()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <button class="btn-primary" onclick="adminApp.loadMonitoring()"><i data-lucide="refresh-cw"></i> Refresh</button>
                     </div>
                     <div class="metric-grid" id="monitoring-grid">
                         <!-- Devices loaded via JS -->
@@ -122,7 +124,7 @@
                                 <h3 class="card-title" style="margin:0;">SKU Produk</h3>
                                 <p class="admin-muted">Kelola master produk dan standar QC pH, Brix, serta TDS.</p>
                             </div>
-                            <button class="btn-primary" onclick="adminApp.openSkuModal()"><i class="fas fa-plus"></i> Tambah SKU</button>
+                            <button class="btn-primary" onclick="adminApp.openSkuModal()"><i data-lucide="plus"></i> Tambah SKU</button>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -151,7 +153,7 @@
                                 <h3 class="card-title" style="margin:0;">Staff Management</h3>
                                 <p class="admin-muted">Tambah, edit, dan hapus akun QC staff/admin.</p>
                             </div>
-                            <button class="btn-primary" onclick="adminApp.openStaffModal()"><i class="fas fa-user-plus"></i> Tambah Staff</button>
+                            <button class="btn-primary" onclick="adminApp.openStaffModal()"><i data-lucide="user-plus"></i> Tambah Staff</button>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -177,7 +179,7 @@
                                 <h3 class="card-title" style="margin:0;">Facility Monitoring Setup</h3>
                                 <p class="admin-muted">Kelola ruangan, freezer, chiller, dan threshold suhu.</p>
                             </div>
-                            <button class="btn-primary" onclick="adminApp.openRoomModal()"><i class="fas fa-plus"></i> Tambah Ruangan</button>
+                            <button class="btn-primary" onclick="adminApp.openRoomModal()"><i data-lucide="plus"></i> Tambah Ruangan</button>
                         </div>
                         <div id="facility-manager-grid" class="facility-manager-grid"></div>
                     </div>
@@ -222,7 +224,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; gap: 12px;">
                             <h3 class="card-title" style="margin:0;">Barcode & Batch Traceability</h3>
                             <input id="traceability-barcode" placeholder="Scan / input barcode" style="padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
-                            <button class="btn-primary" onclick="adminApp.loadTraceability()"><i class="fas fa-search"></i> Search</button>
+                            <button class="btn-primary" onclick="adminApp.loadTraceability()"><i data-lucide="search"></i> Search</button>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -294,7 +296,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 style="margin:0;">Evidence Preview</h3>
-                <button class="icon-btn" onclick="document.getElementById('image-modal').classList.remove('active')"><i class="fas fa-times"></i></button>
+                <button class="icon-btn" onclick="document.getElementById('image-modal').classList.remove('active')"><i data-lucide="x"></i></button>
             </div>
             <div class="modal-body" style="text-align:center;">
                 <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px;">
@@ -307,13 +309,13 @@
             <form id="crud-form">
                 <div class="modal-header">
                     <h3 id="crud-title" style="margin:0;">Form</h3>
-                    <button type="button" class="icon-btn" onclick="adminApp.closeCrudModal()"><i class="fas fa-times"></i></button>
+                    <button type="button" class="icon-btn" onclick="adminApp.closeCrudModal()"><i data-lucide="x"></i></button>
                 </div>
                 <div class="modal-body">
                     <div id="crud-fields" class="admin-form-grid"></div>
                     <div class="admin-form-actions">
                         <button type="button" class="btn-secondary" onclick="adminApp.closeCrudModal()">Batal</button>
-                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan</button>
+                        <button type="submit" class="btn-primary"><i data-lucide="save"></i> Simpan</button>
                     </div>
                 </div>
             </form>

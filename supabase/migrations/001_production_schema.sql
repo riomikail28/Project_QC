@@ -63,6 +63,30 @@ create table if not exists public.temperature_logs (
   created_at timestamptz not null default now()
 );
 
+alter table public.temperature_logs
+  add column if not exists device_type text,
+  add column if not exists zone text,
+  add column if not exists temperature_c numeric(6,2),
+  add column if not exists humidity_rh numeric(6,2),
+  add column if not exists threshold_c numeric(6,2),
+  add column if not exists is_abnormal boolean not null default false,
+  add column if not exists photo_url text,
+  add column if not exists staff_id uuid,
+  add column if not exists batch_id uuid,
+  add column if not exists recorded_at timestamptz not null default now(),
+  add column if not exists created_at timestamptz not null default now();
+
+update public.temperature_logs
+set
+  zone = coalesce(zone, 'QC Area'),
+  device_type = coalesce(device_type, 'room'),
+  temperature_c = coalesce(temperature_c, 0),
+  is_abnormal = coalesce(is_abnormal, false)
+where zone is null
+   or device_type is null
+   or temperature_c is null
+   or is_abnormal is null;
+
 create table if not exists public.barcode_labels (
   id uuid primary key default gen_random_uuid(),
   batch_id uuid,
@@ -95,7 +119,23 @@ create index if not exists idx_qc_reports_status on public.qc_reports (status, a
 create index if not exists idx_products_active_code on public.products (is_active, product_code);
 -- Index for temperature_logs will be created in separate migration to avoid dependency issues
 -- create index if not exists idx_temperature_logs_recorded_at on public.temperature_logs (recorded_at desc);
-create index if not exists idx_temperature_logs_zone on public.temperature_logs (zone, device_type);
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'temperature_logs'
+      and column_name = 'zone'
+  ) and exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'temperature_logs'
+      and column_name = 'device_type'
+  ) then
+    create index if not exists idx_temperature_logs_zone
+    on public.temperature_logs (zone, device_type);
+  end if;
+end $$;
 create index if not exists idx_barcode_labels_value on public.barcode_labels (barcode_value);
 create index if not exists idx_audit_logs_created_at on public.audit_logs (created_at desc);
 create index if not exists idx_staff_activity_created_at on public.staff_activity (created_at desc);

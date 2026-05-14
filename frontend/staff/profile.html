@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../styles/profile.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="profile-page is-loading">
     <header class="top-navbar">
@@ -23,7 +24,7 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html" class="active">Profile</a>
-            <a href="/admin/">Admin</a>
+            <a href="dashboard.html#admin">Admin</a>
         </nav>
         <div class="nav-actions">
             <button class="nav-btn" aria-label="Settings"><i class="fas fa-gear"></i></button>
@@ -125,6 +126,7 @@
     <script src="../js/mobile-nav.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
             const user = Auth.user();
             if (!user) {
                 window.location.href = 'login.html';
@@ -168,6 +170,7 @@
                     <div class="progress ${tone}"><span style="width:${progress}%"></span></div>
                 </div>
             `).join('');
+            if (window.lucide) lucide.createIcons();
 
             window.setTimeout(() => document.body.classList.remove('is-loading'), 420);
         });

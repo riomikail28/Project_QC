@@ -93,6 +93,25 @@ img {
   align-items: center;
 }
 
+.nav-icon,
+.menu-icon,
+.card-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+[data-lucide] {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
+  flex-shrink: 0;
+}
+
 .nav-brand {
   gap: 9px;
   min-width: 0;

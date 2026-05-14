@@ -10,6 +10,7 @@ const Dashboard = {
             this.renderMetrics(data);
             this.renderCriticalIssues(data.critical_issues);
             this.renderRecentAlerts(data.recent_alerts);
+            this.refreshIcons();
         } catch (error) {
             console.error('Failed to load dashboard:', error);
             const fallback = {
@@ -26,7 +27,12 @@ const Dashboard = {
             this.renderHealth(fallback.health_score);
             this.renderMetrics(fallback);
             this.renderCriticalIssues(fallback.critical_issues);
+            this.refreshIcons();
         }
+    },
+
+    refreshIcons() {
+        if (window.lucide) lucide.createIcons();
     },
 
     renderHealth(score) {
@@ -111,6 +117,7 @@ const Dashboard = {
                 </div>
             `;
         });
+        this.refreshIcons();
     },
 
     renderRecentAlerts(alerts) {

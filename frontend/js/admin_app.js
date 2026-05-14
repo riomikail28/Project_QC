@@ -13,8 +13,10 @@ const adminApp = {
     init() {
         this.checkAuth();
         this.setupNavigation();
+        this.setupMobileDrawer();
         this.setupThemeToggle();
         this.setupCrudForm();
+        this.refreshIcons();
         
         // Initial load
         this.loadOverview();
@@ -39,26 +41,55 @@ const adminApp = {
         items.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Update active class
+                const target = item.dataset.section || item.getAttribute('data-target');
+                if (!target) return;
+
                 items.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
 
-                // Update page title
-                document.getElementById('page-title').innerText = item.innerText;
+                document.getElementById('page-title').innerText = item.querySelector('span')?.innerText || item.innerText;
 
-                // Hide all sections
-                document.querySelectorAll('.dashboard-section').forEach(sec => sec.classList.remove('active'));
-                
-                // Show target section
-                const target = item.getAttribute('data-target');
+                document.querySelectorAll('.dashboard-section, .admin-section').forEach(sec => {
+                    sec.classList.remove('active');
+                    sec.hidden = true;
+                });
+
                 const section = document.getElementById(`section-${target}`);
                 if(section) {
+                    section.hidden = false;
                     section.classList.add('active');
-                    // Load data based on section
                     this.loadSectionData(target);
                 }
+                this.closeMobileDrawer();
+                this.refreshIcons();
             });
         });
+    },
+
+    setupMobileDrawer() {
+        const toggle = document.getElementById('admin-menu-toggle');
+        const overlay = document.getElementById('admin-drawer-overlay');
+        if (toggle) toggle.addEventListener('click', () => this.openMobileDrawer());
+        if (overlay) overlay.addEventListener('click', () => this.closeMobileDrawer());
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') this.closeMobileDrawer();
+        });
+    },
+
+    openMobileDrawer() {
+        document.getElementById('admin-sidebar')?.classList.add('open');
+        document.getElementById('admin-drawer-overlay')?.classList.add('active');
+        document.body.classList.add('admin-drawer-open');
+    },
+
+    closeMobileDrawer() {
+        document.getElementById('admin-sidebar')?.classList.remove('open');
+        document.getElementById('admin-drawer-overlay')?.classList.remove('active');
+        document.body.classList.remove('admin-drawer-open');
+    },
+
+    refreshIcons() {
+        if (window.lucide) lucide.createIcons();
     },
 
     setupThemeToggle() {
@@ -207,7 +238,7 @@ const adminApp = {
             card.innerHTML = `
                 <div class="metric-header">
                     <span>${dev.facility_rooms?.name || 'Unassigned'} - ${dev.name}</span>
-                    <i class="fas ${statusIcon} metric-icon" style="color: ${statusColor}"></i>
+                    <i data-lucide="${log && !log.is_normal ? 'triangle-alert' : log ? 'circle-check' : 'circle-help'}" class="metric-icon" style="color: ${statusColor}"></i>
                 </div>
                 <div class="metric-value">${tempDisplay}</div>
                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px;">
@@ -216,6 +247,7 @@ const adminApp = {
             `;
             grid.appendChild(card);
         });
+        this.refreshIcons();
     },
 
     async loadStaff() {
@@ -235,12 +267,13 @@ const adminApp = {
                     <td><span class="status-badge status-${item.role === 'admin' ? 'fail' : 'pass'}">${(item.role || 'staff').toUpperCase()}</span></td>
                     <td>
                         <span class="row-actions">
-                            <button class="btn-secondary btn-sm" onclick='adminApp.openStaffModal(${this.safeJson(item)})'><i class="fas fa-pen"></i> Edit</button>
-                            <button class="btn-danger btn-sm" onclick="adminApp.deleteStaff('${item.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openStaffModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteStaff('${item.id}')"><i data-lucide="trash-2"></i> Hapus</button>
                         </span>
                     </td>
                 </tr>
             `).join('');
+            this.refreshIcons();
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Gagal memuat staff.</td></tr>';
         }
@@ -269,9 +302,9 @@ const adminApp = {
                             <p class="admin-muted">${room.description || 'Monitoring area'}</p>
                         </div>
                         <span class="row-actions">
-                            <button class="btn-primary btn-sm" onclick="adminApp.openDeviceModal(null, '${room.id}')"><i class="fas fa-plus"></i> Tambah Unit</button>
-                            <button class="btn-secondary btn-sm" onclick='adminApp.openRoomModal(${this.safeJson(room)})'><i class="fas fa-pen"></i> Edit</button>
-                            <button class="btn-danger btn-sm" onclick="adminApp.deleteRoom('${room.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                            <button class="btn-primary btn-sm" onclick="adminApp.openDeviceModal(null, '${room.id}')"><i data-lucide="plus"></i> Tambah Unit</button>
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openRoomModal(${this.safeJson(room)})'><i data-lucide="pencil"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteRoom('${room.id}')"><i data-lucide="trash-2"></i> Hapus</button>
                         </span>
                     </div>
                     <ul class="device-list-admin">
@@ -279,14 +312,15 @@ const adminApp = {
                             <li>
                                 <span><strong>${device.name}</strong><br><span class="admin-muted">${device.type} - ${device.threshold_temp || device.threshold || 0} C</span></span>
                                 <span class="row-actions">
-                                    <button class="btn-secondary btn-sm" onclick='adminApp.openDeviceModal(${this.safeJson(device)}, "${room.id}")'><i class="fas fa-pen"></i> Edit</button>
-                                    <button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                                    <button class="btn-secondary btn-sm" onclick='adminApp.openDeviceModal(${this.safeJson(device)}, "${room.id}")'><i data-lucide="pencil"></i> Edit</button>
+                                    <button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i data-lucide="trash-2"></i> Hapus</button>
                                 </span>
                             </li>
                         `).join('') : '<li><span class="admin-muted">Belum ada unit di ruangan ini.</span></li>'}
                     </ul>
                 </div>
             `).join('');
+            this.refreshIcons();
         } catch (error) {
             container.innerHTML = '<div class="empty-admin-state">Gagal memuat facility setup.</div>';
         }
@@ -319,6 +353,7 @@ const adminApp = {
         document.getElementById('crud-title').innerText = title;
         document.getElementById('crud-fields').innerHTML = fieldsHtml;
         document.getElementById('crud-modal').classList.add('active');
+        this.refreshIcons();
     },
 
     closeCrudModal() {
@@ -524,12 +559,13 @@ const adminApp = {
                     <td><span class="status-badge status-${item.is_active === false ? 'pending' : 'pass'}">${item.is_active === false ? 'NONAKTIF' : 'AKTIF'}</span></td>
                     <td>
                         <span class="row-actions">
-                            <button class="btn-secondary btn-sm" onclick='adminApp.openSkuModal(${this.safeJson(item)})'><i class="fas fa-pen"></i> Edit</button>
-                            <button class="btn-danger btn-sm" onclick="adminApp.deleteSku('${item.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openSkuModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteSku('${item.id}')"><i data-lucide="trash-2"></i> Hapus</button>
                         </span>
                     </td>
                 </tr>
             `).join('');
+            this.refreshIcons();
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Gagal memuat SKU.</td></tr>';
         }
@@ -565,7 +601,7 @@ const adminApp = {
             const evidence = batch.product_photo_url || batch.temperature_photo_url || batch.barcode_photo_url || batch.photo_url;
             let badgeClass = `status-badge status-${status}`;
             let evidenceBtn = evidence 
-                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i class="fas fa-image"></i> Lihat</button>`
+                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat</button>`
                 : '-';
 
             tr.innerHTML = `
@@ -578,6 +614,7 @@ const adminApp = {
             `;
             tbody.appendChild(tr);
         });
+        this.refreshIcons();
     },
 
     async loadAuditTrail() {
@@ -648,11 +685,12 @@ const adminApp = {
                 <td><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
                 <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
                 <td>${row.inspector_name || row.staff_id || '-'}</td>
-                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i class="fas fa-image"></i> Lihat</button>` : '-'}</td>
+                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat</button>` : '-'}</td>
                 <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
             `;
             tbody.appendChild(tr);
         });
+        this.refreshIcons();
     },
 
     previewImage(url) {

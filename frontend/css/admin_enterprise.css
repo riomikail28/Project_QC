@@ -30,6 +30,11 @@ body {
     radial-gradient(circle at 16% -8%, rgba(37,99,235,.22), transparent 32%),
     linear-gradient(180deg, #0f172a, #070b14);
   color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+body.admin-drawer-open {
+  overflow: hidden;
 }
 
 button,
@@ -68,13 +73,32 @@ select {
   font-weight: 900;
 }
 
-.sidebar-header i {
+.admin-brand-icon {
   width: 42px;
   height: 42px;
   display: grid;
   place-items: center;
   border-radius: 15px;
   background: linear-gradient(135deg, var(--primary-color), #38bdf8);
+}
+
+.admin-brand-icon svg,
+.sidebar-item svg,
+.icon-btn svg,
+.btn-primary svg,
+.btn-secondary svg,
+.btn-danger svg,
+.metric-icon,
+.nav-icon,
+.menu-icon,
+.card-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  stroke-width: 2;
+  flex-shrink: 0;
 }
 
 .sidebar-menu {
@@ -126,6 +150,17 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-menu-toggle {
+  display: none;
 }
 
 .topbar-right {
@@ -223,6 +258,15 @@ select {
 
 .dashboard-section.active {
   display: block;
+}
+
+.admin-section {
+  display: none;
+}
+
+.admin-section.active {
+  display: block;
+  animation: fadeIn .25s ease;
 }
 
 .grid-2 {
@@ -445,6 +489,19 @@ select {
   display: grid;
 }
 
+.admin-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  background: rgba(2, 6, 23, .62);
+  backdrop-filter: blur(8px);
+}
+
+.admin-drawer-overlay.active {
+  display: block;
+}
+
 .modal-content {
   width: min(620px, 100%);
   border: 1px solid var(--border-color);
@@ -477,18 +534,31 @@ select {
   }
 
   .admin-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 90;
+    width: min(312px, 86vw);
+    height: 100vh;
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    box-shadow: var(--shadow-md);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
   }
 
   .sidebar-menu {
-    flex-direction: row;
-    overflow-x: auto;
+    flex-direction: column;
+    overflow-y: auto;
   }
 
   .sidebar-item {
-    white-space: nowrap;
+    white-space: normal;
+  }
+
+  .admin-menu-toggle {
+    display: grid;
   }
 
   .grid-2 {

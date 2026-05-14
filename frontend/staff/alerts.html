@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../styles/alerts.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <header class="top-navbar">
@@ -112,7 +113,10 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadAlerts);
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+            loadAlerts();
+        });
     </script>
 </body>
 </html>

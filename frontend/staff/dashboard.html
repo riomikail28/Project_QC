@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../styles/dashboard.css">
     <link rel="stylesheet" href="../styles/alerts.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div id="loading-screen">
@@ -389,6 +390,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
             if (!Auth.check()) window.location.href = 'login.html';
             setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);
             const tick = () => {
@@ -411,6 +413,9 @@
                 document.querySelectorAll('.fab-mini').forEach((btn, i) => setTimeout(() => btn.classList.toggle('visible'), i * 45));
             });
             Dashboard.init();
+            if (window.location.hash === '#admin') {
+                window.setTimeout(() => toggleInlineAdmin(null, true), 250);
+            }
         });
     </script>
 </body>
