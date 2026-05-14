@@ -6,11 +6,15 @@ const adminApp = {
     // API Endpoints
     apiBase: '/api/v1/admin',
     charts: {},
+    crudMode: null,
+    crudId: null,
+    crudContext: {},
 
     init() {
         this.checkAuth();
         this.setupNavigation();
         this.setupThemeToggle();
+        this.setupCrudForm();
         
         // Initial load
         this.loadOverview();
@@ -92,6 +96,8 @@ const adminApp = {
         switch(target) {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
+            case 'staff': this.loadStaff(); break;
+            case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadQCReports(); break;
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
@@ -209,6 +215,227 @@ const adminApp = {
             `;
             grid.appendChild(card);
         });
+    },
+
+    async loadStaff() {
+        const tbody = document.getElementById('table-staff');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
+        try {
+            const staff = await API.get('/staff');
+            if (!staff.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada staff.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = staff.map(item => `
+                <tr>
+                    <td><strong>${item.full_name || item.username || '-'}</strong></td>
+                    <td>${item.username || '-'}</td>
+                    <td><span class="status-badge status-${item.role === 'admin' ? 'fail' : 'pass'}">${(item.role || 'staff').toUpperCase()}</span></td>
+                    <td>
+                        <span class="row-actions">
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openStaffModal(${this.safeJson(item)})'><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteStaff('${item.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Gagal memuat staff.</td></tr>';
+        }
+    },
+
+    async loadFacilityManager() {
+        const container = document.getElementById('facility-manager-grid');
+        if (!container) return;
+        container.innerHTML = '<div class="empty-admin-state">Loading facility...</div>';
+        try {
+            const rooms = await API.get('/facility/structure');
+            if (!rooms.length) {
+                container.innerHTML = `
+                    <div class="empty-admin-state">
+                        <strong>Belum ada ruangan monitoring.</strong><br>
+                        Tambahkan ruangan untuk mulai membuat freezer/chiller monitoring.
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = rooms.map(room => `
+                <div class="facility-room-card">
+                    <div class="facility-room-head">
+                        <div>
+                            <h3 class="card-title" style="margin:0;">${room.name}</h3>
+                            <p class="admin-muted">${room.description || 'Monitoring area'}</p>
+                        </div>
+                        <span class="row-actions">
+                            <button class="btn-primary btn-sm" onclick="adminApp.openDeviceModal(null, '${room.id}')"><i class="fas fa-plus"></i> Tambah Unit</button>
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openRoomModal(${this.safeJson(room)})'><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteRoom('${room.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                        </span>
+                    </div>
+                    <ul class="device-list-admin">
+                        ${(room.devices || []).length ? (room.devices || []).map(device => `
+                            <li>
+                                <span><strong>${device.name}</strong><br><span class="admin-muted">${device.type} - ${device.threshold_temp || device.threshold || 0} C</span></span>
+                                <span class="row-actions">
+                                    <button class="btn-secondary btn-sm" onclick='adminApp.openDeviceModal(${this.safeJson(device)}, "${room.id}")'><i class="fas fa-pen"></i> Edit</button>
+                                    <button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                                </span>
+                            </li>
+                        `).join('') : '<li><span class="admin-muted">Belum ada unit di ruangan ini.</span></li>'}
+                    </ul>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<div class="empty-admin-state">Gagal memuat facility setup.</div>';
+        }
+    },
+
+    safeJson(value) {
+        return JSON.stringify(value || {}).replace(/'/g, '&apos;');
+    },
+
+    setupCrudForm() {
+        const form = document.getElementById('crud-form');
+        if (!form) return;
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            await this.submitCrudForm();
+        });
+    },
+
+    openCrudModal(title, mode, fieldsHtml, context = {}) {
+        this.crudMode = mode;
+        this.crudId = context.id || null;
+        this.crudContext = context;
+        document.getElementById('crud-title').innerText = title;
+        document.getElementById('crud-fields').innerHTML = fieldsHtml;
+        document.getElementById('crud-modal').classList.add('active');
+    },
+
+    closeCrudModal() {
+        document.getElementById('crud-modal').classList.remove('active');
+        document.getElementById('crud-form').reset();
+        this.crudMode = null;
+        this.crudId = null;
+        this.crudContext = {};
+    },
+
+    openStaffModal(staff = null) {
+        const item = staff || {};
+        this.openCrudModal(item.id ? 'Edit Staff' : 'Tambah Staff', item.id ? 'editStaff' : 'addStaff', `
+            <label>Nama Lengkap
+                <input id="staff-full-name" value="${item.full_name || item.username || ''}" required>
+            </label>
+            <label>Username
+                <input id="staff-username" value="${item.username || ''}" required>
+            </label>
+            <label>Role
+                <select id="staff-role">
+                    <option value="staff" ${item.role === 'staff' ? 'selected' : ''}>QC Staff</option>
+                    <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+            </label>
+            <label>${item.id ? 'Password Baru (opsional)' : 'Password'}
+                <input id="staff-password" type="password" ${item.id ? '' : 'required'} placeholder="${item.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'}">
+            </label>
+        `, { id: item.id });
+    },
+
+    openRoomModal(room = null) {
+        const item = room || {};
+        this.openCrudModal(item.id ? 'Edit Ruangan' : 'Tambah Ruangan', item.id ? 'editRoom' : 'addRoom', `
+            <label>Nama Ruangan
+                <input id="room-name" value="${item.name || ''}" required>
+            </label>
+            <label>Deskripsi
+                <input id="room-description" value="${item.description || ''}">
+            </label>
+        `, { id: item.id });
+    },
+
+    openDeviceModal(device = null, roomId = '') {
+        const item = device || {};
+        this.openCrudModal(item.id ? 'Edit Unit Monitoring' : 'Tambah Unit Monitoring', item.id ? 'editDevice' : 'addDevice', `
+            <label>Nama Unit
+                <input id="device-name" value="${item.name || ''}" required>
+            </label>
+            <label>Tipe
+                <select id="device-type">
+                    <option value="chiller" ${item.type === 'chiller' ? 'selected' : ''}>Chiller</option>
+                    <option value="freezer" ${item.type === 'freezer' ? 'selected' : ''}>Freezer</option>
+                    <option value="undercounter" ${item.type === 'undercounter' ? 'selected' : ''}>Undercounter</option>
+                    <option value="room_temp" ${item.type === 'room_temp' ? 'selected' : ''}>Suhu Ruangan</option>
+                </select>
+            </label>
+            <label>Threshold Suhu
+                <input id="device-threshold" type="number" step="0.1" value="${item.threshold_temp || item.threshold || 5}" required>
+            </label>
+        `, { id: item.id, roomId });
+    },
+
+    async submitCrudForm() {
+        try {
+            if (this.crudMode === 'addStaff' || this.crudMode === 'editStaff') {
+                const payload = {
+                    full_name: document.getElementById('staff-full-name').value.trim(),
+                    username: document.getElementById('staff-username').value.trim(),
+                    role: document.getElementById('staff-role').value,
+                };
+                const password = document.getElementById('staff-password').value;
+                if (password) payload.password = password;
+                if (this.crudMode === 'addStaff') await API.post('/staff', payload);
+                else await API.patch(`/staff/${this.crudId}`, payload);
+                await this.loadStaff();
+            }
+
+            if (this.crudMode === 'addRoom' || this.crudMode === 'editRoom') {
+                const payload = {
+                    name: document.getElementById('room-name').value.trim(),
+                    description: document.getElementById('room-description').value.trim(),
+                };
+                if (this.crudMode === 'addRoom') await API.post('/facility/rooms', payload);
+                else await API.patch(`/facility/rooms/${this.crudId}`, payload);
+                await this.loadFacilityManager();
+            }
+
+            if (this.crudMode === 'addDevice' || this.crudMode === 'editDevice') {
+                const payload = {
+                    name: document.getElementById('device-name').value.trim(),
+                    type: document.getElementById('device-type').value,
+                    threshold: Number(document.getElementById('device-threshold').value),
+                };
+                if (this.crudMode === 'addDevice') {
+                    payload.room_id = this.crudContext.roomId;
+                    await API.post('/facility/devices', payload);
+                } else {
+                    await API.patch(`/facility/devices/${this.crudId}`, payload);
+                }
+                await this.loadFacilityManager();
+            }
+
+            this.closeCrudModal();
+        } catch (error) {
+            alert(`Gagal menyimpan data: ${error.message}`);
+        }
+    },
+
+    async deleteStaff(id) {
+        if (!confirm('Hapus staff ini?')) return;
+        await API.delete(`/staff/${id}`);
+        await this.loadStaff();
+    },
+
+    async deleteRoom(id) {
+        if (!confirm('Hapus ruangan ini? Unit di dalamnya juga bisa terdampak.')) return;
+        await API.delete(`/facility/rooms/${id}`);
+        await this.loadFacilityManager();
+    },
+
+    async deleteDevice(id) {
+        if (!confirm('Hapus unit monitoring ini?')) return;
+        await API.delete(`/facility/devices/${id}`);
+        await this.loadFacilityManager();
     },
 
     async loadQCReports() {

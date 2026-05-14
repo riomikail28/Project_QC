@@ -171,6 +171,35 @@ img {
   gap: 7px;
 }
 
+.desktop-nav {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(239, 246, 255, .76);
+}
+
+.desktop-nav a {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  transition: .2s ease;
+}
+
+.desktop-nav a:hover,
+.desktop-nav a.active {
+  color: var(--primary);
+  background: rgba(37, 99, 235, .1);
+}
+
 .nav-clock {
   display: none;
   color: var(--muted);
@@ -831,6 +860,10 @@ label {
   }
 
   .search-bar {
+    display: flex;
+  }
+
+  .desktop-nav {
     display: flex;
   }
 

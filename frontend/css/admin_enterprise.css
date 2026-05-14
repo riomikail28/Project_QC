@@ -295,6 +295,132 @@ select {
   cursor: pointer;
 }
 
+.btn-secondary,
+.btn-danger {
+  min-height: 38px;
+  border-radius: 13px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  border: 1px solid var(--border-color);
+  background: rgba(148, 163, 184, .12);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  border: 1px solid rgba(239, 68, 68, .2);
+  background: rgba(239, 68, 68, .12);
+  color: var(--danger-color);
+}
+
+.btn-sm {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: .78rem;
+}
+
+.admin-section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-muted {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: .86rem;
+}
+
+.admin-form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-form-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.admin-form-grid input,
+.admin-form-grid select {
+  width: 100%;
+  padding: 0 12px;
+}
+
+.admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.row-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.facility-manager-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.facility-room-card {
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, .22);
+  padding: 16px;
+}
+
+.facility-room-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.device-list-admin {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.device-list-admin li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .04);
+}
+
+.empty-admin-state {
+  padding: 26px;
+  border: 1px dashed var(--border-color);
+  border-radius: 18px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 input,
 select {
   min-height: 40px;
@@ -371,5 +497,20 @@ select {
 
   .admin-content {
     padding: 16px;
+  }
+
+  .admin-section-toolbar,
+  .facility-room-head,
+  .device-list-admin li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .row-actions {
+    width: 100%;
+  }
+
+  .row-actions > * {
+    flex: 1;
   }
 }

@@ -20,6 +20,8 @@
             <ul class="sidebar-menu">
                 <li><a href="#" class="sidebar-item active" data-target="overview"><i class="fas fa-home"></i> Overview</a></li>
                 <li><a href="#" class="sidebar-item" data-target="monitoring"><i class="fas fa-thermometer-half"></i> Live Monitoring</a></li>
+                <li><a href="#" class="sidebar-item" data-target="staff"><i class="fas fa-users-gear"></i> Staff</a></li>
+                <li><a href="#" class="sidebar-item" data-target="facility"><i class="fas fa-warehouse"></i> Facility Setup</a></li>
                 <li><a href="#" class="sidebar-item" data-target="reports"><i class="fas fa-file-alt"></i> QC Reports</a></li>
                 <li><a href="#" class="sidebar-item" data-target="traceability"><i class="fas fa-qrcode"></i> Traceability</a></li>
                 <li><a href="#" class="sidebar-item" data-target="approval"><i class="fas fa-check-double"></i> Approvals</a></li>
@@ -108,6 +110,46 @@
                     </div>
                     <div class="metric-grid" id="monitoring-grid">
                         <!-- Devices loaded via JS -->
+                    </div>
+                </section>
+
+                <!-- SECTION: Staff Management -->
+                <section id="section-staff" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Staff Management</h3>
+                                <p class="admin-muted">Tambah, edit, dan hapus akun QC staff/admin.</p>
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.openStaffModal()"><i class="fas fa-user-plus"></i> Tambah Staff</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="enterprise-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Username</th>
+                                        <th>Role</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-staff"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: Facility Management -->
+                <section id="section-facility" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Facility Monitoring Setup</h3>
+                                <p class="admin-muted">Kelola ruangan, freezer, chiller, dan threshold suhu.</p>
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.openRoomModal()"><i class="fas fa-plus"></i> Tambah Ruangan</button>
+                        </div>
+                        <div id="facility-manager-grid" class="facility-manager-grid"></div>
                     </div>
                 </section>
 
@@ -227,6 +269,24 @@
             <div class="modal-body" style="text-align:center;">
                 <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px;">
             </div>
+        </div>
+    </div>
+
+    <div class="enterprise-modal" id="crud-modal">
+        <div class="modal-content">
+            <form id="crud-form">
+                <div class="modal-header">
+                    <h3 id="crud-title" style="margin:0;">Form</h3>
+                    <button type="button" class="icon-btn" onclick="adminApp.closeCrudModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="crud-fields" class="admin-form-grid"></div>
+                    <div class="admin-form-actions">
+                        <button type="button" class="btn-secondary" onclick="adminApp.closeCrudModal()">Batal</button>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
