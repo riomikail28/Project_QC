@@ -436,21 +436,75 @@ img {
 }
 
 .nav-item::before {
+  content: "";
   width: 24px;
   height: 24px;
-  display: grid;
-  place-items: center;
-  font-family: "Font Awesome 6 Free";
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1;
+  display: block;
+  background-color: currentColor;
+  -webkit-mask: var(--nav-icon) center / 22px 22px no-repeat;
+  mask: var(--nav-icon) center / 22px 22px no-repeat;
   transition: transform .2s ease;
 }
 
-.nav-item[href*="dashboard"]::before { content: "\f015"; }
-.nav-item[href*="monitoring"]::before { content: "\f2c9"; }
-.nav-item[href*="inspection"]::before { content: "\f46c"; }
-.nav-item[href*="profile"]::before { content: "\f007"; }
+.nav-item[href*="dashboard"] {
+  --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 11 9-8 9 8'/%3E%3Cpath d='M5 10v10h14V10'/%3E%3Cpath d='M9 20v-6h6v6'/%3E%3C/svg%3E");
+}
+
+.nav-item[href*="monitoring"] {
+  --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z'/%3E%3Cpath d='M10 5v8'/%3E%3C/svg%3E");
+}
+
+.nav-item[href*="inspection"] {
+  --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+
+.nav-item[href*="profile"] {
+  --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21a8 8 0 0 0-16 0'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+
+.card-icon {
+  position: relative;
+}
+
+.card-icon i,
+.alert-icon i,
+.device-icon i {
+  display: none;
+}
+
+.card-icon::before,
+.alert-icon::before,
+.device-icon::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  display: block;
+  background-color: currentColor;
+  -webkit-mask: var(--icon-mask, var(--icon-default)) center / contain no-repeat;
+  mask: var(--icon-mask, var(--icon-default)) center / contain no-repeat;
+}
+
+.card-icon,
+.alert-icon,
+.device-icon {
+  --icon-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v20'/%3E%3Cpath d='M2 12h20'/%3E%3C/svg%3E");
+}
+
+.card-icon:has(.fa-barcode) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M4 7v10M8 7v10M12 7v10M16 7v10M20 7v10'/%3E%3Cpath d='M3 5h3M18 5h3M3 19h3M18 19h3'/%3E%3C/svg%3E"); }
+.card-icon:has(.fa-triangle-exclamation),
+.alert-icon:has(.fa-triangle-exclamation),
+.alert-icon:has(.fa-bell) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 3 10 18H2L12 3Z'/%3E%3Cpath d='M12 9v5'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E"); }
+.card-icon:has(.fa-clipboard-check) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5h6'/%3E%3Cpath d='M9 3h6v4H9z'/%3E%3Cpath d='M5 5h2M17 5h2v16H5V5'/%3E%3Cpath d='m8 14 2 2 5-5'/%3E%3C/svg%3E"); }
+.card-icon:has(.fa-user-clock) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M2 21a7 7 0 0 1 12-5'/%3E%3Ccircle cx='18' cy='18' r='4'/%3E%3Cpath d='M18 16v2l1.5 1'/%3E%3C/svg%3E"); }
+.card-icon:has(.fa-temperature-half),
+.device-icon:has(.fa-temperature-low),
+.device-icon:has(.fa-thermometer-half) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z'/%3E%3Cpath d='M10 5v8'/%3E%3C/svg%3E"); }
+.device-icon:has(.fa-icicles),
+.alert-icon:has(.fa-snowflake) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v20'/%3E%3Cpath d='m4.93 4.93 14.14 14.14'/%3E%3Cpath d='m19.07 4.93-14.14 14.14'/%3E%3Cpath d='M2 12h20'/%3E%3C/svg%3E"); }
+.alert-icon:has(.fa-camera) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3h5Z'/%3E%3Ccircle cx='12' cy='13' r='3'/%3E%3C/svg%3E"); }
+.alert-icon:has(.fa-robot) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='8' width='14' height='10' rx='3'/%3E%3Cpath d='M12 8V4'/%3E%3Cpath d='M9 13h.01M15 13h.01'/%3E%3Cpath d='M8 22h8'/%3E%3C/svg%3E"); }
+.alert-icon:has(.fa-check-double),
+.alert-icon:has(.fa-check-circle) { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 12 4 4 8-8'/%3E%3Cpath d='m13 12 2 2 6-6'/%3E%3C/svg%3E"); }
 
 .nav-item:active,
 .nav-item.active {
