@@ -7,6 +7,7 @@
     <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="%232563eb"/><path d="M18 42 32 12l14 30-14-8-14 8Z" fill="white"/></svg>'>
     <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../styles/dashboard.css">
+    <link rel="stylesheet" href="../styles/alerts.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -32,7 +33,7 @@
                 <div class="time" id="clockTime">00:00:00</div>
                 <div id="clockDate">-- -- ----</div>
             </div>
-            <button class="nav-btn" onclick="window.location.href='alerts.html'" aria-label="Notifications">
+            <button class="nav-btn" onclick="openAlertDrawer()" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
                 <span class="badge" id="alertBadge" style="display:none">0</span>
             </button>
@@ -139,7 +140,7 @@
             <div class="panel-card">
                 <div class="section-header">
                     <h3 class="section-title">Abnormal Alert Feed</h3>
-                    <a class="section-link" href="alerts.html">View all</a>
+                    <button class="section-link" onclick="openAlertDrawer()" style="border:0;background:transparent;padding:0">View all</button>
                 </div>
                 <div id="criticalList" class="activity-list">
                     <div class="skeleton skeleton-card"></div>
@@ -168,6 +169,24 @@
         <button id="mainFab" class="fab" aria-label="Quick actions"><i class="fas fa-plus"></i></button>
     </div>
 
+    <div class="alert-drawer-overlay" id="alertDrawerOverlay" onclick="closeAlertDrawer()"></div>
+    <aside class="alert-drawer" id="alertDrawer" aria-label="Active alerts">
+        <div class="alert-drawer-header">
+            <div class="alert-drawer-title">
+                <div class="alert-icon"><i class="fas fa-bell"></i></div>
+                <div>
+                    <h3>Active Alerts</h3>
+                    <p>Corrective actions required</p>
+                </div>
+            </div>
+            <button class="icon-button" onclick="closeAlertDrawer()" aria-label="Close alerts"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="alertDrawerList" class="alert-drawer-body">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+    </aside>
+
     <nav class="bottom-nav">
         <a href="dashboard.html" class="nav-item active"><i class="fas fa-chart-pie"></i><span>Home</span></a>
         <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
@@ -180,6 +199,81 @@
     <script src="../js/utils.js"></script>
     <script src="../js/dashboard.js"></script>
     <script>
+        function alertTime(value) {
+            if (window.Utils && typeof Utils.formatTime === 'function') return Utils.formatTime(value);
+            return value ? new Date(value).toLocaleString('id-ID') : 'Just now';
+        }
+
+        function correctiveAction(zone) {
+            if (zone && zone.includes('Chiller')) return 'Pindahkan produk ke chiller cadangan dan periksa kompresor.';
+            if (zone && zone.includes('Freezer')) return 'Jangan buka pintu freezer. Hubungi maintenance segera.';
+            return 'Periksa integritas batch dan lakukan pengecekan ulang parameter QC.';
+        }
+
+        async function loadAlertDrawer() {
+            const container = document.getElementById('alertDrawerList');
+            container.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+            try {
+                const alerts = await API.get('/alerts');
+                if (!alerts || alerts.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <h4>Semua sistem normal</h4>
+                            <p>Tidak ada alert aktif untuk saat ini.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                container.innerHTML = alerts.map(alert => `
+                    <div class="alert-card fail" style="flex-direction:column;align-items:flex-start">
+                        <div style="display:flex;align-items:center;gap:12px;width:100%">
+                            <div class="alert-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                            <div class="alert-info">
+                                <h4>${alert.zone || 'Batch Violation'}</h4>
+                                <p>${alertTime(alert.created_at)} - Value: ${alert.temperature_c || alert.description || '-'}</p>
+                            </div>
+                            <span class="alert-status fail">Critical</span>
+                        </div>
+                        <div class="alert-action-box">
+                            <strong>Tindakan Korektif:</strong><br>${correctiveAction(alert.zone)}
+                        </div>
+                        <button class="alert-resolve-btn" onclick="resolveAlertInDrawer('${alert.id}')">Tandai Selesai</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-cloud-exclamation"></i>
+                        <h4>Gagal memuat alert</h4>
+                        <p>Coba refresh data beberapa saat lagi.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function openAlertDrawer() {
+            document.getElementById('alertDrawerOverlay').classList.add('active');
+            document.getElementById('alertDrawer').classList.add('active');
+            loadAlertDrawer();
+        }
+
+        function closeAlertDrawer() {
+            document.getElementById('alertDrawerOverlay').classList.remove('active');
+            document.getElementById('alertDrawer').classList.remove('active');
+        }
+
+        async function resolveAlertInDrawer(id) {
+            if (!confirm('Tandai alert ini sebagai selesai?')) return;
+            try {
+                await API.post(`/alerts/${id}/resolve`, {});
+                await loadAlertDrawer();
+                Dashboard.init();
+            } catch (error) {
+                alert('Gagal menyelesaikan alert');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
             setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);

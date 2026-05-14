@@ -8,12 +8,13 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  padding: 0 0 calc(var(--nav-height) + 18px);
+  padding: 0 0 calc(var(--nav-height) + 24px);
   background:
     radial-gradient(circle at 15% -10%, rgba(59, 130, 246, 0.24), transparent 34%),
     radial-gradient(circle at 90% 5%, rgba(14, 165, 233, 0.14), transparent 28%),
@@ -61,7 +62,7 @@ img {
 .app-shell {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 18px 16px 28px;
+  padding: 12px 14px 28px;
 }
 
 .page-grid {
@@ -73,8 +74,8 @@ img {
   position: sticky;
   top: 0;
   z-index: 50;
-  min-height: var(--header-h);
-  padding: 12px 16px;
+  min-height: 58px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -93,7 +94,7 @@ img {
 }
 
 .nav-brand {
-  gap: 11px;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -102,8 +103,8 @@ img {
 }
 
 .logo-icon {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   border-radius: 15px;
   display: grid;
@@ -132,7 +133,7 @@ img {
 }
 
 .brand-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
 }
@@ -140,7 +141,7 @@ img {
 .brand-sub {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -167,7 +168,7 @@ img {
 }
 
 .nav-actions {
-  gap: 9px;
+  gap: 7px;
 }
 
 .nav-clock {
@@ -187,8 +188,8 @@ img {
 .nav-btn,
 .icon-button {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--border);
   border-radius: 15px;
   background: rgba(239, 246, 255, 0.9);
@@ -224,8 +225,8 @@ img {
 }
 
 .user-avatar {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -247,6 +248,7 @@ img {
 .glass-card,
 .analytics-card,
 .panel-card {
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: linear-gradient(145deg, rgba(255, 255, 255, .95), rgba(239, 246, 255, .78));
@@ -255,14 +257,15 @@ img {
 }
 
 .panel-card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .analytics-card {
   position: relative;
   overflow: hidden;
-  padding: 18px;
+  padding: 14px;
   transition: transform .25s ease, border-color .25s ease;
+  min-width: 0;
 }
 
 .analytics-card::before {
@@ -279,12 +282,12 @@ img {
 }
 
 .card-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 15px;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
   display: grid;
   place-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 11px;
   color: var(--primary2);
   background: rgba(37, 99, 235, .14);
 }
@@ -294,7 +297,7 @@ img {
 .card-icon.danger { color: var(--danger); background: rgba(239, 68, 68, .14); }
 
 .card-value {
-  font-size: 30px;
+  font-size: clamp(24px, 7vw, 32px);
   line-height: 1;
   font-weight: 900;
 }
@@ -302,16 +305,17 @@ img {
 .card-label,
 .eyebrow {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: .06em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .card-trend {
   margin-top: 8px;
   color: var(--success);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -327,6 +331,7 @@ img {
   margin: 0;
   font-size: 18px;
   font-weight: 900;
+  min-width: 0;
 }
 
 .section-link {
@@ -387,12 +392,14 @@ img {
 .alert-info h4 {
   margin: 0 0 3px;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .alert-info p {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .bottom-nav {
@@ -411,28 +418,58 @@ img {
 }
 
 .nav-item {
+  position: relative;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 4px;
+  gap: 5px;
   color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
+  transition: color .2s ease, transform .2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item i {
+  display: none;
+}
+
+.nav-item::before {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-family: "Font Awesome 6 Free";
   font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  transition: transform .2s ease;
+}
+
+.nav-item[href*="dashboard"]::before { content: "\f015"; }
+.nav-item[href*="monitoring"]::before { content: "\f2c9"; }
+.nav-item[href*="inspection"]::before { content: "\f46c"; }
+.nav-item[href*="profile"]::before { content: "\f007"; }
+
+.nav-item:active,
+.nav-item.active {
+  transform: scale(1.05);
 }
 
 .nav-item.active {
   color: var(--primary2);
 }
 
+.nav-item.active::before {
+  transform: translateY(-2px) scale(1.08);
+  filter: drop-shadow(0 8px 12px rgba(37,99,235,.28));
+}
+
 .fab-container {
   position: fixed;
-  right: 18px;
-  bottom: calc(var(--nav-height) + 18px);
+  right: 16px;
+  bottom: 90px;
   z-index: 70;
   display: grid;
   justify-items: end;
@@ -450,8 +487,8 @@ img {
 }
 
 .fab {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   background: linear-gradient(135deg, var(--primary), #38bdf8);
   font-size: 20px;
   transition: transform .25s ease;
@@ -549,9 +586,12 @@ label {
 }
 
 .empty-state {
-  padding: 34px 18px;
+  padding: 28px 18px;
   text-align: center;
   color: var(--muted);
+  border: 1px dashed rgba(37,99,235,.18);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.64);
 }
 
 .mini-stat {
@@ -572,6 +612,25 @@ label {
   margin-bottom: 12px;
   color: rgba(148, 163, 184, .5);
   font-size: 38px;
+}
+
+.empty-state h4 {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.empty-state p {
+  max-width: 320px;
+  margin: 0 auto 14px;
+  font-size: 13px;
+}
+
+.empty-state .btn-primary,
+.empty-state .btn-secondary {
+  width: auto;
+  min-height: 40px;
+  padding: 0 14px;
 }
 
 #loading-screen {
@@ -658,8 +717,32 @@ label {
     padding: 24px;
   }
 
-  .search-bar,
-  .nav-clock {
+  .top-navbar {
+    min-height: var(--header-h);
+    padding: 12px 24px;
+  }
+
+  .logo-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+  }
+
+  .brand-sub {
+    font-size: 10px;
+  }
+
+  .nav-btn,
+  .icon-button,
+  .user-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .search-bar {
     display: flex;
   }
 
@@ -669,5 +752,24 @@ label {
 
   .fab-container {
     bottom: 24px;
+    right: 24px;
+  }
+
+  .fab {
+    width: 64px;
+    height: 64px;
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .nav-clock {
+    display: block;
+  }
+
+  .fab {
+    width: 72px;
+    height: 72px;
+    font-size: 24px;
   }
 }

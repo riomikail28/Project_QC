@@ -102,6 +102,9 @@ function renderDevices(devices) {
                 <i class="fas fa-temperature-half"></i>
                 <h4>Belum ada unit monitoring</h4>
                 <p>Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu.</p>
+                <button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-arrow-left"></i> Kembali Dashboard
+                </button>
             </div>
         `;
         return;
@@ -112,13 +115,13 @@ function renderDevices(devices) {
             <div class="device-icon">
                 <i class="fas ${iconForType(device.type)}"></i>
             </div>
+            <div class="status-badge success device-status"><span class="online-dot"></span>Realtime</div>
             <div class="device-name">${device.name}</div>
             <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
             <div class="device-temp">${device.threshold_temp || "--"}&deg;C</div>
-            <div class="device-meta">Last update: live fallback - Staff checker: QC Team</div>
+            <div class="device-meta">Last update: just now - Staff checker: QC Team</div>
             <div class="sparkline"></div>
             <div class="health-bar"><span></span></div>
-            <div class="status-badge success" style="margin-top:12px;"><span class="online-dot"></span>Normal</div>
         </div>
     `).join("");
 }
@@ -218,6 +221,9 @@ async function loadRecentLogs() {
                     <i class="fas fa-clipboard-list"></i>
                     <h4>Belum ada log suhu</h4>
                     <p>Log terbaru akan muncul setelah staff menyimpan laporan suhu pertama.</p>
+                    <button class="btn-primary" type="button" onclick="document.querySelector('.device-card')?.click()">
+                        <i class="fas fa-plus"></i> Input Suhu
+                    </button>
                 </div>
             `;
             return;

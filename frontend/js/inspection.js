@@ -18,7 +18,11 @@ const Inspection = {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-history" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
-                        <p>No active batches found.</p>
+                        <h4>No active batches found</h4>
+                        <p>Buat batch baru untuk mulai flow QC scan, foto, dan validasi.</p>
+                        <button class="btn-primary" type="button" onclick="window.location.href='new_batch.html'">
+                            <i class="fas fa-plus"></i> New Batch
+                        </button>
                     </div>
                 `;
                 return;
