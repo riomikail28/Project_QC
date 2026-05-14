@@ -1,120 +1,82 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Profile | QC Central Kitchen</title>
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <title>Profile | ASTRO QC Enterprise</title>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="../styles/profile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .profile-container {
-            padding: 24px 20px;
-            text-align: center;
-        }
-
-        .avatar-circle {
-            width: 100px;
-            height: 100px;
-            background: var(--accent-gradient);
-            border-radius: 50%;
-            margin: 0 auto 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: white;
-            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
-            border: 4px solid #ffffff;
-        }
-
-        .info-card {
-            background: #ffffff;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            margin-top: 32px;
-            text-align: left;
-            box-shadow: var(--shadow-md);
-        }
-
-        .info-item {
-            margin-bottom: 20px;
-        }
-
-        .info-item label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 4px;
-        }
-
-        .info-item p {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .btn-logout {
-            width: 100%;
-            padding: 16px;
-            background: #fef2f2;
-            border: 1px solid #fee2e2;
-            color: var(--status-fail);
-            border-radius: var(--radius-md);
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 32px;
-            transition: all 0.3s;
-        }
-
-        .btn-logout:hover {
-            background: var(--status-fail);
-            color: white;
-        }
-    </style>
 </head>
-
 <body>
-    <header class="header">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html"
-                style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;"><i
-                    class="fas fa-chevron-left"></i></a>
-            <h2 style="font-size: 20px; font-weight: 800;">USER PROFILE</h2>
+    <header class="top-navbar">
+        <a class="nav-brand" href="dashboard.html">
+            <div class="logo-icon"><i class="fas fa-user-shield"></i></div>
+            <div>
+                <div class="brand-name">Profile</div>
+                <div class="brand-sub">Staff Access</div>
+            </div>
+        </a>
+        <div class="nav-actions">
+            <button class="nav-btn" aria-label="Settings"><i class="fas fa-gear"></i></button>
+            <div class="user-avatar" id="avatarSmall">QC</div>
         </div>
     </header>
 
-    <div class="profile-container">
-        <div class="avatar-circle">
-            <i class="fas fa-user"></i>
-        </div>
-        <h2 id="displayUsername" style="margin-bottom: 4px;">Loading...</h2>
-        <p id="displayRole" class="alert-status" style="display: inline-block; padding: 4px 16px;"></p>
-
-        <div class="info-card">
-            <div class="info-item">
-                <label>Full Name</label>
-                <p id="fullName">Astro Staff Member</p>
+    <main class="app-shell page-grid">
+        <section class="glass-card profile-cover">
+            <div class="profile-main">
+                <label class="avatar-circle" title="Upload avatar">
+                    <i class="fas fa-user"></i>
+                    <input type="file" accept="image/*" hidden>
+                </label>
+                <div>
+                    <span class="eyebrow">ASTRO QC Staff</span>
+                    <h1 id="displayUsername">Loading...</h1>
+                    <span id="displayRole" class="alert-status pass">STAFF</span>
+                </div>
             </div>
-            <div class="info-item">
+        </section>
+
+        <section class="profile-grid">
+            <div class="glass-card profile-info"><label>Full Name</label><p id="fullName">Astro Staff Member</p></div>
+            <div class="glass-card profile-info"><label>Shift Info</label><p>Shift A - 07:00</p></div>
+            <div class="glass-card profile-info"><label>Department</label><p>QC Kitchen</p></div>
+            <div class="glass-card profile-info"><label>Last Login</label><p id="lastLogin">Today</p></div>
+        </section>
+
+        <section class="panel-card">
+            <div class="section-header">
+                <h3 class="section-title">Activity Statistics</h3>
+                <span class="status-badge success"><span class="online-dot"></span>Online</span>
+            </div>
+            <div class="profile-grid">
+                <div class="mini-stat"><span class="card-label">QC Submitted</span><strong>128</strong></div>
+                <div class="mini-stat"><span class="card-label">Photo Evidence</span><strong>84</strong></div>
+                <div class="mini-stat"><span class="card-label">Temp Logs</span><strong>212</strong></div>
+                <div class="mini-stat"><span class="card-label">Accuracy</span><strong>99%</strong></div>
+            </div>
+        </section>
+
+        <section class="menu-grid">
+            <button class="menu-item"><span class="alert-icon"><i class="fas fa-pen"></i></span><strong>Edit profile</strong></button>
+            <button class="menu-item"><span class="alert-icon"><i class="fas fa-lock"></i></span><strong>Change password</strong></button>
+            <button class="menu-item"><span class="alert-icon"><i class="fas fa-bell"></i></span><strong>Notification settings</strong></button>
+            <button class="menu-item"><span class="alert-icon"><i class="fas fa-palette"></i></span><strong>Theme settings</strong></button>
+            <button class="menu-item logout-danger" onclick="Auth.logout()"><span class="alert-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
+        </section>
+
+        <section class="panel-card">
+            <div class="profile-info">
                 <label>Account ID</label>
-                <p id="accountId" style="font-family: monospace; font-size: 13px; opacity: 0.7;"></p>
+                <p id="accountId" style="font-family:monospace;color:var(--muted)"></p>
             </div>
-            <div class="info-item" style="margin-bottom: 0;">
-                <label>System Access</label>
-                <p id="accessLevel">Standard Operations</p>
-            </div>
-        </div>
-
-        <button class="btn-logout" onclick="Auth.logout()">LOGOUT SYSTEM</button>
-    </div>
+        </section>
+    </main>
 
     <nav class="bottom-nav">
-        <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i><span>Home</span></a>
-        <a href="monitoring.html" class="nav-item"><i class="fas fa-thermometer-half"></i><span>Monitor</span></a>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Home</span></a>
+        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
         <a href="inspection.html" class="nav-item"><i class="fas fa-clipboard-check"></i><span>Check</span></a>
         <a href="profile.html" class="nav-item active"><i class="fas fa-user-circle"></i><span>Profile</span></a>
     </nav>
@@ -130,17 +92,15 @@
                 window.location.href = 'login.html';
                 return;
             }
-
+            const initials = user.username.substring(0, 2).toUpperCase();
             document.getElementById('displayUsername').innerText = user.username.toUpperCase();
+            document.getElementById('avatarSmall').innerText = initials;
             document.getElementById('accountId').innerText = user.id;
-
+            document.getElementById('lastLogin').innerText = new Date().toLocaleString('id-ID');
             const roleEl = document.getElementById('displayRole');
             roleEl.innerText = user.role.toUpperCase();
             roleEl.className = 'alert-status ' + (user.role === 'admin' ? 'fail' : 'pass');
-
-            document.getElementById('accessLevel').innerText = user.role === 'admin' ? 'Administrator (Full Control)' : 'Staff (Operations Only)';
         });
     </script>
 </body>
-
 </html>

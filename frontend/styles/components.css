@@ -1,0 +1,3 @@
+/* Shared component entrypoint.
+   Core reusable components live in global.css so legacy pages can adopt them
+   with one stylesheet while newer pages can import app.css. */

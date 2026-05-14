@@ -3,50 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quality Inspection | QC Central Kitchen</title>
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <title>QC Check | ASTRO QC Enterprise</title>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="../styles/qc.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="header">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="dashboard.html" style="color: var(--text-primary); font-size: 18px; width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-chevron-left"></i></a>
+    <header class="top-navbar">
+        <a class="nav-brand" href="dashboard.html">
+            <div class="logo-icon"><i class="fas fa-clipboard-check"></i></div>
             <div>
-                <h2 style="font-size: 20px; font-weight: 800;">QUALITY CONTROL</h2>
-                <p style="font-size: 12px; opacity: 0.7;">Production Batch Inspection</p>
+                <div class="brand-name">QC Check</div>
+                <div class="brand-sub">Batch Inspection</div>
             </div>
+        </a>
+        <div class="nav-actions">
+            <button class="nav-btn" onclick="window.location.href='new_batch.html'" aria-label="New batch"><i class="fas fa-plus"></i></button>
+            <div class="user-avatar">QC</div>
         </div>
     </header>
 
-    <div class="metrics-row" style="margin-top: 16px;">
-        <div class="metric-card">
-            <div class="metric-value" style="color: var(--status-pass);">12</div>
-            <div class="metric-label">Pass</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value" style="color: var(--status-fail);">1</div>
-            <div class="metric-label">Hold</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">5</div>
-            <div class="metric-label">Active</div>
-        </div>
-    </div>
+    <main class="app-shell page-grid">
+        <section class="glass-card qc-hero animate-in">
+            <span class="eyebrow">Guided Quality Flow</span>
+            <h1>Scan, input suhu, upload foto, validasi AI, lalu submit QC.</h1>
+            <p style="color:var(--muted);margin:0">Flow mobile-first untuk staff kitchen dengan autosave lokal dan validasi visual.</p>
+        </section>
 
-    <section class="section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 class="section-title" style="margin: 0;">Active Batches</h3>
-            <button onclick="window.location.href='new_batch.html'" style="padding: 10px 16px; background: var(--accent-blue); border: none; border-radius: 10px; color: white; font-size: 12px; font-weight: 700;">NEW BATCH</button>
-        </div>
-        
-        <div id="batchList">
-            <div class="skeleton" style="height: 100px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border-radius: 16px;"></div>
-        </div>
-    </section>
+        <section class="stepper">
+            <div class="step active"><i class="fas fa-barcode"></i>Scan</div>
+            <div class="step"><i class="fas fa-temperature-half"></i>Suhu</div>
+            <div class="step"><i class="fas fa-camera"></i>Foto</div>
+            <div class="step"><i class="fas fa-robot"></i>AI</div>
+            <div class="step"><i class="fas fa-check"></i>Submit</div>
+        </section>
+
+        <section class="metric-strip">
+            <div class="mini-stat"><span class="card-label">Pass</span><strong style="color:var(--success)">12</strong></div>
+            <div class="mini-stat"><span class="card-label">Hold</span><strong style="color:var(--danger)">1</strong></div>
+            <div class="mini-stat"><span class="card-label">Active</span><strong>5</strong></div>
+        </section>
+
+        <section class="qc-layout">
+            <div class="panel-card form-stack">
+                <div class="section-header">
+                    <h3 class="section-title">Quick QC Input</h3>
+                    <span class="status-badge success"><span class="online-dot"></span>Autosave</span>
+                </div>
+                <div class="scanner-frame">
+                    <i class="fas fa-qrcode"></i>
+                    <strong>Barcode Scanner UI</strong>
+                    <span>Gunakan kamera atau input manual batch barcode.</span>
+                    <input class="input-field" id="qcBarcode" placeholder="Scan / ketik barcode batch">
+                </div>
+                <div class="validation-grid">
+                    <div>
+                        <label>Input Suhu</label>
+                        <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="0.0 C">
+                    </div>
+                    <div>
+                        <label>CCP Stage</label>
+                        <select class="select-field" id="qcStage">
+                            <option>Receiving</option>
+                            <option>Cooking</option>
+                            <option>Cooling</option>
+                            <option>Packing</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>AI Badge</label>
+                        <div class="status-badge success" style="min-height:46px;justify-content:center;width:100%"><i class="fas fa-robot"></i> Ready</div>
+                    </div>
+                </div>
+                <div class="upload-zone" onclick="document.getElementById('qcPhoto').click()">
+                    <i class="fas fa-cloud-arrow-up"></i>
+                    <strong>Drag and drop upload</strong>
+                    <span>Ambil foto evidence produk, suhu, atau barcode.</span>
+                    <input id="qcPhoto" type="file" accept="image/*" hidden>
+                </div>
+                <button class="btn-primary" onclick="window.location.href='new_batch.html'"><i class="fas fa-paper-plane"></i>Submit QC Batch</button>
+            </div>
+
+            <div class="panel-card">
+                <div class="section-header">
+                    <h3 class="section-title">Active Batches</h3>
+                    <a class="section-link" href="new_batch.html">New batch</a>
+                </div>
+                <div id="activeBatchList" class="activity-list">
+                    <div class="skeleton skeleton-card"></div>
+                </div>
+                <div class="section-header" style="margin-top:20px">
+                    <h3 class="section-title">Product Shortcuts</h3>
+                    <span class="section-link">Catalog</span>
+                </div>
+                <div id="productGrid" class="validation-grid"></div>
+            </div>
+        </section>
+    </main>
 
     <nav class="bottom-nav">
-        <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i><span>Home</span></a>
-        <a href="monitoring.html" class="nav-item"><i class="fas fa-thermometer-half"></i><span>Monitor</span></a>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Home</span></a>
+        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
         <a href="inspection.html" class="nav-item active"><i class="fas fa-clipboard-check"></i><span>Check</span></a>
         <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profile</span></a>
     </nav>
@@ -59,6 +116,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
+            ['qcBarcode','qcTemp','qcStage'].forEach(id => {
+                const el = document.getElementById(id);
+                const saved = localStorage.getItem(id);
+                if (saved) el.value = saved;
+                el.addEventListener('input', () => localStorage.setItem(id, el.value));
+            });
             Inspection.init();
         });
     </script>

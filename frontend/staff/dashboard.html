@@ -3,101 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard | QC Central Kitchen</title>
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <title>Dashboard | ASTRO QC Enterprise</title>
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="%232563eb"/><path d="M18 42 32 12l14 30-14-8-14 8Z" fill="white"/></svg>'>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="../styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="header">
-        <div>
-            <h2>ASTRO QC</h2>
-            <p id="currentDate">Memuat data...</p>
-        </div>
-        <div class="header-actions">
-            <button id="adminBtn" class="notif-btn" onclick="window.location.href='admin_panel.html'" style="display: none; background: #f0f7ff; color: #0052cc; margin-right: 8px;"><i class="fas fa-cog"></i></button>
-            <button class="notif-btn" onclick="window.location.href='alerts.html'"><i class="fas fa-bell"></i></button>
+    <div id="loading-screen">
+        <div class="brand-logo">ASTRO QC</div>
+        <div class="spinner"></div>
+    </div>
+
+    <header class="top-navbar">
+        <a class="nav-brand" href="dashboard.html">
+            <div class="logo-icon"><i class="fas fa-shield-halved"></i></div>
+            <div>
+                <div class="brand-name">ASTRO QC</div>
+                <div class="brand-sub">Central Kitchen</div>
+            </div>
+        </a>
+        <label class="search-bar">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="search" placeholder="Search batch, alert, product">
+        </label>
+        <div class="nav-actions">
+            <div class="nav-clock">
+                <div class="time" id="clockTime">00:00:00</div>
+                <div id="clockDate">-- -- ----</div>
+            </div>
+            <button class="nav-btn" onclick="window.location.href='alerts.html'" aria-label="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="badge" id="alertBadge" style="display:none">0</span>
+            </button>
+            <div class="user-avatar" id="userInitial">QC</div>
         </div>
     </header>
 
-    <div class="health-card">
-        <h3>Facility Health Score</h3>
-        <div class="score-ring">
-            <svg viewBox="0 0 100 100">
-                <circle class="bg-circle" cx="50" cy="50" r="45"></circle>
-                <circle id="scoreCircle" class="progress-circle" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"></circle>
-            </svg>
-            <div class="score-value" id="healthScore">0</div>
-        </div>
-        <p style="color: var(--status-pass); font-weight: 700; margin-top: 8px;" id="healthStatus">SYSTEM STABLE</p>
-    </div>
-
-    <div class="metrics-row">
-        <div class="metric-card">
-            <div class="metric-value" id="activeBatches">0</div>
-            <div class="metric-label">Active</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value" id="criticalAlerts" style="color: var(--status-fail);">0</div>
-            <div class="metric-label">Alerts</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value" id="dailyScore">0</div>
-            <div class="metric-label">Efficiency</div>
-        </div>
-    </div>
-
-    <section class="section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 class="section-title" style="margin: 0;">Critical Monitoring</h3>
-            <a href="alerts.html" style="color: var(--accent-blue); font-size: 13px; font-weight: 600;">View All</a>
-        </div>
-        <div id="recentAlerts">
-            <div class="skeleton" style="height: 80px; margin-bottom: 12px; background: #eff6ff; border-radius: 16px;"></div>
-        </div>
-    </section>
-
-    <!-- Speed Dial FAB -->
-    <div id="fabContainer" style="position: fixed; bottom: 100px; right: 24px; z-index: 1001;">
-        <button id="mainFab" class="fab" style="border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all 0.3s;">
-            <i class="fas fa-plus"></i>
-        </button>
-        <div id="fabMenu" style="display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; position: absolute; bottom: 80px; right: 0;">
-            <button onclick="openFindingModal()" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: #ef4444; cursor: pointer; box-shadow: var(--shadow-md);" title="Lapor Temuan"><i class="fas fa-camera"></i></button>
-            <button onclick="window.location.href='new_batch.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);" title="Batch Baru"><i class="fas fa-box"></i></button>
-            <button onclick="window.location.href='monitoring.html'" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border-subtle); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-md);" title="Monitoring"><i class="fas fa-thermometer-half"></i></button>
-        </div>
-    </div>
-
-    <!-- Modal Temuan -->
-    <div id="findingModal" class="modal-overlay">
-        <div class="modal-sheet">
-            <div class="modal-drag-handle"></div>
-            <div class="modal-header">
-                <h3>Lapor Temuan QC</h3>
-                <button onclick="closeFindingModal()" class="close-btn"><i class="fas fa-times"></i></button>
+    <main class="app-shell page-grid">
+        <section class="dashboard-hero">
+            <div class="glass-card welcome-banner animate-in">
+                <span class="eyebrow">ASTRO QC Command Center</span>
+                <h1 id="greetingText">Good Morning, QC Team</h1>
+                <p>Ringkasan real-time untuk produksi, suhu fasilitas, approval, dan alert abnormal hari ini.</p>
             </div>
-            <form id="findingForm">
-                <div class="form-group">
-                    <label class="input-label">Foto Temuan</label>
-                    <div id="photoPreview" style="width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 12px; cursor: pointer; overflow: hidden;">
-                        <i class="fas fa-camera" style="font-size: 32px; color: #94a3b8; margin-bottom: 8px;"></i>
-                        <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Klik untuk ambil foto</span>
-                        <img id="previewImg" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+            <div class="glass-card health-card-main animate-in">
+                <div class="score-container">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle id="healthProgress" class="progress" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"></circle>
+                    </svg>
+                    <div class="score-text">
+                        <span class="val" id="healthValue">0</span>
+                        <span class="label">Health</span>
                     </div>
-                    <input type="file" id="findingPhoto" accept="image/*" capture="environment" style="display: none;">
                 </div>
-                <div class="form-group">
-                    <label class="input-label">Alasan / Deskripsi</label>
-                    <textarea id="findingReason" class="input-field" style="height: 120px; resize: none; padding-top: 12px;" placeholder="Jelaskan temuan Anda..."></textarea>
+                <div class="health-info">
+                    <h2 id="healthLabel">Analyzing System...</h2>
+                    <p>Skor fasilitas dihitung dari compliance batch, alert suhu, dan status monitoring.</p>
+                    <span class="status-badge success"><span class="online-dot"></span>Live Sync</span>
                 </div>
-                <button type="submit" class="btn-primary" id="submitFindingBtn">KIRIM LAPORAN</button>
-            </form>
+            </div>
+        </section>
+
+        <section class="metrics-grid stagger">
+            <div class="analytics-card animate-in">
+                <div class="card-icon"><i class="fas fa-barcode"></i></div>
+                <div class="card-value" id="totalBatches">0</div>
+                <div class="card-label">Batch Hari Ini</div>
+                <div class="card-trend">Production active</div>
+            </div>
+            <div class="analytics-card animate-in">
+                <div class="card-icon danger"><i class="fas fa-triangle-exclamation"></i></div>
+                <div class="card-value" id="failedBatches">0</div>
+                <div class="card-label">Total Alert</div>
+                <div class="card-trend" style="color:var(--danger)">Needs review</div>
+            </div>
+            <div class="analytics-card animate-in">
+                <div class="card-icon success"><i class="fas fa-clipboard-check"></i></div>
+                <div class="card-value">98%</div>
+                <div class="card-label">QC Success Rate</div>
+                <div class="card-trend">Above target</div>
+            </div>
+            <div class="analytics-card animate-in">
+                <div class="card-icon warning"><i class="fas fa-user-clock"></i></div>
+                <div class="card-value">4</div>
+                <div class="card-label">Pending Approval</div>
+                <div class="card-trend" style="color:var(--warning)">Supervisor queue</div>
+            </div>
+            <div class="analytics-card animate-in">
+                <div class="card-icon"><i class="fas fa-temperature-half"></i></div>
+                <div class="card-value">-18.4</div>
+                <div class="card-label">Avg Freezer C</div>
+                <div class="card-trend">Stable range</div>
+            </div>
+        </section>
+
+        <section class="dashboard-main-grid">
+            <div class="panel-card chart-card">
+                <div class="section-header">
+                    <h3 class="section-title">Produksi 7 Hari</h3>
+                    <span class="status-badge muted">Auto fallback</span>
+                </div>
+                <div class="fake-line-chart" aria-label="Line chart produksi 7 hari"></div>
+            </div>
+            <div class="panel-card chart-card">
+                <div class="section-header">
+                    <h3 class="section-title">Status QC</h3>
+                    <span class="section-link">Today</span>
+                </div>
+                <div class="pie-wrap">
+                    <div class="pie-chart"></div>
+                    <div class="activity-list">
+                        <span class="status-badge success">Pass 72%</span>
+                        <span class="status-badge warning">Warning 14%</span>
+                        <span class="status-badge danger">Fail 6%</span>
+                        <span class="status-badge muted">Pending 8%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="summary-grid">
+            <div class="panel-card">
+                <div class="section-header">
+                    <h3 class="section-title">Realtime Monitoring</h3>
+                    <span class="online-dot"></span>
+                </div>
+                <div class="activity-list">
+                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-snowflake"></i></div><div><strong>Freezer Line A</strong><p class="card-label">Main storage</p></div><div class="temp-value">-18C</div></div>
+                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-temperature-low"></i></div><div><strong>Chiller Prep</strong><p class="card-label">Kitchen prep</p></div><div class="temp-value">3C</div></div>
+                    <div class="monitor-row"><div class="alert-icon"><i class="fas fa-fan"></i></div><div><strong>Blast Chiller</strong><p class="card-label">Cooling station</p></div><div class="temp-value">1C</div></div>
+                </div>
+            </div>
+            <div class="panel-card">
+                <div class="section-header">
+                    <h3 class="section-title">Abnormal Alert Feed</h3>
+                    <a class="section-link" href="alerts.html">View all</a>
+                </div>
+                <div id="criticalList" class="activity-list">
+                    <div class="skeleton skeleton-card"></div>
+                    <div class="skeleton skeleton-card"></div>
+                </div>
+            </div>
+            <div class="panel-card">
+                <div class="section-header">
+                    <h3 class="section-title">Today QC Summary</h3>
+                    <span class="section-link">Shift A</span>
+                </div>
+                <div class="approval-list">
+                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-camera"></i></div><div class="alert-info"><h4>Photo inspection</h4><p>24 evidence uploaded</p></div><span class="status-badge success">OK</span></div>
+                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-robot"></i></div><div class="alert-info"><h4>AI validation</h4><p>2 items need human review</p></div><span class="status-badge warning">Review</span></div>
+                    <div class="alert-card"><div class="alert-icon"><i class="fas fa-check-double"></i></div><div class="alert-info"><h4>Approval queue</h4><p>Supervisor pending list</p></div><span class="status-badge muted">4</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="fab-container">
+        <div id="fabMenu" style="display:none; gap:10px; flex-direction:column;">
+            <button class="fab-mini" onclick="window.location.href='inspection.html'" title="Quick Scan"><i class="fas fa-qrcode"></i></button>
+            <button class="fab-mini" onclick="window.location.href='new_batch.html'" title="New Batch"><i class="fas fa-plus"></i></button>
         </div>
+        <button id="mainFab" class="fab" aria-label="Quick actions"><i class="fas fa-plus"></i></button>
     </div>
 
     <nav class="bottom-nav">
-        <a href="dashboard.html" class="nav-item active"><i class="fas fa-th-large"></i><span>Home</span></a>
-        <a href="monitoring.html" class="nav-item"><i class="fas fa-thermometer-half"></i><span>Monitor</span></a>
+        <a href="dashboard.html" class="nav-item active"><i class="fas fa-chart-pie"></i><span>Home</span></a>
+        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
         <a href="inspection.html" class="nav-item"><i class="fas fa-clipboard-check"></i><span>Check</span></a>
         <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profile</span></a>
     </nav>
@@ -105,102 +178,31 @@
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/utils.js"></script>
-    <script src="../js/ui-mobile.js"></script>
     <script src="../js/dashboard.js"></script>
-    <script src="../js/mobile-nav.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (!Auth.check()) window.location.href = 'login.html';
-            
-            const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
-            if (user.role === 'admin') {
-                document.getElementById('adminBtn').style.display = 'flex';
-            }
-
-            document.getElementById('currentDate').innerText = Utils.formatDate(new Date());
+            setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);
+            const tick = () => {
+                const now = new Date();
+                document.getElementById('clockTime').innerText = now.toLocaleTimeString('id-ID');
+                document.getElementById('clockDate').innerText = now.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+            };
+            tick();
+            setInterval(tick, 1000);
+            const hour = new Date().getHours();
+            document.getElementById('greetingText').innerText = hour < 12 ? 'Good Morning, QC Team' : hour < 18 ? 'Good Afternoon, QC Team' : 'Good Evening, QC Team';
+            const user = Auth.user();
+            if (user?.username) document.getElementById('userInitial').innerText = user.username.substring(0, 2).toUpperCase();
+            const mainFab = document.getElementById('mainFab');
+            const fabMenu = document.getElementById('fabMenu');
+            mainFab.addEventListener('click', () => {
+                const visible = fabMenu.style.display === 'flex';
+                fabMenu.style.display = visible ? 'none' : 'flex';
+                mainFab.classList.toggle('rotated');
+                document.querySelectorAll('.fab-mini').forEach((btn, i) => setTimeout(() => btn.classList.toggle('visible'), i * 45));
+            });
             Dashboard.init();
-        });
-
-        // FAB Toggle
-        const fab = document.getElementById('mainFab');
-        const menu = document.getElementById('fabMenu');
-        fab.addEventListener('click', () => {
-            const isVisible = menu.style.display === 'flex';
-            menu.style.display = isVisible ? 'none' : 'flex';
-            fab.style.transform = isVisible ? 'rotate(0)' : 'rotate(45deg)';
-        });
-
-        // Finding Modal Logic
-        const findingModal = document.getElementById('findingModal');
-        const modalSheet = findingModal.querySelector('.modal-sheet');
-        const findingForm = document.getElementById('findingForm');
-        const photoInput = document.getElementById('findingPhoto');
-        const photoPreview = document.getElementById('photoPreview');
-        const previewImg = document.getElementById('previewImg');
-
-        function openFindingModal() {
-            menu.style.display = 'none';
-            fab.style.transform = 'rotate(0)';
-            findingModal.style.display = 'flex';
-            setTimeout(() => modalSheet.classList.add('active'), 10);
-        }
-
-        function closeFindingModal() {
-            modalSheet.classList.remove('active');
-            setTimeout(() => findingModal.style.display = 'none', 400);
-        }
-
-        photoPreview.addEventListener('click', () => photoInput.click());
-
-        photoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (prev) => {
-                    previewImg.src = prev.target.result;
-                    previewImg.style.display = 'block';
-                    photoPreview.querySelector('i').style.display = 'none';
-                    photoPreview.querySelector('span').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        findingForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitFindingBtn');
-            const reason = document.getElementById('findingReason').value;
-            const photo = photoInput.files[0];
-
-            if (!reason) return alert("Mohon isi alasan temuan");
-
-            btn.disabled = true;
-            btn.innerText = 'MENGIRIM...';
-
-            try {
-                const formData = new FormData();
-                formData.append('reason', reason);
-                if (photo) formData.append('photo', photo);
-                formData.append('staff_id', JSON.parse(localStorage.getItem('qc_user')).id);
-
-                await API.upload('/qc/findings', formData);
-                
-                alert("Laporan temuan berhasil dikirim!");
-                closeFindingModal();
-                findingForm.reset();
-                previewImg.style.display = 'none';
-                photoPreview.querySelector('i').style.display = 'block';
-                photoPreview.querySelector('span').style.display = 'block';
-            } catch (err) {
-                alert("Gagal mengirim laporan: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'KIRIM LAPORAN';
-            }
-        });
-
-        findingModal.addEventListener('click', (e) => {
-            if (e.target === findingModal) closeFindingModal();
         });
     </script>
 </body>

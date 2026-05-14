@@ -1,0 +1,94 @@
+.qc-hero {
+  padding: 22px;
+}
+
+.qc-hero h1 {
+  margin: 8px 0;
+  font-size: clamp(27px, 5vw, 44px);
+  line-height: 1.04;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.step {
+  min-height: 82px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(15,23,42,.55);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.step.active {
+  color: white;
+  border-color: rgba(59,130,246,.65);
+  background: rgba(37,99,235,.32);
+}
+
+.qc-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.scanner-frame,
+.upload-zone {
+  min-height: 180px;
+  border: 1px dashed rgba(148,163,184,.36);
+  border-radius: var(--radius);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  background: linear-gradient(145deg, rgba(15,23,42,.7), rgba(30,41,59,.45));
+  text-align: center;
+  color: var(--muted);
+}
+
+.scanner-frame i,
+.upload-zone i {
+  font-size: 38px;
+  color: var(--primary2);
+}
+
+.validation-grid,
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mini-stat {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(15,23,42,.56);
+}
+
+.mini-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+}
+
+.form-stack {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 860px) {
+  .qc-layout {
+    grid-template-columns: 1.1fr .9fr;
+  }
+}

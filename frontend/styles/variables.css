@@ -1,0 +1,62 @@
+/* =====================================================
+   ASTRO QC – Design System Variables
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* ─── Color Palette ─────────────────────────── */
+  --bg:       #0f172a;
+  --card:     #111827;
+  --card2:    #1e293b;
+  --primary:  #2563eb;
+  --primary2: #3b82f6;
+  --success:  #10b981;
+  --warning:  #f59e0b;
+  --danger:   #ef4444;
+  --text:     #f8fafc;
+  --muted:    #94a3b8;
+  --border:   rgba(255,255,255,0.08);
+
+  /* Semantic status backgrounds */
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --danger-bg:  rgba(239, 68, 68, 0.12);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --gradient-hero:    linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #172554 100%);
+  --gradient-card:    linear-gradient(145deg, #111827 0%, #1e293b 100%);
+
+  /* Glass morphism */
+  --glass-bg:     rgba(17, 24, 39, 0.75);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-blur:   blur(16px);
+
+  /* Glows */
+  --glow-blue:    0 0 24px rgba(37, 99, 235, 0.35);
+  --glow-success: 0 0 24px rgba(16, 185, 129, 0.3);
+  --glow-danger:  0 0 24px rgba(239, 68, 68, 0.3);
+
+  /* ─── Geometry ──────────────────────────────── */
+  --radius-sm: 10px;
+  --radius:    18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  /* ─── Shadows ───────────────────────────────── */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow:    0 8px 20px rgba(0,0,0,0.35);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,0.45);
+
+  /* ─── Transitions ───────────────────────────── */
+  --transition:    0.3s ease;
+  --transition-lg: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ─── Typography ────────────────────────────── */
+  --font-sans: 'Inter', 'Poppins', system-ui, sans-serif;
+
+  /* ─── Layout ────────────────────────────────── */
+  --nav-height: 72px;
+  --header-h:   72px;
+}
