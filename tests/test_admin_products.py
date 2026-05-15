@@ -101,3 +101,23 @@ def test_admin_qc_reports_loads_findings_for_reports_hash():
     assert "renderEvidenceCell" in js
     assert "storage_path" in js
     assert "admin-evidence-path" in css
+
+
+def test_admin_api_urls_do_not_double_api_prefix():
+    api_js = (ROOT / "frontend" / "js" / "api.js").read_text(encoding="utf-8")
+    admin_js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert "apiBase: '/v1/admin'" in admin_js
+    assert "apiBase: '/api/v1/admin'" not in admin_js
+    assert "_url(endpoint)" in api_js
+    assert "startsWith('/api/')" in api_js
+    assert "API_BASE}${endpoint}" not in api_js
+    for endpoint in (
+        "/qc-reports",
+        "/traceability",
+        "/approvals",
+        "/audit-trail",
+        "/monitoring/realtime",
+        "/analytics/overview",
+    ):
+        assert f"${{this.apiBase}}{endpoint}" in admin_js

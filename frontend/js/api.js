@@ -10,7 +10,8 @@ const API_BASE = window.location.origin.includes('localhost') || window.location
 const API = {
     async get(endpoint) {
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const url = this._url(endpoint);
+            const response = await fetch(url, {
                 headers: this._headers(),
                 credentials: 'include'
             });
@@ -18,7 +19,7 @@ const API = {
                 return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
-                    const retryResp = await fetch(`${API_BASE}${endpoint}`, { headers: this._headers(), credentials: 'include' });
+                    const retryResp = await fetch(url, { headers: this._headers(), credentials: 'include' });
                     return await this._handleResponse(retryResp);
                 }
                 throw err;
@@ -31,7 +32,8 @@ const API = {
 
     async post(endpoint, data) {
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const url = this._url(endpoint);
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: this._headers(),
                 body: JSON.stringify(data),
@@ -41,7 +43,7 @@ const API = {
                 return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
-                    const retryResp = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
+                    const retryResp = await fetch(url, { method: 'POST', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
                     return await this._handleResponse(retryResp);
                 }
                 throw err;
@@ -54,7 +56,8 @@ const API = {
 
     async patch(endpoint, data) {
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const url = this._url(endpoint);
+            const response = await fetch(url, {
                 method: 'PATCH',
                 headers: this._headers(),
                 body: JSON.stringify(data),
@@ -64,7 +67,7 @@ const API = {
                 return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
-                    const retryResp = await fetch(`${API_BASE}${endpoint}`, { method: 'PATCH', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
+                    const retryResp = await fetch(url, { method: 'PATCH', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
                     return await this._handleResponse(retryResp);
                 }
                 throw err;
@@ -77,7 +80,8 @@ const API = {
 
     async delete(endpoint) {
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const url = this._url(endpoint);
+            const response = await fetch(url, {
                 method: 'DELETE',
                 headers: this._headers(),
                 credentials: 'include'
@@ -86,7 +90,7 @@ const API = {
                 return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
-                    const retryResp = await fetch(`${API_BASE}${endpoint}`, { method: 'DELETE', headers: this._headers(), credentials: 'include' });
+                    const retryResp = await fetch(url, { method: 'DELETE', headers: this._headers(), credentials: 'include' });
                     return await this._handleResponse(retryResp);
                 }
                 throw err;
@@ -99,7 +103,8 @@ const API = {
 
     async upload(endpoint, formData) {
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const url = this._url(endpoint);
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('qc_token')}`
@@ -111,7 +116,7 @@ const API = {
                 return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
-                    const retryResp = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('qc_token')}` }, body: formData, credentials: 'include' });
+                    const retryResp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('qc_token')}` }, body: formData, credentials: 'include' });
                     return await this._handleResponse(retryResp);
                 }
                 throw err;
@@ -225,6 +230,14 @@ const API = {
         return 'jpg';
     },
 
+    _url(endpoint) {
+        const raw = String(endpoint || '');
+        if (/^https?:\/\//i.test(raw)) return raw;
+        const path = raw.startsWith('/') ? raw : `/${raw}`;
+        if (path === '/api' || path.startsWith('/api/')) return path;
+        return `${API_BASE}${path}`;
+    },
+
     _headers() {
         return {
             'Content-Type': 'application/json',
@@ -247,7 +260,7 @@ const API = {
             if (error.status === 401) {
                 try {
                     // call refresh endpoint
-                    const refreshRes = await fetch(`${API_BASE}/staff/refresh`, { method: 'POST', credentials: 'include' });
+                    const refreshRes = await fetch(this._url('/staff/refresh'), { method: 'POST', credentials: 'include' });
                     if (refreshRes.ok) {
                         const refreshed = await refreshRes.json();
                         if (refreshed && refreshed.token) {

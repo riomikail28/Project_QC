@@ -4,7 +4,7 @@
 
 const adminApp = {
     // API Endpoints
-    apiBase: '/api/v1/admin',
+    apiBase: '/v1/admin',
     charts: {},
     crudMode: null,
     crudId: null,
