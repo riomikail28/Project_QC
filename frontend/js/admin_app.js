@@ -644,23 +644,6 @@ const adminApp = {
         }
 
         res.data.forEach(batch => {
-        const tbody = document.getElementById('table-qc-reports');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading reports...</td></tr>';
-        
-        const statusFilter = document.getElementById('filter-qc-status').value;
-        let url = `${this.apiBase}/qc-reports?limit=20`;
-        if (statusFilter) url += `&status=${statusFilter}`;
-
-        const res = await this.fetchAdminData(url);
-        if (!res || !res.data) return;
-
-        tbody.innerHTML = '';
-        if (res.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada laporan.</td></tr>';
-            return;
-        }
-
-        res.data.forEach(batch => {
             const tr = document.createElement('tr');
             
             const status = batch.status || batch.final_qc_status || 'pending';
