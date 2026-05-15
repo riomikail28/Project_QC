@@ -14,12 +14,21 @@ const adminApp = {
         this.checkAuth();
         this.setupNavigation();
         this.setupMobileDrawer();
-        this.setupThemeToggle();
-        this.setupCrudForm();
+        this.safeRun(() => this.setupThemeToggle(), 'theme toggle');
+        this.safeRun(() => this.setupCrudForm(), 'crud form');
         this.refreshIcons();
         
         // Initial load
-        this.loadOverview();
+        this.safeRun(() => this.loadOverview(), 'overview');
+    },
+
+    safeRun(fn, label) {
+        try {
+            return fn();
+        } catch (error) {
+            console.error(`[Admin] Failed to initialize ${label}:`, error);
+            return null;
+        }
     },
 
     checkAuth() {
@@ -43,33 +52,37 @@ const adminApp = {
     },
 
     setupNavigation() {
-        const items = document.querySelectorAll('.sidebar-item[data-target]');
-        items.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = item.dataset.section || item.getAttribute('data-target');
-                if (!target) return;
-
-                items.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-
-                document.getElementById('page-title').innerText = item.querySelector('span')?.innerText || item.innerText;
-
-                document.querySelectorAll('.dashboard-section, .admin-section').forEach(sec => {
-                    sec.classList.remove('active');
-                    sec.hidden = true;
-                });
-
-                const section = document.getElementById(`section-${target}`);
-                if(section) {
-                    section.hidden = false;
-                    section.classList.add('active');
-                    this.loadSectionData(target);
-                }
-                this.closeMobileDrawer();
-                this.refreshIcons();
-            });
+        document.addEventListener('click', (event) => {
+            const item = event.target.closest('.sidebar-item[data-target]');
+            if (!item) return;
+            event.preventDefault();
+            this.navigateTo(item.dataset.section || item.dataset.target, item);
         });
+    },
+
+    navigateTo(target, activeItem = null) {
+        if (!target) return;
+        const item = activeItem || document.querySelector(`.sidebar-item[data-section="${target}"], .sidebar-item[data-target="${target}"]`);
+        document.querySelectorAll('.sidebar-item[data-target]').forEach(link => link.classList.remove('active'));
+        if (item) item.classList.add('active');
+
+        const title = item?.querySelector('span')?.innerText || item?.innerText || target;
+        const titleEl = document.getElementById('page-title');
+        if (titleEl) titleEl.innerText = title;
+
+        document.querySelectorAll('.dashboard-section, .admin-section').forEach(sec => {
+            sec.classList.remove('active');
+            sec.hidden = true;
+        });
+
+        const section = document.getElementById(`section-${target}`);
+        if (section) {
+            section.hidden = false;
+            section.classList.add('active');
+            this.loadSectionData(target);
+        }
+        this.closeMobileDrawer();
+        this.refreshIcons();
     },
 
     setupMobileDrawer() {
@@ -100,6 +113,7 @@ const adminApp = {
 
     setupThemeToggle() {
         const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
         const root = document.documentElement;
         
         // Check local storage

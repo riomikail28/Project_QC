@@ -20,15 +20,15 @@
                 <span>QC Enterprise</span>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="#" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Temperature Logs</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Reports</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
+                <li><a href="#section-overview" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview" onclick="adminApp.navigateTo('overview', this); return false;"><i data-lucide="layout-dashboard"></i><span>Overview</span></a></li>
+                <li><a href="#section-monitoring" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring" onclick="adminApp.navigateTo('monitoring', this); return false;"><i data-lucide="thermometer"></i><span>Temperature Logs</span></a></li>
+                <li><a href="#section-sku" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku" onclick="adminApp.navigateTo('sku', this); return false;"><i data-lucide="package-check"></i><span>Products</span></a></li>
+                <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff" onclick="adminApp.navigateTo('staff', this); return false;"><i data-lucide="users"></i><span>Staff</span></a></li>
+                <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports" onclick="adminApp.navigateTo('reports', this); return false;"><i data-lucide="file-text"></i><span>QC Reports</span></a></li>
+                <li><a href="#section-traceability" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability" onclick="adminApp.navigateTo('traceability', this); return false;"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
+                <li><a href="#section-approval" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval" onclick="adminApp.navigateTo('approval', this); return false;"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
+                <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit" onclick="adminApp.navigateTo('audit', this); return false;"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
+                <li><a href="#section-facility" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility" onclick="adminApp.navigateTo('facility', this); return false;"><i data-lucide="settings"></i><span>Settings</span></a></li>
                 <li><a href="/dashboard.html" class="sidebar-item"><i data-lucide="home"></i><span>Home</span></a></li>
                 <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>

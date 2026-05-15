@@ -54,6 +54,7 @@ select {
 .admin-sidebar {
   position: sticky;
   top: 0;
+  z-index: 30;
   width: 282px;
   height: 100vh;
   background: var(--sidebar-bg);
@@ -133,6 +134,8 @@ select {
   text-decoration: none;
   font-weight: 800;
   transition: var(--transition);
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .sidebar-item:hover,
@@ -505,12 +508,14 @@ select {
   inset: 0;
   z-index: 80;
   display: none;
+  pointer-events: none;
   background: rgba(2, 6, 23, .62);
   backdrop-filter: blur(8px);
 }
 
 .admin-drawer-overlay.active {
   display: block;
+  pointer-events: auto;
 }
 
 .modal-content {
