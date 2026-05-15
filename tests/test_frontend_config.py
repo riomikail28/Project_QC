@@ -34,3 +34,19 @@ def test_photo_pages_load_config_before_camera_module():
         config_index = html.index("../js/config.js")
         camera_index = html.index("../js/camera-module.js")
         assert config_index < camera_index, page.name
+
+
+def test_dashboard_qc_finding_uploads_to_supabase_before_backend_submit():
+    html = (ROOT / "frontend" / "staff" / "dashboard.html").read_text(encoding="utf-8")
+
+    assert "API.uploadPhotoToSupabase" in html
+    assert "formData.append('photo'," not in html
+    assert "formData.append('photo_url'" in html
+    assert "formData.append('storage_path'" in html
+
+
+def test_csp_allows_blob_image_previews(client):
+    response = client.get("/")
+    csp = response.headers["Content-Security-Policy"]
+
+    assert "img-src 'self' data: blob: https:" in csp

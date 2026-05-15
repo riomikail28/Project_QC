@@ -23,6 +23,15 @@ _client: Client = None
 _failed: bool = False
 _last_error: str = ""
 
+
+def _supabase_key() -> str:
+    return (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_KEY")
+        or os.getenv("SUPABASE_ANON_KEY")
+        or ""
+    ).strip()
+
 def get_client():
     """Get or initialize the Supabase client singleton."""
     global _client, _failed, _last_error
@@ -32,7 +41,7 @@ def get_client():
         
     # Fetch environment variables dynamically
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
+    key = _supabase_key()
 
     if not create_client or not Client:
         _last_error = "Package supabase belum terinstall"
@@ -40,7 +49,7 @@ def get_client():
         return None
 
     if not url or not key:
-        _last_error = "SUPABASE_URL atau SUPABASE_KEY belum dikonfigurasi"
+        _last_error = "SUPABASE_URL dan Supabase key belum dikonfigurasi"
         logger.warning(_last_error)
         return None
     
@@ -79,9 +88,9 @@ def direct_db_query(table: str, method: str = "GET", payload: dict = None, filte
     from urllib import request, error
     
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", "")).strip()
+    key = _supabase_key()
     if not url or not key:
-        raise ValueError("SUPABASE_URL atau SUPABASE_KEY belum dikonfigurasi")
+        raise ValueError("SUPABASE_URL dan Supabase key belum dikonfigurasi")
     
     api_url = f"{url}/rest/v1/{table}"
     if filters:

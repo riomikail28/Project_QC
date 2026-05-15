@@ -143,6 +143,88 @@ const API = {
         }));
     },
 
+    async uploadPhotoToSupabase(file, meta = {}) {
+        this.validatePhoto(file);
+        const config = this._supabaseConfig();
+        const storagePath = this._storagePath(file, meta);
+        const response = await fetch(`${config.url}/storage/v1/object/${config.bucket}/${storagePath}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.anonKey}`,
+                'apikey': config.anonKey,
+                'Content-Type': file.type,
+                'x-upsert': 'false'
+            },
+            body: file
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || `Upload Supabase gagal (${response.status})`);
+        }
+
+        return {
+            url: `${config.url}/storage/v1/object/public/${config.bucket}/${storagePath}`,
+            storage_path: storagePath,
+            bucket: config.bucket
+        };
+    },
+
+    _supabaseConfig() {
+        const config = window.QC_CONFIG || {};
+        const url = String(config.supabaseUrl || '').replace(/\/+$/, '');
+        const anonKey = String(config.supabaseAnonKey || '');
+        const bucket = String(config.supabaseStorageBucket || 'qc-evidence');
+
+        if (!url || !anonKey) {
+            throw new Error('Konfigurasi Supabase frontend belum tersedia.');
+        }
+        if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
+            throw new Error('URL Supabase frontend tidak valid.');
+        }
+        if (this._isUnsafeSupabaseKey(anonKey)) {
+            throw new Error('Supabase service-role key tidak boleh digunakan di frontend.');
+        }
+
+        return { url, anonKey, bucket };
+    },
+
+    _isUnsafeSupabaseKey(key) {
+        if (!key || key.startsWith('sb_secret_')) return true;
+        try {
+            const payload = key.split('.')[1];
+            if (!payload) return false;
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            return decoded.role === 'service_role';
+        } catch (error) {
+            return false;
+        }
+    },
+
+    _storagePath(file, meta = {}) {
+        const extension = this._extensionForPhoto(file);
+        const staffId = this._safePathPart(meta.staffId || 'staff');
+        const source = this._safePathPart(meta.source || 'qc-finding');
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const random = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replace(/[^a-z0-9-]/gi, '');
+        return `${staffId}/${timestamp}/${source}-${random}.${extension}`;
+    },
+
+    _safePathPart(value) {
+        return String(value || 'unknown')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 80) || 'unknown';
+    },
+
+    _extensionForPhoto(file) {
+        if (file.type === 'image/png') return 'png';
+        if (file.type === 'image/webp') return 'webp';
+        return 'jpg';
+    },
+
     _headers() {
         return {
             'Content-Type': 'application/json',

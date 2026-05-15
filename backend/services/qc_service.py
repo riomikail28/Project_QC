@@ -12,11 +12,18 @@ class QCService:
         self.audit = audit_service
         self.external_sync = external_sync
 
-    def report_finding(self, staff_id: str, reason: str, photo_file: Optional[Any]) -> Dict[str, Any]:
+    def report_finding(
+        self,
+        staff_id: str,
+        reason: str,
+        photo_file: Optional[Any] = None,
+        photo_url: str | None = None,
+        storage_path: str | None = None,
+    ) -> Dict[str, Any]:
         photo_files = photo_file if isinstance(photo_file, list) else ([photo_file] if photo_file else [])
         uploaded_files = []
-        photo_urls = []
-        storage_paths = []
+        photo_urls = [item for item in str(photo_url or "").split(";") if item]
+        storage_paths = [item for item in str(storage_path or "").split(";") if item]
         if photo_files and self.storage:
             for item in photo_files:
                 if hasattr(self.storage, "upload_file_storage"):

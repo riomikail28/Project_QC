@@ -235,8 +235,11 @@ def report_finding():
     from backend.repositories.qc_repository import QCRepository
     from backend.services.qc_service import QCService
 
-    reason = request.form.get("reason")
-    staff_id = request.form.get("staff_id") or current_actor_id()
+    body = request.get_json(silent=True) or {}
+    reason = request.form.get("reason") or body.get("reason")
+    staff_id = request.form.get("staff_id") or body.get("staff_id") or current_actor_id()
+    photo_url = request.form.get("photo_url") or body.get("photo_url")
+    storage_path = request.form.get("storage_path") or body.get("storage_path")
     photo_files = request.files.getlist("photo")
 
     if not reason:
@@ -277,7 +280,13 @@ def report_finding():
         qc_service = QCService(repo, storage_service=storage, audit_service=audit_mod, external_sync=None)
 
     try:
-        result = qc_service.report_finding(staff_id, reason, photo_files)
+        result = qc_service.report_finding(
+            staff_id,
+            reason,
+            photo_files,
+            photo_url=photo_url,
+            storage_path=storage_path,
+        )
         return jsonify(result)
     except Exception as e:
         logger.exception("Report finding failed: %s", e)
