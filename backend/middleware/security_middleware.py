@@ -61,20 +61,11 @@ class SecurityMiddleware:
         if not self.secret_key:
             if app.config.get("TESTING"):
                 self.secret_key = "test-secret-change-me"
+            elif os.getenv("VERCEL") or os.getenv("FLASK_ENV") == "production":
+                raise RuntimeError("JWT_SECRET_KEY or SECRET_KEY must be configured in production")
             else:
-                # Vercel/production can fail fast if env vars aren't configured yet.
-                # Use a deterministic fallback to keep the app bootable; JWT endpoints
-                # will still be protected, but tokens generated with the fallback
-                # won't be valid across deployments without the real secret.
-                self.secret_key = (
-                    os.getenv("JWT_SECRET_KEY")
-                    or os.getenv("SECRET_KEY")
-                    or "vercel-fallback-secret"
-                )
-                logger.warning(
-                    "JWT_SECRET_KEY/SECRET_KEY not set in production; using fallback secret. "
-                    "Set JWT_SECRET_KEY in Vercel env for real auth."
-                )
+                self.secret_key = "local-dev-secret-change-me"
+                logger.warning("JWT_SECRET_KEY/SECRET_KEY not set; using local development secret.")
 
         app.extensions["security"] = self
         app.before_request(self._load_authenticated_user)
