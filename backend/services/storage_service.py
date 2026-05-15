@@ -9,7 +9,6 @@ import uuid
 import logging
 from datetime import datetime
 from dataclasses import dataclass
-from flask import current_app
 from backend.database.supabase_client import get_client, STORAGE_BUCKET
 
 logger = logging.getLogger("qc.service.storage")
@@ -53,29 +52,6 @@ def _content_type(ext: str) -> str:
         ".webp": "image/webp",
     }.get(ext, "application/octet-stream")
 
-def _local_photo_result(file_bytes: bytes, filename: str, folder: str = "qc_photos", content_type: str | None = None) -> UploadedPhoto:
-    """Save upload locally for development when Supabase Storage is unavailable."""
-    if os.environ.get("VERCEL"):
-        return None
-
-    upload_root = current_app.config.get("UPLOAD_FOLDER") if current_app else None
-    if not upload_root:
-        upload_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-
-    target_dir = os.path.join(upload_root, folder)
-    os.makedirs(target_dir, exist_ok=True)
-    try:
-        ext = _detect_image_ext(file_bytes, content_type)
-    except Exception:
-        ext = os.path.splitext(filename)[1] or ".jpg"
-        
-    unique_name = f"{datetime.now().strftime('%Y%m%d')}_{uuid.uuid4().hex}{ext}"
-    path = os.path.join(target_dir, unique_name)
-    with open(path, "wb") as fh:
-        fh.write(file_bytes)
-    storage_path = f"{folder}/{unique_name}"
-    return UploadedPhoto(url=f"/uploads/{storage_path}", storage_path=storage_path, bucket="local")
-
 def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", content_type: str | None = None) -> UploadedPhoto:
     """Upload a photo and return URL plus storage path metadata.
     
@@ -89,10 +65,7 @@ def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", con
     """
     sb = get_client()
     if not sb:
-        if os.environ.get("VERCEL"):
-            raise RuntimeError("Supabase client unavailable; cannot upload photo in production")
-        logger.warning("Supabase client not available, using local storage fallback")
-        return _local_photo_result(file_bytes, filename, content_type=content_type)
+        raise RuntimeError("Supabase client unavailable; cannot upload photo")
 
     try:
         ext = _detect_image_ext(file_bytes, content_type)
@@ -122,9 +95,6 @@ def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", con
         return UploadedPhoto(url=public_url, storage_path=storage_path)
     except Exception as e:
         logger.error("Storage upload failed: %s", e)
-        # Only fallback if not in production
-        if not os.environ.get("VERCEL"):
-            return _local_photo_result(file_bytes, filename, content_type=content_type)
         raise Exception(f"Gagal mengunggah foto ke storage: {str(e)}")
 
 

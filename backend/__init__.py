@@ -51,10 +51,6 @@ def create_app() -> Flask:
     except Exception as e:
         logger.warning("Metrics middleware not initialized: %s", e)
 
-    # Configure Uploads
-    app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
-    _ensure_upload_dirs(app)
-
     # Register route blueprints
     from backend.api.temperature_routes import monitoring_bp
     from backend.api.batch_routes import batch_bp
@@ -203,28 +199,4 @@ def create_app() -> Flask:
     def service_worker():
         return send_from_directory(FRONTEND_DIR, "sw.js")
 
-    # Serve uploaded files (for development)
-    @app.route("/uploads/<path:filename>")
-    def uploaded_file(filename):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
     return app
-
-
-def _ensure_upload_dirs(app: Flask):
-    """Ensure upload directories exist."""
-    # Skip directory creation if running on Vercel (Read-only filesystem)
-    if os.environ.get('VERCEL'):
-        return
-
-    paths = [
-        os.path.join(app.config['UPLOAD_FOLDER'], 'qc_photos'),
-        os.path.join(app.config['UPLOAD_FOLDER'], 'reports')
-    ]
-    for path in paths:
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
-        except OSError:
-            # Fallback for other read-only environments
-            pass

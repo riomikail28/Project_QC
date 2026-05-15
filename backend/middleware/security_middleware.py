@@ -24,7 +24,6 @@ PUBLIC_ENDPOINTS = {
     "staff_login",
     "health_check",
     "static",
-    "uploaded_file",
 }
 
 
