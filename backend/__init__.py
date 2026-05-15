@@ -11,7 +11,9 @@ Architecture:
     └── skills/          → Domain-specific modules (product catalog, staff, etc.)
 """
 
-from flask import Flask, send_from_directory
+import json
+
+from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
 import os
 
@@ -167,6 +169,23 @@ def create_app() -> Flask:
     @app.route("/styles/<path:filename>")
     def frontend_styles(filename):
         return send_from_directory(os.path.join(FRONTEND_DIR, "styles"), filename)
+
+    @app.route("/js/config.js")
+    def frontend_config():
+        config = {
+            "supabaseUrl": os.getenv("SUPABASE_URL", "").strip().rstrip("/"),
+            "supabaseAnonKey": os.getenv("SUPABASE_ANON_KEY", "").strip(),
+            "supabaseStorageBucket": os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence").strip() or "qc-evidence",
+            "maxUploadBytes": int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))),
+        }
+        body = (
+            "window.QC_CONFIG = Object.freeze("
+            + json.dumps(config, separators=(",", ":"))
+            + ");\n"
+        )
+        response = Response(body, mimetype="application/javascript")
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        return response
 
     @app.route("/js/<path:filename>")
     def frontend_js(filename):

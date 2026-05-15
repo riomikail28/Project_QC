@@ -178,15 +178,24 @@ class SecurityMiddleware:
         return None
 
     def _security_headers(self, response):
+        supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+        connect_sources = ["'self'", "http://localhost:5000"]
+        if supabase_url:
+            connect_sources.append(supabase_url)
+
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=()")
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "
-            "connect-src 'self' http://localhost:5000; frame-ancestors 'none'; base-uri 'self'",
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: https:; "
+            f"connect-src {' '.join(connect_sources)}; "
+            "frame-ancestors 'none'; base-uri 'self'",
         )
         return response
 

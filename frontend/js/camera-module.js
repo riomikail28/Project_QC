@@ -3,7 +3,7 @@
  * Fix: permission handling, image compression, offline-safe storage
  */
 
-import localforage from 'https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js';
+import localforage from 'https://cdn.jsdelivr.net/npm/localforage@1.10.0/+esm';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -11,7 +11,8 @@ const MAX_SIZE_KB   = 800;
 const JPEG_QUALITY  = 0.82;
 const PHOTO_STORE   = 'qc_pending_photos';
 const SYNC_TAG      = 'sync-qc-evidence';
-const STORAGE_BUCKET = 'qc-evidence';
+const DEFAULT_STORAGE_BUCKET = 'qc-evidence';
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 
 // ─── 1. Request camera permission with graceful fallback ──────────────────────
@@ -153,8 +154,10 @@ export async function savePhoto({ blob, batchId, ccp, operatorId, stationId }) {
 
 // ─── 5. Upload ke Supabase Storage ───────────────────────────────────────────
 async function uploadToSupabase(blob, meta) {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseConfig();
-  const filename = `${meta.stationId}/${meta.batchId}/${meta.ccp}_${Date.now()}.jpg`;
+  validateUploadBlob(blob);
+  const { SUPABASE_URL, SUPABASE_ANON_KEY, STORAGE_BUCKET } = getSupabaseConfig();
+  const contentType = blob.type && ALLOWED_MIME_TYPES.has(blob.type) ? blob.type : 'image/jpeg';
+  const filename = buildStoragePath(meta, extensionForMime(contentType));
 
   const res = await fetch(
     `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filename}`,
@@ -162,7 +165,8 @@ async function uploadToSupabase(blob, meta) {
       method : 'POST',
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type' : 'image/jpeg',
+        'apikey'       : SUPABASE_ANON_KEY,
+        'Content-Type' : contentType,
         'x-upsert'     : 'false'
       },
       body: blob
@@ -224,10 +228,74 @@ export async function syncPendingPhotos() {
 
 // ─── 8. Util ──────────────────────────────────────────────────────────────────
 function getSupabaseConfig() {
+  const config = window.QC_CONFIG || {};
+  const supabaseUrl = String(config.supabaseUrl || '').replace(/\/+$/, '');
+  const supabaseAnonKey = String(config.supabaseAnonKey || '');
+  const storageBucket = String(config.supabaseStorageBucket || DEFAULT_STORAGE_BUCKET);
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase frontend config belum tersedia. Pastikan /js/config.js dimuat sebelum camera-module.js.');
+  }
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl)) {
+    throw new Error('Supabase URL frontend tidak valid.');
+  }
+  if (isUnsafeSupabasePublicKey(supabaseAnonKey)) {
+    throw new Error('Supabase service-role key tidak boleh dipakai di frontend.');
+  }
+
   return {
-    SUPABASE_URL     : window.QC_CONFIG?.supabaseUrl     || '',
-    SUPABASE_ANON_KEY: window.QC_CONFIG?.supabaseAnonKey || ''
+    SUPABASE_URL: supabaseUrl,
+    SUPABASE_ANON_KEY: supabaseAnonKey,
+    STORAGE_BUCKET: storageBucket
   };
+}
+
+function isUnsafeSupabasePublicKey(key) {
+  if (!key) return true;
+  if (key.startsWith('sb_secret_')) return true;
+
+  try {
+    const payload = key.split('.')[1];
+    if (!payload) return false;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded.role === 'service_role';
+  } catch (error) {
+    return false;
+  }
+}
+
+function validateUploadBlob(blob) {
+  if (!blob || !blob.size) {
+    throw new Error('Foto kosong atau tidak valid.');
+  }
+  if (blob.size > (window.QC_CONFIG?.maxUploadBytes || 10 * 1024 * 1024)) {
+    throw new Error('Ukuran foto melebihi batas upload.');
+  }
+  if (blob.type && !ALLOWED_MIME_TYPES.has(blob.type)) {
+    throw new Error('Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.');
+  }
+}
+
+function buildStoragePath(meta = {}, extension = 'jpg') {
+  const stationId = safePathPart(meta.stationId || 'unknown-station');
+  const batchId = safePathPart(meta.batchId || 'unknown-batch');
+  const ccp = safePathPart(meta.ccp || 'evidence');
+  return `${stationId}/${batchId}/${ccp}_${Date.now()}.${extension}`;
+}
+
+function safePathPart(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'unknown';
+}
+
+function extensionForMime(contentType) {
+  if (contentType === 'image/png') return 'png';
+  if (contentType === 'image/webp') return 'webp';
+  return 'jpg';
 }
 
 export async function getPendingCount() {
