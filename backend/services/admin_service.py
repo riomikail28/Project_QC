@@ -84,11 +84,63 @@ class AdminService:
             query = self.sb.table("qc_reports").select("*", count="exact")
             if status_filter:
                 query = query.eq("status", status_filter)
-            res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
-            return {"success": True, "data": res.data or [], "count": res.count or 0}
+            query = query.order("created_at", desc=True)
+            if hasattr(query, "range"):
+                query = query.range(offset, offset + limit - 1)
+            else:
+                query = query.limit(limit)
+            report_res = query.execute()
+            reports = [self._normalize_qc_report(row) for row in (report_res.data or [])]
+
+            finding_query = self.sb.table("qc_findings").select("*").order("created_at", desc=True)
+            if hasattr(finding_query, "range"):
+                finding_query = finding_query.range(offset, offset + limit - 1)
+            else:
+                finding_query = finding_query.limit(limit)
+            finding_res = finding_query.execute()
+            findings = [
+                self._normalize_qc_finding(row)
+                for row in (finding_res.data or [])
+                if self._include_finding_for_status(row, status_filter)
+            ]
+
+            combined = sorted(
+                reports + findings,
+                key=lambda row: row.get("created_at") or "",
+                reverse=True,
+            )
+            return {
+                "success": True,
+                "data": combined[:limit],
+                "count": (getattr(report_res, "count", None) or len(reports)) + len(findings),
+            }
         except Exception as exc:
             logger.error("QC reports failed: %s", exc)
             return {"success": False, "detail": str(exc)}
+
+    def _normalize_qc_report(self, row):
+        item = dict(row or {})
+        item.setdefault("report_type", "qc_report")
+        item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
+        item.setdefault("photo_url", item.get("product_photo_url") or item.get("temperature_photo_url") or item.get("barcode_photo_url"))
+        return item
+
+    def _normalize_qc_finding(self, row):
+        item = dict(row or {})
+        item["report_type"] = "qc_finding"
+        item["status"] = item.get("status") or "finding"
+        item["approval_status"] = item.get("approval_status") or "pending"
+        item["display_title"] = item.get("reason") or "QC Finding"
+        item["product_name"] = item.get("product_name") or "QC Finding"
+        item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_id")
+        return item
+
+    def _include_finding_for_status(self, row, status_filter):
+        if not status_filter:
+            return True
+        status = (row.get("status") or "finding").lower()
+        approval_status = (row.get("approval_status") or "pending").lower()
+        return status_filter.lower() in {status, approval_status, "finding"}
 
     def get_traceability(self, barcode=None, limit=50):
         if not self.sb:

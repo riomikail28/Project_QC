@@ -539,6 +539,37 @@ select {
   justify-content: space-between;
 }
 
+.admin-evidence-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.admin-evidence-link {
+  color: var(--primary-color);
+  font-size: .82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-evidence-link:hover {
+  text-decoration: underline;
+}
+
+.admin-evidence-path {
+  display: block;
+  max-width: 240px;
+  overflow: hidden;
+  padding: 4px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

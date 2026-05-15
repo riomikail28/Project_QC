@@ -647,24 +647,53 @@ const adminApp = {
             const tr = document.createElement('tr');
             
             const status = batch.status || batch.final_qc_status || 'pending';
-            const evidence = batch.product_photo_url || batch.temperature_photo_url || batch.barcode_photo_url || batch.photo_url;
             let badgeClass = `status-badge status-${status}`;
-            const evidenceUrls = (evidence || '').split(';').filter(u => u);
-            let evidenceBtn = evidenceUrls.length > 0 
-                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`
-                : '-';
 
             tr.innerHTML = `
                 <td>${new Date(batch.created_at).toLocaleString('id-ID')}</td>
-                <td><strong>${batch.batch_code || batch.batch_id || '-'}</strong></td>
+                <td><strong>${this.escapeHtml(batch.batch_code || batch.batch_id || batch.display_title || '-')}</strong></td>
                 <td>${batch.product_name || batch.product_id || '-'}</td>
                 <td>${batch.inspector_name || batch.staff_id || '-'}</td>
                 <td><span class="${badgeClass}">${status.toUpperCase()}</span></td>
-                <td>${evidenceBtn}</td>
+                <td>${this.renderEvidenceCell(batch)}</td>
             `;
             tbody.appendChild(tr);
         });
         this.refreshIcons();
+    },
+
+    renderEvidenceCell(row) {
+        const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || '';
+        const storagePath = row.storage_path || '';
+        const evidenceUrls = evidence.split(';').filter(Boolean);
+        const storagePaths = storagePath.split(';').filter(Boolean);
+        if (!evidenceUrls.length && !storagePaths.length) return '-';
+
+        const previewButton = evidenceUrls.length
+            ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`
+            : '';
+        const links = evidenceUrls.map((url, index) => (
+            `<a href="${this.escapeAttr(url)}" target="_blank" rel="noopener" class="admin-evidence-link">Foto ${index + 1}</a>`
+        )).join('');
+        const paths = storagePaths.map(path => (
+            `<code class="admin-evidence-path">${this.escapeHtml(path)}</code>`
+        )).join('');
+
+        return `<div class="admin-evidence-cell">${previewButton}${links}${paths}</div>`;
+    },
+
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    },
+
+    escapeAttr(value) {
+        return this.escapeHtml(value).replace(/`/g, '&#96;');
     },
 
     async loadAuditTrail() {
