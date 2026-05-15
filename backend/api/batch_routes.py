@@ -19,7 +19,7 @@ from backend.services.batch_service import (
     get_daily_summary,
 )
 from backend.database.supabase_client import get_client
-from backend.services.storage_service import upload_photo
+from backend.services.storage_service import delete_photo, upload_file_storage
 from backend.middleware.security_middleware import require_auth, require_role
 from backend.services.audit_service import write_audit
 from backend.services.request_validation import BatchCreateRequest, request_payload, validate_model
@@ -126,21 +126,33 @@ def create_new_batch():
         return jsonify({"error": "product_id and batch_code are required"}), 400
 
     try:
+        uploaded = None
         photo_url = None
+        storage_path = None
         photo = request.files.get("photo")
         if photo:
-            photo_url = upload_photo(photo.read(), photo.filename)
+            uploaded = upload_file_storage(photo, staff_id=data.operator_id or "system")
+            photo_url = uploaded.url
+            storage_path = uploaded.storage_path
 
-        batch = create_batch(
-            product_id=product_id,
-            batch_code=batch_code,
-            production_date=data.production_date,
-            shift=data.shift,
-            operator_id=data.operator_id,
-            qc_officer_id=data.qc_officer_id,
-            photo_url=photo_url,
-        )
+        try:
+            batch = create_batch(
+                product_id=product_id,
+                batch_code=batch_code,
+                production_date=data.production_date,
+                shift=data.shift,
+                operator_id=data.operator_id,
+                qc_officer_id=data.qc_officer_id,
+                photo_url=photo_url,
+                storage_path=storage_path,
+            )
+        except Exception:
+            if uploaded:
+                delete_photo(uploaded.storage_path)
+            raise
         if isinstance(batch, dict) and batch.get("error"):
+            if uploaded:
+                delete_photo(uploaded.storage_path)
             return jsonify({"success": False, "error": batch["error"]}), 503
         write_audit("create", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
 
@@ -148,7 +160,12 @@ def create_new_batch():
             "success": True,
             "batch": batch,
             "message": "Batch created. Proceed to inspection.",
+            "photo_url": photo_url,
+            "storage_path": storage_path,
         }), 201
+    except ValueError as e:
+        logger.error("Batch photo validation failed: %s", e)
+        return jsonify({"success": False, "error": f"Upload gagal: {str(e)}"}), 400
     except Exception as e:
         logger.error("Failed to create batch: %s", e)
         return jsonify({"error": f"Gagal membuat batch: {str(e)}"}), 503

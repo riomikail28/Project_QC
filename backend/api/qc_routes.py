@@ -237,7 +237,7 @@ def report_finding():
 
     reason = request.form.get("reason")
     staff_id = request.form.get("staff_id") or current_actor_id()
-    photo_file = request.files.get("photo")
+    photo_files = request.files.getlist("photo")
 
     if not reason:
         return jsonify({"detail": "Reason is required"}), 400
@@ -253,11 +253,17 @@ def report_finding():
         # Storage wrapper around existing upload helper if available
         storage = None
         try:
+            from backend.services.storage_service import delete_photo as _delete_fn
+            from backend.services.storage_service import upload_file_storage as _upload_file_fn
             from backend.services.storage_service import upload_photo as _upload_fn
 
             class _StorageWrap:
                 def upload_photo(self, data, filename):
                     return _upload_fn(data, filename)
+                def upload_file_storage(self, file_storage, staff_id="system"):
+                    return _upload_file_fn(file_storage, staff_id=staff_id)
+                def delete_photo(self, storage_path):
+                    return _delete_fn(storage_path)
 
             storage = _StorageWrap()
         except Exception:
@@ -271,7 +277,7 @@ def report_finding():
         qc_service = QCService(repo, storage_service=storage, audit_service=audit_mod, external_sync=None)
 
     try:
-        result = qc_service.report_finding(staff_id, reason, photo_file)
+        result = qc_service.report_finding(staff_id, reason, photo_files)
         return jsonify(result)
     except Exception as e:
         logger.exception("Report finding failed: %s", e)

@@ -117,6 +117,7 @@ def create_batch(
     operator_id: str = None,
     qc_officer_id: str = None,
     photo_url: str = None,
+    storage_path: str = None,
 ) -> dict:
     """Create a new production batch record in Supabase.
 
@@ -156,16 +157,11 @@ def create_batch(
         payload["qc_officer_id"] = qc_officer_id
     if photo_url:
         payload["photo_url"] = photo_url
+    if storage_path:
+        payload["storage_path"] = storage_path
 
     try:
-        try:
-            res = sb.table("production_batches").insert([payload]).execute()
-        except Exception as e:
-            if "photo_url" in payload and "photo_url" in str(e):
-                payload.pop("photo_url")
-                res = sb.table("production_batches").insert([payload]).execute()
-            else:
-                raise
+        res = sb.table("production_batches").insert([payload]).execute()
         if res.data:
             logger.info("Batch created: %s", batch_code)
             return res.data[0]

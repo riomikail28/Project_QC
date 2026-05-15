@@ -28,7 +28,7 @@
         </div>
 
         <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
-            <input type="file" id="photoInput" accept="image/*" capture="environment" multiple>
+            <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" capture="environment" multiple>
             <div id="photoPreview" style="display: none; margin-bottom: 12px; position: relative;">
                 <img id="previewImg" src="" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-subtle);">
                 <div id="multiPhotoBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--accent-blue); color:white; border-radius:50%; width:24px; height:24px; font-size:12px; display:flex; align-items:center; justify-content:center; border:2px solid white; z-index:10;"></div>
@@ -70,6 +70,13 @@
         document.getElementById('photoInput').addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             if (files.length > 0) {
+                try {
+                    files.forEach(file => API.validatePhoto(file));
+                } catch (err) {
+                    alert(err.message || 'Upload gagal');
+                    e.target.value = '';
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('previewImg').src = e.target.result;
@@ -112,15 +119,18 @@
         document.getElementById('submitBtn').addEventListener('click', async () => {
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerText = 'Submitting...';
+            btn.innerText = 'Uploading...';
 
             try {
                 const res = await CCP.submit(batchId, stageNum);
                 if (res.success) {
+                    alert('✓ Upload berhasil');
                     window.location.href = `batch_detail.html?id=${batchId}`;
+                } else {
+                    throw new Error(res.error || 'Upload gagal');
                 }
             } catch (err) {
-                alert('Submission Error: ' + err.message);
+                alert('✕ Upload gagal: ' + err.message);
                 btn.disabled = false;
                 btn.innerText = 'Submit Inspection';
             }

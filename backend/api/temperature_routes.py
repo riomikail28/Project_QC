@@ -11,7 +11,7 @@ import os
 from backend.services.qc_engine import validate_temperature
 from backend.services.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.database.supabase_client import get_client
-from backend.services.storage_service import upload_photo
+from backend.services.storage_service import delete_photo, upload_file_storage
 from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
 from backend.services.request_validation import TemperatureLogRequest, request_payload, validate_model
@@ -42,8 +42,6 @@ def log_facility_data():
     temperature = data.temperature
     humidity = data.humidity
     reason = data.reason
-    photo_url = data.photo_url
-    photo_file = request.files.get("photo")
 
     if not all([room_id, temperature is not None]):
         return jsonify({"success": False, "error": "Room and Temperature are required"}), 400
@@ -78,19 +76,24 @@ def log_facility_data():
 
         # 3. Save Log (Hybrid: File or URL)
         photo_urls = []
+        storage_paths = []
+        uploaded_files = []
         
         # Check for pre-uploaded URL in body
-        if data.get("photo_url"):
-            photo_urls.append(data.get("photo_url"))
+        if data.photo_url:
+            photo_urls.append(data.photo_url)
             
         # Check for files
         photo_files = request.files.getlist("photo")
         for p_file in photo_files:
             if p_file:
-                p_url = upload_photo(p_file.read(), p_file.filename, staff_id=staff_id)
-                photo_urls.append(p_url)
+                uploaded = upload_file_storage(p_file, staff_id=staff_id)
+                uploaded_files.append(uploaded)
+                photo_urls.append(uploaded.url)
+                storage_paths.append(uploaded.storage_path)
         
         photo_url = ";".join(photo_urls) if photo_urls else None
+        storage_path = ";".join(storage_paths) if storage_paths else None
 
         threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.threshold or 25.0)
 
@@ -104,8 +107,15 @@ def log_facility_data():
             "reason": reason,
             "photo_url": photo_url,
         }
+        if storage_path:
+            log_payload["storage_path"] = storage_path
 
-        res = sb.table("facility_logs").insert(log_payload).execute()
+        try:
+            res = sb.table("facility_logs").insert(log_payload).execute()
+        except Exception as db_error:
+            for uploaded in uploaded_files:
+                delete_photo(uploaded.storage_path)
+            raise db_error
         log_data = res.data[0] if res.data else None
         write_audit("create", "facility_log", str(log_data.get("id")) if log_data else None, after=log_data or log_payload)
 
@@ -126,9 +136,14 @@ def log_facility_data():
             "success": True,
             "status": status,
             "alert": alert,
-            "log_id": log_data["id"] if log_data else None
+            "log_id": log_data["id"] if log_data else None,
+            "photo_url": photo_url,
+            "storage_path": storage_path,
         })
 
+    except ValueError as e:
+        logger.error("Upload validation error: %s", e)
+        return jsonify({"success": False, "error": f"Upload gagal: {str(e)}"}), 400
     except Exception as e:
         logger.error("Logging error: %s", e)
         return jsonify({"success": False, "error": str(e)}), 500

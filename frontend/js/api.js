@@ -122,6 +122,27 @@ const API = {
         }
     },
 
+    validatePhoto(file) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!file) throw new Error('Upload gagal: file kosong');
+        if (!allowedTypes.includes(file.type)) {
+            throw new Error(`Upload gagal: format ${file.name || 'file'} tidak didukung. Gunakan JPG, PNG, atau WEBP.`);
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            throw new Error(`Upload gagal: ukuran ${file.name || 'file'} melebihi 10MB.`);
+        }
+    },
+
+    async uploadPhotos(files, endpoint = '/storage/upload') {
+        const photos = Array.from(files || []);
+        photos.forEach(file => this.validatePhoto(file));
+        return Promise.all(photos.map(file => {
+            const formData = new FormData();
+            formData.append('photo', file);
+            return this.upload(endpoint, formData);
+        }));
+    },
+
     _headers() {
         return {
             'Content-Type': 'application/json',

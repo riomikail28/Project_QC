@@ -13,18 +13,30 @@ class QCService:
         self.external_sync = external_sync
 
     def report_finding(self, staff_id: str, reason: str, photo_file: Optional[Any]) -> Dict[str, Any]:
-        photo_url = None
-        if photo_file and self.storage:
-            try:
-                photo_url = self.storage.upload_photo(photo_file.read(), photo_file.filename)
-            except Exception as e:
-                logger.error("Photo upload failed in service: %s", e)
+        photo_files = photo_file if isinstance(photo_file, list) else ([photo_file] if photo_file else [])
+        uploaded_files = []
+        photo_urls = []
+        storage_paths = []
+        if photo_files and self.storage:
+            for item in photo_files:
+                if hasattr(self.storage, "upload_file_storage"):
+                    uploaded = self.storage.upload_file_storage(item, staff_id=staff_id)
+                    uploaded_files.append(uploaded)
+                    photo_urls.append(uploaded.url)
+                    storage_paths.append(uploaded.storage_path)
+                else:
+                    photo_urls.append(self.storage.upload_photo(item.read(), item.filename))
+
+        photo_url = ";".join(photo_urls) if photo_urls else None
+        storage_path = ";".join(storage_paths) if storage_paths else None
 
         payload = {
             "staff_id": staff_id,
             "reason": reason,
             "photo_url": photo_url,
         }
+        if storage_path:
+            payload["storage_path"] = storage_path
 
         finding = None
         if self.repo:
@@ -32,6 +44,15 @@ class QCService:
                 finding = self.repo.insert_finding(payload)
             except Exception as e:
                 logger.error("DB insert failed: %s", e)
+                if self.storage and hasattr(self.storage, "delete_photo"):
+                    for uploaded in uploaded_files:
+                        self.storage.delete_photo(uploaded.storage_path)
+                raise
+        if uploaded_files and not finding:
+            if self.storage and hasattr(self.storage, "delete_photo"):
+                for uploaded in uploaded_files:
+                    self.storage.delete_photo(uploaded.storage_path)
+            raise RuntimeError("Database save failed after photo upload")
 
         # Audit the action if audit service available
         try:

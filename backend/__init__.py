@@ -62,7 +62,7 @@ def create_app() -> Flask:
     from backend.api.ccp_routes import ccp_bp
     from backend.api.admin_routes import admin_bp
     from backend.api.dashboard_routes import dashboard_bp
-    from backend.api.storage_routes import storage_bp
+    from backend.api.storage_routes import storage_alias_bp, storage_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -77,11 +77,17 @@ def create_app() -> Flask:
 
             # storage wrapper
             try:
+                from backend.services.storage_service import delete_photo as _delete_fn
+                from backend.services.storage_service import upload_file_storage as _upload_file_fn
                 from backend.services.storage_service import upload_photo as _upload_fn
 
                 class _StorageWrap:
                     def upload_photo(self, data, filename):
                         return _upload_fn(data, filename)
+                    def upload_file_storage(self, file_storage, staff_id="system"):
+                        return _upload_file_fn(file_storage, staff_id=staff_id)
+                    def delete_photo(self, storage_path):
+                        return _delete_fn(storage_path)
 
                 storage = _StorageWrap()
             except Exception:
@@ -105,6 +111,7 @@ def create_app() -> Flask:
     app.register_blueprint(admin_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(storage_bp, url_prefix="/api/storage")
+    app.register_blueprint(storage_alias_bp)
 
     # Register staff auth routes
     try:

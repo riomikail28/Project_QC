@@ -6,6 +6,26 @@ const Inspection = {
     async init() {
         this.loadBatches();
         this.loadProducts();
+        this.bindPhotoValidation();
+    },
+
+    bindPhotoValidation() {
+        const input = document.getElementById('qcPhoto');
+        const zone = document.querySelector('.upload-zone');
+        if (!input || !zone) return;
+        input.addEventListener('change', event => {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+            try {
+                files.forEach(file => API.validatePhoto(file));
+                const suffix = files.length > 1 ? ` (${files.length})` : '';
+                zone.querySelector('span').textContent = `✓ Upload berhasil dipilih${suffix}`;
+            } catch (err) {
+                alert(err.message || 'Upload gagal');
+                input.value = '';
+                zone.querySelector('span').textContent = 'Ambil foto evidence produk, suhu, atau barcode.';
+            }
+        });
     },
 
     async loadBatches() {

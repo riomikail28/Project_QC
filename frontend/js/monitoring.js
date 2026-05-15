@@ -1,6 +1,6 @@
 /**
  * Monitoring Logic JS
- * Handles dynamic room/device loading, photo preview, and logging.
+ * Handles dynamic room/device loading, photo preview, and temperature logging.
  */
 
 const roomList = document.getElementById("room-list");
@@ -12,7 +12,7 @@ const currentRoomLabel = document.getElementById("currentRoomName");
 
 let facilityStructure = [];
 let selectedRoomId = null;
-let selectedPhotoFile = null;
+let selectedPhotoFiles = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     loadFacilityStructure();
@@ -32,14 +32,12 @@ async function loadFacilityStructure() {
             return;
         }
         facilityStructure = await res.json();
-
         if (facilityStructure.some(room => String(room.id).startsWith("room-"))) {
             document.getElementById("offlineIndicator").style.display = "flex";
         }
-
         if (!facilityStructure.length) facilityStructure = getFallbackFacility();
         renderRoomSelector();
-        if (facilityStructure.length > 0) selectRoom(facilityStructure[0].id);
+        selectRoom(facilityStructure[0].id);
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
         facilityStructure = getFallbackFacility();
@@ -66,7 +64,6 @@ function renderRoomSelector() {
         currentRoomLabel.innerText = "Setup fasilitas belum tersedia";
         return;
     }
-
     roomList.innerHTML = facilityStructure.map(room => `
         <div class="room-chip ${room.id === selectedRoomId ? "active" : ""}" onclick="selectRoom('${room.id}')">
             ${room.name}
@@ -78,7 +75,6 @@ function selectRoom(roomId) {
     selectedRoomId = roomId;
     const room = facilityStructure.find(item => item.id === roomId);
     if (!room) return;
-
     currentRoomLabel.innerText = room.name;
     renderRoomSelector();
     renderDevices(room.devices || []);
@@ -112,9 +108,7 @@ function renderDevices(devices) {
 
     deviceList.innerHTML = devices.map(device => `
         <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
-            <div class="device-icon">
-                <i class="fas ${iconForType(device.type)}"></i>
-            </div>
+            <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
             <div class="status-badge success device-status"><span class="online-dot"></span>Realtime</div>
             <div class="device-name">${device.name}</div>
             <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
@@ -154,20 +148,22 @@ function triggerPhoto() {
     document.getElementById("photo-input").click();
 }
 
-let selectedPhotoFiles = [];
-
-// ... (triggerPhoto, iconForType, etc. remain same)
-
 document.getElementById("photo-input").addEventListener("change", event => {
-    selectedPhotoFiles = Array.from(event.target.files);
+    selectedPhotoFiles = Array.from(event.target.files || []);
     if (selectedPhotoFiles.length === 0) return;
+    try {
+        selectedPhotoFiles.forEach(file => API.validatePhoto(file));
+    } catch (err) {
+        alert(err.message || "Upload gagal");
+        removePhoto();
+        return;
+    }
 
-    // Show preview of the first file
     const reader = new FileReader();
     reader.onload = loadEvent => {
         document.getElementById("preview-img").src = loadEvent.target.result;
         document.getElementById("photo-preview").style.display = "block";
-        
+
         const badge = document.getElementById("multi-photo-badge");
         if (selectedPhotoFiles.length > 1) {
             badge.innerText = selectedPhotoFiles.length;
@@ -197,79 +193,43 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
 
-    // Validation
-    for (const file of selectedPhotoFiles) {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            alert(`Format file ${file.name} tidak didukung. Gunakan JPG, PNG, atau WEBP.`);
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            alert(`Ukuran file ${file.name} terlalu besar. Maksimal 10MB.`);
-            return;
-        }
+    try {
+        selectedPhotoFiles.forEach(file => API.validatePhoto(file));
+    } catch (err) {
+        alert(err.message || "Upload gagal");
+        return;
     }
 
     const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
-
-    // Parallel Upload using Promise.all
-    let photoUrls = [];
-    if (selectedPhotoFiles.length > 0) {
-        try {
-            const uploadPromises = selectedPhotoFiles.map(async (file) => {
-                const fd = new FormData();
-                fd.append("photo", file);
-                const res = await fetch("/api/storage/upload", {
-                    method: "POST",
-                    body: fd,
-                    headers: authHeaders()
-                });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error || "Upload failed");
-                return data.url;
-            });
-            photoUrls = await Promise.all(uploadPromises);
-        } catch (err) {
-            alert(`✕ Gagal upload foto: ${err.message}`);
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
-            return;
-        }
-    }
-
-    const payload = {
-        device_id: document.getElementById("selected-device-id").value,
-        room_id: document.getElementById("selected-room-id").value,
-        staff_id: user.id || "",
-        temperature: document.getElementById("input-temp").value,
-        humidity: document.getElementById("input-rh").value || "",
-        reason: document.getElementById("input-reason").value,
-        photo_url: photoUrls.join(';')
-    };
+    const formData = new FormData();
+    formData.append("device_id", document.getElementById("selected-device-id").value);
+    formData.append("room_id", document.getElementById("selected-room-id").value);
+    formData.append("staff_id", user.id || "");
+    formData.append("temperature", document.getElementById("input-temp").value);
+    formData.append("humidity", document.getElementById("input-rh").value || "");
+    formData.append("reason", document.getElementById("input-reason").value);
+    selectedPhotoFiles.forEach(file => formData.append("photo", file));
 
     try {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
 
-        const res = await fetch("/api/monitoring/log", { 
-            method: "POST", 
-            body: JSON.stringify(payload), 
-            headers: {
-                ...authHeaders(),
-                "Content-Type": "application/json"
-            } 
+        const res = await fetch("/api/monitoring/log", {
+            method: "POST",
+            body: formData,
+            headers: authHeaders()
         });
-        
+
         const result = await res.json();
         if (result.success) {
-            alert(`✓ Berhasil! Status: ${result.status}`);
+            alert(`✓ Upload berhasil. Status: ${result.status}`);
             closeModal();
             loadRecentLogs();
         } else {
-            alert(`✕ Gagal: ${result.error}`);
+            alert(`✕ Upload gagal: ${result.error || "Coba lagi"}`);
         }
     } catch (err) {
-        alert("✕ Gagal menghubungi server atau timeout");
+        alert("✕ Upload gagal: koneksi timeout atau server tidak merespons");
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;

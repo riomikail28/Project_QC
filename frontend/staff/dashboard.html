@@ -199,7 +199,7 @@
             <button class="icon-button" onclick="closeQcFinding()" aria-label="Close QC Temuan"><i class="fas fa-times"></i></button>
         </div>
         <div class="alert-drawer-body">
-            <input type="file" id="findingPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleFindingPhoto(event)">
+            <input type="file" id="findingPhotoInput" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none" onchange="handleFindingPhoto(event)">
             <button type="button" class="finding-preview" onclick="openFindingCamera()" style="cursor:pointer; width:100%; border:0; text-align:center; font:inherit;">
                 <div class="alert-icon" id="findingPreviewIcon"><i class="fas fa-camera"></i></div>
                 <div id="findingPhotoPreview" style="display:none; width:100%; position:relative;">
@@ -324,7 +324,7 @@
             document.getElementById('findingDrawer').classList.remove('active');
         }
 
-        let selectedFindingPhoto = null;
+        let selectedFindingPhotos = [];
         let selectedFindingPhotoUrl = '';
 
         function openFindingCamera() {
@@ -335,21 +335,19 @@
         }
 
         function handleFindingPhoto(event) {
-            const file = event.target.files && event.target.files[0];
+            const files = Array.from(event.target.files || []);
+            const file = files[0];
             if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                alert('File harus berupa gambar.');
-                event.target.value = '';
-                return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                alert('Ukuran foto maksimal 10MB.');
+            try {
+                files.forEach(item => API.validatePhoto(item));
+            } catch (err) {
+                alert(err.message || 'Upload gagal');
                 event.target.value = '';
                 return;
             }
 
             if (selectedFindingPhotoUrl) URL.revokeObjectURL(selectedFindingPhotoUrl);
-            selectedFindingPhoto = file;
+            selectedFindingPhotos = files;
             selectedFindingPhotoUrl = URL.createObjectURL(file);
 
             const icon = document.getElementById('findingPreviewIcon');
@@ -361,7 +359,10 @@
             if (icon) icon.style.display = 'none';
             if (preview) preview.style.display = 'block';
             if (img) img.src = selectedFindingPhotoUrl;
-            if (badge) badge.style.display = 'inline-flex';
+            if (badge) {
+                badge.textContent = files.length;
+                badge.style.display = files.length > 1 ? 'inline-flex' : 'none';
+            }
             if (prompt) prompt.textContent = 'Foto siap dikirim. Klik lagi untuk ganti foto.';
         }
 
@@ -370,7 +371,7 @@
             const submitBtn = document.getElementById('submitFindingBtn');
             const reason = reasonEl ? reasonEl.value.trim() : '';
 
-            if (!selectedFindingPhoto) {
+            if (!selectedFindingPhotos.length) {
                 alert('Ambil foto temuan terlebih dahulu.');
                 openFindingCamera();
                 return;
@@ -389,7 +390,7 @@
 
             try {
                 const formData = new FormData();
-                formData.append('photo', selectedFindingPhoto);
+                selectedFindingPhotos.forEach(file => formData.append('photo', file));
                 formData.append('reason', reason);
                 formData.append('finding_type', 'field_finding');
                 formData.append('source', 'staff_dashboard');
@@ -401,7 +402,7 @@
                 Dashboard.init();
             } catch (error) {
                 console.error('Submit QC finding failed:', error);
-                alert(`Gagal mengirim laporan temuan: ${error.message || 'Coba lagi.'}`);
+                alert(`✕ Upload gagal: ${error.message || 'Coba lagi.'}`);
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -411,7 +412,7 @@
         }
 
         function resetQcFindingForm() {
-            selectedFindingPhoto = null;
+            selectedFindingPhotos = [];
             if (selectedFindingPhotoUrl) URL.revokeObjectURL(selectedFindingPhotoUrl);
             selectedFindingPhotoUrl = '';
 
