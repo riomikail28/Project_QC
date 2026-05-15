@@ -79,23 +79,59 @@ const CCP = {
 
     async submit(batchId, stageNum) {
         const info = this.stageInfo[stageNum];
-        const photo = document.getElementById('photoInput').files[0];
+        const photos = Array.from(document.getElementById('photoInput').files);
         
+        // Validation
+        for (const photo of photos) {
+            if (photo.size > 10 * 1024 * 1024) {
+                throw new Error(`Ukuran file ${photo.name} terlalu besar. Maksimal 10MB.`);
+            }
+        }
+
+        // Parallel Upload using Promise.all
+        let photoUrls = [];
+        if (photos.length > 0) {
+            const uploadPromises = photos.map(async (file) => {
+                const fd = new FormData();
+                fd.append('photo', file);
+                const res = await fetch('/api/storage/upload', {
+                    method: 'POST',
+                    body: fd,
+                    headers: authHeaders() // assumes authHeaders() returns { 'Authorization': 'Bearer ...' }
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Upload failed');
+                return data.url;
+            });
+            photoUrls = await Promise.all(uploadPromises);
+        }
+
         const metrics = {};
         document.querySelectorAll('#dynamicFields input').forEach(input => {
             metrics[input.id] = {
                 value: parseFloat(input.value),
-                status: 'PASS' // Status determined by backend
+                status: 'PASS'
             };
         });
 
-        const formData = new FormData();
-        formData.append('batch_id', batchId);
-        formData.append('stage', info.name);
-        formData.append('operator_id', Auth.user().id);
-        formData.append('metrics', JSON.stringify(metrics));
-        if (photo) formData.append('photo', photo);
+        // We send the photo_url as a joined string in the body
+        // The backend should be updated to accept this 'photo_url' in the body
+        const payload = {
+            batch_id: batchId,
+            stage: info.name,
+            operator_id: Auth.user().id,
+            metrics: metrics,
+            photo_url: photoUrls.join(';') // Pass the joined URLs
+        };
 
-        return await API.upload('/ccp/submit-stage', formData);
+        const res = await fetch('/api/ccp/submit-stage', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                ...authHeaders(),
+                'Content-Type': 'application/json'
+            }
+        });
+        return await res.json();
     }
 };

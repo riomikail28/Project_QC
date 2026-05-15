@@ -76,9 +76,21 @@ def log_facility_data():
         status = validate_temperature(unit_type, float(temperature))
         is_normal = (status == "PASS")
 
-        # 3. Save Log
-        if photo_file:
-            photo_url = upload_photo(photo_file.read(), photo_file.filename)
+        # 3. Save Log (Hybrid: File or URL)
+        photo_urls = []
+        
+        # Check for pre-uploaded URL in body
+        if data.get("photo_url"):
+            photo_urls.append(data.get("photo_url"))
+            
+        # Check for files
+        photo_files = request.files.getlist("photo")
+        for p_file in photo_files:
+            if p_file:
+                p_url = upload_photo(p_file.read(), p_file.filename, staff_id=staff_id)
+                photo_urls.append(p_url)
+        
+        photo_url = ";".join(photo_urls) if photo_urls else None
 
         threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.threshold or 25.0)
 

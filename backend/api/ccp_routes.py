@@ -49,11 +49,22 @@ def submit_stage():
     if not batch_id or not stage:
         return jsonify({"error": "batch_id and stage are required"}), 400
 
-    # 1. Handle Photo Upload
-    photo_url = None
-    if "photo" in request.files:
-        photo = request.files["photo"]
-        photo_url = upload_photo(photo.read(), photo.filename)
+    # 1. Handle Photo Upload (Hybrid: File or URL)
+    photo_urls = []
+    
+    # Check for pre-uploaded URLs in JSON body
+    body = request.get_json(silent=True) or {}
+    if "photo_url" in body and body["photo_url"]:
+        photo_urls.append(body["photo_url"])
+    
+    # Check for files in multipart request
+    photo_files = request.files.getlist("photo")
+    for p_file in photo_files:
+        if p_file:
+            p_url = upload_photo(p_file.read(), p_file.filename, staff_id=operator_id)
+            photo_urls.append(p_url)
+    
+    photo_url = ";".join(photo_urls) if photo_urls else None
 
     # 2. Parse Metrics
     metrics_raw = parse_form_json("metrics", {})

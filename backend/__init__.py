@@ -62,6 +62,7 @@ def create_app() -> Flask:
     from backend.api.ccp_routes import ccp_bp
     from backend.api.admin_routes import admin_bp
     from backend.api.dashboard_routes import dashboard_bp
+    from backend.api.storage_routes import storage_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -103,6 +104,7 @@ def create_app() -> Flask:
     app.register_blueprint(ccp_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(storage_bp, url_prefix="/api/storage")
 
     # Register staff auth routes
     try:

@@ -15,24 +15,27 @@ from backend.services.qc_engine import determine_overall_status
 
 logger = logging.getLogger("qc.ccp")
 
+"""
+CCP Service
+===========
+Business logic for Critical Control Point (CCP) inspections.
+Handles photo uploads, OCR processing, and CCP log persistence.
+"""
+
+import os
+import logging
+import uuid
+from datetime import datetime
+from backend.database.supabase_client import get_client
+from backend.services.storage_service import upload_photo as upload_general_photo
+from backend.services.qc_engine import determine_overall_status
+
+logger = logging.getLogger("qc.ccp")
+
 # ---------------------------------------------------------------------------
 # OCR and Storage Config
 # ---------------------------------------------------------------------------
 STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence")
-
-
-def upload_photo(file_bytes: bytes, filename: str, folder: str = "ccp") -> str:
-    """Upload a photo to Supabase storage.
-
-    Returns the public URL of the uploaded file.
-    """
-    return upload_general_photo(file_bytes, filename)
-
-
-def process_ocr(image_content: bytes) -> dict:
-    """Return an OCR status compatible with Supabase-only deployments.
-
-    OCR engines are intentionally not bundled in production because the target
     stack is Vercel + Supabase. The image is still uploaded and attached to the
     QC record; operators can enter measured values manually.
     """

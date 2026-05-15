@@ -126,15 +126,16 @@
                 <textarea id="input-reason" rows="3" placeholder="Tuliskan anomali atau tindakan koreksi..."></textarea>
             </div>
             <div>
-                <label>Foto Temuan</label>
+                <label>Foto Temuan (Bisa Multiple)</label>
                 <div class="photo-grid">
                     <div class="photo-placeholder" onclick="triggerPhoto()"><i class="fas fa-camera"></i><span>Ambil Foto</span></div>
                     <div id="photo-preview" class="photo-preview" style="display:none">
                         <img src="" id="preview-img" alt="Preview">
+                        <div id="multi-photo-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--accent-blue); color:white; border-radius:50%; width:20px; height:20px; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid white;"></div>
                         <button type="button" class="remove-photo" onclick="removePhoto()"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
-                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none">
+                <input type="file" id="photo-input" accept="image/*" capture="environment" multiple style="display:none">
             </div>
             <button type="submit" class="btn-primary"><i class="fas fa-cloud-arrow-up"></i>Simpan Laporan</button>
         </form>

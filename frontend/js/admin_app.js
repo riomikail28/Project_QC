@@ -593,13 +593,31 @@ const adminApp = {
         }
 
         res.data.forEach(batch => {
+        const tbody = document.getElementById('table-qc-reports');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading reports...</td></tr>';
+        
+        const statusFilter = document.getElementById('filter-qc-status').value;
+        let url = `${this.apiBase}/qc-reports?limit=20`;
+        if (statusFilter) url += `&status=${statusFilter}`;
+
+        const res = await this.fetchAdminData(url);
+        if (!res || !res.data) return;
+
+        tbody.innerHTML = '';
+        if (res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada laporan.</td></tr>';
+            return;
+        }
+
+        res.data.forEach(batch => {
             const tr = document.createElement('tr');
             
             const status = batch.status || batch.final_qc_status || 'pending';
             const evidence = batch.product_photo_url || batch.temperature_photo_url || batch.barcode_photo_url || batch.photo_url;
             let badgeClass = `status-badge status-${status}`;
-            let evidenceBtn = evidence 
-                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat</button>`
+            const evidenceUrls = (evidence || '').split(';').filter(u => u);
+            let evidenceBtn = evidenceUrls.length > 0 
+                ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`
                 : '-';
 
             tr.innerHTML = `
@@ -678,12 +696,13 @@ const adminApp = {
         }
         res.forEach(row => {
             const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url;
+            const evidenceUrls = (evidence || '').split(';').filter(u => u);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
                 <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
                 <td>${row.inspector_name || row.staff_id || '-'}</td>
-                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat</button>` : '-'}</td>
+                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
                 <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
             `;
             tbody.appendChild(tr);
@@ -692,7 +711,15 @@ const adminApp = {
     },
 
     previewImage(url) {
-        document.getElementById('modal-image').src = url;
+        const urls = url.split(';').filter(u => u);
+        const container = document.getElementById('modal-image-container') || document.getElementById('modal-image').parentElement;
+        
+        if (urls.length > 1) {
+            container.innerHTML = urls.map(u => `<img src="${u}" style="width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">`).join('');
+        } else {
+            container.innerHTML = `<img id="modal-image" src="${urls[0]}" style="max-width: 100%; border-radius: 8px;">`;
+        }
+        
         document.getElementById('image-modal').classList.add('active');
     }
 };
