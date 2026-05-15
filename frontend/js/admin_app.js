@@ -13,13 +13,19 @@ const adminApp = {
     init() {
         this.checkAuth();
         this.setupNavigation();
+        this.setupHashNavigation();
         this.setupMobileDrawer();
         this.safeRun(() => this.setupThemeToggle(), 'theme toggle');
         this.safeRun(() => this.setupCrudForm(), 'crud form');
         this.refreshIcons();
         
         // Initial load
-        this.safeRun(() => this.loadOverview(), 'overview');
+        const hashTarget = this.targetFromHash(window.location.hash);
+        if (hashTarget) {
+            this.navigateTo(hashTarget);
+        } else {
+            this.safeRun(() => this.loadOverview(), 'overview');
+        }
     },
 
     safeRun(fn, label) {
@@ -56,8 +62,23 @@ const adminApp = {
             const item = event.target.closest('.sidebar-item[data-target]');
             if (!item) return;
             event.preventDefault();
-            this.navigateTo(item.dataset.section || item.dataset.target, item);
+            const target = item.dataset.section || item.dataset.target;
+            this.navigateTo(target, item);
+            if (target) history.replaceState(null, '', `#section-${target}`);
         });
+    },
+
+    setupHashNavigation() {
+        window.addEventListener('hashchange', () => {
+            const target = this.targetFromHash(window.location.hash);
+            if (target) this.navigateTo(target);
+        });
+    },
+
+    targetFromHash(hash) {
+        const clean = String(hash || '').replace(/^#/, '');
+        if (!clean.startsWith('section-')) return '';
+        return clean.replace('section-', '');
     },
 
     navigateTo(target, activeItem = null) {
@@ -753,6 +774,8 @@ const adminApp = {
         document.getElementById('image-modal').classList.add('active');
     }
 };
+
+window.adminApp = adminApp;
 
 document.addEventListener('DOMContentLoaded', () => {
     adminApp.init();
