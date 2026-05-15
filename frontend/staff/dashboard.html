@@ -199,16 +199,23 @@
             <button class="icon-button" onclick="closeQcFinding()" aria-label="Close QC Temuan"><i class="fas fa-times"></i></button>
         </div>
         <div class="alert-drawer-body">
-            <div class="finding-preview">
-                <div class="alert-icon"><i class="fas fa-camera"></i></div>
+            <input type="file" id="findingPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleFindingPhoto(event)">
+            <button type="button" class="finding-preview" onclick="openFindingCamera()" style="cursor:pointer; width:100%; border:0; text-align:center; font:inherit;">
+                <div class="alert-icon" id="findingPreviewIcon"><i class="fas fa-camera"></i></div>
+                <div id="findingPhotoPreview" style="display:none; width:100%; position:relative;">
+                    <img id="findingImg" src="" alt="Preview foto temuan QC" style="width:100%; border-radius:12px; margin-bottom:12px;">
+                    <span class="badge" id="findingPhotoBadge" style="position:absolute; top:10px; right:10px; background:var(--primary); color:white; padding:4px 8px; border-radius:12px; font-size:12px; display:none">1</span>
+                </div>
                 <strong>Foto temuan QC</strong>
-                <span>Evidence akan muncul setelah staff upload foto.</span>
-            </div>
+                <span id="findingPrompt">Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)</span>
+            </button>
             <div class="finding-reason">
-                <strong>Reason</strong>
-                <p>Belum ada reason aktif. Jika ada deviasi suhu, batch, atau foto evidence, catatan korektif akan tampil di sini.</p>
+                <strong>Deskripsi Temuan</strong>
+                <textarea id="findingReason" placeholder="Jelaskan temuan Anda (misal: Ada serangga di area packing, kabel terkelupas, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
             </div>
-            <button class="btn-primary" onclick="window.location.href='inspection.html'"><i class="fas fa-clipboard-check"></i>Buka QC Check</button>
+            <button class="btn-primary" id="submitFindingBtn" onclick="submitQcFinding()"><i class="fas fa-paper-plane"></i>Kirim Laporan Temuan</button>
+            <p style="text-align:center; margin-top:12px; font-size:12px; color:var(--text-muted)">Atau buka dashboard inspeksi lengkap:</p>
+            <button class="btn-secondary" onclick="window.location.href='inspection.html'" style="width:100%; padding:12px; margin-top:4px;"><i class="fas fa-clipboard-check"></i>Buka QC Check</button>
         </div>
     </aside>
 
@@ -315,6 +322,114 @@
         function closeQcFinding() {
             document.getElementById('findingOverlay').classList.remove('active');
             document.getElementById('findingDrawer').classList.remove('active');
+        }
+
+        let selectedFindingPhoto = null;
+        let selectedFindingPhotoUrl = '';
+
+        function openFindingCamera() {
+            const input = document.getElementById('findingPhotoInput');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function handleFindingPhoto(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('File harus berupa gambar.');
+                event.target.value = '';
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Ukuran foto maksimal 10MB.');
+                event.target.value = '';
+                return;
+            }
+
+            if (selectedFindingPhotoUrl) URL.revokeObjectURL(selectedFindingPhotoUrl);
+            selectedFindingPhoto = file;
+            selectedFindingPhotoUrl = URL.createObjectURL(file);
+
+            const icon = document.getElementById('findingPreviewIcon');
+            const preview = document.getElementById('findingPhotoPreview');
+            const img = document.getElementById('findingImg');
+            const badge = document.getElementById('findingPhotoBadge');
+            const prompt = document.getElementById('findingPrompt');
+
+            if (icon) icon.style.display = 'none';
+            if (preview) preview.style.display = 'block';
+            if (img) img.src = selectedFindingPhotoUrl;
+            if (badge) badge.style.display = 'inline-flex';
+            if (prompt) prompt.textContent = 'Foto siap dikirim. Klik lagi untuk ganti foto.';
+        }
+
+        async function submitQcFinding() {
+            const reasonEl = document.getElementById('findingReason');
+            const submitBtn = document.getElementById('submitFindingBtn');
+            const reason = reasonEl ? reasonEl.value.trim() : '';
+
+            if (!selectedFindingPhoto) {
+                alert('Ambil foto temuan terlebih dahulu.');
+                openFindingCamera();
+                return;
+            }
+            if (!reason) {
+                alert('Isi deskripsi temuan terlebih dahulu.');
+                if (reasonEl) reasonEl.focus();
+                return;
+            }
+
+            const originalHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Mengirim...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('photo', selectedFindingPhoto);
+                formData.append('reason', reason);
+                formData.append('finding_type', 'field_finding');
+                formData.append('source', 'staff_dashboard');
+
+                await API.upload('/qc/findings', formData);
+                alert('Laporan temuan berhasil dikirim.');
+                resetQcFindingForm();
+                closeQcFinding();
+                Dashboard.init();
+            } catch (error) {
+                console.error('Submit QC finding failed:', error);
+                alert(`Gagal mengirim laporan temuan: ${error.message || 'Coba lagi.'}`);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHtml;
+                }
+            }
+        }
+
+        function resetQcFindingForm() {
+            selectedFindingPhoto = null;
+            if (selectedFindingPhotoUrl) URL.revokeObjectURL(selectedFindingPhotoUrl);
+            selectedFindingPhotoUrl = '';
+
+            const input = document.getElementById('findingPhotoInput');
+            const reason = document.getElementById('findingReason');
+            const icon = document.getElementById('findingPreviewIcon');
+            const preview = document.getElementById('findingPhotoPreview');
+            const img = document.getElementById('findingImg');
+            const badge = document.getElementById('findingPhotoBadge');
+            const prompt = document.getElementById('findingPrompt');
+
+            if (input) input.value = '';
+            if (reason) reason.value = '';
+            if (icon) icon.style.display = 'grid';
+            if (preview) preview.style.display = 'none';
+            if (img) img.removeAttribute('src');
+            if (badge) badge.style.display = 'none';
+            if (prompt) prompt.textContent = 'Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)';
         }
 
         async function resolveAlertInDrawer(id) {
