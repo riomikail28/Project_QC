@@ -1,23 +1,24 @@
 @import url("../styles/variables.css");
 
 :root {
-  --primary-color: #2563eb;
+  --admin-app-bg: var(--app-bg, linear-gradient(180deg, #f8fbff 0%, #eaf2ff 100%));
+  --primary-color: var(--primary, #2563eb);
   --primary-hover: #1d4ed8;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  --bg-color: #0f172a;
-  --card-bg: rgba(17, 24, 39, .82);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --border-color: rgba(255,255,255,.08);
-  --sidebar-bg: rgba(2, 6, 23, .96);
-  --sidebar-text: #94a3b8;
-  --sidebar-active: #ffffff;
-  --sidebar-active-bg: rgba(37, 99, 235, .18);
-  --shadow-sm: 0 14px 34px rgba(2, 6, 23, .28);
-  --shadow-md: 0 20px 60px rgba(2, 6, 23, .36);
-  --border-radius: 18px;
+  --success-color: var(--success, #10b981);
+  --warning-color: var(--warning, #f59e0b);
+  --danger-color: var(--danger, #ef4444);
+  --bg-color: #f8fbff;
+  --card-bg-admin: var(--card-bg, rgba(255,255,255,.72));
+  --text-primary: var(--text-main, #0f172a);
+  --text-secondary: var(--text-muted, #64748b);
+  --border-color: var(--border-soft, rgba(191,219,254,.72));
+  --sidebar-bg: rgba(255, 255, 255, .88);
+  --sidebar-text: #475569;
+  --sidebar-active: #1d4ed8;
+  --sidebar-active-bg: rgba(219, 234, 254, .92);
+  --shadow-sm: 0 18px 54px rgba(15, 23, 42, .08);
+  --shadow-md: 0 22px 60px rgba(37, 99, 235, .14);
+  --border-radius: 16px;
   --transition: all .25s ease;
 }
 
@@ -27,10 +28,12 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background:
-    radial-gradient(circle at 16% -8%, rgba(37,99,235,.22), transparent 32%),
-    linear-gradient(180deg, #0f172a, #070b14);
+    radial-gradient(circle at 15% -10%, rgba(59, 130, 246, 0.24), transparent 34%),
+    radial-gradient(circle at 90% 5%, rgba(14, 165, 233, 0.14), transparent 28%),
+    var(--admin-app-bg);
   color: var(--text-primary);
   overflow-x: hidden;
+  padding-bottom: 0;
 }
 
 body.admin-drawer-open {
@@ -59,6 +62,7 @@ select {
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(22px);
+  box-shadow: 12px 0 42px rgba(15, 23, 42, .06);
 }
 
 .sidebar-header {
@@ -68,7 +72,7 @@ select {
   gap: 12px;
   padding: 0 22px;
   border-bottom: 1px solid var(--border-color);
-  color: white;
+  color: var(--text-primary);
   font-size: 1.18rem;
   font-weight: 900;
 }
@@ -80,6 +84,13 @@ select {
   place-items: center;
   border-radius: 15px;
   background: linear-gradient(135deg, var(--primary-color), #38bdf8);
+  color: #fff;
+}
+
+.topbar-brand {
+  width: 36px;
+  height: 36px;
+  border-radius: 15px;
 }
 
 .admin-brand-icon svg,
@@ -144,7 +155,7 @@ select {
   min-height: 78px;
   padding: 14px 24px;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(15, 23, 42, .84);
+  background: rgba(255, 255, 255, .88);
   backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
@@ -175,7 +186,7 @@ select {
   height: 42px;
   border: 1px solid var(--border-color);
   border-radius: 15px;
-  background: rgba(30,41,59,.72);
+  background: rgba(255,255,255,.72);
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -213,7 +224,7 @@ select {
 .card {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  background: linear-gradient(145deg, rgba(17,24,39,.9), rgba(30,41,59,.66));
+  background: var(--card-bg-admin);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(18px);
 }
@@ -303,7 +314,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgba(15,23,42,.96);
+  background: rgba(239, 246, 255, .96);
   color: var(--text-secondary);
   font-size: .76rem;
   text-transform: uppercase;
@@ -426,7 +437,7 @@ select {
 .facility-room-card {
   border: 1px solid var(--border-color);
   border-radius: 18px;
-  background: rgba(15, 23, 42, .22);
+  background: rgba(255, 255, 255, .58);
   padding: 16px;
 }
 
@@ -454,7 +465,7 @@ select {
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 14px;
-  background: rgba(255, 255, 255, .04);
+  background: rgba(255, 255, 255, .68);
 }
 
 .empty-admin-state {
@@ -470,7 +481,7 @@ select {
   min-height: 40px;
   border: 1px solid var(--border-color) !important;
   border-radius: 13px !important;
-  background: rgba(15,23,42,.68);
+  background: rgba(255, 255, 255, .78);
   color: var(--text-primary);
 }
 
@@ -506,7 +517,7 @@ select {
   width: min(620px, 100%);
   border: 1px solid var(--border-color);
   border-radius: 22px;
-  background: rgba(15,23,42,.96);
+  background: rgba(255,255,255,.96);
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }

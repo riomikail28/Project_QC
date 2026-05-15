@@ -6,7 +6,6 @@
     <title>Profile | ASTRO QC Enterprise</title>
     <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../styles/profile.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -24,10 +23,9 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html" class="active">Profile</a>
-            <a href="/admin/">Admin</a>
+            <a href="/admin/" id="adminNavLink" hidden>Admin</a>
         </nav>
         <div class="nav-actions">
-            <button class="nav-btn" aria-label="Settings"><i class="fas fa-gear"></i></button>
             <div class="user-avatar" id="avatarSmall">QC</div>
         </div>
     </header>
@@ -35,80 +33,63 @@
     <main class="app-shell page-grid">
         <section class="profile-skeleton" id="profileSkeleton" aria-label="Loading profile">
             <div class="skeleton-card skeleton-hero"></div>
-            <div class="skeleton-grid">
-                <span></span><span></span><span></span><span></span>
-            </div>
+            <div class="skeleton-grid"><span></span><span></span><span></span><span></span></div>
         </section>
 
         <section class="glass-card profile-cover fade-in">
             <div class="profile-main">
-                <label class="avatar-circle" title="Upload avatar" id="avatarLarge">
-                    <img id="profilePhoto" alt="Profile photo" hidden>
+                <div class="avatar-circle" id="avatarLarge">
                     <span id="avatarInitials">QC</span>
-                    <span class="presence-dot" id="presenceDot" aria-label="Online"></span>
-                    <input type="file" accept="image/*" hidden>
-                </label>
+                    <span class="presence-dot" aria-label="Online"></span>
+                </div>
                 <div class="profile-identity">
                     <span class="eyebrow">ASTRO QC Staff</span>
                     <h1 id="displayUsername">Loading...</h1>
-                    <p id="roleSubtitle">QC Kitchen Staff</p>
+                    <p id="roleSubtitle">Loading session</p>
                     <div class="profile-badges">
                         <span id="displayRole" class="role-pill staff">STAFF</span>
                         <span class="online-pill"><span class="online-dot"></span>Online</span>
-                        <span class="shift-pill">Shift A • 07:00</span>
+                        <span class="shift-pill" id="displayShift">No shift data</span>
                     </div>
                 </div>
             </div>
         </section>
 
         <section class="profile-grid info-grid fade-in">
-            <div class="glass-card profile-info"><label>Full Name</label><p id="fullName">Astro Staff Member</p></div>
-            <div class="glass-card profile-info"><label>Shift Info</label><p>Shift A • 07:00</p></div>
-            <div class="glass-card profile-info"><label>Department</label><p>QC Kitchen</p></div>
-            <div class="glass-card profile-info"><label>Last Login</label><p id="lastLogin">Today</p></div>
+            <div class="glass-card profile-info"><label>Full Name</label><p id="fullName">-</p></div>
+            <div class="glass-card profile-info"><label>Role</label><p id="roleInfo">-</p></div>
+            <div class="glass-card profile-info"><label>Department</label><p id="departmentInfo">-</p></div>
+            <div class="glass-card profile-info"><label>Last Login</label><p id="lastLogin">No login record</p></div>
         </section>
 
         <section class="panel-card performance-panel fade-in">
             <div class="section-header">
                 <div>
                     <span class="eyebrow">Live Summary</span>
-                    <h3 class="section-title" id="performanceTitle">Today's Performance</h3>
+                    <h3 class="section-title">My QC Activity</h3>
                 </div>
-                <span class="status-badge success"><span class="online-dot"></span>Online</span>
+                <button class="section-link" type="button" onclick="ProfilePage.load()">Retry</button>
             </div>
             <div class="empty-state" id="emptyActivity" hidden>
-                <div>📭</div>
-                <strong>No activity available</strong>
+                <i data-lucide="database"></i>
+                <h3>No activity yet</h3>
+                <p>Data will appear after staff submit QC activity.</p>
             </div>
-            <div class="profile-grid stat-grid" id="performanceGrid">
-                <div class="mini-stat"><span class="stat-icon"><i class="fas fa-box"></i></span><span class="card-label">Batch selesai</span><strong>18</strong><div class="progress"><span style="width:86%"></span></div></div>
-                <div class="mini-stat"><span class="stat-icon"><i class="fas fa-clipboard-check"></i></span><span class="card-label">QC Submitted</span><strong>128</strong><div class="progress"><span style="width:92%"></span></div></div>
-                <div class="mini-stat"><span class="stat-icon"><i class="fas fa-bullseye"></i></span><span class="card-label">Accuracy</span><strong>99%</strong><div class="progress success"><span style="width:99%"></span></div></div>
-                <div class="mini-stat"><span class="stat-icon"><i class="fas fa-bell-slash"></i></span><span class="card-label">Alert ditangani</span><strong>7</strong><div class="progress warning"><span style="width:70%"></span></div></div>
-                <div class="mini-stat"><span class="stat-icon"><i class="fas fa-list-check"></i></span><span class="card-label">Pending task</span><strong>3</strong><div class="progress danger"><span style="width:28%"></span></div></div>
-            </div>
+            <div class="profile-grid stat-grid" id="performanceGrid"></div>
         </section>
 
         <section class="menu-grid fade-in" aria-label="Profile actions">
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-pen"></i></span><strong>Edit Profile</strong></button>
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-lock"></i></span><strong>Change Password</strong></button>
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-bell"></i></span><strong>Notifications</strong></button>
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-chart-line"></i></span><strong>My QC Report</strong></button>
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-moon"></i></span><strong>Appearance</strong></button>
-            <button class="menu-item"><span class="menu-icon"><i class="fas fa-circle-question"></i></span><strong>Help Center</strong></button>
-            <button class="menu-item logout-danger" onclick="Auth.logout()"><span class="menu-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
+            <button class="menu-item" type="button" onclick="document.getElementById('performanceGrid').scrollIntoView({behavior:'smooth'})"><span class="menu-icon"><i class="fas fa-chart-line"></i></span><strong>My QC Activity</strong></button>
+            <button class="menu-item" type="button" onclick="window.location.href='inspection.html'"><span class="menu-icon"><i class="fas fa-image"></i></span><strong>My Upload Evidence</strong></button>
+            <button class="menu-item" type="button" onclick="window.location.href='monitoring.html'"><span class="menu-icon"><i class="fas fa-temperature-half"></i></span><strong>My Temperature Logs</strong></button>
+            <button class="menu-item" type="button" id="openAdminBtn" onclick="window.location.href='/admin/'" hidden><span class="menu-icon"><i class="fas fa-shield-halved"></i></span><strong>Open Admin Panel</strong></button>
+            <button class="menu-item logout-danger" type="button" onclick="Auth.logout()"><span class="menu-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
         </section>
 
         <section class="panel-card system-card fade-in">
             <div class="profile-info">
                 <label>Account ID</label>
-                <p id="accountId" style="font-family:monospace;color:var(--muted)"></p>
-            </div>
-            <div class="system-info">
-                <strong>ASTRO QC Enterprise</strong>
-                <span>Version: 1.0.0</span>
-                <span>PT Astro Technologies Indonesia</span>
-                <span>Build: Production</span>
+                <p id="accountId" style="font-family:monospace;color:var(--muted)">-</p>
             </div>
         </section>
     </main>
@@ -124,56 +105,6 @@
     <script src="../js/auth.js"></script>
     <script src="../js/ui-mobile.js"></script>
     <script src="../js/mobile-nav.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) lucide.createIcons();
-            const user = Auth.user();
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-            const displayName = user.full_name || user.name || user.username || 'Astro Staff Member';
-            const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'QC';
-            const isAdmin = user.role === 'admin';
-            document.body.classList.toggle('admin-profile', isAdmin);
-            document.getElementById('displayUsername').innerText = displayName;
-            document.getElementById('roleSubtitle').innerText = isAdmin ? 'QC Enterprise Administrator' : 'QC Kitchen Staff';
-            document.getElementById('fullName').innerText = displayName;
-            document.getElementById('avatarSmall').innerText = initials;
-            document.getElementById('avatarInitials').innerText = initials;
-            document.getElementById('accountId').innerText = user.id;
-            document.getElementById('lastLogin').innerText = new Date().toLocaleString('id-ID');
-            const roleEl = document.getElementById('displayRole');
-            roleEl.innerText = isAdmin ? 'ADMIN' : 'STAFF';
-            roleEl.className = 'role-pill ' + (isAdmin ? 'admin' : 'staff');
-            document.getElementById('performanceTitle').innerText = isAdmin ? 'Admin Overview' : "Today's Performance";
-
-            const stats = isAdmin ? [
-                ['fa-users', 'Total Staff', '24', 82, ''],
-                ['fa-boxes-stacked', 'Total Batch', '186', 74, ''],
-                ['fa-clock', 'Pending Approval', '9', 38, 'warning'],
-                ['fa-triangle-exclamation', 'Active Alerts', '4', 24, 'danger'],
-                ['fa-chart-simple', 'QC Success Rate', '97%', 97, 'success'],
-            ] : [
-                ['fa-box', 'Batch selesai', '18', 86, ''],
-                ['fa-clipboard-check', 'QC Submitted', '128', 92, ''],
-                ['fa-bullseye', 'Accuracy', '99%', 99, 'success'],
-                ['fa-bell-slash', 'Alert ditangani', '7', 70, 'warning'],
-                ['fa-list-check', 'Pending task', '3', 28, 'danger'],
-            ];
-
-            document.getElementById('performanceGrid').innerHTML = stats.map(([icon, label, value, progress, tone]) => `
-                <div class="mini-stat">
-                    <span class="stat-icon"><i class="fas ${icon}"></i></span>
-                    <span class="card-label">${label}</span>
-                    <strong>${value}</strong>
-                    <div class="progress ${tone}"><span style="width:${progress}%"></span></div>
-                </div>
-            `).join('');
-            if (window.lucide) lucide.createIcons();
-
-            window.setTimeout(() => document.body.classList.remove('is-loading'), 420);
-        });
-    </script>
+    <script src="../js/profile.js"></script>
 </body>
 </html>

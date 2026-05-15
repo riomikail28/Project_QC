@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise QC Admin | Dashboard</title>
+    <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../css/admin_enterprise.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -21,13 +22,14 @@
             <ul class="sidebar-menu">
                 <li><a href="#" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a></li>
                 <li><a href="#" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Temperature Logs</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>SKU Produk</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff Reports</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="warehouse"></i><span>Settings</span></a></li>
-                <li><a href="#" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Evidence</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Reports</span></a></li>
                 <li><a href="#" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
                 <li><a href="#" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
                 <li><a href="#" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
+                <li><a href="#" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
+                <li><a href="/dashboard.html" class="sidebar-item"><i data-lucide="home"></i><span>Home</span></a></li>
                 <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>
         </aside>
@@ -38,6 +40,7 @@
             <header class="admin-topbar">
                 <div class="topbar-left">
                     <button class="icon-btn admin-menu-toggle" id="admin-menu-toggle" aria-label="Open admin menu"><i data-lucide="menu"></i></button>
+                    <span class="admin-brand-icon topbar-brand"><i data-lucide="shield-check"></i></span>
                     <h2 id="page-title" style="margin:0; font-size: 1.2rem;">Overview</h2>
                 </div>
                 <div class="topbar-right">

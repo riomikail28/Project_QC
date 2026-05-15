@@ -35,33 +35,21 @@ async function loadFacilityStructure() {
         if (facilityStructure.some(room => String(room.id).startsWith("room-"))) {
             document.getElementById("offlineIndicator").style.display = "flex";
         }
-        if (!facilityStructure.length) facilityStructure = getFallbackFacility();
+        if (!facilityStructure.length) facilityStructure = [];
         renderRoomSelector();
-        selectRoom(facilityStructure[0].id);
+        if (facilityStructure.length) selectRoom(facilityStructure[0].id);
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
-        facilityStructure = getFallbackFacility();
+        facilityStructure = [];
         renderRoomSelector();
-        selectRoom(facilityStructure[0].id);
     }
-}
-
-function getFallbackFacility() {
-    return [{
-        id: "fallback-cold-kitchen",
-        name: "Cold Kitchen",
-        devices: [
-            { id: "fallback-freezer-a", name: "Freezer Line A", type: "freezer", threshold_temp: -18 },
-            { id: "fallback-chiller-prep", name: "Chiller Prep", type: "chiller", threshold_temp: 4 },
-            { id: "fallback-room-temp", name: "Prep Room", type: "room_temp", threshold_temp: 22 }
-        ]
-    }];
 }
 
 function renderRoomSelector() {
     if (!facilityStructure.length) {
         roomList.innerHTML = `<div class="room-chip active">Belum ada ruangan</div>`;
         currentRoomLabel.innerText = "Setup fasilitas belum tersedia";
+        renderDevices([]);
         return;
     }
     roomList.innerHTML = facilityStructure.map(room => `

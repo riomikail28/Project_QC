@@ -1,18 +1,20 @@
 from unittest.mock import patch
+from datetime import datetime, timezone
 
 from tests.conftest import FakeSupabase
 
 
 def test_dashboard_summary_uses_real_tables(client, staff_headers):
+    today = datetime.now(timezone.utc).date().isoformat()
     fake_db = FakeSupabase({
-        "production_batches": [{"id": "batch-1", "production_date": "2026-05-14", "created_at": "2026-05-14T01:00:00Z"}],
+        "production_batches": [{"id": "batch-1", "production_date": today, "created_at": f"{today}T01:00:00Z"}],
         "qc_reports": [
-            {"id": "qc-1", "status": "pass", "approval_status": "approved", "created_at": "2026-05-14T02:00:00Z"},
-            {"id": "qc-2", "status": "warning", "approval_status": "pending", "created_at": "2026-05-14T03:00:00Z"},
+            {"id": "qc-1", "status": "pass", "approval_status": "approved", "created_at": f"{today}T02:00:00Z"},
+            {"id": "qc-2", "status": "warning", "approval_status": "pending", "created_at": f"{today}T03:00:00Z"},
         ],
         "temperature_logs": [
-            {"id": "temp-1", "device_type": "freezer", "temperature_c": -18, "is_abnormal": False, "recorded_at": "2026-05-14T04:00:00Z"},
-            {"id": "temp-2", "device_type": "freezer", "temperature_c": -16, "is_abnormal": True, "recorded_at": "2026-05-14T05:00:00Z"},
+            {"id": "temp-1", "device_type": "freezer", "temperature_c": -18, "is_abnormal": False, "recorded_at": f"{today}T04:00:00Z"},
+            {"id": "temp-2", "device_type": "freezer", "temperature_c": -16, "is_abnormal": True, "recorded_at": f"{today}T05:00:00Z"},
         ],
         "facility_alerts": [],
         "approvals": [],

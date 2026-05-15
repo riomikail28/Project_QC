@@ -47,9 +47,9 @@
         </section>
 
         <section class="metric-strip">
-            <div class="mini-stat"><span class="card-label">Pass</span><strong style="color:var(--success)">12</strong></div>
-            <div class="mini-stat"><span class="card-label">Hold</span><strong style="color:var(--danger)">1</strong></div>
-            <div class="mini-stat"><span class="card-label">Active</span><strong>5</strong></div>
+            <div class="mini-stat"><span class="card-label">Pass</span><strong id="inspectionPass" style="color:var(--success)">...</strong></div>
+            <div class="mini-stat"><span class="card-label">Hold/Pending</span><strong id="inspectionHold" style="color:var(--danger)">...</strong></div>
+            <div class="mini-stat"><span class="card-label">Active</span><strong id="inspectionActive">...</strong></div>
         </section>
 
         <section class="qc-layout">
@@ -105,6 +105,13 @@
                     <span class="section-link">Catalog</span>
                 </div>
                 <div id="productGrid" class="validation-grid"></div>
+                <div class="section-header" style="margin-top:20px">
+                    <h3 class="section-title">Recent QC Submissions</h3>
+                    <span class="section-link">Real data</span>
+                </div>
+                <div id="recentSubmissionList" class="activity-list">
+                    <div class="skeleton skeleton-card"></div>
+                </div>
             </div>
         </section>
     </main>

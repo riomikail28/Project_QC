@@ -12,6 +12,15 @@ html {
 }
 
 body {
+  --app-bg: linear-gradient(180deg, #f8fbff 0%, #eaf2ff 100%);
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --primary: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-soft: rgba(191, 219, 254, 0.72);
   min-height: 100vh;
   margin: 0;
   padding: 0 0 calc(var(--nav-height) + 24px);

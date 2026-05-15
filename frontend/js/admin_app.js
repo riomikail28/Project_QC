@@ -34,6 +34,12 @@ const adminApp = {
             e.preventDefault();
             Auth.logout();
         });
+        const user = Auth.user() || {};
+        const name = user.full_name || user.name || user.username || 'Admin';
+        const profile = document.querySelector('.user-profile span');
+        const avatar = document.querySelector('.user-profile div');
+        if (profile) profile.textContent = name;
+        if (avatar) avatar.textContent = name.slice(0, 1).toUpperCase();
     },
 
     setupNavigation() {
@@ -213,7 +219,7 @@ const adminApp = {
 
         grid.innerHTML = '';
         if (res.length === 0) {
-            grid.innerHTML = '<p>Belum ada data unit pendingin.</p>';
+            grid.innerHTML = this.emptyState('No data available yet', 'Data will appear after staff submit QC activity.');
             return;
         }
 
@@ -246,6 +252,16 @@ const adminApp = {
             grid.appendChild(card);
         });
         this.refreshIcons();
+    },
+
+    emptyState(title = 'No data available yet', message = 'Data will appear after staff submit QC activity.') {
+        return `
+            <div class="empty-state" style="grid-column:1/-1">
+                <i data-lucide="database"></i>
+                <h3>${title}</h3>
+                <p>${message}</p>
+            </div>
+        `;
     },
 
     async loadStaff() {
