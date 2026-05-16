@@ -8,6 +8,7 @@ Supports photo uploads for findings and optional reason for abnormalities.
 from flask import Blueprint, request, jsonify
 import logging
 from backend.database.supabase_client import get_client
+from backend.database.supabase_client import get_last_db_error
 from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
 from backend.services.monitoring_service import MonitoringService
@@ -30,6 +31,7 @@ def log_facility_data():
         humidity (float, optional)
         reason (str, optional)
         photo_url (str, optional)
+        storage_path (str, optional)
     """
     data = validate_model(TemperatureLogRequest, request_payload())
 
@@ -42,6 +44,7 @@ def log_facility_data():
         humidity=data.humidity,
         reason=data.reason,
         photo_url=data.photo_url,
+        storage_path=data.storage_path,
         threshold=data.threshold,
     )
 
@@ -49,8 +52,13 @@ def log_facility_data():
         body, status_code = MonitoringService(get_client(), audit_writer=write_audit).log_facility_data(data, request.files)
         return jsonify(body), status_code
     except Exception as e:
-        logger.error("Logging error: %s", e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.exception("Logging error")
+        return jsonify({
+            "success": False,
+            "error": "Monitoring log failed",
+            "detail": str(e),
+            "db_detail": get_last_db_error(),
+        }), 500
 
 @monitoring_bp.route("/api/monitoring/latest", methods=["GET"])
 @monitoring_bp.route("/api/temperature/history", methods=["GET"])

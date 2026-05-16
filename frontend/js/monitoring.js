@@ -32,9 +32,6 @@ async function loadFacilityStructure() {
             return;
         }
         facilityStructure = await res.json();
-        if (facilityStructure.some(room => String(room.id).startsWith("room-"))) {
-            document.getElementById("offlineIndicator").style.display = "flex";
-        }
         if (!facilityStructure.length) facilityStructure = [];
         renderRoomSelector();
         if (facilityStructure.length) selectRoom(facilityStructure[0].id);
@@ -192,32 +189,38 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     const formData = new FormData();
     formData.append("device_id", document.getElementById("selected-device-id").value);
     formData.append("room_id", document.getElementById("selected-room-id").value);
-    formData.append("staff_id", user.id || "");
+    formData.append("staff_id", user.id || user.user_id || user.sub || "");
     formData.append("temperature", document.getElementById("input-temp").value);
     formData.append("humidity", document.getElementById("input-rh").value || "");
     formData.append("reason", document.getElementById("input-reason").value);
-    selectedPhotoFiles.forEach(file => formData.append("photo", file));
 
     try {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
 
-        const res = await fetch("/api/monitoring/log", {
-            method: "POST",
-            body: formData,
-            headers: authHeaders()
-        });
+        const uploadedPhotos = await Promise.all(selectedPhotoFiles.map((file, index) => {
+            return API.uploadPhotoToSupabase(file, {
+                staffId: user.id || user.user_id || user.sub || user.username || "staff",
+                source: `temperature-log-${index + 1}`
+            });
+        }));
 
-        const result = await res.json();
+        if (uploadedPhotos.length) {
+            formData.append("photo_url", uploadedPhotos.map(photo => photo.url).join(";"));
+            formData.append("storage_path", uploadedPhotos.map(photo => photo.storage_path).join(";"));
+        }
+
+        const result = await API.upload("/monitoring/log", formData);
         if (result.success) {
-            alert(`✓ Upload berhasil. Status: ${result.status}`);
+            alert(`Upload berhasil. Status: ${result.status}`);
             closeModal();
             loadRecentLogs();
         } else {
-            alert(`✕ Upload gagal: ${result.error || "Coba lagi"}`);
+            const detail = result.detail || result.db_detail || result.error || "Coba lagi";
+            alert(`Upload gagal: ${detail}`);
         }
     } catch (err) {
-        alert("✕ Upload gagal: koneksi timeout atau server tidak merespons");
+        alert(`Upload gagal: ${err.message || "koneksi timeout atau server tidak merespons"}`);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;

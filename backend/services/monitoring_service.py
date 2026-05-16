@@ -2,6 +2,7 @@
 
 import logging
 
+from backend.database.supabase_client import direct_db_query, get_last_db_error
 from backend.services.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.services.audit_service import write_audit
 from backend.services.qc_engine import validate_temperature
@@ -16,9 +17,6 @@ class MonitoringService:
         self.audit_writer = audit_writer
 
     def log_facility_data(self, data, files):
-        if not self.sb:
-            return {"success": False, "error": "Database offline"}, 503
-
         device_id = data.device_id
         room_id = data.room_id
         staff_id = data.staff_id
@@ -35,14 +33,14 @@ class MonitoringService:
             unit_type = "ambient"
             room_name = "Unknown"
 
-            room_res = self.sb.table("facility_rooms").select("name").eq("id", room_id).execute()
-            if room_res.data:
-                room_name = room_res.data[0]["name"]
+            room_rows = self._select_rows("facility_rooms", f"id=eq.{room_id}&select=name")
+            if room_rows:
+                room_name = room_rows[0]["name"]
 
             if device_id:
-                dev_res = self.sb.table("facility_devices").select("*").eq("id", device_id).execute()
-                if dev_res.data:
-                    device_info = dev_res.data[0]
+                device_rows = self._select_rows("facility_devices", f"id=eq.{device_id}&select=*")
+                if device_rows:
+                    device_info = device_rows[0]
                     unit_type = device_info["type"]
                     if unit_type == "undercounter":
                         unit_type = "chiller"
@@ -55,7 +53,9 @@ class MonitoringService:
             photo_urls = []
             storage_paths = []
             if data.photo_url:
-                photo_urls.append(data.photo_url)
+                photo_urls.extend([item for item in str(data.photo_url).split(";") if item])
+            if data.storage_path:
+                storage_paths.extend([item for item in str(data.storage_path).split(";") if item])
 
             for photo_file in files.getlist("photo"):
                 if photo_file:
@@ -82,13 +82,13 @@ class MonitoringService:
                 log_payload["storage_path"] = storage_path
 
             try:
-                res = self.sb.table("facility_logs").insert(log_payload).execute()
+                inserted_rows = self._insert_rows("facility_logs", log_payload)
             except Exception:
                 for uploaded in uploaded_files:
                     delete_photo(uploaded.storage_path)
                 raise
 
-            log_data = res.data[0] if res.data else None
+            log_data = inserted_rows[0] if inserted_rows else None
             self.audit_writer("create", "facility_log", str(log_data.get("id")) if log_data else None, after=log_data or log_payload)
 
             alert = None
@@ -113,29 +113,54 @@ class MonitoringService:
             }, 200
         except ValueError as exc:
             logger.error("Upload validation error: %s", exc)
-            return {"success": False, "error": f"Upload gagal: {str(exc)}"}, 400
+            return {"success": False, "error": "Upload gagal", "detail": str(exc)}, 400
+        except Exception as exc:
+            logger.exception("Monitoring log database error")
+            return {
+                "success": False,
+                "error": "Database save failed",
+                "detail": str(exc),
+                "db_detail": get_last_db_error(),
+            }, 500
 
     def latest_logs(self):
-        if not self.sb:
-            return []
         try:
-            res = (
-                self.sb.table("facility_logs")
-                .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
-                .order("recorded_at", desc=True)
-                .limit(50)
-                .execute()
-            )
-            return res.data or []
+            if self.sb:
+                res = (
+                    self.sb.table("facility_logs")
+                    .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+                    .order("recorded_at", desc=True)
+                    .limit(50)
+                    .execute()
+                )
+                return res.data or []
+            return direct_db_query("facility_logs", "GET", None, "select=*&order=recorded_at.desc&limit=50")
         except Exception as exc:
             logger.error("Fetch logs error: %s", exc)
             return []
 
     def monitoring_stats(self):
-        if not self.sb:
-            return {}, 200
         try:
-            res = self.sb.table("facility_logs").select("is_normal, recorded_at, temperature_c, facility_rooms(name)").execute()
-            return res.data or [], 200
+            rows = self._select_rows("facility_logs", "select=is_normal,recorded_at,temperature_c")
+            return rows, 200
         except Exception as exc:
-            return {"error": str(exc)}, 500
+            return {"error": "Monitoring stats failed", "detail": str(exc), "db_detail": get_last_db_error()}, 500
+
+    def _select_rows(self, table, filters):
+        if self.sb:
+            query = self.sb.table(table).select("*")
+            for part in filters.split("&"):
+                if not part or part.startswith("select="):
+                    continue
+                name, raw_value = part.split("=", 1)
+                if raw_value.startswith("eq."):
+                    query = query.eq(name, raw_value[3:])
+            res = query.execute()
+            return res.data or []
+        return direct_db_query(table, "GET", None, filters)
+
+    def _insert_rows(self, table, payload):
+        if self.sb:
+            res = self.sb.table(table).insert(payload).execute()
+            return res.data or []
+        return direct_db_query(table, "POST", payload)

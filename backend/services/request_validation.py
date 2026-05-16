@@ -42,6 +42,7 @@ class TemperatureLogRequest:
     humidity: float | None = None
     reason: str | None = None
     photo_url: str | None = None
+    storage_path: str | None = None
     threshold: float | None = None
 
 
@@ -52,7 +53,7 @@ class QCValidateRequest:
 
 
 def request_payload() -> dict[str, Any]:
-    if request.content_type and request.content_type.startswith("multipart/form-data"):
+    if request.form:
         return request.form.to_dict()
     return request.get_json(silent=True) or {}
 
@@ -129,7 +130,8 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             temperature=_number(data, "temperature", True, -80, 100),
             humidity=_number(data, "humidity", False, 0, 100),
             reason=_optional_str(data, "reason", 1000),
-            photo_url=_optional_str(data, "photo_url", 2048),
+            photo_url=_optional_str(data, "photo_url", 4096),
+            storage_path=_optional_str(data, "storage_path", 4096),
             threshold=_number(data, "threshold", False, -80, 100),
         )
     if model is QCValidateRequest:
