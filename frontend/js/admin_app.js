@@ -439,7 +439,7 @@ const adminApp = {
                 </select>
             </label>
             <label>${item.id ? 'Password Baru (opsional)' : 'Password'}
-                <input id="staff-password" type="password" ${item.id ? '' : 'required'} placeholder="${item.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'}">
+                <input id="staff-password" type="password" autocomplete="${item.id ? 'new-password' : 'current-password'}" ${item.id ? '' : 'required'} placeholder="${item.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'}">
             </label>
         `, { id: item.id });
     },

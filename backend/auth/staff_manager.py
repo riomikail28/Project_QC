@@ -41,11 +41,12 @@ def login(username: str, password: str) -> dict:
         
         if res_data and password_matches(res_data[0], password):
             user = res_data[0]
+            profile = _user_profile_for_staff(user["id"])
             return {
                 "id": user["id"],
                 "username": user["username"],
                 "role": user["role"],
-                "name": user.get("full_name", user["username"]),
+                "name": profile.get("full_name") or user.get("full_name") or user["username"],
             }
     except Exception as e:
         logger.error("Login DB error: %s", e)
@@ -60,7 +61,11 @@ def list_staff():
         # Use direct query to bypass library validation
         res_data = direct_db_query("staff_accounts", method="GET")
         staff = res_data or []
+        profiles = _profiles_by_staff_id([item.get("id") for item in staff])
         for item in staff:
+            profile = profiles.get(item.get("id"), {})
+            item["full_name"] = profile.get("full_name") or item.get("full_name") or item.get("username")
+            item["name"] = item["full_name"]
             item.pop("password_hash", None)
             item.pop("password", None)
         return staff
@@ -93,12 +98,17 @@ def create_staff(data: dict):
             "username": username,
             "password_hash": hash_password(password),
             "role": db_role,
-            "full_name": full_name,
         }
         
         # Use direct query to bypass library validation issues
         res_data = direct_db_query("staff_accounts", method="POST", payload=payload)
-        return res_data[0] if res_data else None
+        staff = res_data[0] if res_data else None
+        if staff and full_name:
+            _upsert_user_profile(staff.get("id"), full_name, db_role)
+            staff["full_name"] = full_name
+            staff["name"] = full_name
+        _sanitize_staff(staff)
+        return staff
     except Exception as e:
         logger.error("Failed to create staff: %s", e)
         err_msg = str(e)
@@ -127,24 +137,35 @@ def update_staff(staff_id: str, data: dict):
     if data.get("username"):
         payload["username"] = data["username"]
     if data.get("full_name"):
-        payload["full_name"] = data["full_name"]
+        full_name = data["full_name"]
+    else:
+        full_name = None
     if data.get("role"):
         role_input = data["role"].lower()
         payload["role"] = "admin" if "admin" in role_input else "staff"
     if data.get("password"):
         payload["password_hash"] = hash_password(data["password"])
 
-    if not payload:
+    if not payload and not full_name:
         raise ValueError("Tidak ada data yang diubah")
 
     try:
-        res_data = direct_db_query(
-            "staff_accounts",
-            method="PATCH",
-            payload=payload,
-            filters=f"id=eq.{staff_id}",
-        )
-        return res_data[0] if res_data else {"id": staff_id, **payload}
+        if payload:
+            res_data = direct_db_query(
+                "staff_accounts",
+                method="PATCH",
+                payload=payload,
+                filters=f"id=eq.{staff_id}",
+            )
+            staff = res_data[0] if res_data else {"id": staff_id, **payload}
+        else:
+            staff = get_staff_by_id(staff_id) or {"id": staff_id}
+        if full_name:
+            _upsert_user_profile(staff_id, full_name, staff.get("role") or payload.get("role") or "staff")
+            staff["full_name"] = full_name
+            staff["name"] = full_name
+        _sanitize_staff(staff)
+        return staff
     except Exception as e:
         logger.error("Failed to update staff: %s", e)
         raise ValueError(f"Gagal mengubah staf: {str(e)}")
@@ -157,9 +178,59 @@ def get_staff_by_id(staff_id: str):
         res = direct_db_query('staff_accounts', method='GET', filters=f'id=eq.{staff_id}')
         if res:
             user = res[0]
+            profile = _user_profile_for_staff(staff_id)
+            user["full_name"] = profile.get("full_name") or user.get("username")
+            user["name"] = user["full_name"]
             user.pop('password_hash', None)
             user.pop('password', None)
             return user
     except Exception as e:
         logger.error("Failed to get staff by id: %s", e)
     return None
+
+
+def _user_profile_for_staff(staff_id: str) -> dict:
+    if not staff_id:
+        return {}
+    try:
+        from backend.database.supabase_client import direct_db_query
+        rows = direct_db_query("users", method="GET", filters=f"staff_account_id=eq.{staff_id}&limit=1")
+        return rows[0] if rows else {}
+    except Exception as exc:
+        logger.info("Staff profile lookup skipped: %s", exc)
+        return {}
+
+
+def _profiles_by_staff_id(staff_ids: list[str]) -> dict:
+    result = {}
+    for staff_id in [item for item in staff_ids if item]:
+        profile = _user_profile_for_staff(staff_id)
+        if profile:
+            result[staff_id] = profile
+    return result
+
+
+def _upsert_user_profile(staff_id: str, full_name: str, role: str) -> None:
+    if not staff_id or not full_name:
+        return
+    try:
+        from backend.database.supabase_client import direct_db_query
+        existing = direct_db_query("users", method="GET", filters=f"staff_account_id=eq.{staff_id}&limit=1")
+        payload = {
+            "staff_account_id": staff_id,
+            "full_name": full_name,
+            "role": "admin" if role == "admin" else "qc_staff",
+        }
+        if existing:
+            direct_db_query("users", method="PATCH", payload=payload, filters=f"id=eq.{existing[0]['id']}")
+        else:
+            direct_db_query("users", method="POST", payload=payload)
+    except Exception as exc:
+        logger.info("Staff profile sync skipped: %s", exc)
+
+
+def _sanitize_staff(staff: dict | None) -> None:
+    if not staff:
+        return
+    staff.pop("password_hash", None)
+    staff.pop("password", None)

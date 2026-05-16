@@ -185,15 +185,14 @@ class SecurityMiddleware:
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=()")
-        response.headers.setdefault(
-            "Content-Security-Policy",
+        response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             "img-src 'self' data: blob: https:; "
             f"connect-src {' '.join(connect_sources)}; "
-            "frame-ancestors 'none'; base-uri 'self'",
+            "frame-ancestors 'none'; base-uri 'self'"
         )
         return response
 
