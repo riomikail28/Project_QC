@@ -72,7 +72,7 @@ class QCService:
         # Audit the action if audit service available
         try:
             if self.audit:
-                self.audit.write_audit("create", "qc_finding", str(finding.get("id") if isinstance(finding, dict) else None), after=finding)
+                self.audit.write_audit("submit_finding", "qc_finding", str(finding.get("id") if isinstance(finding, dict) else None), after=finding)
         except Exception as e:
             logger.warning("Audit write skipped: %s", e)
 
@@ -83,7 +83,15 @@ class QCService:
         except Exception as e:
             logger.warning("External sync skipped: %s", e)
 
-        return finding or {"success": True, "photo_url": photo_url}
+        data = finding or {"photo_url": photo_url, "storage_path": storage_path}
+        return {
+            "success": True,
+            "message": "QC finding submitted",
+            "data": data,
+            **(data if isinstance(data, dict) else {}),
+            "photo_url": data.get("photo_url") if isinstance(data, dict) else photo_url,
+            "storage_path": data.get("storage_path") if isinstance(data, dict) else storage_path,
+        }
 
     def _insert_evidence(self, uploaded, staff_id, finding_id):
         try:

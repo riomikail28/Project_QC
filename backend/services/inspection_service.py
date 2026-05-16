@@ -116,13 +116,16 @@ class InspectionService:
         sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
         batch_code = str(payload.get("batch_code") or sku_code or "").strip()
-        qc_status = self._norm_status(payload.get("qc_status") or payload.get("status") or "pass")
-        if qc_status == "failed":
-            qc_status = "fail"
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
         if not sku_code and not batch_id:
             return self._fail("SKU atau barcode wajib diisi")
+        raw_status = payload.get("qc_status") or payload.get("status")
+        if not raw_status:
+            return self._fail("Status QC wajib diisi")
+        qc_status = self._norm_status(raw_status)
+        if qc_status == "failed":
+            qc_status = "fail"
         if qc_status not in {"pass", "hold", "fail"}:
             return self._fail("Status QC tidak valid")
         if not batch_code:
@@ -130,7 +133,7 @@ class InspectionService:
 
         product = self._find_product(sku_code)
         product_id = payload.get("product_id") or (product or {}).get("id")
-        product_name = payload.get("product_name") or (product or {}).get("product_name") or sku_code
+        product_name = payload.get("product_name") or (product or {}).get("product_name") or sku_code or "Unknown Product"
         batch_id = batch_id or self._ensure_batch(batch_code, product_id, product_name, staff_id)
 
         uploaded_files = []
@@ -196,15 +199,29 @@ class InspectionService:
                     "storage_path": uploaded.storage_path,
                     "public_url": uploaded.url,
                     "uploaded_by": staff_id,
-                    "related_type": "inspection",
+                    "related_type": "qc_report",
                     "related_id": report_id or batch_id or batch_code,
                 }, required=False)
 
+            if report_id:
+                self._insert("approvals", {
+                    "related_type": "qc_report",
+                    "related_id": report_id,
+                    "status": "pending",
+                    "requested_by": staff_id,
+                    "requester_id": staff_id,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }, required=False)
+
             try:
-                write_audit("create", "qc_report", str(report_id), after=report or report_payload)
+                write_audit("submit_inspection", "qc_report", str(report_id), after=report or report_payload)
             except Exception:
                 pass
-            return self._ok(report or report_payload, "QC inspection submitted")
+            return self._ok({
+                "report_id": report_id,
+                "photo_url": report_payload.get("photo_url"),
+                **(report or report_payload),
+            }, "QC report submitted")
         except Exception as exc:
             for uploaded in uploaded_files:
                 delete_photo(uploaded.storage_path)

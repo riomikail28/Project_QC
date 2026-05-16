@@ -57,5 +57,5 @@ def test_inspection_submit_with_photo_records_evidence(client, staff_headers):
     assert response.status_code == 200
     assert db.inserted["qc_reports"]["status"] == "hold"
     assert db.inserted["qc_reports"]["notes"] == "Label kurang jelas"
-    assert db.inserted["qc_evidence"]["related_type"] == "inspection"
+    assert db.inserted["qc_evidence"]["related_type"] == "qc_report"
     assert db.inserted["qc_evidence"]["storage_path"] == "staff/staff-1/inspection/photo.jpg"

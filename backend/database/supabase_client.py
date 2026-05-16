@@ -16,10 +16,11 @@ except ImportError:
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("qc.db.supabase")
-STORAGE_BUCKET = "qc-evidence"
+STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence")
 
 # Shared singleton instance
 _client: Client = None
+_admin_client: Client = None
 _failed: bool = False
 _last_error: str = ""
 
@@ -28,9 +29,45 @@ def _supabase_key() -> str:
     return (
         os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         or os.getenv("SUPABASE_KEY")
-        or os.getenv("SUPABASE_ANON_KEY")
         or ""
     ).strip()
+
+def _anon_key() -> str:
+    return (os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
+
+
+def _service_key() -> str:
+    return (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
+
+
+def _client_with_key(key: str, key_name: str):
+    global _last_error
+    url = os.getenv("SUPABASE_URL", "").strip().strip("/")
+
+    if not create_client or not Client:
+        _last_error = "Package supabase belum terinstall"
+        logger.warning(_last_error)
+        return None
+    if not url:
+        _last_error = "SUPABASE_URL is not configured"
+        logger.warning(_last_error)
+        return None
+    if not key:
+        _last_error = f"{key_name} is not configured"
+        logger.warning(_last_error)
+        return None
+    try:
+        return create_client(url, key)
+    except Exception as e:
+        error_msg = str(e)
+        logger.warning("Supabase standard client creation failed; trying fallback: %s", error_msg)
+        try:
+            return Client(url, key)
+        except Exception as e2:
+            _last_error = f"{error_msg} | Fallback failed: {str(e2)}"
+            logger.error("Supabase creation failed: %s", _last_error)
+            return None
+
 
 def get_client():
     """Get or initialize the Supabase client singleton."""
@@ -38,38 +75,27 @@ def get_client():
     
     if _client is not None:
         return _client
-        
-    # Fetch environment variables dynamically
-    url = os.getenv("SUPABASE_URL", "").strip().strip("/")
-    key = _supabase_key()
+    _client = _client_with_key(_supabase_key() or _anon_key(), "SUPABASE_KEY")
+    return _client
 
-    if not create_client or not Client:
-        _last_error = "Package supabase belum terinstall"
+
+def get_supabase_client():
+    """Public DB client. Prefer service/SUPABASE_KEY when available."""
+    return get_client()
+
+
+def get_supabase_admin_client():
+    """Privileged Supabase client for backend-only writes and Storage upload."""
+    global _admin_client, _last_error
+    if _admin_client is not None:
+        return _admin_client
+    key = _service_key()
+    if not key:
+        _last_error = "Supabase service role key is not configured"
         logger.warning(_last_error)
         return None
-
-    if not url or not key:
-        _last_error = "SUPABASE_URL dan Supabase key belum dikonfigurasi"
-        logger.warning(_last_error)
-        return None
-    
-    try:
-        # Standard initialization
-        _client = create_client(url, key)
-        return _client
-    except Exception as e:
-        # Fallback for new-format keys (sb_secret_...) which might trip up JWT validation in some SDK versions
-        error_msg = str(e)
-        logger.warning("Supabase standard client creation failed; trying fallback: %s", error_msg)
-        
-        try:
-            # Manually construct client components if create_client is too picky
-            _client = Client(url, key)
-            return _client
-        except Exception as e2:
-            _last_error = f"{error_msg} | Fallback failed: {str(e2)}"
-            logger.error("Supabase creation failed: %s", _last_error)
-            return None
+    _admin_client = _client_with_key(key, "SUPABASE_SERVICE_ROLE_KEY")
+    return _admin_client
 
 def get_last_db_error():
     """Return the last encountered database error message."""
@@ -78,8 +104,9 @@ def get_last_db_error():
 
 def reset_client():
     """Reset the singleton instance (useful for testing or reconnecting)."""
-    global _client, _failed
+    global _client, _admin_client, _failed
     _client = None
+    _admin_client = None
     _failed = False
 
 def direct_db_query(table: str, method: str = "GET", payload: dict = None, filters: str = ""):

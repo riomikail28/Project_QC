@@ -274,10 +274,13 @@ class AdminService:
         return self._empty({
             "date": date,
             "summary": {
-                "temperature": len(temperature),
-                "inspection": len(inspection),
+                "temperature_logs": len(temperature),
+                "inspection_reports": len(inspection),
                 "findings": len(findings),
                 "evidence": len(evidence),
+                "approvals_pending": len([row for row in inspection if str(row.get("approval_status") or "").lower() == "pending"]),
+                "temperature": len(temperature),
+                "inspection": len(inspection),
             },
             "temperature": temperature,
             "inspection": inspection,
@@ -291,24 +294,25 @@ class AdminService:
         data = report.get("data") or {}
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=[
-            "Date", "Report Type", "Staff", "Room", "Device", "SKU/Barcode",
-            "Product", "Temperature", "QC Status", "Notes", "Photo URL", "Created At",
+            "Date", "Time", "Type", "Staff", "Room", "Device", "SKU",
+            "Product", "Temperature", "Status", "Approval", "Notes", "Photo URL",
         ])
         writer.writeheader()
         for row in data.get("rows", []):
             writer.writerow({
                 "Date": data.get("date"),
-                "Report Type": row.get("type"),
+                "Time": str(row.get("created_at") or "")[11:19],
+                "Type": row.get("type"),
                 "Staff": row.get("staff"),
                 "Room": row.get("room"),
                 "Device": row.get("device"),
-                "SKU/Barcode": row.get("sku"),
+                "SKU": row.get("sku"),
                 "Product": row.get("product"),
                 "Temperature": row.get("temperature"),
-                "QC Status": row.get("status"),
+                "Status": row.get("status"),
+                "Approval": row.get("approval_status"),
                 "Notes": row.get("notes"),
                 "Photo URL": row.get("photo_url"),
-                "Created At": row.get("created_at"),
             })
         return output.getvalue()
 
@@ -322,6 +326,7 @@ class AdminService:
             "product": "",
             "temperature": row.get("temperature"),
             "status": row.get("status"),
+            "approval_status": "",
             "notes": row.get("notes"),
             "photo_url": row.get("photo_url"),
             "created_at": row.get("created_at"),
@@ -337,6 +342,7 @@ class AdminService:
             "product": row.get("product_name"),
             "temperature": row.get("temperature"),
             "status": row.get("status"),
+            "approval_status": row.get("approval_status"),
             "notes": row.get("notes"),
             "photo_url": row.get("photo_url") or row.get("product_photo_url"),
             "created_at": row.get("created_at"),
@@ -352,6 +358,7 @@ class AdminService:
             "product": row.get("product_name") or "QC Finding",
             "temperature": "",
             "status": row.get("status") or row.get("approval_status") or "finding",
+            "approval_status": row.get("approval_status"),
             "notes": row.get("reason"),
             "photo_url": row.get("photo_url"),
             "created_at": row.get("created_at"),
@@ -386,11 +393,22 @@ class AdminService:
         }
         if not approved:
             payload["rejection_reason"] = comment or "Rejected by admin"
-        rows = self._update_by_id("approvals", approval_id, {"status": status, "comment": comment, "approved_by": actor_id, "approved_at": payload["approved_at"]})
+        approval_rows = self._update_by_id("approvals", approval_id, {"status": status, "comment": comment, "approved_by": actor_id, "approved_at": payload["approved_at"]})
+        rows = approval_rows
+        related_id = None
+        if approval_rows:
+            related_id = approval_rows[0].get("related_id") or approval_rows[0].get("report_id")
+        if related_id:
+            self._update_by_id("qc_reports", related_id, payload)
         if not rows:
             rows = self._update_by_id("qc_reports", approval_id, payload)
         if not rows:
             return self._fail("Approval item not found")
+        try:
+            from backend.services.audit_service import write_audit
+            write_audit("approve_qc" if approved else "reject_qc", "qc_report", related_id or approval_id, after=payload)
+        except Exception:
+            pass
         return self._empty(rows[0])
 
     def _update_by_id(self, table, row_id, payload):

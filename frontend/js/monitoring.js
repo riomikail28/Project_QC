@@ -241,31 +241,21 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
 
-        const uploadedPhotos = await Promise.all(selectedPhotoFiles.map((file, index) => {
-            return API.uploadPhotoToSupabase(file, {
-                staffId: user.id || user.user_id || user.sub || user.username || "staff",
-                source: `temperature-log-${index + 1}`
-            });
-        }));
-
-        if (uploadedPhotos.length) {
-            formData.append("photo_url", uploadedPhotos.map(photo => photo.url).join(";"));
-            formData.append("storage_path", uploadedPhotos.map(photo => photo.storage_path).join(";"));
-        }
+        selectedPhotoFiles.forEach(file => formData.append("photo", file));
 
         const result = await API.upload("/monitoring/log", formData);
         if (result.success) {
-            alert("Log suhu berhasil disimpan");
+            showToast("Log suhu berhasil disimpan");
             closeModal();
             loadRecentLogs();
         } else {
-            alert("Gagal menyimpan log suhu: kolom database belum sinkron");
+            showToast(result.message || result.error || "Gagal menyimpan log suhu", true);
         }
     } catch (err) {
         const message = String(err.message || "").includes("schema cache")
             ? "Gagal menyimpan log suhu: kolom database belum sinkron"
-            : "Gagal menyimpan log suhu: server tidak merespons";
-        alert(message);
+            : (err.message || "Gagal menyimpan log suhu: server tidak merespons");
+        showToast(message, true);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
@@ -316,6 +306,14 @@ async function loadRecentLogs() {
     } catch (err) {
         console.error("Gagal memuat log", err);
     }
+}
+
+function showToast(message, isError = false) {
+    if (window.showToast) {
+        window.showToast(message, isError ? "error" : "success");
+        return;
+    }
+    alert(message);
 }
 
 function structureFromLogs(logs) {

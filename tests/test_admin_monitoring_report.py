@@ -1,0 +1,1 @@
+from tests.test_admin_reporting import test_admin_temperature_report_uses_staff_logs

@@ -68,7 +68,7 @@ def test_upload_fails_when_supabase_unavailable_instead_of_local_fallback(monkey
     with patch("backend.services.storage_service.get_client", return_value=None), patch(
         "backend.services.storage_service.os.makedirs"
     ) as makedirs:
-        with pytest.raises(RuntimeError, match="Supabase client unavailable"):
+        with pytest.raises(RuntimeError, match="Supabase service role key is not configured"):
             upload_photo_result(JPEG_BYTES, "evidence.jpg", content_type="image/jpeg")
 
     makedirs.assert_not_called()

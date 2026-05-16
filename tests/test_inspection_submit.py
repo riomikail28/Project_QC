@@ -71,6 +71,7 @@ def test_submit_inspection_with_photo_succeeds(client, staff_headers):
             headers=staff_headers,
             data={
                 "barcode": "MANUAL-002",
+                "qc_status": "pass",
                 "photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 10), "photo.jpg"),
             },
             content_type="multipart/form-data",
@@ -88,4 +89,4 @@ def test_submit_inspection_missing_barcode_has_clear_error(client, staff_headers
     body = response.get_json()
     assert response.status_code == 400
     assert body["success"] is False
-    assert "batch" in body["message"].lower() or "barcode" in body["message"].lower()
+    assert "sku" in body["message"].lower() or "barcode" in body["message"].lower()

@@ -89,7 +89,8 @@ const Inspection = {
             if (photo) photo.value = '';
             const zoneText = document.querySelector('.upload-zone span');
             if (zoneText) zoneText.textContent = 'Opsional, JPG/PNG/WEBP maksimal 10MB.';
-            this.message('QC check berhasil disimpan.', false);
+            this.message('QC berhasil dikirim', false);
+            if (typeof this.loadRecentSubmissions === 'function') this.loadRecentSubmissions();
         } catch (error) {
             this.message(`Gagal menyimpan QC check: ${error.message || 'server tidak merespons'}`, true);
         } finally {

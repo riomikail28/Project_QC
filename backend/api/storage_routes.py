@@ -37,9 +37,10 @@ def upload_standalone():
             "message": "OK",
         })
     except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        return jsonify({"success": False, "message": str(e), "error": str(e)}), 400
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        message = str(e) or "Upload gagal"
+        return jsonify({"success": False, "message": message, "error": message}), 500
 
 
 @storage_alias_bp.route("/api/upload", methods=["POST"])

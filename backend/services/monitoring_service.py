@@ -23,7 +23,7 @@ class MonitoringService:
         staff_id = data.staff_id
         temperature = data.temperature
         humidity = data.humidity
-        reason = data.reason
+        reason = data.reason or getattr(data, "notes", None)
 
         if not all([room_id, temperature is not None]):
             return {"success": False, "error": "Room and Temperature are required"}, 400
@@ -48,8 +48,28 @@ class MonitoringService:
                     elif unit_type == "room_temp":
                         unit_type = "ambient"
 
-            status = validate_temperature(unit_type, float(temperature))
-            is_normal = status == "PASS"
+            min_temp = self._coerce_float((device_info or {}).get("min_temperature"), None)
+            max_temp = self._coerce_float((device_info or {}).get("max_temperature"), None)
+            target_temp = self._coerce_float(
+                (device_info or {}).get("target_temperature")
+                or (device_info or {}).get("threshold_temp")
+                or data.threshold,
+                self._default_threshold(unit_type),
+            )
+            qc_status = None
+            if min_temp is not None and max_temp is not None:
+                temp_value = float(temperature)
+                if min_temp <= temp_value <= max_temp:
+                    status = "normal"
+                elif (min_temp - 2) <= temp_value <= (max_temp + 2):
+                    status = "warning"
+                else:
+                    status = "critical"
+                qc_status = {"normal": "PASS", "warning": "WARNING", "critical": "FAIL"}[status]
+            else:
+                qc_status = validate_temperature(unit_type, float(temperature))
+                status = {"PASS": "normal", "WARNING": "warning", "FAIL": "critical"}.get(qc_status, qc_status.lower())
+            is_normal = status == "normal"
 
             photo_urls = []
             storage_paths = []
@@ -67,7 +87,7 @@ class MonitoringService:
 
             photo_url = ";".join(photo_urls) if photo_urls else None
             storage_path = ";".join(storage_paths) if storage_paths else None
-            threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.threshold or 25.0)
+            threshold = target_temp
 
             recorded_at = datetime.now(timezone.utc).isoformat()
             log_payload = {
@@ -98,10 +118,16 @@ class MonitoringService:
             log_id = log_data.get("id") if log_data else None
             self._record_temperature_log(
                 room_name=room_name,
+                room_id=room_id,
+                device_id=device_id,
                 device_type=unit_type,
+                device_name=(device_info or {}).get("name"),
                 temperature=temperature,
                 threshold=threshold,
+                status=status,
                 is_normal=is_normal,
+                photo_url=photo_url,
+                storage_path=storage_path,
                 staff_id=staff_id,
                 notes=reason,
                 recorded_at=recorded_at,
@@ -118,7 +144,7 @@ class MonitoringService:
 
             alert = None
             if not is_normal:
-                alert = generate_temperature_alert(room_name, unit_type, float(temperature), status)
+                alert = generate_temperature_alert(room_name, unit_type, float(temperature), status.upper())
                 if log_data:
                     save_alert_to_db(
                         zone=room_name,
@@ -131,7 +157,8 @@ class MonitoringService:
             return {
                 "success": True,
                 "message": "Temperature log saved",
-                "status": status,
+                "status": qc_status or status.upper(),
+                "computed_status": status,
                 "alert": alert,
                 "data": {
                     "log_id": log_id,
@@ -152,16 +179,23 @@ class MonitoringService:
                 "db_detail": get_last_db_error(),
             }, 500
 
-    def _record_temperature_log(self, room_name, device_type, temperature, threshold, is_normal, staff_id, notes, recorded_at, log_id):
+    def _record_temperature_log(self, room_name, room_id, device_id, device_type, device_name, temperature, threshold, status, is_normal, photo_url, storage_path, staff_id, notes, recorded_at, log_id):
         payload = {
             "zone": room_name or "QC Area",
-            "device_type": device_type if device_type != "ambient" else "room",
+            "room_id": room_id,
+            "device_id": device_id,
+            "device_type": device_type if device_type != "ambient" else "room_temp",
+            "device_name": device_name,
+            "temperature": float(temperature),
             "temperature_c": float(temperature),
             "threshold_c": threshold,
             "is_abnormal": not is_normal,
-            "status": "normal" if is_normal else "abnormal",
+            "status": status,
             "staff_id": staff_id or None,
+            "photo_url": photo_url,
+            "storage_path": storage_path,
             "notes": notes,
+            "created_at": recorded_at,
             "recorded_at": recorded_at,
             "facility_log_id": log_id,
         }
@@ -169,6 +203,21 @@ class MonitoringService:
             self._insert_rows("temperature_logs", {k: v for k, v in payload.items() if v is not None})
         except Exception:
             logger.warning("temperature_logs compatibility insert skipped", exc_info=True)
+
+    def _default_threshold(self, unit_type):
+        if unit_type == "freezer":
+            return -18.0
+        if unit_type in {"chiller", "undercounter"}:
+            return 5.0
+        return 25.0
+
+    def _coerce_float(self, value, default):
+        if value in (None, ""):
+            return default
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
 
     def _record_evidence(self, uploaded_files, staff_id, related_id, photo_urls, storage_paths, created_at):
         if not (uploaded_files or photo_urls or storage_paths):

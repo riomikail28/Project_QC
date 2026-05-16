@@ -9,9 +9,14 @@ import uuid
 import logging
 from datetime import datetime
 from dataclasses import dataclass
-from backend.database.supabase_client import get_client, STORAGE_BUCKET
+from backend.database.supabase_client import STORAGE_BUCKET, get_supabase_admin_client
 
 logger = logging.getLogger("qc.service.storage")
+
+
+def get_client():
+    """Backend storage client hook kept patchable for tests."""
+    return get_supabase_admin_client()
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 ALLOWED_IMAGE_TYPES = {
@@ -66,8 +71,8 @@ def _storage_prefix(staff_id: str = "system", category: str = "inspection", rela
         "temperature": "temperature",
         "monitoring": "temperature",
         "inspection": "inspection",
-        "finding": "findings",
-        "qc_finding": "findings",
+        "finding": "finding",
+        "qc_finding": "finding",
         "barcode": "barcode",
         "ccp": "ccp",
         "batch": "batches",
@@ -108,7 +113,7 @@ def upload_photo_result(
 
     sb = get_client()
     if not sb:
-        raise RuntimeError("Supabase client unavailable; cannot upload photo")
+        raise RuntimeError("Supabase service role key is not configured")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     date_folder = datetime.now().strftime("%Y-%m-%d")

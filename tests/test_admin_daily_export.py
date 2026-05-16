@@ -55,7 +55,11 @@ def test_admin_daily_report_combines_staff_inputs(client, admin_headers):
 
     assert response.status_code == 200
     data = response.get_json()["data"]
-    assert data["summary"] == {"temperature": 1, "inspection": 1, "findings": 1, "evidence": 1}
+    assert data["summary"]["temperature_logs"] == 1
+    assert data["summary"]["inspection_reports"] == 1
+    assert data["summary"]["findings"] == 1
+    assert data["summary"]["evidence"] == 1
+    assert data["summary"]["approvals_pending"] == 1
     assert {row["type"] for row in data["rows"]} == {"temperature", "inspection", "finding"}
 
 
@@ -67,7 +71,7 @@ def test_admin_daily_export_csv(client, admin_headers):
     assert response.mimetype == "text/csv"
     assert "qc_daily_report_2026-05-16.csv" in response.headers["Content-Disposition"]
     body = response.get_data(as_text=True)
-    assert "Date,Report Type,Staff,Room,Device,SKU/Barcode,Product,Temperature,QC Status,Notes,Photo URL,Created At" in body
+    assert "Date,Time,Type,Staff,Room,Device,SKU,Product,Temperature,Status,Approval,Notes,Photo URL" in body
     assert "temperature" in body
     assert "inspection" in body
     assert "finding" in body

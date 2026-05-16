@@ -77,6 +77,7 @@ def qc_reports():
     return jsonify({"detail": res.get("detail", "Error fetching reports")}), 500
 
 @admin_bp.route("/audit-trail", methods=["GET"])
+@admin_bp.route("/audit-logs", methods=["GET"])
 @require_role("admin")
 def audit_trail():
     limit = int(request.args.get("limit", 50))
@@ -208,6 +209,31 @@ def legacy_report_daily():
 @require_role("admin")
 def legacy_export_daily_report():
     return export_daily_report()
+
+
+@admin_legacy_bp.route("/approvals", methods=["GET"])
+@require_role("admin")
+def legacy_approvals():
+    return approvals()
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>/approve", methods=["POST"])
+@require_role("admin")
+def legacy_approve(approval_id):
+    return approve(approval_id)
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>/reject", methods=["POST"])
+@require_role("admin")
+def legacy_reject(approval_id):
+    return reject(approval_id)
+
+
+@admin_legacy_bp.route("/audit-trail", methods=["GET"])
+@admin_legacy_bp.route("/audit-logs", methods=["GET"])
+@require_role("admin")
+def legacy_audit_trail():
+    return audit_trail()
 
 
 @admin_bp.route("/reports/batches", methods=["GET"])
