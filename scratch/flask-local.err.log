@@ -1,0 +1,70 @@
+JWT_SECRET_KEY/SECRET_KEY not set; using local development secret.
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.100.48:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+JWT_SECRET_KEY/SECRET_KEY not set; using local development secret.
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-786-001
+INFO:werkzeug:127.0.0.1 - - [16/May/2026 23:45:19] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [16/May/2026 23:45:27] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:09] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:09] "GET /css/dashboard.css HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:09] "GET /js/api.js HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:09] "GET /js/auth.js HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:09] "GET /js/ui-mobile.js HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:11] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+INFO:qc.security:JWT rejected: Not enough segments
+ERROR:qc.staff:Login DB error: SUPABASE_SERVICE_ROLE_KEY has invalid format (CLI Secret detected). Use the Service Role JWT.
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:16] "[31m[1mPOST /api/staff/login HTTP/1.1[0m" 401 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "[31m[1mPOST /api/staff/refresh HTTP/1.1[0m" 401 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "GET /login.html HTTP/1.1" 200 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "[36mGET /css/dashboard.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "[36mGET /js/api.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "[36mGET /js/auth.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:17] "[36mGET /js/ui-mobile.js HTTP/1.1[0m" 304 -
+INFO:qc.security:JWT rejected: Not enough segments
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:46:19] "[31m[1mPOST /api/staff/login HTTP/1.1[0m" 400 -
+INFO:werkzeug:127.0.0.1 - - [16/May/2026 23:46:35] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [16/May/2026 23:52:46] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [16/May/2026 23:52:47] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:53:28] "[36mGET / HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:53:28] "[36mGET /css/dashboard.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:53:28] "[36mGET /js/api.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:53:28] "[36mGET /js/ui-mobile.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:53:28] "[36mGET /js/auth.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:10] "[36mGET / HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:10] "[36mGET /css/dashboard.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:10] "[36mGET /js/api.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:10] "[36mGET /js/auth.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:10] "[36mGET /js/ui-mobile.js HTTP/1.1[0m" 304 -
+INFO:qc.security:JWT rejected: Not enough segments
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:54:12] "[31m[1mPOST /api/staff/login HTTP/1.1[0m" 400 -
+INFO:qc.security:JWT rejected: Not enough segments
+INFO:werkzeug:192.168.100.48 - - [16/May/2026 23:59:07] "[31m[1mPOST /api/staff/login HTTP/1.1[0m" 400 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:27] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:28] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:28] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:29] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:29] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:29] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:29] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:30] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:30] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:30] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:30] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:31] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:31] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:31] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:31] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:32] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:33] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:34] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:34] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:34] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:35] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:35] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:04:55] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -
+INFO:werkzeug:127.0.0.1 - - [17/May/2026 00:09:19] "[35m[1mGET /api/health/supabase HTTP/1.1[0m" 503 -

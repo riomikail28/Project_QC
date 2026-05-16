@@ -89,15 +89,20 @@ def test_app_factory_does_not_create_backend_upload_directories(monkeypatch):
 def test_supabase_client_uses_anon_key_when_backend_key_alias_missing(monkeypatch):
     from backend.database import supabase_client
 
+    anon_jwt = (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YW1wbGUiLCJyb2xlIjoiYW5vbiIsImlhdCI6MSwiZXhwIjo0MTAyNDQ0ODAwfQ."
+        "signature"
+    )
     monkeypatch.setenv("SUPABASE_URL", "https://example-ref.supabase.co")
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     monkeypatch.delenv("SUPABASE_KEY", raising=False)
-    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", anon_jwt)
     supabase_client.reset_client()
 
     with patch("backend.database.supabase_client.create_client", return_value="client") as create_client:
         client = supabase_client.get_client()
 
     assert client == "client"
-    create_client.assert_called_once_with("https://example-ref.supabase.co", "anon-key")
+    create_client.assert_called_once_with("https://example-ref.supabase.co", anon_jwt)
     supabase_client.reset_client()
