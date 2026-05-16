@@ -48,7 +48,7 @@ const Inspection = {
         const container = document.getElementById('activeBatchList');
         if (!container) return;
         if (!rows.length) {
-            container.innerHTML = this.emptyState('No inspection data yet', 'Create first batch to start QC inspection activity.', true);
+            container.innerHTML = this.emptyState('Belum ada batch aktif', 'Tambahkan batch produksi pertama untuk mulai QC inspection.', 'Tambah Batch', 'new_batch.html');
             return;
         }
         container.innerHTML = rows.map(batch => `
@@ -67,7 +67,7 @@ const Inspection = {
         const container = document.getElementById('productGrid');
         if (!container) return;
         if (!rows.length) {
-            container.innerHTML = this.emptyState('No products available yet', 'Product shortcuts appear after product master data is added.');
+            container.innerHTML = this.emptyState('Belum ada product master', 'Tambahkan master produk dari admin panel agar shortcut produk tampil.', 'Tambah Produk', '/admin/#products');
             return;
         }
         container.innerHTML = rows.map(product => `
@@ -84,7 +84,7 @@ const Inspection = {
         const container = document.getElementById('recentSubmissionList');
         if (!container) return;
         if (!rows.length) {
-            container.innerHTML = this.emptyState('No recent submissions', 'Data will appear after staff submit QC activity.');
+            container.innerHTML = this.emptyState('Belum ada QC submission', 'Data akan muncul setelah staff submit QC batch pertama.', 'Submit QC Batch', 'new_batch.html');
             return;
         }
         container.innerHTML = rows.map(row => `
@@ -100,8 +100,8 @@ const Inspection = {
     },
 
     renderError(error) {
-        const retry = '<button class="btn-primary" type="button" onclick="Inspection.loadAll()">Retry</button>';
-        const html = `<div class="empty-state"><i data-lucide="database"></i><h3>Unable to load data</h3><p>${this.escape(error.message || 'Retry')}</p>${retry}</div>`;
+        const retry = '<button class="btn-primary" type="button" onclick="Inspection.loadAll()">Muat Ulang</button>';
+        const html = `<div class="empty-state"><i data-lucide="database"></i><h3>Data inspection belum tersedia</h3><p>${this.escape(error.message || 'Coba muat ulang data production.')}</p>${retry}</div>`;
         this.setHtml('activeBatchList', html);
         this.setHtml('productGrid', html);
         this.setHtml('recentSubmissionList', html);
@@ -128,13 +128,13 @@ const Inspection = {
         });
     },
 
-    emptyState(title, message, includeButton = false) {
+    emptyState(title, message, buttonLabel = '', href = '') {
         return `
             <div class="empty-state">
                 <i data-lucide="database"></i>
                 <h3>${title}</h3>
                 <p>${message}</p>
-                ${includeButton ? '<button class="btn-primary" type="button" onclick="window.location.href=\'new_batch.html\'">Create first batch</button>' : ''}
+                ${buttonLabel ? `<button class="btn-primary" type="button" onclick="window.location.href='${href}'">${buttonLabel}</button>` : ''}
             </div>
         `;
     },

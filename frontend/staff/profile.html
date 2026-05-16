@@ -66,7 +66,7 @@
             <div class="section-header">
                 <div>
                     <span class="eyebrow">Live Summary</span>
-                    <h3 class="section-title">My QC Activity</h3>
+                    <h3 class="section-title">Ringkasan Aktivitas</h3>
                 </div>
                 <button class="section-link" type="button" onclick="ProfilePage.load()">Retry</button>
             </div>
@@ -79,9 +79,6 @@
         </section>
 
         <section class="menu-grid fade-in" aria-label="Profile actions">
-            <button class="menu-item" type="button" onclick="document.getElementById('performanceGrid').scrollIntoView({behavior:'smooth'})"><span class="menu-icon"><i class="fas fa-chart-line"></i></span><strong>My QC Activity</strong></button>
-            <button class="menu-item" type="button" onclick="window.location.href='inspection.html'"><span class="menu-icon"><i class="fas fa-image"></i></span><strong>My Upload Evidence</strong></button>
-            <button class="menu-item" type="button" onclick="window.location.href='monitoring.html'"><span class="menu-icon"><i class="fas fa-temperature-half"></i></span><strong>My Temperature Logs</strong></button>
             <button class="menu-item" type="button" id="openAdminBtn" onclick="window.location.href='/admin/'" hidden><span class="menu-icon"><i class="fas fa-shield-halved"></i></span><strong>Open Admin Panel</strong></button>
             <button class="menu-item logout-danger" type="button" onclick="Auth.logout()"><span class="menu-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
         </section>

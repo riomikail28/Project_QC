@@ -29,7 +29,7 @@ const ProfilePage = {
     renderIdentity(user) {
         const displayName = user.full_name || user.name || user.username || 'Unknown user';
         const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'QC';
-        const role = user.role || 'staff';
+        const role = String(user.role || 'staff').toLowerCase();
         const isAdmin = role === 'admin';
 
         document.body.classList.toggle('admin-profile', isAdmin);

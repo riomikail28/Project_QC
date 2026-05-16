@@ -54,3 +54,23 @@ def test_inspection_product_shortcuts(client, staff_headers):
     data = response.get_json()["data"]
     assert len(data) == 1
     assert data[0]["product_code"] == "SKU-1"
+
+
+def test_inspection_service_uses_direct_supabase_when_sdk_unavailable(monkeypatch):
+    from backend.services import inspection_service
+
+    def fake_direct(table, method="GET", payload=None, filters=""):
+        assert method == "GET"
+        if table == "production_batches":
+            return [{"id": "batch-1", "batch_code": "B-1", "status": "pending", "product_name": "Soup"}]
+        if table == "qc_reports":
+            return [{"id": "report-1", "status": "pass"}]
+        return []
+
+    monkeypatch.setattr(inspection_service, "get_client", lambda: None)
+    monkeypatch.setattr(inspection_service, "direct_db_query", fake_direct)
+
+    service = inspection_service.InspectionService()
+
+    assert service.summary()["data"]["active_batches"] == 1
+    assert service.active_batches()["data"][0]["batch_code"] == "B-1"

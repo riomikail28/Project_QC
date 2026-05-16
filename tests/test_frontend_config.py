@@ -50,3 +50,13 @@ def test_csp_allows_blob_image_previews(client):
     csp = response.headers["Content-Security-Policy"]
 
     assert "img-src 'self' data: blob: https:" in csp
+
+
+def test_staff_profile_hides_staff_action_menu_items():
+    html = (ROOT / "frontend" / "staff" / "profile.html").read_text(encoding="utf-8")
+
+    assert "My QC Activity" not in html
+    assert "My Upload Evidence" not in html
+    assert "My Temperature Logs" not in html
+    assert "Open Admin Panel" in html
+    assert "hidden" in html

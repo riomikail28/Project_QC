@@ -121,3 +121,40 @@ def test_monitoring_structure_has_no_local_room_fallback(monkeypatch):
     monkeypatch.setattr(facility_manager, "direct_db_query", lambda *args, **kwargs: [])
 
     assert facility_manager.get_monitoring_structure() == []
+
+
+def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
+    from backend.monitoring import facility_manager
+
+    def fake_direct(table, method="GET", payload=None, filters=""):
+        if table == "facility_rooms" or table == "facility_devices":
+            return []
+        if table == "facility_logs":
+            return [
+                {
+                    "id": "log-1",
+                    "room_id": "room-ppic",
+                    "device_id": "device-chiller",
+                    "temperature_c": 3.5,
+                    "facility_rooms": {"name": "PPIC"},
+                    "facility_devices": {"name": "Chiller", "type": "chiller", "threshold_temp": 5},
+                },
+                {
+                    "id": "log-2",
+                    "room_id": "room-kitchen",
+                    "device_id": "device-freezer",
+                    "temperature_c": -19,
+                    "facility_rooms": {"name": "Kitchen"},
+                    "facility_devices": {"name": "Freezer", "type": "freezer", "threshold_temp": -18},
+                },
+            ]
+        return []
+
+    monkeypatch.setattr(facility_manager, "get_client", lambda: None)
+    monkeypatch.setattr(facility_manager, "direct_db_query", fake_direct)
+
+    structure = facility_manager.get_monitoring_structure()
+
+    assert [room["name"] for room in structure] == ["PPIC", "Kitchen"]
+    assert structure[0]["devices"][0]["name"] == "Chiller"
+    assert structure[1]["devices"][0]["type"] == "freezer"

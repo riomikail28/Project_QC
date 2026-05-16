@@ -13,6 +13,7 @@ const currentRoomLabel = document.getElementById("currentRoomName");
 let facilityStructure = [];
 let selectedRoomId = null;
 let selectedPhotoFiles = [];
+let latestTemperatureLogs = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     loadFacilityStructure();
@@ -34,7 +35,7 @@ async function loadFacilityStructure() {
         facilityStructure = await res.json();
         if (!facilityStructure.length) facilityStructure = [];
         renderRoomSelector();
-        if (facilityStructure.length) selectRoom(facilityStructure[0].id);
+        if (facilityStructure.length) selectRoom(preferredRoomId());
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
         facilityStructure = [];
@@ -56,6 +57,11 @@ function renderRoomSelector() {
     `).join("");
 }
 
+function preferredRoomId() {
+    const roomWithDevices = facilityStructure.find(room => (room.devices || []).length);
+    return (roomWithDevices || facilityStructure[0])?.id;
+}
+
 function selectRoom(roomId) {
     selectedRoomId = roomId;
     const room = facilityStructure.find(item => item.id === roomId);
@@ -73,9 +79,10 @@ function iconForType(type) {
 }
 
 function renderDevices(devices) {
+    const totalDevices = facilityStructure.reduce((total, room) => total + (room.devices || []).length, 0);
     deviceCountLabel.innerText = `${devices.length} Unit`;
-    document.getElementById("summaryUnitCount").innerText = devices.length;
-    document.getElementById("summaryStatus").innerText = devices.length ? "Aktif" : "Kosong";
+    document.getElementById("summaryUnitCount").innerText = totalDevices || devices.length;
+    document.getElementById("summaryStatus").innerText = totalDevices || devices.length ? "Aktif" : "Kosong";
 
     if (!devices.length) {
         deviceList.innerHTML = `
@@ -235,6 +242,12 @@ async function loadRecentLogs() {
             return;
         }
         const logs = await res.json();
+        latestTemperatureLogs = Array.isArray(logs) ? logs : [];
+        if (!facilityStructure.length && latestTemperatureLogs.length) {
+            facilityStructure = structureFromLogs(latestTemperatureLogs);
+            renderRoomSelector();
+            if (facilityStructure.length) selectRoom(preferredRoomId());
+        }
         const container = document.getElementById("recent-logs");
         document.getElementById("summaryLogCount").innerText = logs.length || 0;
 
@@ -266,4 +279,41 @@ async function loadRecentLogs() {
     } catch (err) {
         console.error("Gagal memuat log", err);
     }
+}
+
+function structureFromLogs(logs) {
+    const grouped = new Map();
+    logs.forEach(log => {
+        const roomName = log.zone || log.facility_rooms?.name || log.room_name || "QC Area";
+        const deviceType = log.device_type || log.facility_devices?.type || "room_temp";
+        const normalizedType = deviceType === "ambient" ? "room_temp" : deviceType;
+        const deviceName = log.facility_devices?.name || log.device_name || (normalizedType === "freezer" ? "Freezer" : normalizedType === "chiller" ? "Chiller" : "Suhu Ruangan");
+        const roomId = log.room_id || `log-room-${safeId(roomName)}`;
+        const deviceId = log.device_id || `log-device-${safeId(roomName)}-${safeId(deviceName)}`;
+        if (!grouped.has(roomName)) {
+            grouped.set(roomName, { id: roomId, name: roomName, devices: new Map() });
+        }
+        grouped.get(roomName).devices.set(deviceId, {
+            id: deviceId,
+            room_id: roomId,
+            name: deviceName,
+            type: normalizedType,
+            threshold_temp: log.threshold_temp || log.threshold_c || log.facility_devices?.threshold_temp || (normalizedType === "freezer" ? -18 : normalizedType === "chiller" ? 5 : 25),
+            last_temperature_c: log.temperature_c,
+            recorded_at: log.recorded_at || log.created_at,
+        });
+    });
+    const preferred = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
+    const orderedNames = [
+        ...preferred.filter(name => grouped.has(name)),
+        ...Array.from(grouped.keys()).filter(name => !preferred.includes(name)).sort(),
+    ];
+    return orderedNames.map(name => {
+        const room = grouped.get(name);
+        return { id: room.id, name: room.name, devices: Array.from(room.devices.values()) };
+    });
+}
+
+function safeId(value) {
+    return String(value || "unit").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unit";
 }

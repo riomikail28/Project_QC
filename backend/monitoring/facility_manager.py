@@ -10,6 +10,8 @@ from backend.database.supabase_client import direct_db_query, get_client
 
 logger = logging.getLogger("qc.facility")
 
+DEFAULT_MONITORING_ROOMS = ("PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen")
+
 def list_rooms():
     """List all monitoring rooms."""
     sb = get_client()
@@ -95,6 +97,10 @@ def get_monitoring_structure():
     """
     rooms = list_rooms()
     devices = list_devices()
+    if not rooms and not devices:
+        structure = _structure_from_recent_logs()
+        if structure:
+            return structure
     
     structure = []
     for room in rooms:
@@ -105,6 +111,122 @@ def get_monitoring_structure():
             "devices": room_devices
         })
     return structure
+
+
+def _structure_from_recent_logs():
+    """Build monitoring cards from real recent logs when master data is empty."""
+    try:
+        rows = _latest_facility_logs()
+    except Exception as e:
+        logger.error("Recent log fallback failed: %s", e)
+        return []
+
+    grouped = {}
+    for row in rows:
+        room_name = _log_room_name(row)
+        device_type = _log_device_type(row)
+        device_name = _log_device_name(row, room_name, device_type)
+        room_id = row.get("room_id") or f"log-room-{_slug(room_name)}"
+        device_id = row.get("device_id") or f"log-device-{_slug(room_name)}-{_slug(device_name)}"
+        room = grouped.setdefault(room_name, {"id": room_id, "name": room_name, "devices": {}})
+        room["devices"].setdefault(device_id, {
+            "id": device_id,
+            "room_id": room_id,
+            "name": device_name,
+            "type": device_type,
+            "threshold_temp": _log_threshold(row, device_type),
+            "last_temperature_c": row.get("temperature_c"),
+            "recorded_at": row.get("recorded_at") or row.get("created_at"),
+        })
+
+    if not grouped:
+        return []
+
+    for room_name in DEFAULT_MONITORING_ROOMS:
+        if room_name in grouped and not grouped[room_name]["devices"]:
+            room_id = grouped[room_name]["id"]
+            grouped[room_name]["devices"][f"{room_id}-room-temp"] = {
+                "id": f"{room_id}-room-temp",
+                "room_id": room_id,
+                "name": "Suhu Ruangan",
+                "type": "room_temp",
+                "threshold_temp": 25.0,
+            }
+
+    preferred = [name for name in DEFAULT_MONITORING_ROOMS if name in grouped]
+    remainder = sorted([name for name in grouped if name not in preferred])
+    return [
+        {**grouped[name], "devices": list(grouped[name]["devices"].values())}
+        for name in preferred + remainder
+    ]
+
+
+def _latest_facility_logs():
+    sb = get_client()
+    if sb:
+        res = (
+            sb.table("facility_logs")
+            .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+            .order("recorded_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        rows = res.data or []
+        if rows:
+            return rows
+        temp_res = sb.table("temperature_logs").select("*").order("recorded_at", desc=True).limit(100).execute()
+        return temp_res.data or []
+
+    rows = direct_db_query(
+        "facility_logs",
+        "GET",
+        None,
+        "select=*,facility_rooms(name),facility_devices(name,type,threshold_temp)&order=recorded_at.desc&limit=100",
+    )
+    if rows:
+        return rows
+    return direct_db_query("temperature_logs", "GET", None, "select=*&order=recorded_at.desc&limit=100")
+
+
+def _log_room_name(row):
+    return (
+        row.get("zone")
+        or (row.get("facility_rooms") or {}).get("name")
+        or row.get("room_name")
+        or "QC Area"
+    )
+
+
+def _log_device_type(row):
+    device_type = row.get("device_type") or (row.get("facility_devices") or {}).get("type") or "room_temp"
+    if device_type in {"ambient", "room"}:
+        return "room_temp"
+    return device_type
+
+
+def _log_device_name(row, room_name, device_type):
+    return (
+        (row.get("facility_devices") or {}).get("name")
+        or row.get("device_name")
+        or row.get("unit_name")
+        or {"freezer": "Freezer", "chiller": "Chiller", "undercounter": "UC Chiller"}.get(device_type)
+        or ("Suhu Ruangan" if room_name in DEFAULT_MONITORING_ROOMS else "Temperature Point")
+    )
+
+
+def _log_threshold(row, device_type):
+    value = row.get("threshold_temp") or row.get("threshold_c") or (row.get("facility_devices") or {}).get("threshold_temp")
+    if value is not None:
+        return value
+    if device_type == "freezer":
+        return -18.0
+    if device_type in {"chiller", "undercounter"}:
+        return 5.0
+    return 25.0
+
+
+def _slug(value):
+    return "".join(char.lower() if char.isalnum() else "-" for char in str(value)).strip("-") or "unit"
 
 def update_room(room_id: str, data: dict):
     """Update a monitoring room."""

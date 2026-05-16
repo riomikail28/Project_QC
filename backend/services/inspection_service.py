@@ -6,7 +6,7 @@ import logging
 from collections import Counter
 from datetime import datetime, timezone
 
-from backend.database.supabase_client import get_client
+from backend.database.supabase_client import direct_db_query, get_client
 
 logger = logging.getLogger("qc.services.inspection")
 
@@ -22,9 +22,9 @@ class InspectionService:
         return {"success": False, "data": None, "message": message}
 
     def _fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
-        if not self.sb:
-            return []
         try:
+            if not self.sb:
+                return self._direct_fetch(table, select=select, order_by=order_by, desc=desc, limit=limit, filters=filters)
             query = self.sb.table(table).select(select)
             for method, field, value in filters or []:
                 query = getattr(query, method)(field, value)
@@ -36,6 +36,22 @@ class InspectionService:
         except Exception as exc:
             logger.warning("Inspection query skipped for %s: %s", table, exc)
             return []
+
+    def _direct_fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
+        parts = [f"select={str(select).replace(' ', '')}"]
+        for method, field, value in filters or []:
+            if method == "eq":
+                normalized = str(value).lower() if isinstance(value, bool) else value
+                parts.append(f"{field}=eq.{normalized}")
+            elif method == "gte":
+                parts.append(f"{field}=gte.{value}")
+            elif method == "lte":
+                parts.append(f"{field}=lte.{value}")
+        if order_by:
+            parts.append(f"order={order_by}.{'desc' if desc else 'asc'}")
+        if limit:
+            parts.append(f"limit={limit}")
+        return direct_db_query(table, "GET", None, "&".join(parts))
 
     def summary(self):
         try:
@@ -76,6 +92,8 @@ class InspectionService:
 
     def product_shortcuts(self, limit=8):
         rows = self._fetch("products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)])
+        if not rows:
+            rows = self._fetch("products", order_by="product_code", desc=False, limit=limit)
         return self._ok([{
             "id": row.get("id"),
             "product_code": row.get("product_code") or row.get("sku_code") or "-",
