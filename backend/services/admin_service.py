@@ -72,6 +72,9 @@ class AdminService:
                         "temperature_c": row.get("temperature_c"),
                         "is_normal": not row.get("is_abnormal", False),
                         "recorded_at": row.get("recorded_at"),
+                        "photo_url": row.get("photo_url"),
+                        "storage_path": row.get("storage_path"),
+                        "notes": row.get("notes") or row.get("reason"),
                     },
                 }
                 for row in latest.values()
@@ -170,7 +173,7 @@ class AdminService:
         try:
             rows = self._fetch("approvals", order_by="created_at", limit=limit, filters=[("eq", "status", "pending")])
             if rows:
-                return self._empty(rows[:limit])
+                return self._empty([self._approval_with_related(row) for row in rows[:limit]])
 
             rows = []
             reports = self._fetch("qc_reports", order_by="created_at", limit=limit)
@@ -496,11 +499,32 @@ class AdminService:
 
     def _approval_from_qc_report(self, row):
         item = dict(row or {})
+        item.setdefault("approval_id", item.get("id"))
         item.setdefault("source", "qc_report")
         item.setdefault("approval_status", item.get("approval_status") or "pending")
         item.setdefault("status", item.get("status") or "pending")
         item.setdefault("inspector_name", item.get("inspector_name") or item.get("staff_name") or item.get("staff_id") or item.get("operator_id"))
         item.setdefault("product_photo_url", item.get("product_photo_url") or item.get("photo_url"))
+        return item
+
+    def _approval_with_related(self, row):
+        item = dict(row or {})
+        related_type = item.get("related_type")
+        related_id = item.get("related_id") or item.get("report_id")
+        if related_type == "qc_report" and related_id:
+            reports = self._fetch("qc_reports", limit=1, filters=[("eq", "id", related_id)])
+            if reports:
+                report = self._approval_from_qc_report(reports[0])
+                report["approval_id"] = item.get("id")
+                report["id"] = item.get("id")
+                report["related_id"] = related_id
+                report["approval_status"] = item.get("status") or report.get("approval_status") or "pending"
+                report["status"] = report.get("status") or item.get("status") or "pending"
+                report["created_at"] = item.get("created_at") or report.get("created_at")
+                return report
+        item.setdefault("approval_id", item.get("id"))
+        item.setdefault("source", related_type or "approval")
+        item.setdefault("approval_status", item.get("status") or "pending")
         return item
 
     def _approval_from_finding(self, row):

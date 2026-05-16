@@ -36,13 +36,13 @@ def test_photo_pages_load_config_before_camera_module():
         assert config_index < camera_index, page.name
 
 
-def test_dashboard_qc_finding_uploads_to_supabase_before_backend_submit():
+def test_dashboard_qc_finding_uploads_through_backend_submit():
     html = (ROOT / "frontend" / "staff" / "dashboard.html").read_text(encoding="utf-8")
 
-    assert "API.uploadPhotoToSupabase" in html
-    assert "formData.append('photo'," not in html
-    assert "formData.append('photo_url'" in html
-    assert "formData.append('storage_path'" in html
+    assert "API.upload('/qc/findings', formData)" in html
+    assert "formData.append('photo'," in html
+    assert "formData.append('photo_url'" not in html
+    assert "formData.append('storage_path'" not in html
 
 
 def test_csp_allows_blob_image_previews(client):

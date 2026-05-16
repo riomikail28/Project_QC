@@ -68,6 +68,8 @@ class QCService:
         if finding_id:
             for uploaded in uploaded_files:
                 self._insert_evidence(uploaded, staff_id, finding_id)
+            if storage_paths or photo_urls:
+                self._insert_preuploaded_evidence(photo_urls, storage_paths, staff_id, finding_id)
 
         # Audit the action if audit service available
         try:
@@ -113,3 +115,24 @@ class QCService:
             sb.table("qc_evidence").insert({k: v for k, v in payload.items() if v is not None}).execute()
         except Exception as e:
             logger.warning("QC finding evidence metadata skipped: %s", e)
+
+    def _insert_preuploaded_evidence(self, photo_urls, storage_paths, staff_id, finding_id):
+        try:
+            sb = getattr(self.repo, "sb", None)
+            if not sb:
+                return
+            max_items = max(len(photo_urls or []), len(storage_paths or []))
+            for index in range(max_items):
+                public_url = photo_urls[index] if index < len(photo_urls or []) else None
+                storage_path = storage_paths[index] if index < len(storage_paths or []) else None
+                payload = {
+                    "bucket": "qc-evidence",
+                    "storage_path": storage_path,
+                    "public_url": public_url,
+                    "uploaded_by": staff_id,
+                    "related_type": "qc_finding",
+                    "related_id": finding_id,
+                }
+                sb.table("qc_evidence").insert({k: v for k, v in payload.items() if v is not None}).execute()
+        except Exception as e:
+            logger.warning("QC finding preuploaded evidence metadata skipped: %s", e)

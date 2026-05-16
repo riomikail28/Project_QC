@@ -393,17 +393,11 @@
             try {
                 const formData = new FormData();
                 const user = Auth.user() || {};
-                const uploadedPhotos = await Promise.all(selectedFindingPhotos.map((file, index) => (
-                    API.uploadPhotoToSupabase(file, {
-                        staffId: user.id || user.user_id || user.sub || user.username || 'staff',
-                        source: `qc-finding-${index + 1}`
-                    })
-                )));
                 formData.append('reason', reason);
                 formData.append('finding_type', 'field_finding');
                 formData.append('source', 'staff_dashboard');
-                formData.append('photo_url', uploadedPhotos.map(photo => photo.url).join(';'));
-                formData.append('storage_path', uploadedPhotos.map(photo => photo.storage_path).join(';'));
+                formData.append('staff_id', user.id || user.user_id || user.sub || '');
+                selectedFindingPhotos.forEach(file => formData.append('photo', file));
 
                 await API.upload('/qc/findings', formData);
                 alert('Laporan temuan berhasil dikirim.');

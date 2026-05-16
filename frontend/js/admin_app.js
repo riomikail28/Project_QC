@@ -276,6 +276,7 @@ const adminApp = {
 
             const card = document.createElement('div');
             card.className = 'metric-card';
+            const evidence = log?.photo_url || '';
             card.innerHTML = `
                 <div class="metric-header">
                     <span>${dev.facility_rooms?.name || 'Unassigned'} - ${dev.name}</span>
@@ -285,6 +286,7 @@ const adminApp = {
                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px;">
                     Ambang Batas: ${dev.threshold_temp} °C
                 </div>
+                ${evidence ? `<div style="margin-top:10px;">${this.renderEvidenceCell({ photo_url: evidence, storage_path: log?.storage_path || '' })}</div>` : ''}
             `;
             grid.appendChild(card);
         });
@@ -859,14 +861,14 @@ const adminApp = {
             return;
         }
         res.forEach(row => {
-            const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url;
+            const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || row.public_url || '';
             const evidenceUrls = (evidence || '').split(';').filter(u => u);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
                 <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
                 <td>${row.inspector_name || row.staff_id || '-'}</td>
-                <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
+                <td>${evidence ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
                 <td>
                     <div>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</div>
                     <span class="row-actions">

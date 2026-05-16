@@ -245,17 +245,17 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         const result = await API.upload("/monitoring/log", formData);
         if (result.success) {
-            showToast("Log suhu berhasil disimpan");
+            showMonitoringToast("Log suhu berhasil disimpan");
             closeModal();
             loadRecentLogs();
         } else {
-            showToast(result.message || result.error || "Gagal menyimpan log suhu", true);
+            showMonitoringToast(result.message || result.error || "Gagal menyimpan log suhu", true);
         }
     } catch (err) {
         const message = String(err.message || "").includes("schema cache")
             ? "Gagal menyimpan log suhu: kolom database belum sinkron"
             : (err.message || "Gagal menyimpan log suhu: server tidak merespons");
-        showToast(message, true);
+        showMonitoringToast(message, true);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
@@ -308,9 +308,10 @@ async function loadRecentLogs() {
     }
 }
 
-function showToast(message, isError = false) {
-    if (window.showToast) {
-        window.showToast(message, isError ? "error" : "success");
+function showMonitoringToast(message, isError = false) {
+    const globalToast = window.showToast;
+    if (typeof globalToast === "function" && globalToast !== showMonitoringToast) {
+        globalToast(message, isError ? "error" : "success");
         return;
     }
     alert(message);
