@@ -88,6 +88,8 @@ def add_device(room_id: str, name: str, device_type: str, threshold: float):
 
 def delete_device(device_id: str):
     """Delete a specific device."""
+    if is_default_device_id(device_id):
+        return None
     sb = get_client()
     if not sb: return False
     try:
@@ -96,6 +98,10 @@ def delete_device(device_id: str):
     except Exception as e:
         logger.error("Delete device error: %s", e)
         return False
+
+
+def is_default_device_id(device_id: str) -> bool:
+    return str(device_id or "").startswith("default-")
 
 def get_monitoring_structure():
     """Returns a nested structure of Rooms -> Devices for the UI.

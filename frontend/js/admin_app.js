@@ -362,7 +362,7 @@ const adminApp = {
                                 <span><strong>${device.name}</strong><br><span class="admin-muted">${device.type} - ${device.threshold_temp || device.threshold || 0} C</span></span>
                                 <span class="row-actions">
                                     <button class="btn-secondary btn-sm" onclick='adminApp.openDeviceModal(${this.safeJson(device)}, "${room.id}")'><i data-lucide="pencil"></i> Edit</button>
-                                    <button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i data-lucide="trash-2"></i> Hapus</button>
+                                    ${this.renderDeviceDeleteButton(device)}
                                 </span>
                             </li>
                         `).join('') : '<li><span class="admin-muted">Belum ada unit di ruangan ini.</span></li>'}
@@ -377,6 +377,22 @@ const adminApp = {
 
     safeJson(value) {
         return JSON.stringify(value || {}).replace(/'/g, '&apos;');
+    },
+
+    isDefaultDevice(deviceOrId) {
+        const id = typeof deviceOrId === 'string' ? deviceOrId : deviceOrId?.id;
+        return Boolean((typeof deviceOrId === 'object' && deviceOrId?.is_default) || String(id || '').startsWith('default-'));
+    },
+
+    renderDeviceDeleteButton(device) {
+        if (this.isDefaultDevice(device)) {
+            return `
+                <button class="btn-secondary btn-sm" type="button" disabled title="Default unit tidak dapat dihapus">
+                    <i data-lucide="lock"></i> Default
+                </button>
+            `;
+        }
+        return `<button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i data-lucide="trash-2"></i> Hapus</button>`;
     },
 
     formatRange(min, max, unit = '') {
@@ -583,9 +599,17 @@ const adminApp = {
     },
 
     async deleteDevice(id) {
+        if (this.isDefaultDevice(id)) {
+            alert('Default unit tidak dapat dihapus.');
+            return;
+        }
         if (!confirm('Hapus unit monitoring ini?')) return;
-        await API.delete(`/facility/devices/${id}`);
-        await this.loadFacilityManager();
+        try {
+            await API.delete(`/facility/devices/${id}`);
+            await this.loadFacilityManager();
+        } catch (error) {
+            alert(`Gagal menghapus unit: ${error.message || 'Coba lagi'}`);
+        }
     },
 
     async loadSku() {

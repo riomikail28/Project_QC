@@ -76,7 +76,7 @@ def facility_devices():
 @facility_bp.route("/api/facility/devices/<device_id>", methods=["PATCH", "PUT", "DELETE"])
 @require_role("admin")
 def facility_device_detail(device_id):
-    from backend.monitoring.facility_manager import delete_device, update_device
+    from backend.monitoring.facility_manager import delete_device, is_default_device_id, update_device
 
     if request.method in ("PATCH", "PUT"):
         device = update_device(device_id, request.get_json(silent=True) or {})
@@ -84,6 +84,12 @@ def facility_device_detail(device_id):
             return jsonify({"detail": "Gagal mengubah unit"}), 503
         write_audit("update", "facility_device", device_id, after=device)
         return jsonify(device)
+
+    if is_default_device_id(device_id):
+        return jsonify({
+            "success": False,
+            "detail": "Default unit tidak dapat dihapus. Unit fallback hanya bisa dinonaktifkan jika fitur hidden/disabled tersedia.",
+        }), 409
 
     success = delete_device(device_id)
     write_audit("delete", "facility_device", device_id, after={"success": success})

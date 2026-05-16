@@ -99,3 +99,20 @@ def test_profile_applies_profile_role_not_stale_local_storage():
     assert "Auth.persistUser(user)" in profile_js
     assert "Auth.applyRoleVisibility(role)" in profile_js
     assert "Auth.canAccessAdmin(role)" in profile_js
+
+
+def test_admin_app_disables_delete_for_default_facility_devices():
+    admin_js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert "isDefaultDevice" in admin_js
+    assert "Default unit tidak dapat dihapus" in admin_js
+    assert "renderDeviceDeleteButton(device)" in admin_js
+    assert "startsWith('default-')" in admin_js
+
+
+def test_csp_allows_cdn_source_map_connections(client):
+    response = client.get("/")
+    csp = response.headers["Content-Security-Policy"]
+
+    assert "https://cdn.jsdelivr.net" in csp
+    assert "https://unpkg.com" in csp
