@@ -63,6 +63,7 @@ def create_app() -> Flask:
     from backend.api.profile_routes import profile_bp
     from backend.api.staff_routes import staff_bp
     from backend.api.facility_routes import facility_bp
+    from backend.api.health_routes import health_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -117,6 +118,7 @@ def create_app() -> Flask:
     app.register_blueprint(profile_bp)
     app.register_blueprint(staff_bp)
     app.register_blueprint(facility_bp)
+    app.register_blueprint(health_bp)
 
     # Frontend routes for Vercel/serverless deployment.
     @app.route("/")

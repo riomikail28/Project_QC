@@ -9,12 +9,12 @@ def test_monitoring_structure_requires_auth(client):
     assert response.status_code == 401
 
 
-def test_monitoring_latest_returns_empty_when_supabase_offline(client, staff_headers):
+def test_monitoring_latest_returns_error_when_supabase_offline(client, staff_headers):
     with patch("backend.api.temperature_routes.get_client", return_value=None):
         response = client.get("/api/monitoring/latest", headers=staff_headers)
 
-    assert response.status_code == 200
-    assert response.get_json() == []
+    assert response.status_code == 503
+    assert response.get_json()["success"] is False
 
 
 def test_temperature_log_validates_empty_request(client, staff_headers):

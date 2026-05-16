@@ -7,6 +7,7 @@ Ensures only one client instance exists throughout the application.
 
 import os
 import logging
+from dataclasses import dataclass
 try:
     from supabase import create_client, Client
 except ImportError:
@@ -25,6 +26,20 @@ _failed: bool = False
 _last_error: str = ""
 
 
+INVALID_KEY_MESSAGE = "Invalid Supabase API key. Check Vercel SUPABASE_SERVICE_ROLE_KEY."
+CONNECTION_FAILED_MESSAGE = "Supabase connection failed. Please check production environment variables."
+
+
+@dataclass(frozen=True)
+class SupabaseEnvStatus:
+    success: bool
+    message: str
+    supabase_url_configured: bool
+    service_role_key_configured: bool
+    anon_key_configured: bool
+    storage_bucket: str
+
+
 def _supabase_key() -> str:
     return (
         os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -38,6 +53,46 @@ def _anon_key() -> str:
 
 def _service_key() -> str:
     return (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
+
+
+def _is_placeholder(value: str) -> bool:
+    raw = str(value or "").strip().lower()
+    return (
+        not raw
+        or raw.startswith("your-")
+        or raw in {"test-key", "service-role-key", "replace-me"}
+        or "your-project-ref" in raw
+    )
+
+
+def _is_invalid_key_error(error_text: str) -> bool:
+    text = str(error_text or "").lower()
+    return "invalid api key" in text or "jwt" in text and "invalid" in text
+
+
+def validate_supabase_env(require_service_role: bool = True) -> SupabaseEnvStatus:
+    """Validate required Supabase env without exposing secret values."""
+    url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    service_key = _service_key()
+    anon_key = _anon_key()
+    bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence").strip() or "qc-evidence"
+    url_ok = bool(url) and not _is_placeholder(url)
+    service_ok = bool(service_key) and not _is_placeholder(service_key)
+    anon_ok = bool(anon_key) and not _is_placeholder(anon_key)
+    if not url_ok:
+        return SupabaseEnvStatus(False, "SUPABASE_URL is not configured", url_ok, service_ok, anon_ok, bucket)
+    if require_service_role and not service_ok:
+        return SupabaseEnvStatus(False, "Supabase service role key is not configured", url_ok, service_ok, anon_ok, bucket)
+    if not require_service_role and not (service_ok or anon_ok):
+        return SupabaseEnvStatus(False, "Supabase public anon key is not configured", url_ok, service_ok, anon_ok, bucket)
+    return SupabaseEnvStatus(True, "OK", url_ok, service_ok, anon_ok, bucket)
+
+
+def supabase_error_response(message: str | None = None) -> tuple[dict, int]:
+    return {
+        "success": False,
+        "message": message or get_last_db_error() or CONNECTION_FAILED_MESSAGE,
+    }, 503
 
 
 def _client_with_key(key: str, key_name: str):
@@ -56,6 +111,10 @@ def _client_with_key(key: str, key_name: str):
         _last_error = f"{key_name} is not configured"
         logger.warning(_last_error)
         return None
+    if _is_placeholder(key):
+        _last_error = INVALID_KEY_MESSAGE if "SERVICE_ROLE" in key_name else "Invalid Supabase API key"
+        logger.warning(_last_error)
+        return None
     try:
         return create_client(url, key)
     except Exception as e:
@@ -64,7 +123,8 @@ def _client_with_key(key: str, key_name: str):
         try:
             return Client(url, key)
         except Exception as e2:
-            _last_error = f"{error_msg} | Fallback failed: {str(e2)}"
+            fallback_error = str(e2)
+            _last_error = INVALID_KEY_MESSAGE if _is_invalid_key_error(f"{error_msg} {fallback_error}") else f"{error_msg} | Fallback failed: {fallback_error}"
             logger.error("Supabase creation failed: %s", _last_error)
             return None
 
@@ -75,13 +135,30 @@ def get_client():
     
     if _client is not None:
         return _client
+    env = validate_supabase_env(require_service_role=False)
+    if not env.success:
+        _last_error = env.message
+        return None
     _client = _client_with_key(_supabase_key() or _anon_key(), "SUPABASE_KEY")
     return _client
 
 
 def get_supabase_client():
-    """Public DB client. Prefer service/SUPABASE_KEY when available."""
+    """Backward-compatible alias for backend DB client."""
     return get_client()
+
+
+def get_supabase_public_client():
+    """Public Supabase client using anon key only."""
+    global _client, _last_error
+    if _client is not None:
+        return _client
+    env = validate_supabase_env(require_service_role=False)
+    if not env.success:
+        _last_error = env.message
+        return None
+    _client = _client_with_key(_anon_key(), "SUPABASE_ANON_KEY")
+    return _client
 
 
 def get_supabase_admin_client():
@@ -89,6 +166,11 @@ def get_supabase_admin_client():
     global _admin_client, _last_error
     if _admin_client is not None:
         return _admin_client
+    env = validate_supabase_env(require_service_role=True)
+    if not env.success:
+        _last_error = env.message
+        logger.warning(_last_error)
+        return None
     key = _service_key()
     if not key:
         _last_error = "Supabase service role key is not configured"
@@ -96,6 +178,30 @@ def get_supabase_admin_client():
         return None
     _admin_client = _client_with_key(key, "SUPABASE_SERVICE_ROLE_KEY")
     return _admin_client
+
+
+def validate_supabase_connection() -> dict:
+    """Validate env and a lightweight Supabase REST connection."""
+    env = validate_supabase_env(require_service_role=True)
+    base = {
+        "supabase_url_configured": env.supabase_url_configured,
+        "service_role_key_configured": env.service_role_key_configured,
+        "storage_bucket": env.storage_bucket,
+    }
+    if not env.success:
+        return {"success": False, "message": env.message, **base}
+    client = get_supabase_admin_client()
+    if not client:
+        message = get_last_db_error() or CONNECTION_FAILED_MESSAGE
+        if "Invalid Supabase API key" in message:
+            message = "Invalid Supabase API key"
+        return {"success": False, "message": message, **base}
+    try:
+        client.table("facility_rooms").select("id").limit(1).execute()
+        return {"success": True, "connection": "ok", **base}
+    except Exception as exc:
+        message = INVALID_KEY_MESSAGE if _is_invalid_key_error(str(exc)) else f"Supabase connection failed: {str(exc)}"
+        return {"success": False, "message": message, **base}
 
 def get_last_db_error():
     """Return the last encountered database error message."""
@@ -116,8 +222,9 @@ def direct_db_query(table: str, method: str = "GET", payload: dict = None, filte
     
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
     key = _supabase_key()
-    if not url or not key:
-        raise ValueError("SUPABASE_URL dan Supabase key belum dikonfigurasi")
+    env = validate_supabase_env(require_service_role=True)
+    if not env.success:
+        raise ValueError(env.message)
     
     api_url = f"{url}/rest/v1/{table}"
     if filters:

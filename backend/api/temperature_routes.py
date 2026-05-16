@@ -7,7 +7,7 @@ Supports photo uploads for findings and optional reason for abnormalities.
 
 from flask import Blueprint, request, jsonify
 import logging
-from backend.database.supabase_client import get_client
+from backend.database.supabase_client import get_client, supabase_error_response
 from backend.database.supabase_client import get_last_db_error
 from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
@@ -50,7 +50,11 @@ def log_facility_data():
     )
 
     try:
-        body, status_code = MonitoringService(get_client(), audit_writer=write_audit).log_facility_data(data, request.files)
+        sb = get_client()
+        if not sb:
+            body, status_code = supabase_error_response()
+            return jsonify(body), status_code
+        body, status_code = MonitoringService(sb, audit_writer=write_audit).log_facility_data(data, request.files)
         return jsonify(body), status_code
     except Exception as e:
         logger.exception("Logging error")
@@ -66,11 +70,19 @@ def log_facility_data():
 @require_auth
 def get_latest_logs():
     """Fetch latest logs for the dashboard."""
-    return jsonify(MonitoringService(get_client()).latest_logs())
+    sb = get_client()
+    if not sb:
+        body, status_code = supabase_error_response()
+        return jsonify(body), status_code
+    return jsonify(MonitoringService(sb).latest_logs())
 
 @monitoring_bp.route("/api/monitoring/stats", methods=["GET"])
 @require_auth
 def get_monitoring_stats():
     """Aggregate stats for analytics charts."""
-    body, status_code = MonitoringService(get_client()).monitoring_stats()
+    sb = get_client()
+    if not sb:
+        body, status_code = supabase_error_response()
+        return jsonify(body), status_code
+    body, status_code = MonitoringService(sb).monitoring_stats()
     return jsonify(body), status_code

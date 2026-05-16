@@ -1,17 +1,31 @@
 """Facility management routes for rooms and devices."""
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from backend.middleware.security_middleware import require_auth, require_role
 from backend.services.audit_service import write_audit
+from backend.database.supabase_client import get_client, supabase_error_response
 
 facility_bp = Blueprint("facility_bp", __name__)
+
+
+def _require_supabase():
+    if current_app.config.get("TESTING"):
+        return True, None
+    sb = get_client()
+    if not sb:
+        body, status = supabase_error_response()
+        return None, (jsonify(body), status)
+    return sb, None
 
 
 @facility_bp.route("/api/facility/structure", methods=["GET"])
 @facility_bp.route("/api/admin/facility/structure", methods=["GET"])
 @require_auth
 def facility_structure():
+    _, error = _require_supabase()
+    if error:
+        return error
     from backend.monitoring.facility_manager import get_monitoring_structure
 
     return jsonify(get_monitoring_structure())
@@ -21,6 +35,9 @@ def facility_structure():
 @facility_bp.route("/api/admin/facility/rooms", methods=["GET", "POST"])
 @require_role("admin")
 def facility_rooms():
+    _, error = _require_supabase()
+    if error:
+        return error
     from backend.monitoring.facility_manager import add_room, list_rooms
 
     if request.method == "POST":
@@ -37,6 +54,9 @@ def facility_rooms():
 @facility_bp.route("/api/admin/facility/rooms/<room_id>", methods=["PATCH", "PUT", "DELETE"])
 @require_role("admin")
 def facility_room_detail(room_id):
+    _, error = _require_supabase()
+    if error:
+        return error
     from backend.monitoring.facility_manager import delete_room, update_room
 
     if request.method in ("PATCH", "PUT"):
@@ -56,6 +76,9 @@ def facility_room_detail(room_id):
 @facility_bp.route("/api/admin/facility/devices", methods=["GET", "POST"])
 @require_role("admin")
 def facility_devices():
+    _, error = _require_supabase()
+    if error:
+        return error
     from backend.monitoring.facility_manager import add_device, list_devices
 
     if request.method == "POST":
@@ -80,6 +103,9 @@ def facility_devices():
 @facility_bp.route("/api/admin/facility/devices/<device_id>", methods=["PATCH", "PUT", "DELETE"])
 @require_role("admin")
 def facility_device_detail(device_id):
+    _, error = _require_supabase()
+    if error:
+        return error
     from backend.monitoring.facility_manager import delete_device, update_device
 
     if request.method in ("PATCH", "PUT"):

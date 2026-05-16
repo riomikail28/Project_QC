@@ -1,8 +1,9 @@
 import logging
-from flask import Blueprint, Response, g, request, jsonify
+from flask import Blueprint, Response, current_app, g, request, jsonify
 
 from backend.middleware.security_middleware import require_role
 from backend.services.admin_service import AdminService
+from backend.database.supabase_client import get_client, supabase_error_response
 
 logger = logging.getLogger("qc.routes.admin")
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
@@ -10,6 +11,16 @@ admin_legacy_bp = Blueprint("admin_legacy", __name__, url_prefix="/api/admin")
 
 def get_admin_service():
     return AdminService()
+
+
+def _require_supabase():
+    if current_app.config.get("TESTING"):
+        return True, None
+    sb = get_client()
+    if not sb:
+        body, status = supabase_error_response()
+        return None, (jsonify(body), status)
+    return sb, None
 
 
 def _nullable_number(value):
@@ -118,6 +129,22 @@ def _enveloped(res, ok_status=200):
         "data": res.get("data"),
         "message": res.get("message") or ("OK" if res.get("success") else res.get("detail", "Error")),
     }), status
+
+
+@admin_bp.before_request
+def require_admin_supabase():
+    if request.endpoint and request.endpoint.startswith("admin."):
+        _, error = _require_supabase()
+        if error:
+            return error
+
+
+@admin_legacy_bp.before_request
+def require_legacy_admin_supabase():
+    if request.endpoint and request.endpoint.startswith("admin_legacy."):
+        _, error = _require_supabase()
+        if error:
+            return error
 
 
 def _report_args(default_limit=100):

@@ -5,7 +5,12 @@ import pytest
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
-os.environ.setdefault("SUPABASE_KEY", "test-key")
+os.environ.setdefault(
+    "SUPABASE_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YW1wbGUiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxLCJleHAiOjQxMDI0NDQ4MDB9."
+    "signature",
+)
 
 from backend import create_app
 
