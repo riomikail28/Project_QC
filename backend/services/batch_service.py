@@ -148,6 +148,10 @@ def create_batch(
     if resolved_product_id and not _looks_like_uuid(resolved_product_id):
         resolved_product_name = resolved_product_name or resolved_product_id
         resolved_product_id = None
+    if not resolved_product_id:
+        default_product = _ensure_default_product(sb)
+        resolved_product_id = default_product.get("id") if default_product else None
+        resolved_product_name = resolved_product_name or (default_product or {}).get("product_name") or "General QC Product"
 
     payload = {
         "product_id": resolved_product_id,
@@ -155,7 +159,7 @@ def create_batch(
         "batch_code": batch_code,
         "production_date": production_date or date.today().isoformat(),
         "expired_date": expired_date,
-        "status": "pending",
+        "status": "in_progress",
         "created_by": operator_id,
     }
     payload = {key: value for key, value in payload.items() if value not in (None, "")}
@@ -185,6 +189,41 @@ def create_batch(
         raise
 
     return {"error": "Database offline or no data returned", "db_detail": get_last_db_error()}
+
+
+def _ensure_default_product(sb=None) -> dict | None:
+    """Return the GENERAL-QC product, creating it if needed.
+
+    Production schema keeps production_batches.product_id NOT NULL, so every
+    batch needs a real product UUID even when staff enters a free-form batch.
+    """
+    payload = {
+        "product_code": "GENERAL-QC",
+        "product_name": "General QC Product",
+        "is_active": True,
+    }
+    try:
+        if sb:
+            existing = (
+                sb.table("products")
+                .select("id, product_code, product_name")
+                .eq("product_code", "GENERAL-QC")
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                return existing.data[0]
+            created = sb.table("products").insert([payload]).execute()
+            return created.data[0] if created.data else None
+
+        rows = direct_db_query("products", "GET", None, "product_code=eq.GENERAL-QC&limit=1")
+        if rows:
+            return rows[0]
+        created = direct_db_query("products", "POST", payload)
+        return created[0] if created else None
+    except Exception as exc:
+        logger.error("Failed to ensure default product GENERAL-QC: %s", exc)
+        return None
 
 
 def get_daily_summary(day: str = None) -> dict:

@@ -75,6 +75,7 @@ class MonitoringService:
                 "device_type": unit_type if unit_type != "ambient" else "room",
                 "temperature_c": float(temperature),
                 "temperature": float(temperature),
+                "threshold_c": threshold,
                 "humidity_rh": float(humidity) if humidity not in (None, "") else None,
                 "is_normal": is_normal,
                 "is_abnormal": not is_normal,
