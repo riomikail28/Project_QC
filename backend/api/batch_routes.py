@@ -122,8 +122,8 @@ def create_new_batch():
     product_id = data.product_id
     batch_code = data.batch_code
 
-    if not product_id or not batch_code:
-        return jsonify({"error": "product_id and batch_code are required"}), 400
+    if not batch_code:
+        return jsonify({"success": False, "message": "Field batch_code is required"}), 400
 
     try:
         uploaded = None
@@ -138,8 +138,10 @@ def create_new_batch():
         try:
             batch = create_batch(
                 product_id=product_id,
+                product_name=data.product_name,
                 batch_code=batch_code,
                 production_date=data.production_date,
+                expired_date=data.expired_date,
                 shift=data.shift,
                 operator_id=data.operator_id,
                 qc_officer_id=data.qc_officer_id,
@@ -153,7 +155,7 @@ def create_new_batch():
         if isinstance(batch, dict) and batch.get("error"):
             if uploaded:
                 delete_photo(uploaded.storage_path)
-            return jsonify({"success": False, "error": batch["error"]}), 503
+            return jsonify({"success": False, "message": batch["error"], "db_detail": batch.get("db_detail")}), 503
         write_audit("create", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
 
         return jsonify({
@@ -168,7 +170,7 @@ def create_new_batch():
         return jsonify({"success": False, "error": f"Upload gagal: {str(e)}"}), 400
     except Exception as e:
         logger.error("Failed to create batch: %s", e)
-        return jsonify({"error": f"Gagal membuat batch: {str(e)}"}), 503
+        return jsonify({"success": False, "message": f"Gagal membuat batch: {str(e)}"}), 503
 
 
 # ---------------------------------------------------------------------------

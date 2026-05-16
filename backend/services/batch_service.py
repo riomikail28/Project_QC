@@ -8,7 +8,7 @@ Handles batch creation, status determination, and QC scoring.
 import logging
 from datetime import date
 from uuid import UUID
-from backend.database.supabase_client import get_client
+from backend.database.supabase_client import direct_db_query, get_client, get_last_db_error
 
 logger = logging.getLogger("qc.batch")
 
@@ -110,9 +110,11 @@ def get_batch_detail(batch_id: str) -> dict:
 
 
 def create_batch(
-    product_id: str,
     batch_code: str,
-    production_date: str,
+    product_id: str = None,
+    product_name: str = None,
+    production_date: str = None,
+    expired_date: str = None,
     shift: str = None,
     operator_id: str = None,
     qc_officer_id: str = None,
@@ -124,31 +126,36 @@ def create_batch(
     Returns the created batch record or raises on failure.
     """
     sb = get_client()
-    if not sb:
-        return {"error": "Database offline"}
 
     resolved_product_id = product_id
-    if product_id and not _looks_like_uuid(product_id):
+    resolved_product_name = product_name
+    if sb and product_id and not _looks_like_uuid(product_id):
         for code_column in ("product_code", "sku_code"):
             try:
                 product_res = (
                     sb.table("products")
-                    .select("id")
+                    .select("id, product_name")
                     .eq(code_column, product_id)
                     .limit(1)
                     .execute()
                 )
                 if product_res.data:
                     resolved_product_id = product_res.data[0]["id"]
+                    resolved_product_name = resolved_product_name or product_res.data[0].get("product_name")
                     break
             except Exception as e:
                 logger.warning("Could not resolve product code via %s: %s", code_column, e)
 
     payload = {
         "product_id": resolved_product_id,
+        "product_name": resolved_product_name,
         "batch_code": batch_code,
         "production_date": production_date or date.today().isoformat(),
+        "expired_date": expired_date,
+        "status": "pending",
+        "created_by": operator_id,
     }
+    payload = {key: value for key, value in payload.items() if value not in (None, "")}
     if shift:
         payload["shift"] = shift
     if operator_id:
@@ -161,15 +168,20 @@ def create_batch(
         payload["storage_path"] = storage_path
 
     try:
-        res = sb.table("production_batches").insert([payload]).execute()
-        if res.data:
-            logger.info("Batch created: %s", batch_code)
-            return res.data[0]
+        if sb:
+            res = sb.table("production_batches").insert([payload]).execute()
+            if res.data:
+                logger.info("Batch created: %s", batch_code)
+                return res.data[0]
+        rows = direct_db_query("production_batches", "POST", payload)
+        if rows:
+            logger.info("Batch created via direct query: %s", batch_code)
+            return rows[0]
     except Exception as e:
         logger.error("Failed to create batch: %s", e)
         raise
 
-    return {"error": "No data returned"}
+    return {"error": "Database offline or no data returned", "db_detail": get_last_db_error()}
 
 
 def get_daily_summary(day: str = None) -> dict:

@@ -333,7 +333,8 @@ const adminApp = {
         if (!container) return;
         container.innerHTML = '<div class="empty-admin-state">Loading facility...</div>';
         try {
-            const rooms = await API.get('/facility/structure');
+            const envelope = await API.get('/admin/facility/structure');
+            const rooms = Array.isArray(envelope) ? envelope : (envelope.data || []);
             if (!rooms.length) {
                 container.innerHTML = `
                     <div class="empty-admin-state">
@@ -362,7 +363,7 @@ const adminApp = {
                                 <span><strong>${device.name}</strong><br><span class="admin-muted">${device.type} - ${device.threshold_temp || device.threshold || 0} C</span></span>
                                 <span class="row-actions">
                                     <button class="btn-secondary btn-sm" onclick='adminApp.openDeviceModal(${this.safeJson(device)}, "${room.id}")'><i data-lucide="pencil"></i> Edit</button>
-                                    ${this.renderDeviceDeleteButton(device)}
+                                    <button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}', ${device.is_default ? 'true' : 'false'})"><i data-lucide="trash-2"></i> Hapus</button>
                                 </span>
                             </li>
                         `).join('') : '<li><span class="admin-muted">Belum ada unit di ruangan ini.</span></li>'}
@@ -385,14 +386,7 @@ const adminApp = {
     },
 
     renderDeviceDeleteButton(device) {
-        if (this.isDefaultDevice(device)) {
-            return `
-                <button class="btn-secondary btn-sm" type="button" disabled title="Default unit tidak dapat dihapus">
-                    <i data-lucide="lock"></i> Default
-                </button>
-            `;
-        }
-        return `<button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}')"><i data-lucide="trash-2"></i> Hapus</button>`;
+        return `<button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}', ${device?.is_default ? 'true' : 'false'})"><i data-lucide="trash-2"></i> Hapus</button>`;
     },
 
     formatRange(min, max, unit = '') {
@@ -459,6 +453,12 @@ const adminApp = {
             <label>Deskripsi
                 <input id="room-description" value="${item.description || ''}">
             </label>
+            <label>Status
+                <select id="room-is-active">
+                    <option value="true" ${item.is_active === false ? '' : 'selected'}>Aktif</option>
+                    <option value="false" ${item.is_active === false ? 'selected' : ''}>Nonaktif</option>
+                </select>
+            </label>
         `, { id: item.id });
     },
 
@@ -470,14 +470,25 @@ const adminApp = {
             </label>
             <label>Tipe
                 <select id="device-type">
-                    <option value="chiller" ${item.type === 'chiller' ? 'selected' : ''}>Chiller</option>
-                    <option value="freezer" ${item.type === 'freezer' ? 'selected' : ''}>Freezer</option>
-                    <option value="undercounter" ${item.type === 'undercounter' ? 'selected' : ''}>Undercounter</option>
-                    <option value="room_temp" ${item.type === 'room_temp' ? 'selected' : ''}>Suhu Ruangan</option>
+                    <option value="room_temp" ${(item.device_type || item.type) === 'room_temp' ? 'selected' : ''}>Suhu Ruangan</option>
+                    <option value="chiller" ${(item.device_type || item.type) === 'chiller' ? 'selected' : ''}>Chiller</option>
+                    <option value="freezer" ${(item.device_type || item.type) === 'freezer' ? 'selected' : ''}>Freezer</option>
                 </select>
             </label>
-            <label>Threshold Suhu
-                <input id="device-threshold" type="number" step="0.1" value="${item.threshold_temp || item.threshold || 5}" required>
+            <label>Target Suhu
+                <input id="device-target" type="number" step="0.1" value="${item.target_temperature ?? item.threshold_temp ?? item.threshold ?? 5}" required>
+            </label>
+            <label>Min Suhu
+                <input id="device-min" type="number" step="0.1" value="${item.min_temperature ?? ''}">
+            </label>
+            <label>Max Suhu
+                <input id="device-max" type="number" step="0.1" value="${item.max_temperature ?? ''}">
+            </label>
+            <label>Status
+                <select id="device-is-active">
+                    <option value="true" ${item.is_active === false ? '' : 'selected'}>Aktif</option>
+                    <option value="false" ${item.is_active === false ? 'selected' : ''}>Nonaktif</option>
+                </select>
             </label>
         `, { id: item.id, roomId });
     },
@@ -542,23 +553,27 @@ const adminApp = {
                 const payload = {
                     name: document.getElementById('room-name').value.trim(),
                     description: document.getElementById('room-description').value.trim(),
+                    is_active: document.getElementById('room-is-active').value === 'true',
                 };
-                if (this.crudMode === 'addRoom') await API.post('/facility/rooms', payload);
-                else await API.patch(`/facility/rooms/${this.crudId}`, payload);
+                if (this.crudMode === 'addRoom') await API.post('/admin/facility/rooms', payload);
+                else await API.patch(`/admin/facility/rooms/${this.crudId}`, payload);
                 await this.loadFacilityManager();
             }
 
             if (this.crudMode === 'addDevice' || this.crudMode === 'editDevice') {
                 const payload = {
                     name: document.getElementById('device-name').value.trim(),
-                    type: document.getElementById('device-type').value,
-                    threshold: Number(document.getElementById('device-threshold').value),
+                    device_type: document.getElementById('device-type').value,
+                    target_temperature: Number(document.getElementById('device-target').value),
+                    min_temperature: this.numberOrNull('device-min'),
+                    max_temperature: this.numberOrNull('device-max'),
+                    is_active: document.getElementById('device-is-active').value === 'true',
                 };
                 if (this.crudMode === 'addDevice') {
                     payload.room_id = this.crudContext.roomId;
-                    await API.post('/facility/devices', payload);
+                    await API.post('/admin/facility/devices', payload);
                 } else {
-                    await API.patch(`/facility/devices/${this.crudId}`, payload);
+                    await API.patch(`/admin/facility/devices/${this.crudId}`, payload);
                 }
                 await this.loadFacilityManager();
             }
@@ -594,18 +609,17 @@ const adminApp = {
 
     async deleteRoom(id) {
         if (!confirm('Hapus ruangan ini? Unit di dalamnya juga bisa terdampak.')) return;
-        await API.delete(`/facility/rooms/${id}`);
+        await API.delete(`/admin/facility/rooms/${id}`);
         await this.loadFacilityManager();
     },
 
-    async deleteDevice(id) {
-        if (this.isDefaultDevice(id)) {
-            alert('Default unit tidak dapat dihapus.');
-            return;
-        }
-        if (!confirm('Hapus unit monitoring ini?')) return;
+    async deleteDevice(id, isDefault = false) {
+        const message = isDefault
+            ? 'Unit default akan dihapus dari database. Lanjutkan?'
+            : 'Hapus unit monitoring ini?';
+        if (!confirm(message)) return;
         try {
-            await API.delete(`/facility/devices/${id}`);
+            await API.delete(`/admin/facility/devices/${id}`);
             await this.loadFacilityManager();
         } catch (error) {
             alert(`Gagal menghapus unit: ${error.message || 'Coba lagi'}`);

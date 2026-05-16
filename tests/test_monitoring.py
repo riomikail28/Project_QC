@@ -226,13 +226,12 @@ def test_monitoring_latest_falls_back_to_temperature_logs_when_facility_logs_emp
     assert MonitoringService(DB()).latest_logs()[0]["zone"] == "Kitchen"
 
 
-def test_delete_default_facility_device_returns_clear_conflict(client, admin_headers):
+def test_delete_default_facility_device_is_not_locked_permanently(client, admin_headers):
     response = client.delete(
         "/api/facility/devices/default-room-ruang-kopi-chiller",
         headers=admin_headers,
     )
 
     body = response.get_json()
-    assert response.status_code == 409
-    assert body["success"] is False
-    assert "Default unit" in body["detail"]
+    assert response.status_code != 409
+    assert "Default unit" not in body.get("detail", "")

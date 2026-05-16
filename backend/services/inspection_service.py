@@ -118,6 +118,8 @@ class InspectionService:
         qc_status = self._norm_status(payload.get("qc_status") or payload.get("status") or "pending")
         if qc_status == "failed":
             qc_status = "fail"
+        if qc_status == "hold":
+            qc_status = "warning"
         if qc_status not in {"pass", "warning", "fail", "pending", "hold"}:
             return self._fail("Status QC tidak valid")
         if not staff_id:
@@ -145,13 +147,19 @@ class InspectionService:
                 "inspector_name": payload.get("staff_name") or payload.get("inspector_name"),
                 "status": "failed" if qc_status == "fail" else qc_status,
                 "approval_status": "pending",
+                "barcode": barcode or None,
+                "ccp_stage": payload.get("ccp_stage") or "receiving",
+                "temperature": payload.get("temperature") or None,
+                "notes": payload.get("notes") or None,
                 "inspection_result": {
                     "barcode": barcode,
-                    "ccp_stage": payload.get("ccp_stage"),
+                    "ccp_stage": payload.get("ccp_stage") or "receiving",
                     "temperature": payload.get("temperature"),
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
                 },
+                "photo_url": ";".join(photo_urls) if photo_urls else None,
+                "storage_path": ";".join(storage_paths) if storage_paths else None,
                 "product_photo_url": ";".join(photo_urls) if photo_urls else None,
                 "product_storage_path": ";".join(storage_paths) if storage_paths else None,
             }
@@ -175,6 +183,7 @@ class InspectionService:
                 self._insert("qc_evidence", {
                     "file_name": uploaded.file_name,
                     "file_type": uploaded.file_type,
+                    "mime_type": uploaded.file_type,
                     "file_size": uploaded.file_size,
                     "bucket": uploaded.bucket,
                     "storage_path": uploaded.storage_path,

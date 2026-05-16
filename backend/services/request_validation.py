@@ -25,9 +25,11 @@ class LoginRequest:
 
 @dataclass
 class BatchCreateRequest:
-    product_id: str
     batch_code: str
+    product_id: str | None = None
+    product_name: str | None = None
     production_date: str | None = None
+    expired_date: str | None = None
     shift: str | None = None
     operator_id: str | None = None
     qc_officer_id: str | None = None
@@ -115,9 +117,11 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
         )
     if model is BatchCreateRequest:
         return BatchCreateRequest(
-            product_id=_required(data, "product_id", 120),
             batch_code=_required(data, "batch_code", 80),
+            product_id=_optional_str(data, "product_id", 120),
+            product_name=_optional_str(data, "product_name", 160),
             production_date=_optional_str(data, "production_date", 20),
+            expired_date=_optional_str(data, "expired_date", 20),
             shift=_optional_str(data, "shift", 40),
             operator_id=_optional_str(data, "operator_id", 80),
             qc_officer_id=_optional_str(data, "qc_officer_id", 80),

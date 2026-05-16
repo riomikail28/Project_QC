@@ -6,6 +6,7 @@ Used by Admin for kitchen configuration.
 """
 
 import logging
+from datetime import datetime, timezone
 from backend.database.supabase_client import direct_db_query, get_client
 
 logger = logging.getLogger("qc.facility")
@@ -29,12 +30,22 @@ def list_rooms():
         logger.error("List rooms error: %s", e)
         return []
 
-def add_room(name: str, description: str = ""):
+def add_room(name: str, description: str = "", is_active: bool = True):
     """Add a new monitoring room."""
     sb = get_client()
-    if not sb: return None
+    if not sb:
+        return None
     try:
-        res = sb.table("facility_rooms").insert({"name": name, "description": description}).execute()
+        clean_name = str(name or "").strip()
+        if not clean_name:
+            return None
+        payload = {
+            "name": clean_name,
+            "slug": _slug(clean_name),
+            "description": description or "",
+            "is_active": bool(is_active),
+        }
+        res = sb.table("facility_rooms").insert(payload).execute()
         return res.data[0] if res.data else None
     except Exception as e:
         logger.error("Add room error: %s", e)
@@ -69,16 +80,37 @@ def list_devices(room_id: str = None):
         logger.error("List devices error: %s", e)
         return []
 
-def add_device(room_id: str, name: str, device_type: str, threshold: float):
+def add_device(
+    room_id: str,
+    name: str,
+    device_type: str,
+    threshold: float = None,
+    min_temperature: float = None,
+    max_temperature: float = None,
+    is_active: bool = True,
+):
     """Add a new device (chiller/freezer/etc) to a room."""
     sb = get_client()
-    if not sb: return None
+    if not sb:
+        return None
     try:
+        clean_name = str(name or "").strip()
+        normalized_type = _normalize_device_type(device_type)
+        if not room_id or not clean_name or not normalized_type:
+            return None
+        target = _coerce_float(threshold, _default_threshold(normalized_type))
         payload = {
             "room_id": room_id,
-            "name": name,
-            "type": device_type,
-            "threshold_temp": threshold,
+            "name": clean_name,
+            "slug": _slug(clean_name),
+            "device_type": normalized_type,
+            "type": normalized_type,
+            "target_temperature": target,
+            "threshold_temp": target,
+            "min_temperature": _coerce_float(min_temperature, None),
+            "max_temperature": _coerce_float(max_temperature, None),
+            "is_default": False,
+            "is_active": bool(is_active),
         }
         res = sb.table("facility_devices").insert(payload).execute()
         return res.data[0] if res.data else None
@@ -88,8 +120,6 @@ def add_device(room_id: str, name: str, device_type: str, threshold: float):
 
 def delete_device(device_id: str):
     """Delete a specific device."""
-    if is_default_device_id(device_id):
-        return None
     sb = get_client()
     if not sb: return False
     try:
@@ -244,9 +274,11 @@ def _default_devices_for_room(room_id, room_name):
             "room_id": room_id,
             "name": unit_name,
             "display_name": f"{room_name} - {unit_name}",
-            "type": unit_type,
-            "threshold_temp": threshold,
-            "is_default": True,
+        "type": unit_type,
+        "device_type": unit_type,
+        "threshold_temp": threshold,
+        "target_temperature": threshold,
+        "is_default": True,
             "last_temperature_c": None,
             "recorded_at": None,
         }
@@ -306,7 +338,8 @@ def _log_room_name(row):
 
 
 def _log_device_type(row):
-    device_type = row.get("type") or row.get("device_type") or (row.get("facility_devices") or {}).get("type") or "room_temp"
+    facility_device = row.get("facility_devices") or {}
+    device_type = row.get("device_type") or row.get("type") or facility_device.get("device_type") or facility_device.get("type") or "room_temp"
     if device_type in {"ambient", "room"}:
         return "room_temp"
     return device_type
@@ -324,7 +357,14 @@ def _log_device_name(row, room_name, device_type):
 
 
 def _log_threshold(row, device_type):
-    value = row.get("threshold_temp") or row.get("threshold_c") or (row.get("facility_devices") or {}).get("threshold_temp")
+    facility_device = row.get("facility_devices") or {}
+    value = (
+        row.get("threshold_temp")
+        or row.get("target_temperature")
+        or row.get("threshold_c")
+        or facility_device.get("threshold_temp")
+        or facility_device.get("target_temperature")
+    )
     if value is not None:
         return value
     if device_type == "freezer":
@@ -337,6 +377,32 @@ def _log_threshold(row, device_type):
 def _slug(value):
     return "".join(char.lower() if char.isalnum() else "-" for char in str(value)).strip("-") or "unit"
 
+
+def _normalize_device_type(value):
+    normalized = str(value or "").strip().lower()
+    if normalized in {"ambient", "room"}:
+        return "room_temp"
+    if normalized in {"room_temp", "chiller", "freezer"}:
+        return normalized
+    return None
+
+
+def _default_threshold(device_type):
+    if device_type == "freezer":
+        return -18.0
+    if device_type == "chiller":
+        return 5.0
+    return 25.0
+
+
+def _coerce_float(value, default):
+    if value in (None, ""):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 def update_room(room_id: str, data: dict):
     """Update a monitoring room."""
     sb = get_client()
@@ -344,8 +410,12 @@ def update_room(room_id: str, data: dict):
     payload = {}
     if data.get("name"):
         payload["name"] = data["name"]
+        payload["slug"] = _slug(data["name"])
     if "description" in data:
         payload["description"] = data.get("description") or ""
+    if "is_active" in data:
+        payload["is_active"] = bool(data.get("is_active"))
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not payload:
         return None
     try:
@@ -362,12 +432,25 @@ def update_device(device_id: str, data: dict):
     payload = {}
     if data.get("name"):
         payload["name"] = data["name"]
-    if data.get("type"):
-        payload["type"] = data["type"]
-    if "threshold" in data:
-        payload["threshold_temp"] = data.get("threshold")
-    if "threshold_temp" in data:
-        payload["threshold_temp"] = data.get("threshold_temp")
+        payload["slug"] = _slug(data["name"])
+    raw_type = data.get("device_type") or data.get("type")
+    if raw_type:
+        device_type = _normalize_device_type(raw_type)
+        if not device_type:
+            return None
+        payload["device_type"] = device_type
+        payload["type"] = device_type
+    if "threshold" in data or "threshold_temp" in data or "target_temperature" in data:
+        target = _coerce_float(data.get("target_temperature", data.get("threshold_temp", data.get("threshold"))), None)
+        payload["target_temperature"] = target
+        payload["threshold_temp"] = target
+    if "min_temperature" in data:
+        payload["min_temperature"] = _coerce_float(data.get("min_temperature"), None)
+    if "max_temperature" in data:
+        payload["max_temperature"] = _coerce_float(data.get("max_temperature"), None)
+    if "is_active" in data:
+        payload["is_active"] = bool(data.get("is_active"))
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not payload:
         return None
     try:

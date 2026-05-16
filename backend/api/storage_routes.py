@@ -57,6 +57,7 @@ def _record_evidence(uploaded, staff_id, related_type, related_id):
     payload = {
         "file_name": uploaded.file_name,
         "file_type": uploaded.file_type,
+        "mime_type": uploaded.file_type,
         "file_size": uploaded.file_size,
         "bucket": uploaded.bucket,
         "storage_path": uploaded.storage_path,

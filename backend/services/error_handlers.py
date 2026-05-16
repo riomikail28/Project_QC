@@ -22,7 +22,11 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(RequestValidationError)
     def handle_validation_error(exc: RequestValidationError):
-        return jsonify({"error": "Invalid request", "details": exc.errors}), 400
+        message = "Invalid request"
+        if isinstance(exc.errors, dict) and exc.errors:
+            field, detail = next(iter(exc.errors.items()))
+            message = f"Field {field} is {detail}" if detail == "required" else f"{field}: {detail}"
+        return jsonify({"success": False, "message": message, "error": "Invalid request", "details": exc.errors}), 400
 
     @app.errorhandler(HTTPException)
     def handle_http_error(exc: HTTPException):
