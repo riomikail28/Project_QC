@@ -1,11 +1,12 @@
 import logging
-from flask import Blueprint, g, request, jsonify
+from flask import Blueprint, Response, g, request, jsonify
 
 from backend.middleware.security_middleware import require_role
 from backend.services.admin_service import AdminService
 
 logger = logging.getLogger("qc.routes.admin")
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
+admin_legacy_bp = Blueprint("admin_legacy", __name__, url_prefix="/api/admin")
 
 def get_admin_service():
     return AdminService()
@@ -118,26 +119,95 @@ def _enveloped(res, ok_status=200):
     }), status
 
 
+def _report_args(default_limit=100):
+    return {
+        "limit": min(max(int(request.args.get("limit", default_limit)), 1), 2000),
+        "date": request.args.get("date"),
+        "staff_id": request.args.get("staff") or request.args.get("staff_id"),
+        "status_filter": request.args.get("status"),
+    }
+
+
 @admin_bp.route("/reports/temperature", methods=["GET"])
 @require_role("admin")
 def report_temperature():
-    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
-    return _enveloped(get_admin_service().get_temperature_report(limit=limit))
+    return _enveloped(get_admin_service().get_temperature_report(**_report_args()))
 
 
 @admin_bp.route("/reports/inspection", methods=["GET"])
 @require_role("admin")
 def report_inspection():
-    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
-    status_filter = request.args.get("status")
-    return _enveloped(get_admin_service().get_inspection_report(limit=limit, status_filter=status_filter))
+    return _enveloped(get_admin_service().get_inspection_report(**_report_args()))
+
+
+@admin_bp.route("/reports/findings", methods=["GET"])
+@require_role("admin")
+def report_findings():
+    return _enveloped(get_admin_service().get_findings_report(**_report_args()))
 
 
 @admin_bp.route("/reports/evidence", methods=["GET"])
 @require_role("admin")
 def report_evidence():
-    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
-    return _enveloped(get_admin_service().get_evidence_report(limit=limit))
+    args = _report_args()
+    args.pop("status_filter", None)
+    return _enveloped(get_admin_service().get_evidence_report(**args))
+
+
+@admin_bp.route("/reports/daily", methods=["GET"])
+@require_role("admin")
+def report_daily():
+    args = _report_args(default_limit=500)
+    return _enveloped(get_admin_service().get_daily_staff_report(**args))
+
+
+@admin_bp.route("/export/daily-report", methods=["GET"])
+@require_role("admin")
+def export_daily_report():
+    date = request.args.get("date")
+    staff_id = request.args.get("staff") or request.args.get("staff_id")
+    status_filter = request.args.get("status")
+    csv_body = get_admin_service().export_daily_report_csv(date=date, staff_id=staff_id, status_filter=status_filter)
+    filename_date = date or "today"
+    response = Response(csv_body, mimetype="text/csv")
+    response.headers["Content-Disposition"] = f"attachment; filename=qc_daily_report_{filename_date}.csv"
+    return response
+
+
+@admin_legacy_bp.route("/reports/temperature", methods=["GET"])
+@require_role("admin")
+def legacy_report_temperature():
+    return report_temperature()
+
+
+@admin_legacy_bp.route("/reports/inspection", methods=["GET"])
+@require_role("admin")
+def legacy_report_inspection():
+    return report_inspection()
+
+
+@admin_legacy_bp.route("/reports/findings", methods=["GET"])
+@require_role("admin")
+def legacy_report_findings():
+    return report_findings()
+
+
+@admin_legacy_bp.route("/reports/evidence", methods=["GET"])
+@require_role("admin")
+def legacy_report_evidence():
+    return report_evidence()
+
+
+@admin_legacy_bp.route("/reports/daily", methods=["GET"])
+@require_role("admin")
+def legacy_report_daily():
+    return report_daily()
+
+
+@admin_legacy_bp.route("/export/daily-report", methods=["GET"])
+@require_role("admin")
+def legacy_export_daily_report():
+    return export_daily_report()
 
 
 @admin_bp.route("/reports/batches", methods=["GET"])

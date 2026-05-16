@@ -25,6 +25,7 @@
                 <li><a href="#section-sku" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
                 <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Reports</span></a></li>
+                <li><a href="#section-daily-reports" class="sidebar-item admin-nav-link" data-target="daily-reports" data-section="daily-reports"><i data-lucide="calendar-days"></i><span>Reports Harian</span></a></li>
                 <li><a href="#section-traceability" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
                 <li><a href="#section-approval" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
                 <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
@@ -216,6 +217,54 @@
                                 <tbody id="table-qc-reports">
                                     <!-- Filled via JS -->
                                 </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: Daily Staff Reports -->
+                <section id="section-daily-reports" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Daily Staff Reports</h3>
+                                <p class="admin-muted">Monitoring suhu, inspection, findings, dan evidence per hari.</p>
+                            </div>
+                            <div class="daily-report-actions">
+                                <input id="daily-report-date" type="date">
+                                <input id="daily-report-staff" placeholder="Filter staff">
+                                <select id="daily-report-status">
+                                    <option value="">Semua status</option>
+                                    <option value="pass">Pass</option>
+                                    <option value="hold">Hold</option>
+                                    <option value="fail">Fail</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="finding">Finding</option>
+                                </select>
+                                <button class="btn-secondary" onclick="adminApp.loadDailyReports()"><i data-lucide="refresh-cw"></i> Reload</button>
+                                <button class="btn-primary" onclick="adminApp.exportDailyCsv()"><i data-lucide="download"></i> Export CSV</button>
+                            </div>
+                        </div>
+                        <div class="metric-grid daily-summary-grid">
+                            <div class="metric-card"><div class="metric-header"><span>Temperature Logs</span></div><div class="metric-value" id="daily-total-temperature">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Inspection</span></div><div class="metric-value" id="daily-total-inspection">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Findings</span></div><div class="metric-value" id="daily-total-findings">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Evidence</span></div><div class="metric-value" id="daily-total-evidence">0</div></div>
+                        </div>
+                        <div class="daily-report-table-wrap">
+                            <table class="enterprise-table daily-report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Staff</th>
+                                        <th>Type</th>
+                                        <th>Location/SKU</th>
+                                        <th>Status</th>
+                                        <th>Photo</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-daily-reports"></tbody>
                             </table>
                         </div>
                     </div>

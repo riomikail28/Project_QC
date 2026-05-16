@@ -27,7 +27,10 @@ class QCService:
         if photo_files and self.storage:
             for item in photo_files:
                 if hasattr(self.storage, "upload_file_storage"):
-                    uploaded = self.storage.upload_file_storage(item, staff_id=staff_id)
+                    try:
+                        uploaded = self.storage.upload_file_storage(item, staff_id=staff_id, category="finding")
+                    except TypeError:
+                        uploaded = self.storage.upload_file_storage(item, staff_id=staff_id)
                     uploaded_files.append(uploaded)
                     photo_urls.append(uploaded.url)
                     storage_paths.append(uploaded.storage_path)
@@ -61,6 +64,11 @@ class QCService:
                     self.storage.delete_photo(uploaded.storage_path)
             raise RuntimeError("Database save failed after photo upload")
 
+        finding_id = finding.get("id") if isinstance(finding, dict) else None
+        if finding_id:
+            for uploaded in uploaded_files:
+                self._insert_evidence(uploaded, staff_id, finding_id)
+
         # Audit the action if audit service available
         try:
             if self.audit:
@@ -76,3 +84,24 @@ class QCService:
             logger.warning("External sync skipped: %s", e)
 
         return finding or {"success": True, "photo_url": photo_url}
+
+    def _insert_evidence(self, uploaded, staff_id, finding_id):
+        try:
+            sb = getattr(self.repo, "sb", None)
+            if not sb:
+                return
+            payload = {
+                "file_name": uploaded.file_name,
+                "file_type": uploaded.file_type,
+                "mime_type": uploaded.file_type,
+                "file_size": uploaded.file_size,
+                "bucket": uploaded.bucket,
+                "storage_path": uploaded.storage_path,
+                "public_url": uploaded.url,
+                "uploaded_by": staff_id,
+                "related_type": "qc_finding",
+                "related_id": finding_id,
+            }
+            sb.table("qc_evidence").insert({k: v for k, v in payload.items() if v is not None}).execute()
+        except Exception as e:
+            logger.warning("QC finding evidence metadata skipped: %s", e)

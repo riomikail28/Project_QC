@@ -255,15 +255,17 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         const result = await API.upload("/monitoring/log", formData);
         if (result.success) {
-            alert(`Upload berhasil. Status: ${result.status}`);
+            alert("Log suhu berhasil disimpan");
             closeModal();
             loadRecentLogs();
         } else {
-            const detail = result.detail || result.db_detail || result.error || "Coba lagi";
-            alert(`Upload gagal: ${detail}`);
+            alert("Gagal menyimpan log suhu: kolom database belum sinkron");
         }
     } catch (err) {
-        alert(`Upload gagal: ${err.message || "koneksi timeout atau server tidak merespons"}`);
+        const message = String(err.message || "").includes("schema cache")
+            ? "Gagal menyimpan log suhu: kolom database belum sinkron"
+            : "Gagal menyimpan log suhu: server tidak merespons";
+        alert(message);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;

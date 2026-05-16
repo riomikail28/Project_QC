@@ -59,17 +59,39 @@ class RecordingQuery:
         self.filters.append((field, value))
         return self
 
+    def gte(self, field, value):
+        self.filters.append((field, value, "gte"))
+        return self
+
+    def lte(self, field, value):
+        self.filters.append((field, value, "lte"))
+        return self
+
+    def order(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
     def insert(self, payload):
         self.payload = payload
         return self
 
     def execute(self):
         if self.payload is not None:
-            self.db.inserted[self.table_name] = self.payload
-            return type("Result", (), {"data": [{"id": f"{self.table_name}-1", **self.payload}]})()
+            payload = self.payload[0] if isinstance(self.payload, list) else self.payload
+            self.db.inserted[self.table_name] = payload
+            return type("Result", (), {"data": [{"id": f"{self.table_name}-1", **payload}]})()
         rows = list(self.db.fixtures.get(self.table_name, []))
-        for field, value in self.filters:
-            rows = [row for row in rows if row.get(field) == value]
+        for item in self.filters:
+            field, value = item[0], item[1]
+            op = item[2] if len(item) > 2 else "eq"
+            if op == "gte":
+                rows = [row for row in rows if str(row.get(field, "")) >= str(value)]
+            elif op == "lte":
+                rows = [row for row in rows if str(row.get(field, "")) <= str(value)]
+            else:
+                rows = [row for row in rows if row.get(field) == value]
         return type("Result", (), {"data": rows})()
 
 
@@ -108,11 +130,13 @@ def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers)
     assert response.status_code == 200
     payload = fake_db.inserted["facility_logs"]
     assert payload["temperature_c"] == 3.2
-    assert payload["zone"] == "Chiller Room"
-    assert payload["device_type"] == "chiller"
+    assert "zone" not in payload
+    assert "device_type" not in payload
+    assert "temperature" not in payload
+    assert "status" not in payload
     assert payload["threshold_c"] == 4.0
     assert payload["humidity_rh"] == 55
-    assert payload["reason"] == "normal check"
+    assert payload["notes"] == "normal check"
     assert payload["photo_url"].endswith("/temp.jpg")
     assert payload["storage_path"] == "staff/2026-05-16/temp.jpg"
 

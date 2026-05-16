@@ -90,6 +90,89 @@
   gap: 14px;
 }
 
+.simple-qc-page {
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.qc-layout-single {
+  grid-template-columns: 1fr;
+}
+
+.simple-qc-card {
+  gap: 18px;
+  border-radius: 18px;
+}
+
+.simple-qc-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.simple-qc-subtitle,
+.simple-qc-message {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.simple-qc-message.error {
+  color: var(--danger);
+}
+
+.simple-field {
+  display: grid;
+  gap: 8px;
+}
+
+.simple-field label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.input-large {
+  min-height: 58px;
+  font-size: 18px;
+}
+
+.qc-status-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.qc-status-option {
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.92);
+  color: var(--text);
+  font-weight: 900;
+}
+
+.qc-status-option.active {
+  border-color: rgba(37,99,235,.55);
+  background: var(--primary);
+  color: #fff;
+}
+
+.simple-upload {
+  min-height: 150px;
+}
+
+.simple-notes {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.simple-submit {
+  min-height: 56px;
+  justify-content: center;
+  font-size: 16px;
+}
+
 @media (min-width: 860px) {
   .qc-layout {
     grid-template-columns: 1.1fr .9fr;

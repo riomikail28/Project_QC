@@ -1,5 +1,7 @@
 import logging
-from datetime import datetime, timezone
+import csv
+import io
+from datetime import datetime, timedelta, timezone
 
 from backend.database.supabase_client import get_client
 from backend.qc.product_catalog import CENTRAL_KITCHEN_PRODUCTS
@@ -125,7 +127,7 @@ class AdminService:
         item = dict(row or {})
         item.setdefault("report_type", "qc_report")
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
-        item.setdefault("photo_url", item.get("product_photo_url") or item.get("temperature_photo_url") or item.get("barcode_photo_url"))
+        item["photo_url"] = item.get("photo_url") or item.get("product_photo_url") or item.get("temperature_photo_url") or item.get("barcode_photo_url")
         return item
 
     def _normalize_qc_finding(self, row):
@@ -196,30 +198,164 @@ class AdminService:
             logger.error("Audit trail failed: %s", exc)
             return {"success": False, "detail": str(exc)}
 
-    def get_temperature_report(self, limit=100):
+    def _date_filters(self, field, date_value):
+        if not date_value:
+            return []
+        start = f"{date_value}T00:00:00Z"
+        end = (datetime.fromisoformat(date_value) + timedelta(days=1)).date().isoformat() + "T00:00:00Z"
+        return [("gte", field, start), ("lte", field, end)]
+
+    def get_temperature_report(self, limit=100, date=None, staff_id=None, status_filter=None):
+        filters = self._date_filters("recorded_at", date)
+        if staff_id:
+            filters.append(("eq", "staff_id", staff_id))
         rows = self._fetch(
             "facility_logs",
             select="*, facility_rooms(name), facility_devices(name,type,threshold_temp)",
             order_by="recorded_at",
             limit=limit,
+            filters=filters,
         )
         if not rows:
-            rows = self._fetch("temperature_logs", order_by="recorded_at", limit=limit)
-        return self._empty([self._temperature_report_row(row) for row in rows])
+            rows = self._fetch("temperature_logs", order_by="recorded_at", limit=limit, filters=filters)
+        data = [self._temperature_report_row(row) for row in rows]
+        if status_filter:
+            data = [row for row in data if str(row.get("status", "")).lower() == status_filter.lower()]
+        return self._empty(data)
 
-    def get_inspection_report(self, limit=100, status_filter=None):
-        filters = [("eq", "status", status_filter)] if status_filter else None
+    def get_inspection_report(self, limit=100, status_filter=None, date=None, staff_id=None):
+        filters = self._date_filters("created_at", date)
+        if status_filter:
+            filters.append(("eq", "status", status_filter))
+        if staff_id:
+            filters.append(("eq", "staff_id", staff_id))
         rows = self._fetch("qc_reports", order_by="created_at", limit=limit, filters=filters)
         return self._empty([self._normalize_qc_report(row) for row in rows])
 
-    def get_evidence_report(self, limit=100):
-        rows = self._fetch("qc_evidence", order_by="created_at", limit=limit)
+    def get_findings_report(self, limit=100, date=None, staff_id=None, status_filter=None):
+        filters = self._date_filters("created_at", date)
+        if staff_id:
+            filters.append(("eq", "staff_id", staff_id))
+        rows = self._fetch("qc_findings", order_by="created_at", limit=limit, filters=filters)
+        data = [self._normalize_qc_finding(row) for row in rows]
+        if status_filter:
+            needle = status_filter.lower()
+            data = [row for row in data if needle in {str(row.get("status") or "").lower(), str(row.get("approval_status") or "").lower(), "finding"}]
+        return self._empty(data)
+
+    def get_evidence_report(self, limit=100, date=None, staff_id=None):
+        filters = self._date_filters("created_at", date)
+        if staff_id:
+            filters.append(("eq", "uploaded_by", staff_id))
+        rows = self._fetch("qc_evidence", order_by="created_at", limit=limit, filters=filters)
         if not rows:
-            report_rows = self._fetch("qc_reports", order_by="created_at", limit=limit)
+            report_rows = self._fetch("qc_reports", order_by="created_at", limit=limit, filters=self._date_filters("created_at", date))
             rows = self._evidence_from_reports(report_rows)
-            temp_rows = self._fetch("facility_logs", order_by="recorded_at", limit=limit)
+            temp_rows = self._fetch("facility_logs", order_by="recorded_at", limit=limit, filters=self._date_filters("recorded_at", date))
             rows.extend(self._evidence_from_temperature(temp_rows))
-        return self._empty(rows[:limit])
+        normalized = []
+        for row in rows[:limit]:
+            item = dict(row or {})
+            item["photo_url"] = item.get("photo_url") or item.get("public_url") or item.get("signed_url")
+            normalized.append(item)
+        return self._empty(normalized)
+
+    def get_daily_staff_report(self, date=None, staff_id=None, status_filter=None, limit=500):
+        date = date or datetime.now(timezone.utc).date().isoformat()
+        temperature = self.get_temperature_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
+        inspection = self.get_inspection_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
+        findings = self.get_findings_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
+        evidence = self.get_evidence_report(limit=limit, date=date, staff_id=staff_id).get("data", [])
+        rows = []
+        rows.extend(self._daily_temperature_row(row) for row in temperature)
+        rows.extend(self._daily_inspection_row(row) for row in inspection)
+        rows.extend(self._daily_finding_row(row) for row in findings)
+        rows = sorted(rows, key=lambda row: row.get("created_at") or "", reverse=True)
+        return self._empty({
+            "date": date,
+            "summary": {
+                "temperature": len(temperature),
+                "inspection": len(inspection),
+                "findings": len(findings),
+                "evidence": len(evidence),
+            },
+            "temperature": temperature,
+            "inspection": inspection,
+            "findings": findings,
+            "evidence": evidence,
+            "rows": rows[:limit],
+        })
+
+    def export_daily_report_csv(self, date=None, staff_id=None, status_filter=None):
+        report = self.get_daily_staff_report(date=date, staff_id=staff_id, status_filter=status_filter, limit=2000)
+        data = report.get("data") or {}
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=[
+            "Date", "Report Type", "Staff", "Room", "Device", "SKU/Barcode",
+            "Product", "Temperature", "QC Status", "Notes", "Photo URL", "Created At",
+        ])
+        writer.writeheader()
+        for row in data.get("rows", []):
+            writer.writerow({
+                "Date": data.get("date"),
+                "Report Type": row.get("type"),
+                "Staff": row.get("staff"),
+                "Room": row.get("room"),
+                "Device": row.get("device"),
+                "SKU/Barcode": row.get("sku"),
+                "Product": row.get("product"),
+                "Temperature": row.get("temperature"),
+                "QC Status": row.get("status"),
+                "Notes": row.get("notes"),
+                "Photo URL": row.get("photo_url"),
+                "Created At": row.get("created_at"),
+            })
+        return output.getvalue()
+
+    def _daily_temperature_row(self, row):
+        return {
+            "type": "temperature",
+            "staff": row.get("staff_name") or row.get("staff_id") or "-",
+            "room": row.get("room"),
+            "device": row.get("device"),
+            "sku": "",
+            "product": "",
+            "temperature": row.get("temperature"),
+            "status": row.get("status"),
+            "notes": row.get("notes"),
+            "photo_url": row.get("photo_url"),
+            "created_at": row.get("created_at"),
+        }
+
+    def _daily_inspection_row(self, row):
+        return {
+            "type": "inspection",
+            "staff": row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "room": "",
+            "device": "",
+            "sku": row.get("barcode") or row.get("batch_code") or row.get("batch_id"),
+            "product": row.get("product_name"),
+            "temperature": row.get("temperature"),
+            "status": row.get("status"),
+            "notes": row.get("notes"),
+            "photo_url": row.get("photo_url") or row.get("product_photo_url"),
+            "created_at": row.get("created_at"),
+        }
+
+    def _daily_finding_row(self, row):
+        return {
+            "type": "finding",
+            "staff": row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "room": "",
+            "device": "",
+            "sku": row.get("batch_code") or "",
+            "product": row.get("product_name") or "QC Finding",
+            "temperature": "",
+            "status": row.get("status") or row.get("approval_status") or "finding",
+            "notes": row.get("reason"),
+            "photo_url": row.get("photo_url"),
+            "created_at": row.get("created_at"),
+        }
 
     def get_batch_report(self, limit=100):
         rows = self._fetch("production_batches", select="*, products(*)", order_by="created_at", limit=limit)

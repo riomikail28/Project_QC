@@ -66,6 +66,8 @@ def _storage_prefix(staff_id: str = "system", category: str = "inspection", rela
         "temperature": "temperature",
         "monitoring": "temperature",
         "inspection": "inspection",
+        "finding": "findings",
+        "qc_finding": "findings",
         "barcode": "barcode",
         "ccp": "ccp",
         "batch": "batches",

@@ -112,20 +112,26 @@ class InspectionService:
     def submit_qc(self, payload, files=None, actor_id=None):
         files = files or []
         staff_id = payload.get("staff_id") or actor_id
-        barcode = str(payload.get("barcode") or "").strip()
+        barcode = str(payload.get("barcode") or payload.get("sku_code") or "").strip()
+        sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
-        batch_code = str(payload.get("batch_code") or barcode or "").strip()
-        qc_status = self._norm_status(payload.get("qc_status") or payload.get("status") or "pending")
+        batch_code = str(payload.get("batch_code") or sku_code or "").strip()
+        qc_status = self._norm_status(payload.get("qc_status") or payload.get("status") or "pass")
         if qc_status == "failed":
             qc_status = "fail"
-        if qc_status == "hold":
-            qc_status = "warning"
-        if qc_status not in {"pass", "warning", "fail", "pending", "hold"}:
-            return self._fail("Status QC tidak valid")
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
-        if not batch_code and not batch_id:
-            return self._fail("Barcode atau batch wajib diisi")
+        if not sku_code and not batch_id:
+            return self._fail("SKU atau barcode wajib diisi")
+        if qc_status not in {"pass", "hold", "fail"}:
+            return self._fail("Status QC tidak valid")
+        if not batch_code:
+            batch_code = self._generated_batch_code()
+
+        product = self._find_product(sku_code)
+        product_id = payload.get("product_id") or (product or {}).get("id")
+        product_name = payload.get("product_name") or (product or {}).get("product_name") or sku_code
+        batch_id = batch_id or self._ensure_batch(batch_code, product_id, product_name, staff_id)
 
         uploaded_files = []
         photo_urls = [item for item in str(payload.get("photo_url") or "").split(";") if item]
@@ -140,19 +146,20 @@ class InspectionService:
 
             report_payload = {
                 "batch_id": batch_id,
-                "batch_code": batch_code or str(batch_id),
-                "product_id": payload.get("product_id") or None,
-                "product_name": payload.get("product_name") or None,
+                "batch_code": batch_code,
+                "product_id": product_id or None,
+                "product_name": product_name,
                 "staff_id": staff_id,
                 "inspector_name": payload.get("staff_name") or payload.get("inspector_name"),
-                "status": "failed" if qc_status == "fail" else qc_status,
+                "status": qc_status,
                 "approval_status": "pending",
-                "barcode": barcode or None,
+                "barcode": barcode or sku_code or None,
                 "ccp_stage": payload.get("ccp_stage") or "receiving",
                 "temperature": payload.get("temperature") or None,
                 "notes": payload.get("notes") or None,
                 "inspection_result": {
-                    "barcode": barcode,
+                    "sku_code": sku_code,
+                    "barcode": barcode or sku_code,
                     "ccp_stage": payload.get("ccp_stage") or "receiving",
                     "temperature": payload.get("temperature"),
                     "notes": payload.get("notes"),
@@ -170,8 +177,8 @@ class InspectionService:
                 self._insert("barcode_labels", {
                     "batch_id": batch_id,
                     "batch_code": batch_code or str(batch_id),
-                    "product_id": payload.get("product_id") or None,
-                    "product_name": payload.get("product_name") or None,
+                    "product_id": product_id or None,
+                    "product_name": product_name,
                     "barcode_value": barcode,
                     "barcode_photo_url": report_payload.get("product_photo_url"),
                     "staff_id": staff_id,
@@ -203,6 +210,30 @@ class InspectionService:
                 delete_photo(uploaded.storage_path)
             logger.exception("Submit QC failed: %s", exc)
             return self._fail(str(exc))
+
+    def _generated_batch_code(self):
+        return f"QC-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+
+    def _find_product(self, sku_code):
+        if not sku_code:
+            return None
+        rows = self._fetch("products", limit=1, filters=[("eq", "product_code", sku_code)])
+        if not rows:
+            rows = self._fetch("products", limit=1, filters=[("eq", "sku_code", sku_code)])
+        if not rows:
+            rows = self._fetch("products", limit=1, filters=[("eq", "barcode", sku_code)])
+        return rows[0] if rows else None
+
+    def _ensure_batch(self, batch_code, product_id, product_name, staff_id):
+        payload = {
+            "batch_code": batch_code,
+            "product_id": product_id or None,
+            "product_name": product_name,
+            "status": "pending",
+            "created_by": staff_id,
+        }
+        batch = self._insert("production_batches", {k: v for k, v in payload.items() if v is not None}, required=False)
+        return batch.get("id") if isinstance(batch, dict) else None
 
     def _insert(self, table, payload, required=True):
         if not self.sb:

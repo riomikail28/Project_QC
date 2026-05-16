@@ -156,12 +156,11 @@ def check_facility_temperature(
     # ---- Persist to Supabase ----
     sb = _get_supabase()
     log_row = sb.table("facility_logs").insert([{
-        "zone":          zone.value,
         "device_id":     device_id,
         "temperature_c": temperature,
         "threshold_c":   threshold,
         "is_normal":     result.status == QCStatus.PASS,
-        "recorder_id":   recorder_id,
+        "staff_id":      recorder_id,
         "notes":         notes,
     }]).execute()
 

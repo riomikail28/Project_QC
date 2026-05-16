@@ -263,8 +263,8 @@ def report_finding():
             class _StorageWrap:
                 def upload_photo(self, data, filename):
                     return _upload_fn(data, filename)
-                def upload_file_storage(self, file_storage, staff_id="system"):
-                    return _upload_file_fn(file_storage, staff_id=staff_id)
+                def upload_file_storage(self, file_storage, staff_id="system", category=None, related_id=None):
+                    return _upload_file_fn(file_storage, staff_id=staff_id, category=category, related_id=related_id)
                 def delete_photo(self, storage_path):
                     return _delete_fn(storage_path)
 

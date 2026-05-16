@@ -184,7 +184,7 @@ class QueryOptimizer:
                     'temperature_c': log.get('temperature_c'),
                     'humidity_rh': log.get('humidity_rh'),
                     'is_normal': log.get('is_normal', True),
-                    'reason': log.get('reason'),
+                    'notes': log.get('notes') or log.get('reason'),
                     'photo_url': log.get('photo_url'),
                     'recorded_at': log.get('recorded_at', datetime.utcnow().isoformat())
                 })

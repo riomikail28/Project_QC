@@ -570,6 +570,31 @@ select {
   white-space: nowrap;
 }
 
+.daily-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.daily-report-actions input,
+.daily-report-actions select {
+  min-height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.daily-summary-grid {
+  margin: 18px 0;
+}
+
+.daily-report-table-wrap {
+  overflow-x: auto;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -629,5 +654,47 @@ select {
 
   .row-actions > * {
     flex: 1;
+  }
+
+  .daily-report-actions {
+    justify-content: stretch;
+  }
+
+  .daily-report-actions > * {
+    width: 100%;
+  }
+
+  .daily-report-table,
+  .daily-report-table thead,
+  .daily-report-table tbody,
+  .daily-report-table tr,
+  .daily-report-table th,
+  .daily-report-table td {
+    display: block;
+  }
+
+  .daily-report-table thead {
+    display: none;
+  }
+
+  .daily-report-table tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    overflow: hidden;
+  }
+
+  .daily-report-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .daily-report-table td::before {
+    content: attr(data-label);
+    color: var(--text-secondary);
+    font-weight: 700;
   }
 }

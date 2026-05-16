@@ -17,6 +17,7 @@ const adminApp = {
         this.setupMobileDrawer();
         this.safeRun(() => this.setupThemeToggle(), 'theme toggle');
         this.safeRun(() => this.setupCrudForm(), 'crud form');
+        this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
         this.refreshIcons();
         
         // Initial load
@@ -172,6 +173,7 @@ const adminApp = {
             case 'staff': this.loadStaff(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadQCReports(); break;
+            case 'daily-reports': this.loadDailyReports(); break;
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
@@ -698,6 +700,67 @@ const adminApp = {
             tbody.appendChild(tr);
         });
         this.refreshIcons();
+    },
+
+    setupDailyReportDefaults() {
+        const input = document.getElementById('daily-report-date');
+        if (input && !input.value) input.value = new Date().toISOString().slice(0, 10);
+    },
+
+    dailyReportQuery() {
+        const date = document.getElementById('daily-report-date')?.value || new Date().toISOString().slice(0, 10);
+        const staff = document.getElementById('daily-report-staff')?.value?.trim();
+        const status = document.getElementById('daily-report-status')?.value;
+        const params = new URLSearchParams({ date });
+        if (staff) params.set('staff', staff);
+        if (status) params.set('status', status);
+        return params;
+    },
+
+    async loadDailyReports() {
+        const tbody = document.getElementById('table-daily-reports');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading daily reports...</td></tr>';
+        const params = this.dailyReportQuery();
+        const res = await this.fetchAdminData(`${this.apiBase}/reports/daily?${params.toString()}`);
+        const data = res?.data || {};
+        const summary = data.summary || {};
+        this.setText('daily-total-temperature', summary.temperature || 0);
+        this.setText('daily-total-inspection', summary.inspection || 0);
+        this.setText('daily-total-findings', summary.findings || 0);
+        this.setText('daily-total-evidence', summary.evidence || 0);
+        const rows = data.rows || [];
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No findings submitted today / belum ada laporan staff pada tanggal ini.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(row => {
+            const location = row.type === 'temperature'
+                ? `${row.room || '-'} / ${row.device || '-'}`
+                : (row.sku || row.product || '-');
+            return `
+                <tr class="daily-report-row">
+                    <td data-label="Time">${row.created_at ? new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td data-label="Staff">${this.escapeHtml(row.staff || '-')}</td>
+                    <td data-label="Type">${this.escapeHtml(row.type || '-')}</td>
+                    <td data-label="Location/SKU">${this.escapeHtml(location)}</td>
+                    <td data-label="Status"><span class="status-badge status-${this.escapeAttr(row.status || 'pending')}">${this.escapeHtml(row.status || 'pending').toUpperCase()}</span></td>
+                    <td data-label="Photo">${row.photo_url ? `<button class="btn-primary btn-sm" onclick='adminApp.previewImage(${this.safeJson(row.photo_url)})'><i data-lucide="image"></i> Preview</button>` : '-'}</td>
+                    <td data-label="Notes">${this.escapeHtml(row.notes || '-')}</td>
+                </tr>
+            `;
+        }).join('');
+        this.refreshIcons();
+    },
+
+    exportDailyCsv() {
+        const params = this.dailyReportQuery();
+        window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
+    },
+
+    setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
     },
 
     renderEvidenceCell(row) {

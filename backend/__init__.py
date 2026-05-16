@@ -56,7 +56,7 @@ def create_app() -> Flask:
     from backend.api.batch_routes import batch_bp
     from backend.api.qc_routes import qc_bp
     from backend.api.ccp_routes import ccp_bp
-    from backend.api.admin_routes import admin_bp
+    from backend.api.admin_routes import admin_bp, admin_legacy_bp
     from backend.api.dashboard_routes import dashboard_bp
     from backend.api.storage_routes import storage_alias_bp, storage_bp
     from backend.api.inspection_routes import inspection_bp
@@ -84,8 +84,8 @@ def create_app() -> Flask:
                 class _StorageWrap:
                     def upload_photo(self, data, filename):
                         return _upload_fn(data, filename)
-                    def upload_file_storage(self, file_storage, staff_id="system"):
-                        return _upload_file_fn(file_storage, staff_id=staff_id)
+                    def upload_file_storage(self, file_storage, staff_id="system", category=None, related_id=None):
+                        return _upload_file_fn(file_storage, staff_id=staff_id, category=category, related_id=related_id)
                     def delete_photo(self, storage_path):
                         return _delete_fn(storage_path)
 
@@ -109,6 +109,7 @@ def create_app() -> Flask:
     app.register_blueprint(qc_bp)
     app.register_blueprint(ccp_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(admin_legacy_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(storage_bp, url_prefix="/api/storage")
     app.register_blueprint(storage_alias_bp)

@@ -1,6 +1,7 @@
 """Business logic for facility temperature monitoring."""
 
 import logging
+from datetime import datetime, timezone
 
 from backend.database.supabase_client import direct_db_query, get_last_db_error
 from backend.services.alert_service import generate_temperature_alert, save_alert_to_db
@@ -41,7 +42,7 @@ class MonitoringService:
                 device_rows = self._select_rows("facility_devices", f"id=eq.{device_id}&select=*")
                 if device_rows:
                     device_info = device_rows[0]
-                    unit_type = device_info["type"]
+                    unit_type = device_info.get("type") or device_info.get("device_type") or "ambient"
                     if unit_type == "undercounter":
                         unit_type = "chiller"
                     elif unit_type == "room_temp":
@@ -68,22 +69,19 @@ class MonitoringService:
             storage_path = ";".join(storage_paths) if storage_paths else None
             threshold = float(device_info.get("threshold_temp", 25.0)) if device_info else float(data.threshold or 25.0)
 
+            recorded_at = datetime.now(timezone.utc).isoformat()
             log_payload = {
                 "device_id": device_id or None,
                 "room_id": room_id,
-                "zone": room_name or "QC Area",
-                "device_type": unit_type if unit_type != "ambient" else "room",
                 "temperature_c": float(temperature),
-                "temperature": float(temperature),
                 "threshold_c": threshold,
                 "humidity_rh": float(humidity) if humidity not in (None, "") else None,
                 "is_normal": is_normal,
-                "is_abnormal": not is_normal,
-                "status": status.lower(),
                 "staff_id": staff_id or None,
-                "reason": reason,
                 "notes": reason,
                 "photo_url": photo_url,
+                "recorded_at": recorded_at,
+                "created_at": recorded_at,
             }
             if storage_path:
                 log_payload["storage_path"] = storage_path
@@ -97,6 +95,26 @@ class MonitoringService:
 
             log_data = inserted_rows[0] if inserted_rows else None
             self.audit_writer("create", "facility_log", str(log_data.get("id")) if log_data else None, after=log_data or log_payload)
+            log_id = log_data.get("id") if log_data else None
+            self._record_temperature_log(
+                room_name=room_name,
+                device_type=unit_type,
+                temperature=temperature,
+                threshold=threshold,
+                is_normal=is_normal,
+                staff_id=staff_id,
+                notes=reason,
+                recorded_at=recorded_at,
+                log_id=log_id,
+            )
+            self._record_evidence(
+                uploaded_files=uploaded_files,
+                staff_id=staff_id,
+                related_id=log_id,
+                photo_urls=photo_urls,
+                storage_paths=storage_paths,
+                created_at=recorded_at,
+            )
 
             alert = None
             if not is_normal:
@@ -112,11 +130,14 @@ class MonitoringService:
 
             return {
                 "success": True,
+                "message": "Temperature log saved",
                 "status": status,
                 "alert": alert,
-                "log_id": log_data["id"] if log_data else None,
-                "photo_url": photo_url,
-                "storage_path": storage_path,
+                "data": {
+                    "log_id": log_id,
+                    "photo_url": photo_url,
+                    "storage_path": storage_path,
+                },
             }, 200
         except ValueError as exc:
             logger.error("Upload validation error: %s", exc)
@@ -125,10 +146,64 @@ class MonitoringService:
             logger.exception("Monitoring log database error")
             return {
                 "success": False,
+                "message": f"Facility log insert failed: {str(exc)}",
                 "error": "Database save failed",
                 "detail": str(exc),
                 "db_detail": get_last_db_error(),
             }, 500
+
+    def _record_temperature_log(self, room_name, device_type, temperature, threshold, is_normal, staff_id, notes, recorded_at, log_id):
+        payload = {
+            "zone": room_name or "QC Area",
+            "device_type": device_type if device_type != "ambient" else "room",
+            "temperature_c": float(temperature),
+            "threshold_c": threshold,
+            "is_abnormal": not is_normal,
+            "status": "normal" if is_normal else "abnormal",
+            "staff_id": staff_id or None,
+            "notes": notes,
+            "recorded_at": recorded_at,
+            "facility_log_id": log_id,
+        }
+        try:
+            self._insert_rows("temperature_logs", {k: v for k, v in payload.items() if v is not None})
+        except Exception:
+            logger.warning("temperature_logs compatibility insert skipped", exc_info=True)
+
+    def _record_evidence(self, uploaded_files, staff_id, related_id, photo_urls, storage_paths, created_at):
+        if not (uploaded_files or photo_urls or storage_paths):
+            return
+        rows = []
+        uploaded_by_path = {item.storage_path: item for item in uploaded_files}
+        for index, storage_path in enumerate(storage_paths or []):
+            uploaded = uploaded_by_path.get(storage_path)
+            rows.append({
+                "file_name": getattr(uploaded, "file_name", None) if uploaded else None,
+                "file_type": getattr(uploaded, "file_type", None) if uploaded else None,
+                "mime_type": getattr(uploaded, "file_type", None) if uploaded else None,
+                "file_size": getattr(uploaded, "file_size", None) if uploaded else None,
+                "bucket": getattr(uploaded, "bucket", "qc-evidence") if uploaded else "qc-evidence",
+                "storage_path": storage_path,
+                "public_url": (photo_urls or [None])[index] if index < len(photo_urls or []) else None,
+                "uploaded_by": staff_id or None,
+                "related_type": "temperature",
+                "related_id": related_id,
+                "created_at": created_at,
+            })
+        if not rows and photo_urls:
+            rows = [{
+                "bucket": "qc-evidence",
+                "public_url": url,
+                "uploaded_by": staff_id or None,
+                "related_type": "temperature",
+                "related_id": related_id,
+                "created_at": created_at,
+            } for url in photo_urls]
+        for row in rows:
+            try:
+                self._insert_rows("qc_evidence", {k: v for k, v in row.items() if v is not None})
+            except Exception:
+                logger.warning("Temperature evidence metadata insert skipped", exc_info=True)
 
     def latest_logs(self):
         try:
