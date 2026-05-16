@@ -126,15 +126,32 @@ class MonitoringService:
     def latest_logs(self):
         try:
             if self.sb:
-                res = (
-                    self.sb.table("facility_logs")
-                    .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
-                    .order("recorded_at", desc=True)
-                    .limit(50)
-                    .execute()
-                )
-                return res.data or []
-            return direct_db_query("facility_logs", "GET", None, "select=*&order=recorded_at.desc&limit=50")
+                rows = []
+                try:
+                    res = (
+                        self.sb.table("facility_logs")
+                        .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+                        .order("recorded_at", desc=True)
+                        .limit(50)
+                        .execute()
+                    )
+                    rows = res.data or []
+                except Exception as exc:
+                    logger.warning("Fetch facility logs with relations failed: %s", exc)
+                    res = self.sb.table("facility_logs").select("*").order("recorded_at", desc=True).limit(50).execute()
+                    rows = res.data or []
+                if rows:
+                    return rows
+                temp_res = self.sb.table("temperature_logs").select("*").order("recorded_at", desc=True).limit(50).execute()
+                return temp_res.data or []
+            try:
+                rows = direct_db_query("facility_logs", "GET", None, "select=*,facility_rooms(name),facility_devices(name,type,threshold_temp)&order=recorded_at.desc&limit=50")
+            except Exception as exc:
+                logger.warning("Direct facility logs with relations failed: %s", exc)
+                rows = direct_db_query("facility_logs", "GET", None, "select=*&order=recorded_at.desc&limit=50")
+            if rows:
+                return rows
+            return direct_db_query("temperature_logs", "GET", None, "select=*&order=recorded_at.desc&limit=50")
         except Exception as exc:
             logger.error("Fetch logs error: %s", exc)
             return []

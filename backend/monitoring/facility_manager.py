@@ -97,10 +97,12 @@ def get_monitoring_structure():
     """
     rooms = list_rooms()
     devices = list_devices()
-    if not rooms and not devices:
+    if not devices:
         structure = _structure_from_recent_logs()
         if structure:
-            return structure
+            if not rooms:
+                return structure
+            return _merge_log_devices_into_rooms(rooms, structure)
     
     structure = []
     for room in rooms:
@@ -164,28 +166,68 @@ def _structure_from_recent_logs():
 def _latest_facility_logs():
     sb = get_client()
     if sb:
-        res = (
-            sb.table("facility_logs")
-            .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
-            .order("recorded_at", desc=True)
-            .limit(100)
-            .execute()
-        )
-        rows = res.data or []
+        rows = []
+        try:
+            res = (
+                sb.table("facility_logs")
+                .select("*, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+                .order("recorded_at", desc=True)
+                .limit(100)
+                .execute()
+            )
+            rows = res.data or []
+        except Exception as e:
+            logger.warning("Facility log relation query failed: %s", e)
+            try:
+                res = sb.table("facility_logs").select("*").order("recorded_at", desc=True).limit(100).execute()
+                rows = res.data or []
+            except Exception as inner:
+                logger.warning("Facility log query failed: %s", inner)
         if rows:
             return rows
-        temp_res = sb.table("temperature_logs").select("*").order("recorded_at", desc=True).limit(100).execute()
-        return temp_res.data or []
+        try:
+            temp_res = sb.table("temperature_logs").select("*").order("recorded_at", desc=True).limit(100).execute()
+            return temp_res.data or []
+        except Exception as e:
+            logger.warning("Temperature log query failed: %s", e)
+            return []
 
-    rows = direct_db_query(
-        "facility_logs",
-        "GET",
-        None,
-        "select=*,facility_rooms(name),facility_devices(name,type,threshold_temp)&order=recorded_at.desc&limit=100",
-    )
+    rows = []
+    try:
+        rows = direct_db_query(
+            "facility_logs",
+            "GET",
+            None,
+            "select=*,facility_rooms(name),facility_devices(name,type,threshold_temp)&order=recorded_at.desc&limit=100",
+        )
+    except Exception as e:
+        logger.warning("Direct facility log relation query failed: %s", e)
+        try:
+            rows = direct_db_query("facility_logs", "GET", None, "select=*&order=recorded_at.desc&limit=100")
+        except Exception as inner:
+            logger.warning("Direct facility log query failed: %s", inner)
     if rows:
         return rows
-    return direct_db_query("temperature_logs", "GET", None, "select=*&order=recorded_at.desc&limit=100")
+    try:
+        return direct_db_query("temperature_logs", "GET", None, "select=*&order=recorded_at.desc&limit=100")
+    except Exception as e:
+        logger.warning("Direct temperature log query failed: %s", e)
+        return []
+
+
+def _merge_log_devices_into_rooms(rooms, log_structure):
+    by_name = {room["name"]: {**room, "devices": []} for room in rooms}
+    by_id = {room["id"]: by_name[room["name"]] for room in rooms}
+    extras = []
+    for log_room in log_structure:
+        target = by_id.get(log_room.get("id")) or by_name.get(log_room.get("name"))
+        if target:
+            target["devices"] = log_room.get("devices", [])
+        else:
+            extras.append(log_room)
+    merged = list(by_name.values()) + extras
+    preferred = {name: index for index, name in enumerate(DEFAULT_MONITORING_ROOMS)}
+    return sorted(merged, key=lambda room: (preferred.get(room.get("name"), 999), room.get("name") or ""))
 
 
 def _log_room_name(row):

@@ -158,3 +158,62 @@ def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
     assert [room["name"] for room in structure] == ["PPIC", "Kitchen"]
     assert structure[0]["devices"][0]["name"] == "Chiller"
     assert structure[1]["devices"][0]["type"] == "freezer"
+
+
+def test_monitoring_structure_merges_logs_when_master_devices_empty(monkeypatch):
+    from backend.monitoring import facility_manager
+
+    def fake_direct(table, method="GET", payload=None, filters=""):
+        if table == "facility_rooms":
+            return [{"id": "room-ppic", "name": "PPIC"}, {"id": "room-grouper", "name": "Grouper"}]
+        if table == "facility_devices":
+            return []
+        if table == "facility_logs":
+            return [
+                {
+                    "id": "log-1",
+                    "room_id": "room-ppic",
+                    "device_id": "device-chiller",
+                    "temperature_c": 3.5,
+                    "facility_rooms": {"name": "PPIC"},
+                    "facility_devices": {"name": "Chiller", "type": "chiller", "threshold_temp": 5},
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(facility_manager, "get_client", lambda: None)
+    monkeypatch.setattr(facility_manager, "direct_db_query", fake_direct)
+
+    structure = facility_manager.get_monitoring_structure()
+
+    ppic = next(room for room in structure if room["name"] == "PPIC")
+    grouper = next(room for room in structure if room["name"] == "Grouper")
+    assert ppic["devices"][0]["name"] == "Chiller"
+    assert grouper["devices"] == []
+
+
+def test_monitoring_latest_falls_back_to_temperature_logs_when_facility_logs_empty():
+    from backend.services.monitoring_service import MonitoringService
+
+    class Query:
+        def __init__(self, table):
+            self.table = table
+
+        def select(self, *args, **kwargs):
+            return self
+
+        def order(self, *args, **kwargs):
+            return self
+
+        def limit(self, *args, **kwargs):
+            return self
+
+        def execute(self):
+            rows = [] if self.table == "facility_logs" else [{"id": "temp-1", "zone": "Kitchen", "device_type": "freezer"}]
+            return type("Result", (), {"data": rows})()
+
+    class DB:
+        def table(self, table):
+            return Query(table)
+
+    assert MonitoringService(DB()).latest_logs()[0]["zone"] == "Kitchen"

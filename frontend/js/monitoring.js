@@ -32,8 +32,11 @@ async function loadFacilityStructure() {
             window.location.href = "/login.html";
             return;
         }
-        facilityStructure = await res.json();
-        if (!facilityStructure.length) facilityStructure = [];
+        const structure = await res.json();
+        facilityStructure = Array.isArray(structure) ? structure : [];
+        if (!facilityStructure.length && latestTemperatureLogs.length) {
+            facilityStructure = structureFromLogs(latestTemperatureLogs);
+        }
         renderRoomSelector();
         if (facilityStructure.length) selectRoom(preferredRoomId());
     } catch (err) {
@@ -45,9 +48,17 @@ async function loadFacilityStructure() {
 
 function renderRoomSelector() {
     if (!facilityStructure.length) {
-        roomList.innerHTML = `<div class="room-chip active">Belum ada ruangan</div>`;
-        currentRoomLabel.innerText = "Setup fasilitas belum tersedia";
-        renderDevices([]);
+        if (latestTemperatureLogs.length) {
+            facilityStructure = structureFromLogs(latestTemperatureLogs);
+            if (facilityStructure.length) {
+                renderRoomSelector();
+                selectRoom(preferredRoomId());
+                return;
+            }
+        }
+        roomList.innerHTML = `<div class="room-chip active">Belum ada unit</div>`;
+        currentRoomLabel.innerText = "Belum ada unit monitoring";
+        renderDevices([], { hasLogs: false });
         return;
     }
     roomList.innerHTML = facilityStructure.map(room => `
@@ -78,21 +89,27 @@ function iconForType(type) {
     return "fa-thermometer-half";
 }
 
-function renderDevices(devices) {
+function renderDevices(devices, options = {}) {
+    if (!devices.length && latestTemperatureLogs.length && !facilityStructure.length) {
+        facilityStructure = structureFromLogs(latestTemperatureLogs);
+        if (facilityStructure.length) {
+            selectRoom(preferredRoomId());
+            return;
+        }
+    }
     const totalDevices = facilityStructure.reduce((total, room) => total + (room.devices || []).length, 0);
     deviceCountLabel.innerText = `${devices.length} Unit`;
     document.getElementById("summaryUnitCount").innerText = totalDevices || devices.length;
     document.getElementById("summaryStatus").innerText = totalDevices || devices.length ? "Aktif" : "Kosong";
 
     if (!devices.length) {
+        const hasLogs = options.hasLogs ?? latestTemperatureLogs.length > 0;
         deviceList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-temperature-half"></i>
-                <h4>Belum ada unit monitoring</h4>
-                <p>Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu.</p>
-                <button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'">
-                    <i class="fas fa-arrow-left"></i> Kembali Dashboard
-                </button>
+                <h4>${hasLogs ? "Unit belum terpetakan" : "Belum ada unit monitoring"}</h4>
+                <p>${hasLogs ? "Log suhu sudah tersedia, tetapi data unit belum punya room/device yang bisa ditampilkan." : "Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu."}</p>
+                ${hasLogs ? "" : `<button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i> Kembali Dashboard</button>`}
             </div>
         `;
         return;
@@ -243,15 +260,17 @@ async function loadRecentLogs() {
         }
         const logs = await res.json();
         latestTemperatureLogs = Array.isArray(logs) ? logs : [];
-        if (!facilityStructure.length && latestTemperatureLogs.length) {
-            facilityStructure = structureFromLogs(latestTemperatureLogs);
+        const fallbackStructure = structureFromLogs(latestTemperatureLogs);
+        const hasNoDevices = !facilityStructure.length || !facilityStructure.some(room => (room.devices || []).length);
+        if (hasNoDevices && fallbackStructure.length) {
+            facilityStructure = fallbackStructure;
             renderRoomSelector();
             if (facilityStructure.length) selectRoom(preferredRoomId());
         }
         const container = document.getElementById("recent-logs");
-        document.getElementById("summaryLogCount").innerText = logs.length || 0;
+        document.getElementById("summaryLogCount").innerText = latestTemperatureLogs.length || 0;
 
-        if (!logs.length) {
+        if (!latestTemperatureLogs.length) {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-clipboard-list"></i>
@@ -265,11 +284,11 @@ async function loadRecentLogs() {
             return;
         }
 
-        container.innerHTML = logs.map(log => `
+        container.innerHTML = latestTemperatureLogs.map(log => `
             <div class="log-item ${log.is_normal ? "" : "alert"}">
                 <div class="log-info">
-                    <div class="log-title">${log.facility_rooms?.name || "Area"} - ${log.facility_devices?.name || "Suhu Ruang"}</div>
-                    <div class="log-meta">${new Date(log.recorded_at).toLocaleTimeString()} - ${log.temperature_c}&deg;C ${log.humidity_rh ? `- ${log.humidity_rh}%RH` : ""}</div>
+                    <div class="log-title">${log.zone || log.facility_rooms?.name || log.room_name || "Area"} - ${log.facility_devices?.name || log.device_name || log.device_type || "Suhu Ruang"}</div>
+                    <div class="log-meta">${new Date(log.recorded_at || log.created_at).toLocaleTimeString()} - ${log.temperature_c}&deg;C ${log.humidity_rh ? `- ${log.humidity_rh}%RH` : ""}</div>
                 </div>
                 <div class="log-status ${log.is_normal ? "pass" : "fail"}">
                     ${log.is_normal ? "NORMAL" : "ABNORMAL"}
@@ -283,11 +302,11 @@ async function loadRecentLogs() {
 
 function structureFromLogs(logs) {
     const grouped = new Map();
-    logs.forEach(log => {
+    (logs || []).forEach(log => {
         const roomName = log.zone || log.facility_rooms?.name || log.room_name || "QC Area";
         const deviceType = log.device_type || log.facility_devices?.type || "room_temp";
         const normalizedType = deviceType === "ambient" ? "room_temp" : deviceType;
-        const deviceName = log.facility_devices?.name || log.device_name || (normalizedType === "freezer" ? "Freezer" : normalizedType === "chiller" ? "Chiller" : "Suhu Ruangan");
+        const deviceName = log.facility_devices?.name || log.device_name || log.unit_name || (normalizedType === "freezer" ? "Freezer" : normalizedType === "chiller" ? "Chiller" : "Suhu Ruangan");
         const roomId = log.room_id || `log-room-${safeId(roomName)}`;
         const deviceId = log.device_id || `log-device-${safeId(roomName)}-${safeId(deviceName)}`;
         if (!grouped.has(roomName)) {
