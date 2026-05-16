@@ -121,3 +121,129 @@ def test_admin_api_urls_do_not_double_api_prefix():
         "/analytics/overview",
     ):
         assert f"${{this.apiBase}}{endpoint}" in admin_js
+
+
+def test_admin_approvals_fallback_includes_staff_submissions(client, admin_headers):
+    fake_db = FakeSupabase({
+        "approvals": [],
+        "qc_reports": [
+            {
+                "id": "report-1",
+                "batch_code": "BATCH-001",
+                "approval_status": "pending",
+                "status": "warning",
+                "staff_id": "staff-1",
+                "product_photo_url": "https://img/report.jpg",
+                "created_at": "2026-05-16T08:00:00Z",
+            }
+        ],
+        "qc_findings": [
+            {
+                "id": "finding-1",
+                "staff_id": "staff-2",
+                "reason": "Foreign object",
+                "photo_url": "https://img/finding.jpg",
+                "storage_path": "staff/finding.jpg",
+                "created_at": "2026-05-16T09:00:00Z",
+            }
+        ],
+        "facility_logs": [
+            {
+                "id": "temp-1",
+                "room_id": "room-1",
+                "device_id": "device-1",
+                "staff_id": "staff-3",
+                "temperature_c": 9,
+                "is_normal": False,
+                "photo_url": "https://img/temp.jpg",
+                "recorded_at": "2026-05-16T10:00:00Z",
+            }
+        ],
+    })
+
+    with patch("backend.services.admin_service.get_client", return_value=fake_db):
+        response = client.get("/api/v1/admin/approvals", headers=admin_headers)
+
+    rows = response.get_json()
+    assert response.status_code == 200
+    assert rows[0]["source"] == "temperature_log"
+    assert {row["source"] for row in rows} == {"qc_report", "qc_finding", "temperature_log"}
+    assert any(row.get("product_photo_url") == "https://img/finding.jpg" for row in rows)
+
+
+def test_admin_audit_trail_fallback_from_staff_activity(client, admin_headers):
+    fake_db = FakeSupabase({
+        "audit_logs": [],
+        "qc_findings": [
+            {"id": "finding-1", "staff_id": "staff-1", "created_at": "2026-05-16T09:00:00Z"}
+        ],
+        "facility_logs": [
+            {"id": "temp-1", "staff_id": "staff-2", "recorded_at": "2026-05-16T10:00:00Z"}
+        ],
+        "qc_reports": [
+            {"id": "report-1", "staff_id": "staff-3", "created_at": "2026-05-16T08:00:00Z"}
+        ],
+        "production_batch_logs": [],
+    })
+
+    with patch("backend.services.admin_service.get_client", return_value=fake_db):
+        response = client.get("/api/v1/admin/audit-trail", headers=admin_headers)
+
+    rows = response.get_json()
+    assert response.status_code == 200
+    assert rows[0]["entity_type"] == "facility_log"
+    assert {row["action"] for row in rows} == {"submit", "input_temperature"}
+    assert rows[0]["staff_accounts"]["username"] == "staff-2"
+
+
+def test_admin_traceability_fallback_from_staff_submissions(client, admin_headers):
+    fake_db = FakeSupabase({
+        "barcode_labels": [],
+        "production_batches": [
+            {
+                "id": "batch-1",
+                "batch_code": "BATCH-001",
+                "product_id": "product-1",
+                "products": {"product_name": "Chicken Soup"},
+                "created_at": "2026-05-16T07:00:00Z",
+            }
+        ],
+        "qc_reports": [
+            {
+                "id": "report-1",
+                "batch_id": "batch-1",
+                "staff_id": "staff-1",
+                "temperature_photo_url": "https://img/report.jpg",
+                "created_at": "2026-05-16T08:00:00Z",
+            }
+        ],
+        "facility_logs": [
+            {
+                "id": "temp-1",
+                "room_id": "PPIC",
+                "device_id": "Chiller",
+                "staff_id": "staff-2",
+                "photo_url": "https://img/temp.jpg",
+                "recorded_at": "2026-05-16T10:00:00Z",
+            }
+        ],
+        "qc_findings": [
+            {
+                "id": "finding-1",
+                "staff_id": "staff-3",
+                "reason": "Dirty area",
+                "photo_url": "https://img/finding.jpg",
+                "created_at": "2026-05-16T09:00:00Z",
+            }
+        ],
+        "production_batch_logs": [],
+    })
+
+    with patch("backend.services.admin_service.get_client", return_value=fake_db):
+        response = client.get("/api/v1/admin/traceability", headers=admin_headers)
+
+    rows = response.get_json()
+    assert response.status_code == 200
+    assert rows[0]["barcode_value"] == "PPIC / Chiller"
+    assert any(row.get("batch_code") == "BATCH-001" and row.get("product_name") == "Chicken Soup" for row in rows)
+    assert any(row.get("photo_url") == "https://img/finding.jpg" for row in rows)
