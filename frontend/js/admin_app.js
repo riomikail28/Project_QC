@@ -790,11 +790,28 @@ const adminApp = {
                 <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
                 <td>${row.inspector_name || row.staff_id || '-'}</td>
                 <td>${evidence ? `<button class="btn-primary" onclick="adminApp.previewImage('${evidence}')" style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
-                <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
+                <td>
+                    <div>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</div>
+                    <span class="row-actions">
+                        <button class="btn-primary btn-sm" onclick="adminApp.resolveApproval('${row.id}', true)"><i data-lucide="check"></i> Approve</button>
+                        <button class="btn-danger btn-sm" onclick="adminApp.resolveApproval('${row.id}', false)"><i data-lucide="x"></i> Reject</button>
+                    </span>
+                </td>
             `;
             tbody.appendChild(tr);
         });
         this.refreshIcons();
+    },
+
+    async resolveApproval(id, approved) {
+        const comment = approved ? 'Approved from admin panel' : prompt('Alasan reject?') || 'Rejected from admin panel';
+        try {
+            await API.post(`${this.apiBase}/approvals/${id}/${approved ? 'approve' : 'reject'}`, { comment });
+            await this.loadApprovals();
+            await this.loadQCReports();
+        } catch (error) {
+            alert(`Gagal update approval: ${error.message || 'Coba lagi'}`);
+        }
     },
 
     previewImage(url) {

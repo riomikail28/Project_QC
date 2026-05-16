@@ -219,21 +219,29 @@ def require_auth(func: Callable):
 def require_role(*roles: str):
     """Require one of the listed roles. Admin always passes."""
 
-    allowed_roles = set(roles)
+    allowed_roles = {_normalize_role(role) for role in roles}
 
     def decorator(func: Callable):
         @wraps(func)
         @require_auth
         def wrapper(*args, **kwargs):
             user = g.current_user or {}
-            role = user.get("role", "staff")
-            if role != "admin" and role not in allowed_roles:
+            role = _normalize_role(user.get("role", "qc_staff"))
+            admin_roles = {"admin", "supervisor", "manager"}
+            if role not in admin_roles and role not in allowed_roles:
+                raise AuthError("Insufficient permissions", 403)
+            if role in {"supervisor", "manager"} and "admin" not in allowed_roles and role not in allowed_roles:
                 raise AuthError("Insufficient permissions", 403)
             return func(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+def _normalize_role(role: str | None) -> str:
+    value = str(role or "qc_staff").strip().lower()
+    return {"staff": "qc_staff", "qc": "qc_staff", "super_admin": "admin"}.get(value, value)
 
 
 def get_security() -> SecurityMiddleware:

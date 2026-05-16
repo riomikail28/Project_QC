@@ -68,15 +68,16 @@ const Auth = {
     },
 
     normalizeRole(role) {
-        return String(role || 'staff').trim().toLowerCase();
+        const value = String(role || 'staff').trim().toLowerCase();
+        return { staff: 'staff', qc_staff: 'staff', qc: 'staff', super_admin: 'super_admin' }[value] || value;
     },
 
     isAdmin() {
-        return ['admin', 'super_admin'].includes(this.role());
+        return ['admin', 'super_admin', 'supervisor', 'manager'].includes(this.role());
     },
 
     canAccessAdmin(role) {
-        return ['admin', 'super_admin'].includes(this.normalizeRole(role));
+        return ['admin', 'super_admin', 'supervisor', 'manager'].includes(this.normalizeRole(role));
     },
 
     applyRoleVisibility(roleOverride) {

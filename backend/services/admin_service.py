@@ -12,7 +12,10 @@ class AdminService:
         self.sb = sb_client or get_client()
 
     def _empty(self, data):
-        return {"success": True, "data": data}
+        return {"success": True, "data": data, "message": "OK"}
+
+    def _fail(self, message):
+        return {"success": False, "data": None, "message": message, "detail": message}
 
     def _count(self, table: str, filters: list[tuple[str, str, object]] | None = None) -> int:
         if not self.sb:
@@ -192,6 +195,125 @@ class AdminService:
         except Exception as exc:
             logger.error("Audit trail failed: %s", exc)
             return {"success": False, "detail": str(exc)}
+
+    def get_temperature_report(self, limit=100):
+        rows = self._fetch(
+            "facility_logs",
+            select="*, facility_rooms(name), facility_devices(name,type,threshold_temp)",
+            order_by="recorded_at",
+            limit=limit,
+        )
+        if not rows:
+            rows = self._fetch("temperature_logs", order_by="recorded_at", limit=limit)
+        return self._empty([self._temperature_report_row(row) for row in rows])
+
+    def get_inspection_report(self, limit=100, status_filter=None):
+        filters = [("eq", "status", status_filter)] if status_filter else None
+        rows = self._fetch("qc_reports", order_by="created_at", limit=limit, filters=filters)
+        return self._empty([self._normalize_qc_report(row) for row in rows])
+
+    def get_evidence_report(self, limit=100):
+        rows = self._fetch("qc_evidence", order_by="created_at", limit=limit)
+        if not rows:
+            report_rows = self._fetch("qc_reports", order_by="created_at", limit=limit)
+            rows = self._evidence_from_reports(report_rows)
+            temp_rows = self._fetch("facility_logs", order_by="recorded_at", limit=limit)
+            rows.extend(self._evidence_from_temperature(temp_rows))
+        return self._empty(rows[:limit])
+
+    def get_batch_report(self, limit=100):
+        rows = self._fetch("production_batches", select="*, products(*)", order_by="created_at", limit=limit)
+        return self._empty([{
+            "id": row.get("id"),
+            "batch_code": row.get("batch_code"),
+            "product_name": row.get("product_name") or (row.get("products") or {}).get("product_name"),
+            "production_date": row.get("production_date"),
+            "expired_date": row.get("expired_date"),
+            "status": row.get("status") or row.get("final_qc_status") or "pending",
+            "created_by": row.get("created_by") or row.get("operator_id"),
+            "created_at": row.get("created_at"),
+        } for row in rows])
+
+    def get_staff_activity_report(self, limit=100):
+        rows = self._fetch("staff_activity", order_by="created_at", limit=limit)
+        if not rows:
+            rows = self._audit_from_staff_submissions(limit)
+        return self._empty(rows[:limit])
+
+    def approve_item(self, approval_id, actor_id=None, comment=None, approved=True):
+        status = "approved" if approved else "rejected"
+        payload = {
+            "status": status,
+            "approval_status": status,
+            "approved_by": actor_id,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if not approved:
+            payload["rejection_reason"] = comment or "Rejected by admin"
+        rows = self._update_by_id("approvals", approval_id, {"status": status, "comment": comment, "approved_by": actor_id, "approved_at": payload["approved_at"]})
+        if not rows:
+            rows = self._update_by_id("qc_reports", approval_id, payload)
+        if not rows:
+            return self._fail("Approval item not found")
+        return self._empty(rows[0])
+
+    def _update_by_id(self, table, row_id, payload):
+        if not self.sb:
+            return []
+        try:
+            return self.sb.table(table).update({k: v for k, v in payload.items() if v is not None}).eq("id", row_id).execute().data or []
+        except Exception as exc:
+            logger.warning("Admin update skipped for %s: %s", table, exc)
+            return []
+
+    def _temperature_report_row(self, row):
+        room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id")
+        device = row.get("device_name") or row.get("device_type") or (row.get("facility_devices") or {}).get("name") or row.get("device_id")
+        return {
+            "id": row.get("id"),
+            "staff_id": row.get("staff_id") or row.get("created_by"),
+            "staff_name": row.get("staff_name"),
+            "room_id": row.get("room_id"),
+            "room": room,
+            "device_id": row.get("device_id"),
+            "device": device,
+            "temperature": row.get("temperature_c"),
+            "status": "pass" if row.get("is_normal", not row.get("is_abnormal", False)) else "fail",
+            "photo_url": row.get("photo_url"),
+            "storage_path": row.get("storage_path"),
+            "notes": row.get("reason") or row.get("notes"),
+            "created_at": row.get("recorded_at") or row.get("created_at"),
+        }
+
+    def _evidence_from_reports(self, rows):
+        evidence = []
+        for row in rows:
+            urls = row.get("product_photo_url") or row.get("temperature_photo_url") or row.get("barcode_photo_url") or row.get("photo_url")
+            paths = row.get("product_storage_path") or row.get("temperature_storage_path") or row.get("barcode_storage_path") or row.get("storage_path")
+            if urls or paths:
+                evidence.append({
+                    "related_type": "inspection",
+                    "related_id": row.get("id"),
+                    "public_url": urls,
+                    "storage_path": paths,
+                    "uploaded_by": row.get("staff_id"),
+                    "created_at": row.get("created_at"),
+                })
+        return evidence
+
+    def _evidence_from_temperature(self, rows):
+        evidence = []
+        for row in rows:
+            if row.get("photo_url") or row.get("storage_path"):
+                evidence.append({
+                    "related_type": "temperature",
+                    "related_id": row.get("id"),
+                    "public_url": row.get("photo_url"),
+                    "storage_path": row.get("storage_path"),
+                    "uploaded_by": row.get("staff_id"),
+                    "created_at": row.get("recorded_at") or row.get("created_at"),
+                })
+        return evidence
 
     def _fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
         if not self.sb:

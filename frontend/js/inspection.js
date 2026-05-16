@@ -6,6 +6,7 @@
 const Inspection = {
     async init() {
         this.bindPhotoValidation();
+        this.bindSubmit();
         await this.loadAll();
     },
 
@@ -126,6 +127,67 @@ const Inspection = {
                 zone.querySelector('span').textContent = 'Ambil foto evidence produk, suhu, atau barcode.';
             }
         });
+    },
+
+    bindSubmit() {
+        const button = document.getElementById('submitQcBtn');
+        if (!button) return;
+        button.addEventListener('click', () => this.submitQc(button));
+    },
+
+    async submitQc(button) {
+        const original = button.innerHTML;
+        const barcode = document.getElementById('qcBarcode')?.value?.trim();
+        const temperature = document.getElementById('qcTemp')?.value;
+        const ccpStage = document.getElementById('qcStage')?.value;
+        const files = Array.from(document.getElementById('qcPhoto')?.files || []);
+        if (!barcode) {
+            alert('Barcode batch wajib diisi.');
+            return;
+        }
+        try {
+            files.forEach(file => API.validatePhoto(file));
+        } catch (err) {
+            alert(err.message || 'Upload gagal');
+            return;
+        }
+
+        const user = Auth.user() || {};
+        const formData = new FormData();
+        formData.append('barcode', barcode);
+        formData.append('batch_code', barcode);
+        formData.append('temperature', temperature || '');
+        formData.append('ccp_stage', ccpStage || '');
+        formData.append('qc_status', this.deriveStatus(temperature));
+        formData.append('staff_id', user.id || user.user_id || user.sub || '');
+        formData.append('staff_name', user.full_name || user.name || user.username || '');
+        files.forEach(file => formData.append('photo', file));
+
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+            const response = await API.upload('/inspection/submit', formData);
+            if (!response.success) throw new Error(response.message || response.error || 'Submit gagal');
+            ['qcBarcode', 'qcTemp', 'qcStage'].forEach(id => localStorage.removeItem(id));
+            const photo = document.getElementById('qcPhoto');
+            if (photo) photo.value = '';
+            const zoneText = document.querySelector('.upload-zone span');
+            if (zoneText) zoneText.textContent = 'Ambil foto evidence produk, suhu, atau barcode.';
+            alert('QC inspection tersimpan.');
+            await this.loadAll();
+        } catch (error) {
+            alert(`Submit QC gagal: ${error.message || 'server tidak merespons'}`);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = original;
+        }
+    },
+
+    deriveStatus(temperature) {
+        if (temperature === '' || temperature === null || temperature === undefined) return 'pending';
+        const temp = Number(temperature);
+        if (Number.isNaN(temp)) return 'pending';
+        return temp >= -80 && temp <= 100 ? 'pass' : 'warning';
     },
 
     emptyState(title, message, buttonLabel = '', href = '') {

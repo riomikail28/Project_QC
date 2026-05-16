@@ -209,10 +209,18 @@ const API = {
     _storagePath(file, meta = {}) {
         const extension = this._extensionForPhoto(file);
         const staffId = this._safePathPart(meta.staffId || 'staff');
-        const source = this._safePathPart(meta.source || 'qc-finding');
+        const source = this._safePathPart(meta.source || 'inspection');
+        const category = this._categoryPath(source);
         const timestamp = new Date().toISOString().slice(0, 10);
         const random = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replace(/[^a-z0-9-]/gi, '');
-        return `${staffId}/${timestamp}/${source}-${random}.${extension}`;
+        return `staff/${staffId}/${category}/${timestamp}/${source}-${random}.${extension}`;
+    },
+
+    _categoryPath(source) {
+        if (source.includes('temperature') || source.includes('monitoring')) return 'temperature';
+        if (source.includes('barcode')) return 'barcode';
+        if (source.includes('ccp')) return 'ccp';
+        return 'inspection';
     },
 
     _safePathPart(value) {

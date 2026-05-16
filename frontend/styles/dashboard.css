@@ -121,7 +121,7 @@
   min-height: 236px;
 }
 
-.fake-line-chart {
+.production-trend-chart {
   height: 150px;
   margin-top: 16px;
   border-radius: 16px;
@@ -135,7 +135,7 @@
   padding: 18px 16px 12px;
 }
 
-.fake-line-chart::before {
+.production-trend-chart::before {
   content: none;
 }
 

@@ -26,6 +26,9 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 class UploadedPhoto:
     url: str
     storage_path: str
+    file_name: str | None = None
+    file_type: str | None = None
+    file_size: int | None = None
     bucket: str = STORAGE_BUCKET
 
 
@@ -52,7 +55,39 @@ def _content_type(ext: str) -> str:
         ".webp": "image/webp",
     }.get(ext, "application/octet-stream")
 
-def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", content_type: str | None = None) -> UploadedPhoto:
+def _safe_path_part(value: str | None, default: str = "unknown") -> str:
+    safe = str(value or default).strip().replace("\\", "_").replace("/", "_")
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in safe)
+    return safe.strip("-_")[:80] or default
+
+
+def _storage_prefix(staff_id: str = "system", category: str = "inspection", related_id: str | None = None) -> str:
+    category_map = {
+        "temperature": "temperature",
+        "monitoring": "temperature",
+        "inspection": "inspection",
+        "barcode": "barcode",
+        "ccp": "ccp",
+        "batch": "batches",
+        "report": "admin/reports",
+        "approval": "admin/reports",
+    }
+    normalized = category_map.get(str(category or "inspection").lower(), "inspection")
+    if normalized == "batches":
+        return f"batches/{_safe_path_part(related_id or staff_id, 'batch')}"
+    if normalized.startswith("admin/"):
+        return normalized
+    return f"staff/{_safe_path_part(staff_id, 'system')}/{normalized}"
+
+
+def upload_photo_result(
+    file_bytes,
+    filename: str,
+    staff_id: str = "system",
+    content_type: str | None = None,
+    category: str | None = None,
+    related_id: str | None = None,
+) -> UploadedPhoto:
     """Upload a photo and return URL plus storage path metadata.
     
     Args:
@@ -63,23 +98,24 @@ def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", con
     Returns:
         UploadedPhoto with public URL and storage path.
     """
-    sb = get_client()
-    if not sb:
-        raise RuntimeError("Supabase client unavailable; cannot upload photo")
-
     try:
         ext = _detect_image_ext(file_bytes, content_type)
     except ValueError as ve:
         logger.error("Validation failed: %s", ve)
         raise
 
-    # Path: staff_id/date/filename
-    # Filename: staff_id_timestamp_uuid.ext
+    sb = get_client()
+    if not sb:
+        raise RuntimeError("Supabase client unavailable; cannot upload photo")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     date_folder = datetime.now().strftime("%Y-%m-%d")
-    safe_staff_id = str(staff_id or "system").replace("/", "_").replace("\\", "_")
+    safe_staff_id = _safe_path_part(staff_id, "system")
     unique_name = f"{safe_staff_id}_{timestamp}_{uuid.uuid4().hex}{ext}"
-    storage_path = f"{safe_staff_id}/{date_folder}/{unique_name}"
+    if category is None:
+        storage_path = f"{safe_staff_id}/{date_folder}/{unique_name}"
+    else:
+        storage_path = f"{_storage_prefix(staff_id, category, related_id)}/{date_folder}/{unique_name}"
 
     try:
         sb.storage.from_(STORAGE_BUCKET).upload(
@@ -92,7 +128,13 @@ def upload_photo_result(file_bytes, filename: str, staff_id: str = "system", con
         if not public_url:
             delete_photo(storage_path)
             raise RuntimeError("Storage upload succeeded but public URL is empty")
-        return UploadedPhoto(url=public_url, storage_path=storage_path)
+        return UploadedPhoto(
+            url=public_url,
+            storage_path=storage_path,
+            file_name=filename,
+            file_type=_content_type(ext),
+            file_size=len(file_bytes),
+        )
     except Exception as e:
         logger.error("Storage upload failed: %s", e)
         raise Exception(f"Gagal mengunggah foto ke storage: {str(e)}")
@@ -108,7 +150,12 @@ def upload_photo(file_bytes, filename: str, staff_id: str = "system", content_ty
     return result.url if result else None
 
 
-def upload_file_storage(file_storage, staff_id: str = "system") -> UploadedPhoto:
+def upload_file_storage(
+    file_storage,
+    staff_id: str = "system",
+    category: str | None = None,
+    related_id: str | None = None,
+) -> UploadedPhoto:
     """Validate and upload a Werkzeug FileStorage image."""
     if not file_storage or not getattr(file_storage, "filename", ""):
         raise ValueError("No photo provided")
@@ -117,6 +164,8 @@ def upload_file_storage(file_storage, staff_id: str = "system") -> UploadedPhoto
         file_storage.filename,
         staff_id=staff_id,
         content_type=getattr(file_storage, "mimetype", None),
+        category=category,
+        related_id=related_id,
     )
 
 

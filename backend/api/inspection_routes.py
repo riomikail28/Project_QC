@@ -1,6 +1,6 @@
 """Inspection real-data API routes."""
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from backend.middleware.security_middleware import require_auth
 from backend.services.inspection_service import InspectionService
@@ -41,3 +41,14 @@ def product_shortcuts():
 def recent_submissions():
     limit = min(max(int(request.args.get("limit", 10)), 1), 50)
     return _json(_service().recent_submissions(limit=limit))
+
+
+@inspection_bp.route("/submit", methods=["POST"])
+@inspection_bp.route("/qc-submit", methods=["POST"])
+@require_auth
+def submit_qc():
+    payload = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
+    actor = getattr(g, "current_user", {}) or {}
+    files = request.files.getlist("photo") or request.files.getlist("evidence")
+    result = _service().submit_qc(payload, files=files, actor_id=actor.get("id") or actor.get("sub"))
+    return _json(result, 200 if result.get("success") else 400)

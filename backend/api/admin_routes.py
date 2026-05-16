@@ -1,5 +1,5 @@
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 
 from backend.middleware.security_middleware import require_role
 from backend.services.admin_service import AdminService
@@ -107,6 +107,67 @@ def approvals():
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error fetching approvals")}), 500
+
+
+def _enveloped(res, ok_status=200):
+    status = ok_status if res.get("success") else 500
+    return jsonify({
+        "success": bool(res.get("success")),
+        "data": res.get("data"),
+        "message": res.get("message") or ("OK" if res.get("success") else res.get("detail", "Error")),
+    }), status
+
+
+@admin_bp.route("/reports/temperature", methods=["GET"])
+@require_role("admin")
+def report_temperature():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_temperature_report(limit=limit))
+
+
+@admin_bp.route("/reports/inspection", methods=["GET"])
+@require_role("admin")
+def report_inspection():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    status_filter = request.args.get("status")
+    return _enveloped(get_admin_service().get_inspection_report(limit=limit, status_filter=status_filter))
+
+
+@admin_bp.route("/reports/evidence", methods=["GET"])
+@require_role("admin")
+def report_evidence():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_evidence_report(limit=limit))
+
+
+@admin_bp.route("/reports/batches", methods=["GET"])
+@require_role("admin")
+def report_batches():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_batch_report(limit=limit))
+
+
+@admin_bp.route("/reports/staff-activity", methods=["GET"])
+@require_role("admin")
+def report_staff_activity():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_staff_activity_report(limit=limit))
+
+
+@admin_bp.route("/approvals/<approval_id>/approve", methods=["POST"])
+@require_role("admin")
+def approve(approval_id):
+    payload = request.get_json(silent=True) or {}
+    actor = getattr(g, "current_user", {}) or {}
+    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=True))
+
+
+@admin_bp.route("/approvals/<approval_id>/reject", methods=["POST"])
+@require_role("admin")
+def reject(approval_id):
+    payload = request.get_json(silent=True) or {}
+    actor = getattr(g, "current_user", {}) or {}
+    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=False))
 
 
 @admin_bp.route("/products", methods=["GET", "POST"])

@@ -155,7 +155,7 @@ function openLogModal(deviceId) {
 
     document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
     document.getElementById("selected-device-id").value = deviceId;
-    document.getElementById("selected-room-id").value = selectedRoomId;
+    document.getElementById("selected-room-id").value = device.room_id || room.id;
 
     const iconEl = document.getElementById("sheet-icon");
     if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;

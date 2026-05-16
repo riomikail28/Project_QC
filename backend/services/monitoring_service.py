@@ -59,7 +59,7 @@ class MonitoringService:
 
             for photo_file in files.getlist("photo"):
                 if photo_file:
-                    uploaded = upload_file_storage(photo_file, staff_id=staff_id)
+                    uploaded = upload_file_storage(photo_file, staff_id=staff_id, category="temperature", related_id=room_id)
                     uploaded_files.append(uploaded)
                     photo_urls.append(uploaded.url)
                     storage_paths.append(uploaded.storage_path)
