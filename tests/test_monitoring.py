@@ -114,13 +114,17 @@ def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers)
     assert payload["storage_path"] == "staff/2026-05-16/temp.jpg"
 
 
-def test_monitoring_structure_has_no_local_room_fallback(monkeypatch):
+def test_monitoring_structure_returns_default_room_unit_matrix(monkeypatch):
     from backend.monitoring import facility_manager
 
     monkeypatch.setattr(facility_manager, "get_client", lambda: None)
     monkeypatch.setattr(facility_manager, "direct_db_query", lambda *args, **kwargs: [])
 
-    assert facility_manager.get_monitoring_structure() == []
+    structure = facility_manager.get_monitoring_structure()
+
+    assert len(structure) == 6
+    assert [room["name"] for room in structure] == ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"]
+    assert all([device["name"] for device in room["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"] for room in structure)
 
 
 def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
@@ -155,9 +159,12 @@ def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
 
     structure = facility_manager.get_monitoring_structure()
 
-    assert [room["name"] for room in structure] == ["PPIC", "Kitchen"]
-    assert structure[0]["devices"][0]["name"] == "Chiller"
-    assert structure[1]["devices"][0]["type"] == "freezer"
+    assert len(structure) == 6
+    ppic = next(room for room in structure if room["name"] == "PPIC")
+    kitchen = next(room for room in structure if room["name"] == "Kitchen")
+    assert [device["name"] for device in ppic["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"]
+    assert next(device for device in ppic["devices"] if device["type"] == "chiller")["last_temperature_c"] == 3.5
+    assert next(device for device in kitchen["devices"] if device["type"] == "freezer")["last_temperature_c"] == -19
 
 
 def test_monitoring_structure_merges_logs_when_master_devices_empty(monkeypatch):
@@ -188,8 +195,8 @@ def test_monitoring_structure_merges_logs_when_master_devices_empty(monkeypatch)
 
     ppic = next(room for room in structure if room["name"] == "PPIC")
     grouper = next(room for room in structure if room["name"] == "Grouper")
-    assert ppic["devices"][0]["name"] == "Chiller"
-    assert grouper["devices"] == []
+    assert next(device for device in ppic["devices"] if device["type"] == "chiller")["last_temperature_c"] == 3.5
+    assert [device["name"] for device in grouper["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"]
 
 
 def test_monitoring_latest_falls_back_to_temperature_logs_when_facility_logs_empty():

@@ -300,7 +300,7 @@ def _log_room_name(row):
 
 
 def _log_device_type(row):
-    device_type = row.get("device_type") or (row.get("facility_devices") or {}).get("type") or "room_temp"
+    device_type = row.get("type") or row.get("device_type") or (row.get("facility_devices") or {}).get("type") or "room_temp"
     if device_type in {"ambient", "room"}:
         return "room_temp"
     return device_type
@@ -308,7 +308,8 @@ def _log_device_type(row):
 
 def _log_device_name(row, room_name, device_type):
     return (
-        (row.get("facility_devices") or {}).get("name")
+        row.get("name")
+        or (row.get("facility_devices") or {}).get("name")
         or row.get("device_name")
         or row.get("unit_name")
         or {"freezer": "Freezer", "chiller": "Chiller", "undercounter": "UC Chiller"}.get(device_type)
