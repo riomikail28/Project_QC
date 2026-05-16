@@ -152,14 +152,33 @@ alter table public.facility_logs
   add column if not exists room_id uuid references public.facility_rooms(id) on delete set null,
   add column if not exists device_id uuid references public.facility_devices(id) on delete set null,
   add column if not exists staff_id uuid,
+  add column if not exists zone text,
+  add column if not exists device_type text,
   add column if not exists temperature_c numeric(6,2),
+  add column if not exists temperature numeric,
+  add column if not exists status text,
+  add column if not exists notes text,
+  add column if not exists threshold_c numeric,
   add column if not exists humidity_rh numeric(6,2),
+  add column if not exists is_abnormal boolean not null default false,
   add column if not exists is_normal boolean not null default true,
   add column if not exists reason text,
   add column if not exists photo_url text,
   add column if not exists storage_path text,
   add column if not exists recorded_at timestamptz not null default now(),
   add column if not exists created_at timestamptz not null default now();
+
+update public.facility_logs
+set
+  zone = coalesce(zone, 'QC Area'),
+  device_type = coalesce(device_type, 'room'),
+  temperature = coalesce(temperature, temperature_c),
+  status = coalesce(status, case when is_normal then 'pass' else 'fail' end),
+  notes = coalesce(notes, reason);
+
+alter table public.facility_logs
+  alter column zone drop not null,
+  alter column device_type drop not null;
 
 do $$
 begin

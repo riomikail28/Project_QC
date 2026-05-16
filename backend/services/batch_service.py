@@ -145,6 +145,9 @@ def create_batch(
                     break
             except Exception as e:
                 logger.warning("Could not resolve product code via %s: %s", code_column, e)
+    if resolved_product_id and not _looks_like_uuid(resolved_product_id):
+        resolved_product_name = resolved_product_name or resolved_product_id
+        resolved_product_id = None
 
     payload = {
         "product_id": resolved_product_id,

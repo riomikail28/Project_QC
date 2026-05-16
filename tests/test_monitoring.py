@@ -108,6 +108,8 @@ def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers)
     assert response.status_code == 200
     payload = fake_db.inserted["facility_logs"]
     assert payload["temperature_c"] == 3.2
+    assert payload["zone"] == "Chiller Room"
+    assert payload["device_type"] == "chiller"
     assert payload["humidity_rh"] == 55
     assert payload["reason"] == "normal check"
     assert payload["photo_url"].endswith("/temp.jpg")

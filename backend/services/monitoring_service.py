@@ -71,11 +71,17 @@ class MonitoringService:
             log_payload = {
                 "device_id": device_id or None,
                 "room_id": room_id,
+                "zone": room_name or "QC Area",
+                "device_type": unit_type if unit_type != "ambient" else "room",
                 "temperature_c": float(temperature),
+                "temperature": float(temperature),
                 "humidity_rh": float(humidity) if humidity not in (None, "") else None,
                 "is_normal": is_normal,
+                "is_abnormal": not is_normal,
+                "status": status.lower(),
                 "staff_id": staff_id or None,
                 "reason": reason,
+                "notes": reason,
                 "photo_url": photo_url,
             }
             if storage_path:

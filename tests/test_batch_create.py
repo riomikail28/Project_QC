@@ -59,6 +59,23 @@ def test_create_batch_succeeds(client, staff_headers):
     assert db.inserted["product_name"] == "Soup"
 
 
+def test_create_batch_does_not_send_unresolved_sku_to_uuid_product_id(client, staff_headers):
+    db = BatchDb()
+    db.rows["products"] = []
+    with patch("backend.services.batch_service.get_client", return_value=db), patch(
+        "backend.api.batch_routes.write_audit"
+    ):
+        response = client.post(
+            "/api/batch/create",
+            headers=staff_headers,
+            json={"product_id": "SKU-HONEY-001", "batch_code": "BATCH-002"},
+        )
+
+    assert response.status_code == 201
+    assert "product_id" not in db.inserted
+    assert db.inserted["product_name"] == "SKU-HONEY-001"
+
+
 def test_create_batch_requires_batch_code(client, staff_headers):
     response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
 

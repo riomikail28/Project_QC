@@ -33,8 +33,6 @@ def list_rooms():
 def add_room(name: str, description: str = "", is_active: bool = True):
     """Add a new monitoring room."""
     sb = get_client()
-    if not sb:
-        return None
     try:
         clean_name = str(name or "").strip()
         if not clean_name:
@@ -45,6 +43,9 @@ def add_room(name: str, description: str = "", is_active: bool = True):
             "description": description or "",
             "is_active": bool(is_active),
         }
+        if not sb:
+            rows = direct_db_query("facility_rooms", "POST", payload)
+            return rows[0] if rows else None
         res = sb.table("facility_rooms").insert(payload).execute()
         return res.data[0] if res.data else None
     except Exception as e:
@@ -53,9 +54,14 @@ def add_room(name: str, description: str = "", is_active: bool = True):
 
 def delete_room(room_id: str):
     """Delete a room and all its devices."""
-    sb = get_client()
-    if not sb: return False
+    if _is_synthetic_id(room_id):
+        logger.info("Ignoring delete for synthetic room id: %s", room_id)
+        return True
     try:
+        sb = get_client()
+        if not sb:
+            direct_db_query("facility_rooms", "DELETE", None, f"id=eq.{room_id}")
+            return True
         sb.table("facility_rooms").delete().eq("id", room_id).execute()
         return True
     except Exception as e:
@@ -91,8 +97,6 @@ def add_device(
 ):
     """Add a new device (chiller/freezer/etc) to a room."""
     sb = get_client()
-    if not sb:
-        return None
     try:
         clean_name = str(name or "").strip()
         normalized_type = _normalize_device_type(device_type)
@@ -112,6 +116,9 @@ def add_device(
             "is_default": False,
             "is_active": bool(is_active),
         }
+        if not sb:
+            rows = direct_db_query("facility_devices", "POST", payload)
+            return rows[0] if rows else None
         res = sb.table("facility_devices").insert(payload).execute()
         return res.data[0] if res.data else None
     except Exception as e:
@@ -120,9 +127,14 @@ def add_device(
 
 def delete_device(device_id: str):
     """Delete a specific device."""
-    sb = get_client()
-    if not sb: return False
+    if _is_synthetic_id(device_id):
+        logger.info("Ignoring delete for synthetic device id: %s", device_id)
+        return True
     try:
+        sb = get_client()
+        if not sb:
+            direct_db_query("facility_devices", "DELETE", None, f"id=eq.{device_id}")
+            return True
         sb.table("facility_devices").delete().eq("id", device_id).execute()
         return True
     except Exception as e:
@@ -132,6 +144,11 @@ def delete_device(device_id: str):
 
 def is_default_device_id(device_id: str) -> bool:
     return str(device_id or "").startswith("default-")
+
+
+def _is_synthetic_id(value: str) -> bool:
+    raw = str(value or "")
+    return raw.startswith(("default-", "default-room-", "log-room-", "log-device-"))
 
 def get_monitoring_structure():
     """Returns a nested structure of Rooms -> Devices for the UI.
@@ -405,8 +422,6 @@ def _coerce_float(value, default):
 
 def update_room(room_id: str, data: dict):
     """Update a monitoring room."""
-    sb = get_client()
-    if not sb: return None
     payload = {}
     if data.get("name"):
         payload["name"] = data["name"]
@@ -419,6 +434,10 @@ def update_room(room_id: str, data: dict):
     if not payload:
         return None
     try:
+        sb = get_client()
+        if not sb:
+            rows = direct_db_query("facility_rooms", "PATCH", payload, f"id=eq.{room_id}")
+            return rows[0] if rows else {"id": room_id, **payload}
         res = sb.table("facility_rooms").update(payload).eq("id", room_id).execute()
         return res.data[0] if res.data else {"id": room_id, **payload}
     except Exception as e:
@@ -427,8 +446,6 @@ def update_room(room_id: str, data: dict):
 
 def update_device(device_id: str, data: dict):
     """Update a facility device."""
-    sb = get_client()
-    if not sb: return None
     payload = {}
     if data.get("name"):
         payload["name"] = data["name"]
@@ -454,6 +471,10 @@ def update_device(device_id: str, data: dict):
     if not payload:
         return None
     try:
+        sb = get_client()
+        if not sb:
+            rows = direct_db_query("facility_devices", "PATCH", payload, f"id=eq.{device_id}")
+            return rows[0] if rows else {"id": device_id, **payload}
         res = sb.table("facility_devices").update(payload).eq("id", device_id).execute()
         return res.data[0] if res.data else {"id": device_id, **payload}
     except Exception as e:
