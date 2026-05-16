@@ -11,6 +11,11 @@ from backend.database.supabase_client import direct_db_query, get_client
 logger = logging.getLogger("qc.facility")
 
 DEFAULT_MONITORING_ROOMS = ("PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen")
+DEFAULT_MONITORING_UNITS = (
+    ("room_temp", "Suhu Ruangan", 25.0),
+    ("chiller", "Chiller", 5.0),
+    ("freezer", "Freezer", -18.0),
+)
 
 def list_rooms():
     """List all monitoring rooms."""
@@ -97,21 +102,12 @@ def get_monitoring_structure():
     """
     rooms = list_rooms()
     devices = list_devices()
-    if not devices:
-        structure = _structure_from_recent_logs()
-        if structure:
-            if not rooms:
-                return structure
-            return _merge_log_devices_into_rooms(rooms, structure)
-    
-    structure = []
-    for room in rooms:
-        room_devices = [d for d in devices if d["room_id"] == room["id"]]
-        structure.append({
-            "id": room["id"],
-            "name": room["name"],
-            "devices": room_devices
-        })
+    log_structure = _structure_from_recent_logs()
+    if not rooms:
+        rooms = _default_rooms()
+    structure = _build_room_unit_matrix(rooms, devices)
+    if log_structure:
+        structure = _merge_log_devices_into_matrix(structure, log_structure)
     return structure
 
 
@@ -140,20 +136,6 @@ def _structure_from_recent_logs():
             "last_temperature_c": row.get("temperature_c"),
             "recorded_at": row.get("recorded_at") or row.get("created_at"),
         })
-
-    if not grouped:
-        return []
-
-    for room_name in DEFAULT_MONITORING_ROOMS:
-        if room_name in grouped and not grouped[room_name]["devices"]:
-            room_id = grouped[room_name]["id"]
-            grouped[room_name]["devices"][f"{room_id}-room-temp"] = {
-                "id": f"{room_id}-room-temp",
-                "room_id": room_id,
-                "name": "Suhu Ruangan",
-                "type": "room_temp",
-                "threshold_temp": 25.0,
-            }
 
     preferred = [name for name in DEFAULT_MONITORING_ROOMS if name in grouped]
     remainder = sorted([name for name in grouped if name not in preferred])
@@ -215,19 +197,97 @@ def _latest_facility_logs():
         return []
 
 
-def _merge_log_devices_into_rooms(rooms, log_structure):
-    by_name = {room["name"]: {**room, "devices": []} for room in rooms}
-    by_id = {room["id"]: by_name[room["name"]] for room in rooms}
-    extras = []
-    for log_room in log_structure:
-        target = by_id.get(log_room.get("id")) or by_name.get(log_room.get("name"))
-        if target:
-            target["devices"] = log_room.get("devices", [])
-        else:
-            extras.append(log_room)
-    merged = list(by_name.values()) + extras
+def _default_rooms():
+    return [{"id": f"default-room-{_slug(name)}", "name": name} for name in DEFAULT_MONITORING_ROOMS]
+
+
+def _build_room_unit_matrix(rooms, devices):
+    by_room = {}
+    for room in rooms:
+        room_id = room.get("id") or f"default-room-{_slug(room.get('name'))}"
+        by_room[room_id] = {
+            **room,
+            "id": room_id,
+            "name": room.get("name") or "QC Area",
+            "devices": _default_devices_for_room(room_id, room.get("name") or "QC Area"),
+        }
+
+    for device in devices or []:
+        room_id = device.get("room_id")
+        if not room_id:
+            continue
+        room = by_room.setdefault(room_id, {
+            "id": room_id,
+            "name": (device.get("facility_rooms") or {}).get("name") or "QC Area",
+            "devices": _default_devices_for_room(room_id, (device.get("facility_rooms") or {}).get("name") or "QC Area"),
+        })
+        device_type = _log_device_type(device)
+        matrix_id = _default_device_id(room_id, device_type)
+        normalized = _normalize_device(device, room["name"], device_type)
+        room["devices"] = [normalized if item["id"] == matrix_id or item.get("type") == device_type else item for item in room["devices"]]
+
+    merged = list(by_room.values())
     preferred = {name: index for index, name in enumerate(DEFAULT_MONITORING_ROOMS)}
     return sorted(merged, key=lambda room: (preferred.get(room.get("name"), 999), room.get("name") or ""))
+
+
+def _default_devices_for_room(room_id, room_name):
+    return [
+        {
+            "id": _default_device_id(room_id, unit_type),
+            "room_id": room_id,
+            "name": unit_name,
+            "display_name": f"{room_name} - {unit_name}",
+            "type": unit_type,
+            "threshold_temp": threshold,
+            "is_default": True,
+            "last_temperature_c": None,
+            "recorded_at": None,
+        }
+        for unit_type, unit_name, threshold in DEFAULT_MONITORING_UNITS
+    ]
+
+
+def _default_device_id(room_id, device_type):
+    return f"{room_id}-{_slug(device_type)}"
+
+
+def _merge_log_devices_into_matrix(structure, log_structure):
+    by_name = {room["name"]: room for room in structure}
+    by_id = {room["id"]: room for room in structure}
+    for log_room in log_structure:
+        target = by_id.get(log_room.get("id")) or by_name.get(log_room.get("name"))
+        if not target:
+            target = {
+                "id": log_room.get("id") or f"log-room-{_slug(log_room.get('name'))}",
+                "name": log_room.get("name") or "QC Area",
+                "devices": _default_devices_for_room(log_room.get("id") or f"log-room-{_slug(log_room.get('name'))}", log_room.get("name") or "QC Area"),
+            }
+            structure.append(target)
+        for log_device in log_room.get("devices", []):
+            device_type = _log_device_type(log_device)
+            normalized = _normalize_device(log_device, target["name"], device_type)
+            target["devices"] = [
+                normalized if item.get("type") == device_type else item
+                for item in target["devices"]
+            ]
+    preferred = {name: index for index, name in enumerate(DEFAULT_MONITORING_ROOMS)}
+    return sorted(structure, key=lambda room: (preferred.get(room.get("name"), 999), room.get("name") or ""))
+
+
+def _normalize_device(device, room_name, device_type):
+    name = _log_device_name(device, room_name, device_type)
+    room_id = device.get("room_id") or f"default-room-{_slug(room_name)}"
+    normalized = {
+        **device,
+        "id": device.get("id") or _default_device_id(room_id, device_type),
+        "room_id": room_id,
+        "name": name,
+        "display_name": f"{room_name} - {name}",
+        "type": device_type,
+        "threshold_temp": _log_threshold(device, device_type),
+    }
+    return normalized
 
 
 def _log_room_name(row):

@@ -58,8 +58,22 @@ const Auth = {
         }
     },
 
+    role() {
+        const user = this.user() || {};
+        return String(user.role || localStorage.getItem('qc_role') || 'staff').toLowerCase();
+    },
+
     isAdmin() {
-        const u = this.user();
-        return (u && u.role === 'admin') || localStorage.getItem('qc_role') === 'admin';
+        return ['admin', 'super_admin'].includes(this.role());
+    },
+
+    applyRoleVisibility() {
+        const canAccessAdmin = this.isAdmin();
+        document.querySelectorAll('[data-admin-only], #adminNavLink, #openAdminBtn').forEach(element => {
+            element.hidden = !canAccessAdmin;
+            element.setAttribute('aria-hidden', canAccessAdmin ? 'false' : 'true');
+        });
     }
 };
+
+document.addEventListener('DOMContentLoaded', () => Auth.applyRoleVisibility());

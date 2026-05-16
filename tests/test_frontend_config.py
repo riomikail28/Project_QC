@@ -60,3 +60,24 @@ def test_staff_profile_hides_staff_action_menu_items():
     assert "My Temperature Logs" not in html
     assert "Open Admin Panel" in html
     assert "hidden" in html
+
+
+def test_staff_pages_mark_admin_links_as_role_based():
+    for page_name in ["dashboard.html", "monitoring.html", "inspection.html", "profile.html"]:
+        html = (ROOT / "frontend" / "staff" / page_name).read_text(encoding="utf-8")
+        assert 'href="/admin/"' in html
+        admin_index = html.index('href="/admin/"')
+        tag_start = html.rfind("<", 0, admin_index)
+        tag_end = html.find(">", admin_index)
+        admin_tag = html[tag_start:tag_end]
+        assert "data-admin-only" in admin_tag, page_name
+        assert "hidden" in admin_tag, page_name
+
+
+def test_auth_supports_super_admin_and_role_visibility():
+    auth_js = (ROOT / "frontend" / "js" / "auth.js").read_text(encoding="utf-8")
+
+    assert "role()" in auth_js
+    assert "'staff'" in auth_js
+    assert "super_admin" in auth_js
+    assert "applyRoleVisibility" in auth_js

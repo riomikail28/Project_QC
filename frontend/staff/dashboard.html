@@ -34,7 +34,7 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html">Profile</a>
-            <a href="/admin/" class="admin-link">Admin</a>
+            <a href="/admin/" class="admin-link" data-admin-only hidden>Admin</a>
         </nav>
         <div class="nav-actions">
             <div class="nav-clock">
@@ -456,7 +456,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
-            if (window.location.hash === '#admin') {
+            Auth.applyRoleVisibility();
+            if (window.location.hash === '#admin' && Auth.isAdmin()) {
                 window.location.replace('/admin/');
                 return;
             }

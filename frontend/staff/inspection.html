@@ -23,7 +23,7 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html" class="active">Check</a>
             <a href="profile.html">Profile</a>
-            <a href="/admin/">Admin</a>
+            <a href="/admin/" data-admin-only hidden>Admin</a>
         </nav>
         <div class="nav-actions">
             <button class="nav-btn" onclick="window.location.href='new_batch.html'" aria-label="New batch"><i class="fas fa-plus"></i></button>
@@ -134,6 +134,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
             if (!Auth.check()) window.location.href = 'login.html';
+            Auth.applyRoleVisibility();
             ['qcBarcode','qcTemp','qcStage'].forEach(id => {
                 const el = document.getElementById(id);
                 const saved = localStorage.getItem(id);

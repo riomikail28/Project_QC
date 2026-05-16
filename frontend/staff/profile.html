@@ -23,7 +23,7 @@
             <a href="monitoring.html">Monitor</a>
             <a href="inspection.html">Check</a>
             <a href="profile.html" class="active">Profile</a>
-            <a href="/admin/" id="adminNavLink" hidden>Admin</a>
+            <a href="/admin/" id="adminNavLink" data-admin-only hidden>Admin</a>
         </nav>
         <div class="nav-actions">
             <div class="user-avatar" id="avatarSmall">QC</div>
@@ -79,7 +79,7 @@
         </section>
 
         <section class="menu-grid fade-in" aria-label="Profile actions">
-            <button class="menu-item" type="button" id="openAdminBtn" onclick="window.location.href='/admin/'" hidden><span class="menu-icon"><i class="fas fa-shield-halved"></i></span><strong>Open Admin Panel</strong></button>
+            <button class="menu-item" type="button" id="openAdminBtn" data-admin-only onclick="window.location.href='/admin/'" hidden><span class="menu-icon"><i class="fas fa-shield-halved"></i></span><strong>Open Admin Panel</strong></button>
             <button class="menu-item logout-danger" type="button" onclick="Auth.logout()"><span class="menu-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
         </section>
 
