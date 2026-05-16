@@ -134,7 +134,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
             if (!Auth.check()) window.location.href = 'login.html';
-            Auth.applyRoleVisibility();
+            Auth.refreshSessionRole();
             ['qcBarcode','qcTemp','qcStage'].forEach(id => {
                 const el = document.getElementById(id);
                 const saved = localStorage.getItem(id);

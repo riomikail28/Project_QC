@@ -15,7 +15,9 @@ const ProfilePage = {
                 API.get('/profile/me'),
                 API.get('/profile/activity-summary'),
             ]);
-            this.renderIdentity(me.data || Auth.user() || {});
+            const user = me.data || Auth.user() || {};
+            Auth.persistUser(user);
+            this.renderIdentity(user);
             this.renderSummary(summary.data || {});
         } catch (error) {
             this.renderIdentity(Auth.user() || {});
@@ -29,8 +31,8 @@ const ProfilePage = {
     renderIdentity(user) {
         const displayName = user.full_name || user.name || user.username || 'Unknown user';
         const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'QC';
-        const role = String(user.role || Auth.role() || 'staff').toLowerCase();
-        const isAdmin = ['admin', 'super_admin'].includes(role);
+        const role = Auth.normalizeRole(user.role || Auth.role());
+        const isAdmin = Auth.canAccessAdmin(role);
 
         document.body.classList.toggle('admin-profile', isAdmin);
         this.text('displayUsername', displayName);
@@ -49,7 +51,7 @@ const ProfilePage = {
             roleEl.innerText = isAdmin ? role.toUpperCase() : 'STAFF';
             roleEl.className = 'role-pill ' + (isAdmin ? 'admin' : 'staff');
         }
-        Auth.applyRoleVisibility();
+        Auth.applyRoleVisibility(role);
     },
 
     renderSummary(data) {

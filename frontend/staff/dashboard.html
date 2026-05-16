@@ -456,7 +456,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
-            Auth.applyRoleVisibility();
+            Auth.refreshSessionRole();
             if (window.location.hash === '#admin' && Auth.isAdmin()) {
                 window.location.replace('/admin/');
                 return;

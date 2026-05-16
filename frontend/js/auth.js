@@ -41,7 +41,11 @@ const Auth = {
     user() {
         const user = localStorage.getItem('qc_user');
         if (user) {
-            return JSON.parse(user);
+            try {
+                return JSON.parse(user);
+            } catch (error) {
+                localStorage.removeItem('qc_user');
+            }
         }
 
         const token = localStorage.getItem('qc_token');
@@ -60,20 +64,55 @@ const Auth = {
 
     role() {
         const user = this.user() || {};
-        return String(user.role || localStorage.getItem('qc_role') || 'staff').toLowerCase();
+        return this.normalizeRole(user.role || localStorage.getItem('qc_role'));
+    },
+
+    normalizeRole(role) {
+        return String(role || 'staff').trim().toLowerCase();
     },
 
     isAdmin() {
         return ['admin', 'super_admin'].includes(this.role());
     },
 
-    applyRoleVisibility() {
-        const canAccessAdmin = this.isAdmin();
+    canAccessAdmin(role) {
+        return ['admin', 'super_admin'].includes(this.normalizeRole(role));
+    },
+
+    applyRoleVisibility(roleOverride) {
+        const canAccessAdmin = roleOverride === undefined ? this.isAdmin() : this.canAccessAdmin(roleOverride);
         document.querySelectorAll('[data-admin-only], #adminNavLink, #openAdminBtn').forEach(element => {
             element.hidden = !canAccessAdmin;
+            element.style.display = canAccessAdmin ? '' : 'none';
             element.setAttribute('aria-hidden', canAccessAdmin ? 'false' : 'true');
         });
+    },
+
+    persistUser(user) {
+        if (!user || typeof user !== 'object') return;
+        const current = this.user() || {};
+        const merged = { ...current, ...user };
+        localStorage.setItem('qc_user', JSON.stringify(merged));
+        localStorage.setItem('qc_role', this.normalizeRole(merged.role));
+    },
+
+    async refreshSessionRole() {
+        if (!this.check() || !window.API || typeof API.get !== 'function') {
+            this.applyRoleVisibility('staff');
+            return null;
+        }
+        this.applyRoleVisibility(this.role());
+        try {
+            const response = await API.get('/profile/me');
+            const user = response?.data || response || {};
+            this.persistUser(user);
+            this.applyRoleVisibility(user.role);
+            return user;
+        } catch (error) {
+            this.applyRoleVisibility(this.role());
+            return null;
+        }
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => Auth.applyRoleVisibility());
+document.addEventListener('DOMContentLoaded', () => Auth.refreshSessionRole());

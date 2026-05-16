@@ -81,3 +81,21 @@ def test_auth_supports_super_admin_and_role_visibility():
     assert "'staff'" in auth_js
     assert "super_admin" in auth_js
     assert "applyRoleVisibility" in auth_js
+    assert "refreshSessionRole" in auth_js
+    assert "API.get('/profile/me')" in auth_js
+    assert "element.hidden = !canAccessAdmin" in auth_js
+    assert "element.style.display = canAccessAdmin ? '' : 'none'" in auth_js
+
+
+def test_staff_pages_refresh_role_from_session():
+    for page_name in ["dashboard.html", "monitoring.html", "inspection.html"]:
+        html = (ROOT / "frontend" / "staff" / page_name).read_text(encoding="utf-8")
+        assert "Auth.refreshSessionRole()" in html
+
+
+def test_profile_applies_profile_role_not_stale_local_storage():
+    profile_js = (ROOT / "frontend" / "js" / "profile.js").read_text(encoding="utf-8")
+
+    assert "Auth.persistUser(user)" in profile_js
+    assert "Auth.applyRoleVisibility(role)" in profile_js
+    assert "Auth.canAccessAdmin(role)" in profile_js
