@@ -709,12 +709,12 @@ const adminApp = {
             let badgeClass = `status-badge status-${status}`;
 
             tr.innerHTML = `
-                <td>${new Date(batch.created_at).toLocaleString('id-ID')}</td>
-                <td><strong>${this.escapeHtml(batch.batch_code || batch.batch_id || batch.display_title || '-')}</strong></td>
-                <td>${batch.product_name || batch.product_id || '-'}</td>
-                <td>${batch.inspector_name || batch.staff_id || '-'}</td>
-                <td><span class="${badgeClass}">${status.toUpperCase()}</span></td>
-                <td>${this.renderEvidenceCell(batch)}</td>
+                <td data-label="Tanggal">${new Date(batch.created_at).toLocaleString('id-ID')}</td>
+                <td data-label="Batch"><strong>${this.escapeHtml(batch.batch_code || batch.batch_id || batch.display_title || '-')}</strong></td>
+                <td data-label="Produk">${batch.product_name || batch.product_id || '-'}</td>
+                <td data-label="Operator">${batch.inspector_name || batch.staff_id || '-'}</td>
+                <td data-label="Status QC"><span class="${badgeClass}">${status.toUpperCase()}</span></td>
+                <td data-label="Foto Evidence">${this.renderEvidenceCell(batch)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -834,11 +834,11 @@ const adminApp = {
         res.forEach(log => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${new Date(log.created_at).toLocaleString('id-ID')}</td>
-                <td>${log.staff_accounts?.username || 'System'}</td>
-                <td><span style="font-family:monospace; background:var(--bg-color); padding:2px 4px; border-radius:4px;">${log.action.toUpperCase()}</span></td>
-                <td>${log.entity_type} (${log.entity_id || '-'})</td>
-                <td style="font-size:0.8rem; color:var(--text-secondary);">${log.ip_address || '-'}</td>
+                <td data-label="Waktu">${new Date(log.created_at).toLocaleString('id-ID')}</td>
+                <td data-label="Actor">${log.staff_accounts?.username || 'System'}</td>
+                <td data-label="Action"><span style="font-family:monospace; background:var(--bg-color); padding:2px 4px; border-radius:4px;">${log.action.toUpperCase()}</span></td>
+                <td data-label="Entity">${log.entity_type} (${log.entity_id || '-'})</td>
+                <td data-label="IP" style="font-size:0.8rem; color:var(--text-secondary);">${log.ip_address || '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -859,11 +859,11 @@ const adminApp = {
         res.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${row.barcode_value || '-'}</strong></td>
-                <td>${row.batch_code || row.batch_id || '-'}</td>
-                <td>${row.product_name || row.product_id || '-'}</td>
-                <td>${row.staff_name || row.staff_id || '-'}</td>
-                <td>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
+                <td data-label="Barcode"><strong>${row.barcode_value || '-'}</strong></td>
+                <td data-label="Batch">${row.batch_code || row.batch_id || '-'}</td>
+                <td data-label="Product">${row.product_name || row.product_id || '-'}</td>
+                <td data-label="Staff">${row.staff_name || row.staff_id || '-'}</td>
+                <td data-label="Created">${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -884,11 +884,11 @@ const adminApp = {
             const evidenceUrls = (evidence || '').split(';').filter(u => u);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
-                <td><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
-                <td>${row.inspector_name || row.staff_id || '-'}</td>
-                <td>${evidence ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
-                <td>
+                <td data-label="Batch"><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
+                <td data-label="Status"><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
+                <td data-label="Inspector">${row.inspector_name || row.staff_id || '-'}</td>
+                <td data-label="Evidence">${evidence ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
+                <td data-label="Action">
                     <div>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</div>
                     <span class="row-actions">
                         <button class="btn-primary btn-sm" onclick="adminApp.resolveApproval('${row.id}', true)"><i data-lucide="check"></i> Approve</button>

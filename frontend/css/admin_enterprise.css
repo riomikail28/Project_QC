@@ -664,20 +664,25 @@ select {
     width: 100%;
   }
 
-  .daily-report-table,
-  .daily-report-table thead,
-  .daily-report-table tbody,
-  .daily-report-table tr,
-  .daily-report-table th,
-  .daily-report-table td {
+  .dashboard-section .card > div[style*="overflow-x"],
+  .daily-report-table-wrap {
+    overflow-x: visible !important;
+  }
+
+  .enterprise-table,
+  .enterprise-table thead,
+  .enterprise-table tbody,
+  .enterprise-table tr,
+  .enterprise-table th,
+  .enterprise-table td {
     display: block;
   }
 
-  .daily-report-table thead {
+  .enterprise-table thead {
     display: none;
   }
 
-  .daily-report-table tr {
+  .enterprise-table tr {
     margin-bottom: 12px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -685,16 +690,31 @@ select {
     overflow: hidden;
   }
 
-  .daily-report-table td {
+  .enterprise-table td {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 14px;
     border-bottom: 1px solid var(--border-color);
+    white-space: normal;
+    word-break: break-word;
   }
 
-  .daily-report-table td::before {
+  .enterprise-table td::before {
     content: attr(data-label);
     color: var(--text-secondary);
     font-weight: 700;
+    min-width: 92px;
+    flex: 0 0 38%;
+  }
+
+  .enterprise-table td:not([data-label])::before {
+    content: "";
+    display: none;
+  }
+
+  .enterprise-table td[colspan] {
+    display: block;
+    text-align: center;
   }
 }
