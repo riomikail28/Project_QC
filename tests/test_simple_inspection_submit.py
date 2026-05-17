@@ -13,7 +13,7 @@ def test_inspection_submit_manual_sku_without_notes_or_photo(client, staff_heade
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"sku_code": "SKU-MANUAL-1", "qc_status": "pass", "staff_id": "staff-1"},
+            data={"sku_code": "SKU-MANUAL-1", "qc_stage": "final_check", "qc_status": "pass", "staff_id": "staff-1"},
         )
 
     assert response.status_code == 200
@@ -46,6 +46,7 @@ def test_inspection_submit_with_photo_records_evidence(client, staff_headers):
             headers=staff_headers,
             data={
                 "sku_code": "SKU-MANUAL-2",
+                "qc_stage": "final_check",
                 "qc_status": "hold",
                 "staff_id": "staff-1",
                 "notes": "Label kurang jelas",

@@ -142,8 +142,22 @@ class AdminService:
         item = dict(row or {})
         item.setdefault("report_type", "qc_report")
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
-        item["photo_url"] = item.get("photo_url") or item.get("product_photo_url") or item.get("temperature_photo_url") or item.get("barcode_photo_url")
+        item["qc_stage"] = item.get("qc_stage") or item.get("ccp_stage")
+        item["staff_name"] = item.get("staff_name") or item.get("inspector_name") or item.get("staff_id")
+        item["photo_url"] = (
+            item.get("photo_url")
+            or item.get("cooking_photo_url")
+            or item.get("barcode_photo_url")
+            or item.get("label_photo_url")
+            or item.get("product_photo_url")
+            or item.get("temperature_photo_url")
+        )
         self.normalize_evidence_url(item)
+        for prefix in ("cooking", "barcode", "label"):
+            url_key = f"{prefix}_photo_url"
+            path_key = f"{prefix}_storage_path"
+            if not item.get(url_key) and item.get(path_key):
+                item[url_key] = self._signed_storage_url(item.get(path_key), item.get("bucket") or "qc-evidence") or self._public_storage_url(item.get(path_key), item.get("bucket") or "qc-evidence")
         return item
 
     def _normalize_qc_finding(self, row):
@@ -424,7 +438,7 @@ class AdminService:
             "temperature": row.get("temperature"),
             "status": row.get("status"),
             "approval_status": row.get("approval_status"),
-            "notes": row.get("notes"),
+            "notes": row.get("notes") or row.get("qc_stage") or row.get("ccp_stage"),
             "photo_url": row.get("photo_url") or row.get("product_photo_url"),
             "created_at": row.get("created_at"),
         }
@@ -598,6 +612,7 @@ class AdminService:
         item.setdefault("source", "qc_report")
         item.setdefault("approval_status", item.get("approval_status") or "pending")
         item.setdefault("status", item.get("status") or "pending")
+        item.setdefault("qc_stage", item.get("ccp_stage"))
         item.setdefault("inspector_name", item.get("inspector_name") or item.get("staff_name") or item.get("staff_id") or item.get("operator_id"))
         item.setdefault("product_photo_url", item.get("product_photo_url") or item.get("photo_url"))
         return item

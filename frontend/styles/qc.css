@@ -143,6 +143,45 @@
   gap: 8px;
 }
 
+.qc-stage-selector,
+.batch-choice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.qc-stage-option,
+.batch-choice {
+  min-height: 74px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,.92);
+  color: var(--text);
+  text-align: left;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.qc-stage-option span,
+.batch-choice span,
+.batch-choice small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qc-stage-option.active,
+.batch-choice.active {
+  border-color: rgba(37,99,235,.62);
+  background: rgba(239,246,255,.96);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+}
+
+.batch-new-btn {
+  min-height: 44px;
+  justify-content: center;
+}
+
 .qc-status-option {
   min-height: 56px;
   border: 1px solid var(--border);

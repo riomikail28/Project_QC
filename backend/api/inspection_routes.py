@@ -46,6 +46,17 @@ def active_batches():
     return _json(_service().active_batches(limit=limit))
 
 
+@inspection_bp.route("/batches/active", methods=["GET"])
+@require_auth
+def active_batches_for_sku():
+    _, error = _require_supabase()
+    if error:
+        return error
+    sku = request.args.get("sku") or request.args.get("barcode") or ""
+    limit = min(max(int(request.args.get("limit", 20)), 1), 100)
+    return _json(_service().active_batches_for_sku(sku=sku, limit=limit))
+
+
 @inspection_bp.route("/product-shortcuts", methods=["GET"])
 @require_auth
 def product_shortcuts():
@@ -75,6 +86,11 @@ def submit_qc():
         return error
     payload = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
     actor = getattr(g, "current_user", {}) or {}
-    files = request.files.getlist("photo") or request.files.getlist("evidence")
+    files = {
+        "photo": request.files.getlist("photo") or request.files.getlist("evidence"),
+        "cooking_photo": request.files.getlist("cooking_photo"),
+        "barcode_photo": request.files.getlist("barcode_photo"),
+        "label_photo": request.files.getlist("label_photo"),
+    }
     result = _service().submit_qc(payload, files=files, actor_id=actor.get("id") or actor.get("sub"))
     return _json(result, 200 if result.get("success") else 400)

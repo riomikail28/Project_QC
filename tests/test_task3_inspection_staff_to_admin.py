@@ -26,6 +26,7 @@ def test_task3_staff_submit_inspection_with_photo_admin_report_and_pending_appro
             headers=staff_headers,
             data={
                 "sku_code": "SKU-100",
+                "qc_stage": "final_check",
                 "qc_status": "hold",
                 "staff_id": "staff-1",
                 "photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 12), "photo.jpg"),

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from backend.database.supabase_client import direct_db_query, get_client
 from backend.services.audit_service import write_audit
@@ -92,6 +93,40 @@ class InspectionService:
         ]
         return self._ok(active)
 
+    def active_batches_for_sku(self, sku, limit=20):
+        sku = str(sku or "").strip()
+        if not sku:
+            return self._ok({"active_batches": []})
+        product = self._find_product(sku)
+        product_id = (product or {}).get("id")
+        product_name = (product or {}).get("product_name")
+        rows = self._fetch("production_batches", order_by="created_at", limit=500)
+        active_statuses = {"", "pending", "in_progress", "hold", "warning", "pending_review", "on_hold"}
+        candidates = []
+        for row in rows:
+            status = self._norm_status(row.get("status") or row.get("final_qc_status"))
+            if status not in active_statuses:
+                continue
+            values = {
+                str(row.get("batch_code") or "").lower(),
+                str(row.get("product_name") or "").lower(),
+                str(row.get("product_code") or "").lower(),
+                str(row.get("sku_code") or "").lower(),
+                str(row.get("barcode") or "").lower(),
+                str(row.get("product_id") or "").lower(),
+            }
+            if (
+                sku.lower() in values
+                or (product_id and str(product_id).lower() in values)
+                or (product_name and product_name.lower() in values)
+            ):
+                view = self._batch_view(row)
+                last = self._last_report_for_batch(row.get("id"), row.get("batch_code"))
+                view["last_stage"] = (last or {}).get("qc_stage") or (last or {}).get("ccp_stage")
+                view["last_status"] = (last or {}).get("status") or row.get("final_qc_status") or row.get("status")
+                candidates.append(view)
+        return self._ok({"active_batches": candidates[:limit]})
+
     def product_shortcuts(self, limit=8):
         rows = self._fetch("products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)])
         if not rows:
@@ -110,16 +145,19 @@ class InspectionService:
         return self._ok([self._log_view(row) for row in logs])
 
     def submit_qc(self, payload, files=None, actor_id=None):
-        files = files or []
+        files = files or {}
         staff_id = payload.get("staff_id") or actor_id
         barcode = str(payload.get("barcode") or payload.get("sku_code") or "").strip()
         sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
-        batch_code = str(payload.get("batch_code") or sku_code or "").strip()
+        batch_code = str(payload.get("batch_code") or "").strip()
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
-        if not sku_code and not batch_id:
+        if not sku_code:
             return self._fail("SKU atau barcode wajib diisi")
+        qc_stage = self._normalize_stage(payload.get("qc_stage") or payload.get("ccp_stage"))
+        if not qc_stage:
+            return self._fail("Jenis pengecekan wajib dipilih: cooking_check atau final_check")
         raw_status = payload.get("qc_status") or payload.get("status")
         if not raw_status:
             return self._fail("Status QC wajib diisi")
@@ -128,24 +166,59 @@ class InspectionService:
             qc_status = "fail"
         if qc_status not in {"pass", "hold", "fail"}:
             return self._fail("Status QC tidak valid")
-        if not batch_code:
-            batch_code = self._generated_batch_code()
+        temperature = payload.get("temperature")
+        if qc_stage == "cooking_check" and temperature in (None, ""):
+            return self._fail("Temperature is required for Cooking Check")
 
         product = self._find_product(sku_code)
         product_id = payload.get("product_id") or (product or {}).get("id")
         product_name = payload.get("product_name") or (product or {}).get("product_name") or sku_code or "Unknown Product"
+        if not batch_id:
+            active = self.active_batches_for_sku(sku_code, limit=1).get("data", {}).get("active_batches", [])
+            if active and not payload.get("force_new_batch"):
+                batch_id = active[0].get("id")
+                batch_code = batch_code or active[0].get("batch_code")
+        if not batch_code:
+            batch_code = self._generated_batch_code()
         batch_id = batch_id or self._ensure_batch(batch_code, product_id, product_name, staff_id)
 
         uploaded_files = []
-        photo_urls = [item for item in str(payload.get("photo_url") or "").split(";") if item]
-        storage_paths = [item for item in str(payload.get("storage_path") or "").split(";") if item]
         try:
-            for photo_file in files:
-                if photo_file and getattr(photo_file, "filename", ""):
-                    uploaded = upload_file_storage(photo_file, staff_id=staff_id, category="inspection", related_id=batch_id or batch_code)
-                    uploaded_files.append(uploaded)
-                    photo_urls.append(uploaded.url)
-                    storage_paths.append(uploaded.storage_path)
+            uploads = {
+                "generic": self._preuploaded(payload.get("photo_url"), payload.get("storage_path")),
+                "cooking": self._preuploaded(payload.get("cooking_photo_url"), payload.get("cooking_storage_path")),
+                "barcode": self._preuploaded(payload.get("barcode_photo_url"), payload.get("barcode_storage_path")),
+                "label": self._preuploaded(payload.get("label_photo_url"), payload.get("label_storage_path")),
+            }
+            file_map = self._file_map(files)
+            if qc_stage == "cooking_check":
+                for photo_file in file_map.get("cooking_photo") or file_map.get("photo") or []:
+                    uploaded = self._upload_if_present(photo_file, staff_id, "cooking", batch_id or batch_code)
+                    if uploaded:
+                        uploaded_files.append(("cooking", uploaded))
+                        uploads["cooking"]["urls"].append(uploaded.url)
+                        uploads["cooking"]["paths"].append(uploaded.storage_path)
+            elif qc_stage == "final_check":
+                for field_name, bucket_key in (("barcode_photo", "barcode"), ("label_photo", "label"), ("photo", "generic")):
+                    for photo_file in file_map.get(field_name) or []:
+                        uploaded = self._upload_if_present(photo_file, staff_id, bucket_key, batch_id or batch_code)
+                        if uploaded:
+                            uploaded_files.append((bucket_key, uploaded))
+                            uploads[bucket_key]["urls"].append(uploaded.url)
+                            uploads[bucket_key]["paths"].append(uploaded.storage_path)
+
+            cooking_url = self._join(uploads["cooking"]["urls"])
+            cooking_path = self._join(uploads["cooking"]["paths"])
+            barcode_url = self._join(uploads["barcode"]["urls"])
+            barcode_path = self._join(uploads["barcode"]["paths"])
+            label_url = self._join(uploads["label"]["urls"])
+            label_path = self._join(uploads["label"]["paths"])
+            generic_url = self._join(uploads["generic"]["urls"])
+            generic_path = self._join(uploads["generic"]["paths"])
+            photo_urls = [item for item in [cooking_url, barcode_url, label_url, generic_url] if item]
+            storage_paths = [item for item in [cooking_path, barcode_path, label_path, generic_path] if item]
+            photo_url = self._join(photo_urls)
+            storage_path = self._join(storage_paths)
 
             report_payload = {
                 "batch_id": batch_id,
@@ -157,21 +230,29 @@ class InspectionService:
                 "status": qc_status,
                 "approval_status": "pending",
                 "barcode": barcode or sku_code or None,
-                "ccp_stage": payload.get("ccp_stage") or "receiving",
-                "temperature": payload.get("temperature") or None,
+                "qc_stage": qc_stage,
+                "ccp_stage": qc_stage,
+                "temperature": temperature or None,
                 "notes": payload.get("notes") or None,
                 "inspection_result": {
                     "sku_code": sku_code,
                     "barcode": barcode or sku_code,
-                    "ccp_stage": payload.get("ccp_stage") or "receiving",
-                    "temperature": payload.get("temperature"),
+                    "qc_stage": qc_stage,
+                    "ccp_stage": qc_stage,
+                    "temperature": temperature,
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
                 },
-                "photo_url": ";".join(photo_urls) if photo_urls else None,
-                "storage_path": ";".join(storage_paths) if storage_paths else None,
-                "product_photo_url": ";".join(photo_urls) if photo_urls else None,
-                "product_storage_path": ";".join(storage_paths) if storage_paths else None,
+                "photo_url": photo_url,
+                "storage_path": storage_path,
+                "product_photo_url": photo_url,
+                "product_storage_path": storage_path,
+                "cooking_photo_url": cooking_url,
+                "cooking_storage_path": cooking_path,
+                "barcode_photo_url": barcode_url,
+                "barcode_storage_path": barcode_path,
+                "label_photo_url": label_url,
+                "label_storage_path": label_path,
             }
             report_payload = {key: value for key, value in report_payload.items() if value is not None}
             report = self._insert("qc_reports", report_payload)
@@ -189,7 +270,7 @@ class InspectionService:
                 }, required=False)
 
             report_id = report.get("id") if isinstance(report, dict) else None
-            for uploaded in uploaded_files:
+            for evidence_type, uploaded in uploaded_files:
                 self._insert("qc_evidence", {
                     "file_name": uploaded.file_name,
                     "file_type": uploaded.file_type,
@@ -201,6 +282,7 @@ class InspectionService:
                     "uploaded_by": staff_id,
                     "related_type": "qc_report",
                     "related_id": report_id or batch_id or batch_code,
+                    "metadata": {"qc_stage": qc_stage, "evidence_type": evidence_type},
                 }, required=False)
 
             if report_id:
@@ -212,6 +294,7 @@ class InspectionService:
                     "requester_id": staff_id,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }, required=False)
+            self._update_batch_status(batch_id, batch_code, report or report_payload)
 
             try:
                 write_audit("submit_inspection", "qc_report", str(report_id), after=report or report_payload)
@@ -220,23 +303,27 @@ class InspectionService:
                         "upload_inspection_photo",
                         "qc_report",
                         str(report_id),
-                        metadata={"storage_paths": [item.storage_path for item in uploaded_files]},
+                        metadata={"storage_paths": [item.storage_path for _, item in uploaded_files], "qc_stage": qc_stage},
                     )
             except Exception:
                 pass
             return self._ok({
                 "report_id": report_id,
+                "batch_id": batch_id,
+                "batch_code": batch_code,
+                "qc_stage": qc_stage,
+                "approval_status": "pending",
                 "photo_url": report_payload.get("photo_url"),
                 **(report or report_payload),
-            }, "QC report submitted")
+            }, "QC check submitted")
         except Exception as exc:
-            for uploaded in uploaded_files:
+            for _, uploaded in uploaded_files:
                 delete_photo(uploaded.storage_path)
             logger.exception("Submit QC failed: %s", exc)
             return self._fail(str(exc))
 
     def _generated_batch_code(self):
-        return f"QC-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+        return f"QC-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid4())[:8].upper()}"
 
     def _find_product(self, sku_code):
         if not sku_code:
@@ -258,6 +345,69 @@ class InspectionService:
         }
         batch = self._insert("production_batches", {k: v for k, v in payload.items() if v is not None}, required=False)
         return batch.get("id") if isinstance(batch, dict) else None
+
+    def _normalize_stage(self, value):
+        raw = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        aliases = {
+            "cooking": "cooking_check",
+            "cook": "cooking_check",
+            "cooking_check": "cooking_check",
+            "final": "final_check",
+            "final_check": "final_check",
+            "label": "final_check",
+            "barcode": "final_check",
+        }
+        return aliases.get(raw)
+
+    def _file_map(self, files):
+        if isinstance(files, dict):
+            return {key: [item for item in (value or []) if item] for key, value in files.items()}
+        return {"photo": [item for item in (files or []) if item]}
+
+    def _upload_if_present(self, photo_file, staff_id, category, related_id):
+        if not photo_file or not getattr(photo_file, "filename", ""):
+            return None
+        return upload_file_storage(photo_file, staff_id=staff_id, category=category, related_id=related_id)
+
+    def _preuploaded(self, urls, paths):
+        return {
+            "urls": [item for item in str(urls or "").split(";") if item],
+            "paths": [item for item in str(paths or "").split(";") if item],
+        }
+
+    def _join(self, values):
+        items = [item for item in values if item]
+        return ";".join(items) if items else None
+
+    def _last_report_for_batch(self, batch_id, batch_code):
+        filters = []
+        if batch_id:
+            filters.append(("eq", "batch_id", batch_id))
+        rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=filters) if filters else []
+        if not rows and batch_code:
+            rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=[("eq", "batch_code", batch_code)])
+        return rows[0] if rows else None
+
+    def _update_batch_status(self, batch_id, batch_code, current_report):
+        if not batch_id or not self.sb:
+            return
+        try:
+            reports = self._fetch("qc_reports", order_by="created_at", limit=100, filters=[("eq", "batch_id", batch_id)])
+            reports.append(current_report)
+            stages = {row.get("qc_stage") or row.get("ccp_stage"): self._norm_status(row.get("status")) for row in reports}
+            statuses = set(stages.values())
+            payload = {"updated_at": datetime.now(timezone.utc).isoformat()}
+            if "fail" in statuses:
+                payload.update({"status": "failed", "final_qc_status": "fail"})
+            elif "hold" in statuses:
+                payload.update({"status": "on_hold", "final_qc_status": "hold"})
+            elif stages.get("cooking_check") == "pass" and stages.get("final_check") == "pass":
+                payload.update({"status": "completed", "final_qc_status": "pass"})
+            else:
+                payload.update({"status": "in_progress", "final_qc_status": "pending"})
+            self.sb.table("production_batches").update(payload).eq("id", batch_id).execute()
+        except Exception:
+            logger.warning("Batch status update skipped for %s/%s", batch_id, batch_code, exc_info=True)
 
     def _insert(self, table, payload, required=True):
         if not self.sb:

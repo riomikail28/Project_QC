@@ -55,7 +55,7 @@ def test_staff_submit_inspection_persists_qc_report_and_barcode(client, staff_he
                 "barcode": "BATCH-001",
                 "batch_code": "BATCH-001",
                 "temperature": "4.2",
-                "ccp_stage": "Packing",
+                "qc_stage": "final_check",
                 "qc_status": "pass",
                 "staff_id": "staff-1",
             },
@@ -65,7 +65,7 @@ def test_staff_submit_inspection_persists_qc_report_and_barcode(client, staff_he
     body = response.get_json()
     assert body["success"] is True
     assert db.inserted["qc_reports"][0]["batch_code"] == "BATCH-001"
-    assert db.inserted["qc_reports"][0]["inspection_result"]["ccp_stage"] == "Packing"
+    assert db.inserted["qc_reports"][0]["inspection_result"]["qc_stage"] == "final_check"
     assert db.inserted["barcode_labels"][0]["barcode_value"] == "BATCH-001"
 
 
@@ -74,7 +74,7 @@ def test_staff_submit_inspection_requires_batch_identifier(client, staff_headers
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"temperature": "4.2", "qc_status": "pass", "staff_id": "staff-1"},
+            data={"temperature": "4.2", "qc_stage": "cooking_check", "qc_status": "pass", "staff_id": "staff-1"},
         )
 
     assert response.status_code == 400

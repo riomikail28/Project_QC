@@ -44,7 +44,7 @@ def test_submit_inspection_without_photo_succeeds(client, staff_headers):
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"barcode": "MANUAL-001", "ccp_stage": "receiving", "qc_status": "pass"},
+            data={"barcode": "MANUAL-001", "qc_stage": "final_check", "qc_status": "pass"},
         )
 
     body = response.get_json()
@@ -71,6 +71,7 @@ def test_submit_inspection_with_photo_succeeds(client, staff_headers):
             headers=staff_headers,
             data={
                 "barcode": "MANUAL-002",
+                "qc_stage": "final_check",
                 "qc_status": "pass",
                 "photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 10), "photo.jpg"),
             },

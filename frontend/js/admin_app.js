@@ -702,23 +702,62 @@ const adminApp = {
             return;
         }
 
-        res.data.forEach(batch => {
+        const grouped = this.groupQcReportsByBatch(res.data);
+        grouped.forEach(batch => {
             const tr = document.createElement('tr');
-            
-            const status = batch.status || batch.final_qc_status || 'pending';
+            const status = batch.overall_status || 'pending';
             let badgeClass = `status-badge status-${status}`;
+            const timeline = this.renderQcTimeline(batch.reports);
 
             tr.innerHTML = `
-                <td data-label="Tanggal">${new Date(batch.created_at).toLocaleString('id-ID')}</td>
-                <td data-label="Batch"><strong>${this.escapeHtml(batch.batch_code || batch.batch_id || batch.display_title || '-')}</strong></td>
-                <td data-label="Produk">${batch.product_name || batch.product_id || '-'}</td>
-                <td data-label="Operator">${batch.inspector_name || batch.staff_id || '-'}</td>
+                <td data-label="Tanggal">${batch.created_at ? new Date(batch.created_at).toLocaleString('id-ID') : '-'}</td>
+                <td data-label="Batch"><strong>${this.escapeHtml(batch.batch_code || '-')}</strong><div class="admin-muted">${timeline}</div></td>
+                <td data-label="Produk">${this.escapeHtml(batch.product_name || '-')}</td>
+                <td data-label="Operator">${this.escapeHtml(batch.staff_names || '-')}</td>
                 <td data-label="Status QC"><span class="${badgeClass}">${status.toUpperCase()}</span></td>
-                <td data-label="Foto Evidence">${this.renderEvidenceCell(batch)}</td>
+                <td data-label="Foto Evidence">${batch.reports.map(row => this.renderEvidenceCell(row)).join('')}</td>
             `;
             tbody.appendChild(tr);
         });
         this.refreshIcons();
+    },
+
+    groupQcReportsByBatch(rows) {
+        const map = new Map();
+        (rows || []).forEach(row => {
+            const key = row.batch_code || row.batch_id || row.id;
+            if (!map.has(key)) {
+                map.set(key, {
+                    batch_code: row.batch_code || row.batch_id || '-',
+                    product_name: row.product_name || row.product_id || '-',
+                    created_at: row.created_at,
+                    reports: [],
+                });
+            }
+            const group = map.get(key);
+            group.reports.push(row);
+            group.created_at = [group.created_at, row.created_at].filter(Boolean).sort().pop() || group.created_at;
+        });
+        return Array.from(map.values()).map(group => {
+            const statuses = new Set(group.reports.map(row => String(row.status || '').toLowerCase()));
+            group.overall_status = statuses.has('fail') ? 'fail' : statuses.has('hold') ? 'hold' : statuses.has('pass') ? 'pass' : 'pending';
+            group.staff_names = [...new Set(group.reports.map(row => row.staff_name || row.inspector_name || row.staff_id).filter(Boolean))].join(', ');
+            return group;
+        });
+    },
+
+    renderQcTimeline(reports) {
+        const stages = {
+            cooking_check: reports.find(row => (row.qc_stage || row.ccp_stage) === 'cooking_check'),
+            final_check: reports.find(row => (row.qc_stage || row.ccp_stage) === 'final_check'),
+        };
+        const cooking = stages.cooking_check
+            ? `Cooking Check: ${String(stages.cooking_check.status || '-').toUpperCase()}${stages.cooking_check.temperature ? `, ${stages.cooking_check.temperature} C` : ''}`
+            : 'Cooking Check belum dilakukan';
+        const final = stages.final_check
+            ? `Final Check: ${String(stages.final_check.status || '-').toUpperCase()}`
+            : 'Final Check belum dilakukan';
+        return `${this.escapeHtml(cooking)}<br>${this.escapeHtml(final)}`;
     },
 
     setupDailyReportDefaults() {
@@ -783,7 +822,7 @@ const adminApp = {
     },
 
     renderEvidenceCell(row) {
-        const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || '';
+        const evidence = row.cooking_photo_url || row.barcode_photo_url || row.label_photo_url || row.product_photo_url || row.temperature_photo_url || row.photo_url || '';
         const evidenceUrls = evidence.split(';').filter(Boolean);
         if (!evidenceUrls.length) return 'No photo';
 
