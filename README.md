@@ -100,3 +100,10 @@ Universitas Indraprasta PGRI (UNINDRA)
 ---
 
 ### "Transforming Quality Control Into Intelligent Digital Operations"
+
+<img width="545" height="777" alt="image" src="https://github.com/user-attachments/assets/460580fd-3322-478f-8dd8-64ea675bac64" />
+<img width="513" height="777" alt="image" src="https://github.com/user-attachments/assets/cc0dd10d-8d75-40f9-9ed8-3d292ddec72a" />
+<img width="507" height="775" alt="image" src="https://github.com/user-attachments/assets/d1d93d7a-dafa-4c0a-9a1f-0e495ae2ae46" />
+<img width="524" height="774" alt="image" src="https://github.com/user-attachments/assets/722fd36e-215e-4d8b-ab24-bf8eb812ed52" />
+<img width="508" height="764" alt="image" src="https://github.com/user-attachments/assets/75fbcdd2-0ab1-4437-9bcf-00f5e1f9b428" />
+
