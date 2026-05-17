@@ -93,7 +93,12 @@ def qc_reports():
 def audit_trail():
     limit = int(request.args.get("limit", 50))
     service = get_admin_service()
-    res = service.get_audit_trail(limit)
+    res = service.get_audit_trail(
+        limit=limit,
+        date=request.args.get("date"),
+        action=request.args.get("action"),
+        user=request.args.get("user") or request.args.get("staff") or request.args.get("staff_id"),
+    )
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error fetching audit trail")}), 500
@@ -124,11 +129,15 @@ def approvals():
 
 def _enveloped(res, ok_status=200):
     status = ok_status if res.get("success") else 500
-    return jsonify({
+    body = {
         "success": bool(res.get("success")),
         "data": res.get("data"),
         "message": res.get("message") or ("OK" if res.get("success") else res.get("detail", "Error")),
-    }), status
+    }
+    if not res.get("success"):
+        body["error"] = res.get("detail") or res.get("message")
+        body["error_code"] = res.get("error_code") or "ADMIN_API_ERROR"
+    return jsonify(body), status
 
 
 @admin_bp.before_request
@@ -196,6 +205,18 @@ def export_daily_report():
     staff_id = request.args.get("staff") or request.args.get("staff_id")
     status_filter = request.args.get("status")
     csv_body = get_admin_service().export_daily_report_csv(date=date, staff_id=staff_id, status_filter=status_filter)
+    try:
+        from backend.services.audit_service import write_audit
+        actor = getattr(g, "current_user", {}) or {}
+        write_audit(
+            "export_daily_report",
+            "daily_report",
+            date or "today",
+            metadata={"date": date, "staff_id": staff_id, "status": status_filter},
+            after={"exported_by": actor.get("id") or actor.get("sub")},
+        )
+    except Exception:
+        pass
     filename_date = date or "today"
     response = Response(csv_body, mimetype="text/csv")
     response.headers["Content-Disposition"] = f"attachment; filename=qc_daily_report_{filename_date}.csv"

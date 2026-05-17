@@ -262,7 +262,8 @@ const API = {
             data = { error: text || 'Invalid server response' };
         }
         if (!response.ok) {
-            const error = new Error(data.message || data.detail || data.error || 'Request failed');
+            const serverMessage = this._errorMessage(data, response);
+            const error = new Error(serverMessage);
             error.status = response.status;
             error.data = data;
             // Attempt refresh once on 401 before redirecting
@@ -291,5 +292,21 @@ const API = {
             throw error;
         }
         return data;
+    },
+
+    _errorMessage(data, response) {
+        const raw = data || {};
+        const message = raw.message || raw.detail || raw.error;
+        if (typeof message === 'string' && message.trim()) {
+            return message.trim();
+        }
+        if (raw.error_code) {
+            return `Request gagal (${raw.error_code})`;
+        }
+        if (response.status === 400) return 'Request tidak valid. Periksa data yang dikirim.';
+        if (response.status === 404) return 'Data tidak ditemukan atau sudah berubah.';
+        if (response.status === 409) return 'Data masih dipakai oleh relasi lain.';
+        if (response.status === 503) return 'Supabase belum terkoneksi atau environment production belum valid.';
+        return `Request gagal (${response.status} ${response.statusText || 'Error'})`;
     }
 };

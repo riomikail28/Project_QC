@@ -215,6 +215,13 @@ class InspectionService:
 
             try:
                 write_audit("submit_inspection", "qc_report", str(report_id), after=report or report_payload)
+                if uploaded_files:
+                    write_audit(
+                        "upload_inspection_photo",
+                        "qc_report",
+                        str(report_id),
+                        metadata={"storage_paths": [item.storage_path for item in uploaded_files]},
+                    )
             except Exception:
                 pass
             return self._ok({

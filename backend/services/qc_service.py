@@ -75,6 +75,13 @@ class QCService:
         try:
             if self.audit:
                 self.audit.write_audit("submit_finding", "qc_finding", str(finding.get("id") if isinstance(finding, dict) else None), after=finding)
+                if uploaded_files:
+                    self.audit.write_audit(
+                        "upload_finding_photo",
+                        "qc_finding",
+                        str(finding.get("id") if isinstance(finding, dict) else None),
+                        metadata={"storage_paths": [item.storage_path for item in uploaded_files]},
+                    )
         except Exception as e:
             logger.warning("Audit write skipped: %s", e)
 

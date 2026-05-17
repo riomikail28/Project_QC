@@ -161,7 +161,16 @@ const adminApp = {
             return await API.get(endpoint);
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
+            this.notify(error.message || 'Gagal memuat data admin');
             return null;
+        }
+    },
+
+    notify(message) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, 'error');
+        } else {
+            alert(message);
         }
     },
 
@@ -899,7 +908,7 @@ const adminApp = {
             await this.loadApprovals();
             await this.loadQCReports();
         } catch (error) {
-            alert(`Gagal update approval: ${error.message || 'Coba lagi'}`);
+            this.notify(`Gagal update approval: ${error.message || 'Coba lagi'}`);
         }
     },
 

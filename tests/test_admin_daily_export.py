@@ -71,7 +71,7 @@ def test_admin_daily_export_csv(client, admin_headers):
     assert response.mimetype == "text/csv"
     assert "qc_daily_report_2026-05-16.csv" in response.headers["Content-Disposition"]
     body = response.get_data(as_text=True)
-    assert "Date,Time,Type,Staff,Room,Device,SKU,Product,Temperature,Status,Approval,Notes,Photo URL" in body
+    assert "Date,Time,Report Type,Staff,Room,Device,SKU/Barcode,Product,Temperature,QC Status,Approval Status,Notes,Photo URL" in body
     assert "temperature" in body
     assert "inspection" in body
     assert "finding" in body

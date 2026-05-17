@@ -114,8 +114,15 @@ class MonitoringService:
                 raise
 
             log_data = inserted_rows[0] if inserted_rows else None
-            self.audit_writer("create", "facility_log", str(log_data.get("id")) if log_data else None, after=log_data or log_payload)
             log_id = log_data.get("id") if log_data else None
+            self.audit_writer("submit_temperature", "facility_log", str(log_id) if log_id else None, after=log_data or log_payload)
+            if uploaded_files:
+                self.audit_writer(
+                    "upload_temperature_photo",
+                    "facility_log",
+                    str(log_id) if log_id else None,
+                    metadata={"storage_paths": [item.storage_path for item in uploaded_files]},
+                )
             self._record_temperature_log(
                 room_name=room_name,
                 room_id=room_id,

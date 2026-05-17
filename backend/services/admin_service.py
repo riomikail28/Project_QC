@@ -51,29 +51,40 @@ class AdminService:
         if not self.sb:
             return self._empty([])
         try:
-            res = (
-                self.sb.table("temperature_logs")
-                .select("*")
-                .order("recorded_at", desc=True)
-                .limit(50)
-                .execute()
-            )
+            try:
+                res = (
+                    self.sb.table("facility_logs")
+                    .select("*, facility_rooms(name), facility_devices(name,type,device_type,threshold_temp)")
+                    .order("recorded_at", desc=True)
+                    .limit(50)
+                    .execute()
+                )
+            except Exception as exc:
+                logger.warning("Realtime facility_logs query failed, using temperature_logs: %s", exc)
+                res = (
+                    self.sb.table("temperature_logs")
+                    .select("*")
+                    .order("recorded_at", desc=True)
+                    .limit(50)
+                    .execute()
+                )
             latest = {}
             for row in res.data or []:
-                key = row.get("zone") or row.get("device_type") or row.get("id")
+                key = row.get("device_id") or row.get("zone") or row.get("device_type") or row.get("id")
                 latest.setdefault(key, row)
             devices = [
                 {
                     "id": row.get("id"),
-                    "name": row.get("zone") or row.get("device_type") or "Temperature Point",
-                    "type": row.get("device_type") or "ambient",
-                    "threshold_temp": row.get("threshold_c"),
-                    "facility_rooms": {"name": row.get("zone") or "QC Area"},
+                    "name": (row.get("facility_devices") or {}).get("name") or row.get("device_name") or row.get("zone") or row.get("device_type") or "Temperature Point",
+                    "type": (row.get("facility_devices") or {}).get("type") or (row.get("facility_devices") or {}).get("device_type") or row.get("device_type") or "ambient",
+                    "threshold_temp": row.get("threshold_c") or (row.get("facility_devices") or {}).get("threshold_temp"),
+                    "facility_rooms": {"name": (row.get("facility_rooms") or {}).get("name") or row.get("zone") or "QC Area"},
                     "latest_log": {
-                        "temperature_c": row.get("temperature_c"),
-                        "is_normal": not row.get("is_abnormal", False),
+                        "temperature_c": row.get("temperature_c") or row.get("temperature"),
+                        "humidity_rh": row.get("humidity_rh") or row.get("humidity"),
+                        "is_normal": row.get("is_normal", not row.get("is_abnormal", False)),
                         "recorded_at": row.get("recorded_at"),
-                        "photo_url": row.get("photo_url"),
+                        "photo_url": self.normalize_evidence_url(dict(row)).get("photo_url"),
                         "storage_path": row.get("storage_path"),
                         "notes": row.get("notes") or row.get("reason"),
                     },
@@ -194,11 +205,22 @@ class AdminService:
             logger.error("Approvals failed: %s", exc)
             return {"success": False, "detail": str(exc)}
 
-    def get_audit_trail(self, limit=50):
+    def get_audit_trail(self, limit=50, date=None, action=None, user=None):
         try:
-            rows = self._fetch("audit_logs", select="*, staff_accounts(username)", order_by="created_at", limit=limit)
+            filters = self._date_filters("created_at", date)
+            if action:
+                filters.append(("eq", "action", action))
+            if user:
+                filters.append(("eq", "actor_id", user))
+            rows = self._fetch("audit_logs", select="*, staff_accounts(username)", order_by="created_at", limit=limit, filters=filters)
             if not rows:
                 rows = self._audit_from_staff_submissions(limit)
+                if date:
+                    rows = [row for row in rows if str(row.get("created_at") or "").startswith(date)]
+                if action:
+                    rows = [row for row in rows if row.get("action") == action]
+                if user:
+                    rows = [row for row in rows if user in {row.get("actor_id"), row.get("staff_id")}]
             return self._empty(rows[:limit])
         except Exception as exc:
             logger.error("Audit trail failed: %s", exc)
@@ -277,11 +299,27 @@ class AdminService:
         )
         storage_path = record.get("storage_path") or record.get("product_storage_path") or record.get("temperature_storage_path") or record.get("barcode_storage_path")
         if not url and storage_path:
-            url = self._public_storage_url(storage_path, record.get("bucket") or "qc-evidence")
+            url = self._signed_storage_url(storage_path, record.get("bucket") or "qc-evidence") or self._public_storage_url(storage_path, record.get("bucket") or "qc-evidence")
         record["photo_url"] = url
         record["storage_path"] = storage_path
         record["has_photo"] = bool(url)
         return record
+
+    def _signed_storage_url(self, storage_path, bucket="qc-evidence"):
+        first_path = str(storage_path or "").split(";")[0].strip()
+        if not first_path or first_path.startswith(("http://", "https://")):
+            return first_path or None
+        try:
+            storage = getattr(self.sb, "storage", None)
+            if not storage or not hasattr(storage, "from_"):
+                return None
+            result = storage.from_(bucket).create_signed_url(first_path.lstrip("/"), 3600)
+            if isinstance(result, dict):
+                return result.get("signedURL") or result.get("signed_url") or result.get("url")
+            return getattr(result, "signed_url", None) or getattr(result, "signedURL", None) or getattr(result, "url", None)
+        except Exception as exc:
+            logger.warning("Signed evidence URL generation skipped: %s", exc)
+            return None
 
     def _public_storage_url(self, storage_path, bucket="qc-evidence"):
         first_path = str(storage_path or "").split(";")[0].strip()
@@ -300,6 +338,10 @@ class AdminService:
         inspection = self.get_inspection_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
         findings = self.get_findings_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
         evidence = self.get_evidence_report(limit=limit, date=date, staff_id=staff_id).get("data", [])
+        approval_filters = self._date_filters("created_at", date)
+        if staff_id:
+            approval_filters.append(("eq", "requested_by", staff_id))
+        approvals = self._fetch("approvals", order_by="created_at", limit=limit, filters=approval_filters)
         rows = []
         rows.extend(self._daily_temperature_row(row) for row in temperature)
         rows.extend(self._daily_inspection_row(row) for row in inspection)
@@ -312,7 +354,12 @@ class AdminService:
                 "inspection_reports": len(inspection),
                 "findings": len(findings),
                 "evidence": len(evidence),
-                "approvals_pending": len([row for row in inspection if str(row.get("approval_status") or "").lower() == "pending"]),
+                "approvals_pending": len([row for row in approvals if str(row.get("status") or "").lower() == "pending"])
+                or len([row for row in inspection if str(row.get("approval_status") or "").lower() == "pending"]),
+                "approvals_approved": len([row for row in approvals if str(row.get("status") or "").lower() == "approved"])
+                or len([row for row in inspection if str(row.get("approval_status") or "").lower() == "approved"]),
+                "approvals_rejected": len([row for row in approvals if str(row.get("status") or "").lower() == "rejected"])
+                or len([row for row in inspection if str(row.get("approval_status") or "").lower() == "rejected"]),
                 "temperature": len(temperature),
                 "inspection": len(inspection),
             },
@@ -328,23 +375,23 @@ class AdminService:
         data = report.get("data") or {}
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=[
-            "Date", "Time", "Type", "Staff", "Room", "Device", "SKU",
-            "Product", "Temperature", "Status", "Approval", "Notes", "Photo URL",
+            "Date", "Time", "Report Type", "Staff", "Room", "Device", "SKU/Barcode",
+            "Product", "Temperature", "QC Status", "Approval Status", "Notes", "Photo URL",
         ])
         writer.writeheader()
         for row in data.get("rows", []):
             writer.writerow({
                 "Date": data.get("date"),
                 "Time": str(row.get("created_at") or "")[11:19],
-                "Type": row.get("type"),
+                "Report Type": row.get("type"),
                 "Staff": row.get("staff"),
                 "Room": row.get("room"),
                 "Device": row.get("device"),
-                "SKU": row.get("sku"),
+                "SKU/Barcode": row.get("sku"),
                 "Product": row.get("product"),
                 "Temperature": row.get("temperature"),
-                "Status": row.get("status"),
-                "Approval": row.get("approval_status"),
+                "QC Status": row.get("status"),
+                "Approval Status": row.get("approval_status"),
                 "Notes": row.get("notes"),
                 "Photo URL": row.get("photo_url"),
             })
@@ -419,23 +466,36 @@ class AdminService:
 
     def approve_item(self, approval_id, actor_id=None, comment=None, approved=True):
         status = "approved" if approved else "rejected"
+        approved_at = datetime.now(timezone.utc).isoformat()
         payload = {
             "status": status,
             "approval_status": status,
             "approved_by": actor_id,
-            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_at": approved_at,
         }
         if not approved:
             payload["rejection_reason"] = comment or "Rejected by admin"
-        approval_rows = self._update_by_id("approvals", approval_id, {"status": status, "comment": comment, "approved_by": actor_id, "approved_at": payload["approved_at"]})
+        approval_update = {"status": status, "comment": comment, "approved_by": actor_id, "approved_at": approved_at}
+        if not approved:
+            approval_update["rejection_reason"] = comment or "Rejected by admin"
+        approval_rows = self._update_by_id("approvals", approval_id, approval_update)
         rows = approval_rows
         related_id = None
         if approval_rows:
             related_id = approval_rows[0].get("related_id") or approval_rows[0].get("report_id")
+        if not approval_rows:
+            existing = self._fetch("approvals", limit=1, filters=[("eq", "related_id", approval_id)])
+            if existing:
+                related_id = approval_id
+                rows = self._update_by_id("approvals", existing[0].get("id"), approval_update)
         if related_id:
-            self._update_by_id("qc_reports", related_id, payload)
-        if not rows:
-            rows = self._update_by_id("qc_reports", approval_id, payload)
+            report_rows = self._update_by_id("qc_reports", related_id, payload)
+            rows = report_rows or rows
+        if not related_id and not rows:
+            report_rows = self._update_by_id("qc_reports", approval_id, payload)
+            if report_rows:
+                related_id = approval_id
+                rows = report_rows
         if not rows:
             return self._fail("Approval item not found")
         try:
@@ -457,6 +517,8 @@ class AdminService:
     def _temperature_report_row(self, row):
         room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id")
         device = row.get("device_name") or row.get("device_type") or (row.get("facility_devices") or {}).get("name") or row.get("device_id")
+        raw_status = row.get("status")
+        normalized_status = str(raw_status).lower() if raw_status else ("pass" if row.get("is_normal", not row.get("is_abnormal", False)) else "fail")
         return self.normalize_evidence_url({
             "id": row.get("id"),
             "staff_id": row.get("staff_id") or row.get("created_by"),
@@ -465,8 +527,10 @@ class AdminService:
             "room": room,
             "device_id": row.get("device_id"),
             "device": device,
-            "temperature": row.get("temperature_c"),
-            "status": "pass" if row.get("is_normal", not row.get("is_abnormal", False)) else "fail",
+            "device_type": row.get("device_type") or (row.get("facility_devices") or {}).get("type") or (row.get("facility_devices") or {}).get("device_type"),
+            "temperature": row.get("temperature_c") or row.get("temperature"),
+            "humidity": row.get("humidity_rh") or row.get("humidity"),
+            "status": normalized_status,
             "photo_url": row.get("photo_url"),
             "storage_path": row.get("storage_path"),
             "notes": row.get("reason") or row.get("notes"),
