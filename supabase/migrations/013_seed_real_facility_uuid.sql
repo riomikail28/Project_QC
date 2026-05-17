@@ -21,6 +21,10 @@ on public.facility_rooms (slug);
 create unique index if not exists uq_facility_devices_room_slug_013
 on public.facility_devices (room_id, slug);
 
+update public.facility_devices
+set slug = lower(regexp_replace(coalesce(nullif(slug, ''), name), '[^a-zA-Z0-9]+', '-', 'g'))
+where slug is null or slug = '';
+
 with room_seed(name, slug, description) as (
   values
     ('PPIC', 'ppic', 'Default monitoring room'),
@@ -65,4 +69,12 @@ select
 from public.facility_rooms room
 cross join device_seed
 where room.slug in ('ppic', 'grouper', 'pack-basah', 'pack-kering', 'ruang-kopi', 'kitchen')
-on conflict (room_id, slug) do nothing;
+  and not exists (
+    select 1
+    from public.facility_devices existing
+    where existing.room_id = room.id
+      and (
+        existing.slug = device_seed.slug
+        or lower(existing.name) = lower(device_seed.name)
+      )
+  );
