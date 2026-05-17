@@ -31,7 +31,7 @@
         </div>
     </header>
 
-    <main class="app-shell page-grid simple-qc-page">
+    <main class="app-shell page-grid simple-qc-page inspection-page">
         <section class="qc-layout qc-layout-single">
             <div class="panel-card form-stack simple-qc-card">
                 <div class="section-header">
@@ -43,6 +43,7 @@
                 <div class="simple-field">
                     <label for="productSearch">Pilih Produk / SKU</label>
                     <input class="input-field input-large" id="productSearch" placeholder="Cari kode SKU atau nama produk" autocomplete="off">
+                    <p class="simple-qc-message product-search-help" id="productSearchHelp">Ketik minimal 2 huruf untuk mencari produk.</p>
                     <div class="product-picker-list" id="productPickerList"></div>
                     <button class="btn-secondary manual-sku-toggle" id="manualSkuToggle" type="button">Input SKU manual</button>
                     <div id="manualSkuWrap" hidden>
@@ -54,6 +55,7 @@
                 <div class="simple-field" id="activeBatchPanel" hidden>
                     <label>Batch Aktif</label>
                     <div id="activeBatchList" class="batch-choice-list"></div>
+                    <p class="simple-qc-message" id="activeBatchEmpty" hidden>Belum ada batch aktif. Batch baru akan dibuat saat submit.</p>
                     <button class="btn-secondary batch-new-btn" id="createNewBatchBtn" type="button">Buat Batch Baru Saat Submit</button>
                 </div>
                 <div class="simple-field">
@@ -61,11 +63,9 @@
                     <div class="qc-stage-selector" role="radiogroup" aria-label="Jenis Pengecekan">
                         <button class="qc-stage-option active" type="button" data-stage="cooking_check">
                             <strong>Cooking Check</strong>
-                            <span>Suhu masak + foto masakan/thermometer</span>
                         </button>
                         <button class="qc-stage-option" type="button" data-stage="final_check">
                             <strong>Final Check</strong>
-                            <span>Foto barcode + label cetak</span>
                         </button>
                     </div>
                 </div>
@@ -74,22 +74,28 @@
                     <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
                     <div class="upload-zone simple-upload" onclick="document.getElementById('cookingPhoto').click()">
                         <i class="fas fa-cloud-arrow-up"></i>
-                        <strong>Upload foto masakan / thermometer</strong>
+                        <strong>Foto Masakan / Thermometer</strong>
+                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
                         <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <div class="photo-preview" id="cookingPhotoPreview" hidden></div>
                         <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
                 </div>
                 <div class="simple-field" id="finalFields" hidden>
                     <div class="upload-zone simple-upload" onclick="document.getElementById('barcodePhoto').click()">
                         <i class="fas fa-barcode"></i>
-                        <strong>Upload foto barcode</strong>
+                        <strong>Foto Barcode</strong>
+                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
                         <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <div class="photo-preview" id="barcodePhotoPreview" hidden></div>
                         <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
                     <div class="upload-zone simple-upload" onclick="document.getElementById('labelPhoto').click()">
                         <i class="fas fa-tag"></i>
-                        <strong>Upload foto label cetak</strong>
+                        <strong>Foto Label Cetak</strong>
+                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
                         <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <div class="photo-preview" id="labelPhotoPreview" hidden></div>
                         <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
                 </div>
@@ -101,9 +107,12 @@
                         <button class="qc-status-option" type="button" data-status="fail">FAIL</button>
                     </div>
                 </div>
-                <div class="simple-field">
+                <div class="simple-field optional-notes">
+                    <button class="notes-toggle" id="notesToggle" type="button">+ Tambah catatan opsional</button>
+                    <div id="notesWrap" hidden>
                     <label for="qcNotes">Catatan opsional</label>
-                    <textarea class="input-field simple-notes" id="qcNotes" rows="4" placeholder="Contoh: kemasan penyok, warna tidak standar, atau catatan lain"></textarea>
+                    <textarea class="input-field simple-notes" id="qcNotes" rows="4" placeholder="Contoh: label buram, suhu kurang, kemasan rusak"></textarea>
+                    </div>
                 </div>
                 <button class="btn-primary simple-submit" id="submitQcBtn" type="button"><i class="fas fa-paper-plane"></i>Submit QC Check</button>
                 <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>

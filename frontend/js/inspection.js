@@ -16,23 +16,27 @@ const Inspection = {
         await this.loadProducts();
         this.bindProductSearch();
         this.bindManualSku();
+        this.bindNotesToggle();
         this.bindStatus();
         this.bindStage();
         this.bindSkuLookup();
         this.bindBatchNew();
+        this.bindCompletionState();
         this.bindPhotoValidation();
         this.bindSubmit();
         this.updateStageFields();
+        this.updateSubmitState();
     },
 
     async loadProducts() {
         try {
             const response = await API.get('/inspection/products');
             this.products = response?.data || [];
-            this.renderProductOptions(this.products.slice(0, 20));
+            this.renderProductPrompt('Ketik minimal 2 huruf untuk mencari produk.');
         } catch (error) {
             this.products = [];
             this.message('Gagal memuat daftar produk. Gunakan input SKU manual jika perlu.', true);
+            this.renderProductPrompt('Daftar produk belum tersedia. Gunakan input SKU manual jika perlu.');
         }
     },
 
@@ -43,12 +47,18 @@ const Inspection = {
             this.selectedProduct = null;
             this.updateSelectedProductCard();
             const query = input.value.trim().toLowerCase();
+            if (query.length < 2) {
+                this.renderProductPrompt('Ketik minimal 2 huruf untuk mencari produk.');
+                this.updateSubmitState();
+                return;
+            }
             const matches = this.products.filter(item => {
                 const code = String(item.product_code || '').toLowerCase();
                 const name = String(item.product_name || '').toLowerCase();
-                return !query || code.includes(query) || name.includes(query);
+                return code.includes(query) || name.includes(query);
             });
-            this.renderProductOptions(matches.slice(0, 30));
+            this.renderProductOptions(matches.slice(0, 5));
+            this.updateSubmitState();
         });
     },
 
@@ -69,6 +79,19 @@ const Inspection = {
             if (productMessage) productMessage.textContent = this.manualMode
                 ? 'Mode manual aktif. Batch baru akan dibuat saat submit jika tidak ada batch aktif.'
                 : 'Pilih produk untuk mencari batch aktif.';
+            this.renderProductPrompt(this.manualMode ? '' : 'Ketik minimal 2 huruf untuk mencari produk.');
+            this.updateSubmitState();
+        });
+    },
+
+    bindNotesToggle() {
+        const button = document.getElementById('notesToggle');
+        const wrap = document.getElementById('notesWrap');
+        if (!button || !wrap) return;
+        button.addEventListener('click', () => {
+            wrap.hidden = !wrap.hidden;
+            button.textContent = wrap.hidden ? '+ Tambah catatan opsional' : '- Sembunyikan catatan';
+            if (!wrap.hidden) document.getElementById('qcNotes')?.focus();
         });
     },
 
@@ -91,6 +114,7 @@ const Inspection = {
                     item.classList.toggle('active', item === button);
                 });
                 this.updateStageFields();
+                this.updateSubmitState();
             });
         });
     },
@@ -101,6 +125,7 @@ const Inspection = {
         let timer = null;
         input.addEventListener('input', () => {
             clearTimeout(timer);
+            this.updateSubmitState();
             timer = setTimeout(() => {
                 if (this.manualMode) this.lookupActiveBatches(input.value.trim());
             }, 400);
@@ -118,6 +143,13 @@ const Inspection = {
         });
     },
 
+    bindCompletionState() {
+        ['productSearch', 'qcSku', 'qcTemp'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.addEventListener('input', () => this.updateSubmitState());
+        });
+    },
+
     updateStageFields() {
         const cooking = document.getElementById('cookingFields');
         const final = document.getElementById('finalFields');
@@ -131,17 +163,19 @@ const Inspection = {
             if (!input) return;
             const zone = input.closest('.upload-zone');
             input.addEventListener('change', event => {
-                const file = (event.target.files || [])[0];
-                if (!file) return;
-                try {
-                    API.validatePhoto(file);
-                    zone.querySelector('span').textContent = file.name;
-                } catch (err) {
-                    this.message(err.message || 'Upload gagal', true);
-                    input.value = '';
-                    zone.querySelector('span').textContent = 'Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.';
-                }
-            });
+            const file = (event.target.files || [])[0];
+            if (!file) return;
+            try {
+                API.validatePhoto(file);
+                zone.querySelector('span').textContent = file.name;
+                this.renderPhotoPreview(id, file);
+            } catch (err) {
+                this.message(err.message || 'Upload gagal', true);
+                input.value = '';
+                zone.querySelector('span').textContent = 'Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.';
+                this.clearPhotoPreview(id);
+            }
+        });
         });
     },
 
@@ -207,6 +241,7 @@ const Inspection = {
             ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
                 const input = document.getElementById(id);
                 if (input) input.value = '';
+                this.clearPhotoPreview(id);
             });
             document.querySelectorAll('.upload-zone span').forEach(item => {
                 item.textContent = 'Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.';
@@ -217,6 +252,8 @@ const Inspection = {
             this.forceNewBatch = false;
             this.updateSelectedProductCard();
             this.renderActiveBatches([]);
+            this.renderProductPrompt('Ketik minimal 2 huruf untuk mencari produk.');
+            this.updateSubmitState();
             this.message('QC Check berhasil dikirim', false);
             if (typeof this.loadRecentSubmissions === 'function') this.loadRecentSubmissions();
         } catch (error) {
@@ -225,6 +262,16 @@ const Inspection = {
             button.disabled = false;
             button.innerHTML = original;
         }
+    },
+
+    updateSubmitState() {
+        const button = document.getElementById('submitQcBtn');
+        if (!button) return;
+        const manualSku = document.getElementById('qcSku')?.value?.trim();
+        const temperature = document.getElementById('qcTemp')?.value;
+        const hasProduct = Boolean(this.selectedProduct || manualSku);
+        const hasStageData = this.selectedStage !== 'cooking_check' || Boolean(temperature);
+        button.disabled = !(hasProduct && hasStageData);
     },
 
     message(text, isError = false) {
@@ -260,7 +307,7 @@ const Inspection = {
         const list = document.getElementById('productPickerList');
         if (!list) return;
         if (!products.length) {
-            list.innerHTML = '<div class="simple-qc-message">Tidak ada produk aktif. Gunakan input SKU manual.</div>';
+            list.innerHTML = '<div class="simple-qc-message product-empty-state">Produk tidak ditemukan. Gunakan input SKU manual jika perlu.</div>';
             return;
         }
         list.innerHTML = '';
@@ -277,6 +324,12 @@ const Inspection = {
         });
     },
 
+    renderProductPrompt(text) {
+        const list = document.getElementById('productPickerList');
+        if (!list) return;
+        list.innerHTML = text ? `<div class="simple-qc-message product-empty-state">${this.escapeHtml(text)}</div>` : '';
+    },
+
     selectProduct(product) {
         this.selectedProduct = product;
         this.manualMode = false;
@@ -291,7 +344,9 @@ const Inspection = {
         if (search) search.value = `${product.product_code || ''} - ${product.product_name || ''}`.trim();
         if (manualInput) manualInput.value = '';
         this.updateSelectedProductCard();
+        this.renderProductPrompt('');
         this.lookupActiveBatches(product.product_code);
+        this.updateSubmitState();
         document.querySelectorAll('.product-picker-option').forEach(item => {
             item.classList.toggle('active', item.textContent.includes(product.product_code || '__none__'));
         });
@@ -307,17 +362,33 @@ const Inspection = {
         }
         card.hidden = false;
         card.innerHTML = `
-            <strong>Produk terpilih:</strong>
-            <span>${this.escapeHtml(this.selectedProduct.product_name || '-')}</span>
-            <span>SKU: ${this.escapeHtml(this.selectedProduct.product_code || '-')}</span>
+            <div>
+                <small>Produk dipilih</small>
+                <strong>${this.escapeHtml(this.selectedProduct.product_code || '-')}</strong>
+                <span>${this.escapeHtml(this.selectedProduct.product_name || '-')}</span>
+            </div>
+            <button class="btn-secondary change-product-btn" type="button">Ganti Produk</button>
         `;
+        card.querySelector('.change-product-btn')?.addEventListener('click', () => {
+            this.selectedProduct = null;
+            this.selectedBatch = null;
+            this.forceNewBatch = false;
+            document.getElementById('productSearch')?.focus();
+            this.updateSelectedProductCard();
+            this.renderActiveBatches([]);
+            this.renderProductPrompt('Ketik minimal 2 huruf untuk mencari produk.');
+            this.updateSubmitState();
+        });
     },
 
     renderActiveBatches(batches) {
         const panel = document.getElementById('activeBatchPanel');
         const list = document.getElementById('activeBatchList');
+        const empty = document.getElementById('activeBatchEmpty');
         if (!panel || !list) return;
-        panel.hidden = !batches.length;
+        const hasContext = Boolean(this.selectedProduct || this.manualMode);
+        panel.hidden = !hasContext;
+        if (empty) empty.hidden = Boolean(batches.length);
         list.innerHTML = '';
         batches.forEach(batch => {
             const button = document.createElement('button');
@@ -325,8 +396,8 @@ const Inspection = {
             button.className = 'batch-choice';
             button.innerHTML = `
                 <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
-                <span>${this.escapeHtml(batch.product_name || '-')}</span>
-                <small>Stage terakhir: ${this.escapeHtml(batch.last_stage || '-')} | Status: ${this.escapeHtml(batch.last_status || '-')}</small>
+                <small>Tahap terakhir: ${this.stageLabel(batch.last_stage)} | Status: ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</small>
+                <span>Lanjutkan Batch</span>
             `;
             button.addEventListener('click', () => {
                 this.selectedBatch = batch;
@@ -337,6 +408,39 @@ const Inspection = {
             });
             list.appendChild(button);
         });
+    },
+
+    renderPhotoPreview(inputId, file) {
+        const preview = document.getElementById(`${inputId}Preview`);
+        if (!preview) return;
+        const url = URL.createObjectURL(file);
+        preview.hidden = false;
+        preview.innerHTML = `
+            <img src="${url}" alt="">
+            <span>${this.escapeHtml(file.name)}</span>
+            <button type="button" aria-label="Hapus foto">Hapus</button>
+        `;
+        preview.querySelector('button')?.addEventListener('click', event => {
+            event.stopPropagation();
+            const input = document.getElementById(inputId);
+            if (input) input.value = '';
+            this.clearPhotoPreview(inputId);
+            const zone = input?.closest('.upload-zone');
+            if (zone) zone.querySelector('span').textContent = 'Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.';
+        });
+    },
+
+    clearPhotoPreview(inputId) {
+        const preview = document.getElementById(`${inputId}Preview`);
+        if (!preview) return;
+        preview.hidden = true;
+        preview.innerHTML = '';
+    },
+
+    stageLabel(value) {
+        if (value === 'cooking_check') return 'Cooking Check';
+        if (value === 'final_check') return 'Final Check';
+        return this.escapeHtml(value || '-');
     },
 
     escapeHtml(value) {
