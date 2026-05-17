@@ -137,6 +137,10 @@ class InspectionService:
             "product_name": row.get("product_name") or "Unnamed product",
         } for row in rows])
 
+    def products(self, limit=1000):
+        rows = self._fetch("products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)])
+        return self._ok([self._product_picker_item(row) for row in rows])
+
     def recent_submissions(self, limit=10):
         reports = self._fetch("qc_reports", order_by="created_at", limit=limit)
         if reports:
@@ -170,9 +174,13 @@ class InspectionService:
         if qc_stage == "cooking_check" and temperature in (None, ""):
             return self._fail("Temperature is required for Cooking Check")
 
-        product = self._find_product(sku_code)
-        product_id = payload.get("product_id") or (product or {}).get("id")
-        product_name = payload.get("product_name") or (product or {}).get("product_name") or sku_code or "Unknown Product"
+        product = self._resolve_product(payload.get("product_id"), sku_code)
+        if payload.get("product_id") and not product:
+            return self._fail("Produk tidak ditemukan atau sudah nonaktif")
+        product_id = (product or {}).get("id")
+        sku_code = (product or {}).get("product_code") or (product or {}).get("sku_code") or sku_code
+        barcode = (product or {}).get("product_code") or barcode or sku_code
+        product_name = (product or {}).get("product_name") or payload.get("product_name") or "Manual SKU"
         if not batch_id:
             active = self.active_batches_for_sku(sku_code, limit=1).get("data", {}).get("active_batches", [])
             if active and not payload.get("force_new_batch"):
@@ -334,6 +342,24 @@ class InspectionService:
         if not rows:
             rows = self._fetch("products", limit=1, filters=[("eq", "barcode", sku_code)])
         return rows[0] if rows else None
+
+    def _resolve_product(self, product_id, sku_code):
+        product_id = str(product_id or "").strip()
+        if product_id:
+            rows = self._fetch("products", limit=1, filters=[("eq", "id", product_id)])
+            product = rows[0] if rows else None
+            if product and product.get("is_active") is not False:
+                return product
+            return None
+        return self._find_product(sku_code)
+
+    def _product_picker_item(self, row):
+        return {
+            "id": row.get("id"),
+            "product_code": row.get("product_code") or row.get("sku_code"),
+            "product_name": row.get("product_name"),
+            "is_active": row.get("is_active", True),
+        }
 
     def _ensure_batch(self, batch_code, product_id, product_name, staff_id):
         payload = {

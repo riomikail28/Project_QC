@@ -21,7 +21,7 @@ def test_inspection_submit_manual_sku_without_notes_or_photo(client, staff_heade
     assert body["success"] is True
     report = db.inserted["qc_reports"]
     assert report["barcode"] == "SKU-MANUAL-1"
-    assert report["product_name"] == "SKU-MANUAL-1"
+    assert report["product_name"] == "Manual SKU"
     assert report["status"] == "pass"
     assert report["approval_status"] == "pending"
     assert "notes" not in report

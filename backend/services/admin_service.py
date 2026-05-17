@@ -144,6 +144,7 @@ class AdminService:
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
         item["qc_stage"] = item.get("qc_stage") or item.get("ccp_stage")
         item["staff_name"] = item.get("staff_name") or item.get("inspector_name") or item.get("staff_id")
+        item["product_code"] = item.get("product_code") or item.get("sku_code") or item.get("barcode")
         item["photo_url"] = (
             item.get("photo_url")
             or item.get("cooking_photo_url")

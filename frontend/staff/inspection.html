@@ -41,9 +41,15 @@
                     </div>
                 </div>
                 <div class="simple-field">
-                    <label for="qcSku">SKU / Barcode</label>
-                    <input class="input-field input-large" id="qcSku" placeholder="Scan atau ketik SKU" autocomplete="off">
-                    <p class="simple-qc-message" id="productDetected">Isi SKU untuk mencari batch aktif.</p>
+                    <label for="productSearch">Pilih Produk / SKU</label>
+                    <input class="input-field input-large" id="productSearch" placeholder="Cari kode SKU atau nama produk" autocomplete="off">
+                    <div class="product-picker-list" id="productPickerList"></div>
+                    <button class="btn-secondary manual-sku-toggle" id="manualSkuToggle" type="button">Input SKU manual</button>
+                    <div id="manualSkuWrap" hidden>
+                        <input class="input-field" id="qcSku" placeholder="Masukkan SKU manual" autocomplete="off">
+                    </div>
+                    <div class="selected-product-card" id="selectedProductCard" hidden></div>
+                    <p class="simple-qc-message" id="productDetected">Pilih produk untuk mencari batch aktif.</p>
                 </div>
                 <div class="simple-field" id="activeBatchPanel" hidden>
                     <label>Batch Aktif</label>
@@ -124,7 +130,7 @@
             if (window.lucide) lucide.createIcons();
             if (!Auth.check()) window.location.href = 'login.html';
             Auth.refreshSessionRole();
-            ['qcSku','qcTemp','qcNotes'].forEach(id => {
+            ['productSearch','qcSku','qcTemp','qcNotes'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 const saved = localStorage.getItem(id);

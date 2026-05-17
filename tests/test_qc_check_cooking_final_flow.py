@@ -66,7 +66,7 @@ class FlowQuery:
 class FlowDb:
     def __init__(self):
         self.fixtures = {
-            "products": [{"id": "product-1", "product_code": "SKU-CK", "product_name": "Chicken Katsu"}],
+            "products": [{"id": "product-1", "product_code": "SKU-CK", "product_name": "Chicken Katsu", "is_active": True}],
             "production_batches": [{
                 "id": "batch-1",
                 "batch_code": "QC-20260517-001",
@@ -195,8 +195,8 @@ def test_staff_b_can_submit_final_check_on_same_batch_without_overwriting_cookin
 def test_admin_report_contains_cooking_and_final_stages(client, admin_headers):
     db = FlowDb()
     db.fixtures["qc_reports"] = [
-        {"id": "r1", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "product_name": "Chicken Katsu", "qc_stage": "cooking_check", "status": "pass", "temperature": 82, "created_at": "2026-05-17T03:00:00Z"},
-        {"id": "r2", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "product_name": "Chicken Katsu", "qc_stage": "final_check", "status": "pass", "created_at": "2026-05-17T06:00:00Z"},
+        {"id": "r1", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "barcode": "SKU-CK", "product_name": "Chicken Katsu", "qc_stage": "cooking_check", "status": "pass", "temperature": 82, "created_at": "2026-05-17T03:00:00Z"},
+        {"id": "r2", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "barcode": "SKU-CK", "product_name": "Chicken Katsu", "qc_stage": "final_check", "status": "pass", "created_at": "2026-05-17T06:00:00Z"},
     ]
 
     with patch("backend.services.admin_service.get_client", return_value=db):

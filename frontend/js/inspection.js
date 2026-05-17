@@ -7,9 +7,15 @@ const Inspection = {
     selectedStatus: 'pass',
     selectedStage: 'cooking_check',
     selectedBatch: null,
+    products: [],
+    selectedProduct: null,
+    manualMode: false,
     forceNewBatch: false,
 
     async init() {
+        await this.loadProducts();
+        this.bindProductSearch();
+        this.bindManualSku();
         this.bindStatus();
         this.bindStage();
         this.bindSkuLookup();
@@ -17,6 +23,53 @@ const Inspection = {
         this.bindPhotoValidation();
         this.bindSubmit();
         this.updateStageFields();
+    },
+
+    async loadProducts() {
+        try {
+            const response = await API.get('/inspection/products');
+            this.products = response?.data || [];
+            this.renderProductOptions(this.products.slice(0, 20));
+        } catch (error) {
+            this.products = [];
+            this.message('Gagal memuat daftar produk. Gunakan input SKU manual jika perlu.', true);
+        }
+    },
+
+    bindProductSearch() {
+        const input = document.getElementById('productSearch');
+        if (!input) return;
+        input.addEventListener('input', () => {
+            this.selectedProduct = null;
+            this.updateSelectedProductCard();
+            const query = input.value.trim().toLowerCase();
+            const matches = this.products.filter(item => {
+                const code = String(item.product_code || '').toLowerCase();
+                const name = String(item.product_name || '').toLowerCase();
+                return !query || code.includes(query) || name.includes(query);
+            });
+            this.renderProductOptions(matches.slice(0, 30));
+        });
+    },
+
+    bindManualSku() {
+        const button = document.getElementById('manualSkuToggle');
+        if (!button) return;
+        button.addEventListener('click', () => {
+            this.manualMode = !this.manualMode;
+            this.selectedProduct = null;
+            this.selectedBatch = null;
+            this.forceNewBatch = false;
+            const wrap = document.getElementById('manualSkuWrap');
+            if (wrap) wrap.hidden = !this.manualMode;
+            button.textContent = this.manualMode ? 'Pilih dari daftar produk' : 'Input SKU manual';
+            this.updateSelectedProductCard();
+            this.renderActiveBatches([]);
+            const productMessage = document.getElementById('productDetected');
+            if (productMessage) productMessage.textContent = this.manualMode
+                ? 'Mode manual aktif. Batch baru akan dibuat saat submit jika tidak ada batch aktif.'
+                : 'Pilih produk untuk mencari batch aktif.';
+        });
     },
 
     bindStatus() {
@@ -48,9 +101,10 @@ const Inspection = {
         let timer = null;
         input.addEventListener('input', () => {
             clearTimeout(timer);
-            timer = setTimeout(() => this.lookupActiveBatches(input.value.trim()), 400);
+            timer = setTimeout(() => {
+                if (this.manualMode) this.lookupActiveBatches(input.value.trim());
+            }, 400);
         });
-        if (input.value.trim()) this.lookupActiveBatches(input.value.trim());
     },
 
     bindBatchNew() {
@@ -99,14 +153,15 @@ const Inspection = {
 
     async submitQc(button) {
         const original = button.innerHTML;
-        const sku = document.getElementById('qcSku')?.value?.trim();
+        const manualSku = document.getElementById('qcSku')?.value?.trim();
+        const sku = this.selectedProduct?.product_code || manualSku;
         const notes = document.getElementById('qcNotes')?.value?.trim();
         const temperature = document.getElementById('qcTemp')?.value;
         const cookingPhoto = (document.getElementById('cookingPhoto')?.files || [])[0];
         const barcodePhoto = (document.getElementById('barcodePhoto')?.files || [])[0];
         const labelPhoto = (document.getElementById('labelPhoto')?.files || [])[0];
-        if (!sku) {
-            this.message('SKU atau barcode wajib diisi.', true);
+        if (!this.selectedProduct && !manualSku) {
+            this.message('Pilih produk atau masukkan SKU manual terlebih dahulu', true);
             return;
         }
         if (this.selectedStage === 'cooking_check' && !temperature) {
@@ -122,6 +177,8 @@ const Inspection = {
 
         const user = Auth.user() || {};
         const formData = new FormData();
+        if (this.selectedProduct?.id) formData.append('product_id', this.selectedProduct.id);
+        formData.append('product_name', this.selectedProduct?.product_name || 'Manual SKU');
         formData.append('sku_code', sku);
         formData.append('barcode', sku);
         formData.append('qc_stage', this.selectedStage);
@@ -142,7 +199,7 @@ const Inspection = {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Menyimpan...';
             const response = await API.upload('/inspection/submit', formData);
             if (!response.success) throw new Error(response.message || response.error || 'Submit gagal');
-            ['qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
+            ['productSearch', 'qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
                 localStorage.removeItem(id);
                 const el = document.getElementById(id);
                 if (el) el.value = '';
@@ -155,7 +212,10 @@ const Inspection = {
                 item.textContent = 'Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.';
             });
             this.selectedBatch = null;
+            this.selectedProduct = null;
+            this.manualMode = false;
             this.forceNewBatch = false;
+            this.updateSelectedProductCard();
             this.renderActiveBatches([]);
             this.message('QC Check berhasil dikirim', false);
             if (typeof this.loadRecentSubmissions === 'function') this.loadRecentSubmissions();
@@ -194,6 +254,63 @@ const Inspection = {
             if (productEl) productEl.textContent = 'Gagal mengecek batch aktif. Tetap bisa submit sebagai batch baru.';
             this.renderActiveBatches([]);
         }
+    },
+
+    renderProductOptions(products) {
+        const list = document.getElementById('productPickerList');
+        if (!list) return;
+        if (!products.length) {
+            list.innerHTML = '<div class="simple-qc-message">Tidak ada produk aktif. Gunakan input SKU manual.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        products.forEach(product => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'product-picker-option';
+            button.innerHTML = `
+                <strong>${this.escapeHtml(product.product_code || '-')}</strong>
+                <span>${this.escapeHtml(product.product_name || '-')}</span>
+            `;
+            button.addEventListener('click', () => this.selectProduct(product));
+            list.appendChild(button);
+        });
+    },
+
+    selectProduct(product) {
+        this.selectedProduct = product;
+        this.manualMode = false;
+        this.selectedBatch = null;
+        this.forceNewBatch = false;
+        const manualWrap = document.getElementById('manualSkuWrap');
+        const manualButton = document.getElementById('manualSkuToggle');
+        const search = document.getElementById('productSearch');
+        const manualInput = document.getElementById('qcSku');
+        if (manualWrap) manualWrap.hidden = true;
+        if (manualButton) manualButton.textContent = 'Input SKU manual';
+        if (search) search.value = `${product.product_code || ''} - ${product.product_name || ''}`.trim();
+        if (manualInput) manualInput.value = '';
+        this.updateSelectedProductCard();
+        this.lookupActiveBatches(product.product_code);
+        document.querySelectorAll('.product-picker-option').forEach(item => {
+            item.classList.toggle('active', item.textContent.includes(product.product_code || '__none__'));
+        });
+    },
+
+    updateSelectedProductCard() {
+        const card = document.getElementById('selectedProductCard');
+        if (!card) return;
+        if (!this.selectedProduct) {
+            card.hidden = true;
+            card.innerHTML = '';
+            return;
+        }
+        card.hidden = false;
+        card.innerHTML = `
+            <strong>Produk terpilih:</strong>
+            <span>${this.escapeHtml(this.selectedProduct.product_name || '-')}</span>
+            <span>SKU: ${this.escapeHtml(this.selectedProduct.product_code || '-')}</span>
+        `;
     },
 
     renderActiveBatches(batches) {

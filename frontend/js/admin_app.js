@@ -712,7 +712,7 @@ const adminApp = {
             tr.innerHTML = `
                 <td data-label="Tanggal">${batch.created_at ? new Date(batch.created_at).toLocaleString('id-ID') : '-'}</td>
                 <td data-label="Batch"><strong>${this.escapeHtml(batch.batch_code || '-')}</strong><div class="admin-muted">${timeline}</div></td>
-                <td data-label="Produk">${this.escapeHtml(batch.product_name || '-')}</td>
+                <td data-label="Produk">${this.escapeHtml(batch.product_code || '-')}<br>${this.escapeHtml(batch.product_name || '-')}</td>
                 <td data-label="Operator">${this.escapeHtml(batch.staff_names || '-')}</td>
                 <td data-label="Status QC"><span class="${badgeClass}">${status.toUpperCase()}</span></td>
                 <td data-label="Foto Evidence">${batch.reports.map(row => this.renderEvidenceCell(row)).join('')}</td>
@@ -730,6 +730,7 @@ const adminApp = {
                 map.set(key, {
                     batch_code: row.batch_code || row.batch_id || '-',
                     product_name: row.product_name || row.product_id || '-',
+                    product_code: row.product_code || row.sku_code || row.barcode || '-',
                     created_at: row.created_at,
                     reports: [],
                 });
@@ -737,6 +738,9 @@ const adminApp = {
             const group = map.get(key);
             group.reports.push(row);
             group.created_at = [group.created_at, row.created_at].filter(Boolean).sort().pop() || group.created_at;
+            if ((!group.product_code || group.product_code === '-') && (row.product_code || row.sku_code || row.barcode)) {
+                group.product_code = row.product_code || row.sku_code || row.barcode;
+            }
         });
         return Array.from(map.values()).map(group => {
             const statuses = new Set(group.reports.map(row => String(row.status || '').toLowerCase()));

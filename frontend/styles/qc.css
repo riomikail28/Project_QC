@@ -144,13 +144,16 @@
 }
 
 .qc-stage-selector,
-.batch-choice-list {
+.batch-choice-list,
+.product-picker-list {
   display: grid;
   gap: 10px;
 }
 
 .qc-stage-option,
-.batch-choice {
+.batch-choice,
+.product-picker-option,
+.selected-product-card {
   min-height: 74px;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -164,19 +167,32 @@
 
 .qc-stage-option span,
 .batch-choice span,
-.batch-choice small {
+.batch-choice small,
+.product-picker-option span,
+.selected-product-card span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
 }
 
 .qc-stage-option.active,
-.batch-choice.active {
+.batch-choice.active,
+.product-picker-option.active {
   border-color: rgba(37,99,235,.62);
   background: rgba(239,246,255,.96);
   box-shadow: 0 0 0 3px rgba(37,99,235,.10);
 }
 
+.product-picker-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.product-picker-option {
+  min-height: 60px;
+}
+
+.manual-sku-toggle,
 .batch-new-btn {
   min-height: 44px;
   justify-content: center;

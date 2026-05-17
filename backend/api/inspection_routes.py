@@ -67,6 +67,15 @@ def product_shortcuts():
     return _json(_service().product_shortcuts(limit=limit))
 
 
+@inspection_bp.route("/products", methods=["GET"])
+@require_auth
+def products():
+    _, error = _require_supabase()
+    if error:
+        return error
+    return _json(_service().products())
+
+
 @inspection_bp.route("/recent-submissions", methods=["GET"])
 @require_auth
 def recent_submissions():
