@@ -7,8 +7,9 @@ Handles batch CRUD, QC scoring, and dashboard analytics.
 Supabase tables: production_batches, production_batch_logs, products
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 import logging
+from datetime import datetime
 
 from backend.services.batch_service import (
     determine_batch_status,
@@ -120,10 +121,7 @@ def create_new_batch():
     data = validate_model(BatchCreateRequest, request_payload())
 
     product_id = data.product_id
-    batch_code = data.batch_code
-
-    if not batch_code:
-        return jsonify({"success": False, "message": "Field batch_code is required"}), 400
+    batch_code = data.batch_code or f"QC-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
     try:
         uploaded = None
@@ -147,6 +145,11 @@ def create_new_batch():
                 qc_officer_id=data.qc_officer_id,
                 photo_url=photo_url,
                 storage_path=storage_path,
+                ph_value=data.ph_value,
+                brix_value=data.brix_value,
+                tds_value=data.tds_value,
+                parameter_notes=data.notes,
+                parameter_checked_by=data.operator_id or (getattr(g, "current_user", {}) or {}).get("id"),
             )
         except Exception:
             if uploaded:
@@ -156,7 +159,24 @@ def create_new_batch():
             if uploaded:
                 delete_photo(uploaded.storage_path)
             return jsonify({"success": False, "message": batch["error"], "db_detail": batch.get("db_detail")}), 503
-        write_audit("create", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
+        write_audit("create_batch", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
+        if any(value is not None for value in (data.ph_value, data.brix_value, data.tds_value)):
+            write_audit(
+                "batch_parameter_check",
+                "production_batch",
+                str(batch.get("id")) if isinstance(batch, dict) else None,
+                metadata={
+                    "product_id": product_id,
+                    "batch_code": batch_code,
+                    "ph_value": data.ph_value,
+                    "ph_status": (batch or {}).get("ph_status"),
+                    "brix_value": data.brix_value,
+                    "brix_status": (batch or {}).get("brix_status"),
+                    "tds_value": data.tds_value,
+                    "tds_status": (batch or {}).get("tds_status"),
+                },
+                after=batch,
+            )
 
         return jsonify({
             "success": True,

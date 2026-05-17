@@ -31,3 +31,36 @@
 .new-batch-submit {
     margin-top: 12px;
 }
+
+.optional-parameter-card {
+    display: grid;
+    gap: 14px;
+    margin-top: 8px;
+    padding: 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    background: rgba(255,255,255,.86);
+}
+
+.optional-parameter-card h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+}
+
+.optional-parameter-card p,
+.parameter-standard {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.parameter-grid {
+    display: grid;
+    gap: 12px;
+}
+
+@media (min-width: 720px) {
+    .parameter-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}

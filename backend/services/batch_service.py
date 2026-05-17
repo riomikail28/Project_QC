@@ -6,7 +6,7 @@ Handles batch creation, status determination, and QC scoring.
 """
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from uuid import UUID
 from backend.database.supabase_client import direct_db_query, get_client, get_last_db_error
 
@@ -120,6 +120,11 @@ def create_batch(
     qc_officer_id: str = None,
     photo_url: str = None,
     storage_path: str = None,
+    ph_value: float | None = None,
+    brix_value: float | None = None,
+    tds_value: float | None = None,
+    parameter_notes: str | None = None,
+    parameter_checked_by: str | None = None,
 ) -> dict:
     """Create a new production batch record in Supabase.
 
@@ -129,19 +134,35 @@ def create_batch(
 
     resolved_product_id = product_id
     resolved_product_name = product_name
+    product_row = None
+    if sb and product_id and _looks_like_uuid(product_id):
+        try:
+            product_res = (
+                sb.table("products")
+                .select("id, product_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
+                .eq("id", product_id)
+                .limit(1)
+                .execute()
+            )
+            if product_res.data:
+                product_row = product_res.data[0]
+                resolved_product_name = resolved_product_name or product_row.get("product_name")
+        except Exception as e:
+            logger.warning("Could not resolve product id: %s", e)
     if sb and product_id and not _looks_like_uuid(product_id):
         for code_column in ("product_code", "sku_code"):
             try:
                 product_res = (
                     sb.table("products")
-                    .select("id, product_name")
+                    .select("id, product_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
                     .eq(code_column, product_id)
                     .limit(1)
                     .execute()
                 )
                 if product_res.data:
-                    resolved_product_id = product_res.data[0]["id"]
-                    resolved_product_name = resolved_product_name or product_res.data[0].get("product_name")
+                    product_row = product_res.data[0]
+                    resolved_product_id = product_row["id"]
+                    resolved_product_name = resolved_product_name or product_row.get("product_name")
                     break
             except Exception as e:
                 logger.warning("Could not resolve product code via %s: %s", code_column, e)
@@ -150,9 +171,11 @@ def create_batch(
         resolved_product_id = None
     if not resolved_product_id:
         default_product = _ensure_default_product(sb)
+        product_row = default_product
         resolved_product_id = default_product.get("id") if default_product else None
         resolved_product_name = resolved_product_name or (default_product or {}).get("product_name") or "General QC Product"
 
+    parameter_status = _parameter_statuses(product_row or {}, ph_value, brix_value, tds_value)
     payload = {
         "product_id": resolved_product_id,
         "product_name": resolved_product_name,
@@ -161,6 +184,17 @@ def create_batch(
         "expired_date": expired_date,
         "status": "in_progress",
         "created_by": operator_id,
+        "ph_value": ph_value,
+        "brix_value": brix_value,
+        "tds_value": tds_value,
+        "ph_status": parameter_status["ph_status"],
+        "brix_status": parameter_status["brix_status"],
+        "tds_status": parameter_status["tds_status"],
+        "parameter_notes": parameter_notes,
+        "parameter_checked_by": parameter_checked_by or operator_id,
+        "parameter_checked_at": datetime.now(timezone.utc).isoformat()
+        if any(value is not None for value in (ph_value, brix_value, tds_value))
+        else None,
     }
     payload = {key: value for key, value in payload.items() if value not in (None, "")}
     if shift:
@@ -224,6 +258,24 @@ def _ensure_default_product(sb=None) -> dict | None:
     except Exception as exc:
         logger.error("Failed to ensure default product GENERAL-QC: %s", exc)
         return None
+
+
+def _parameter_statuses(product: dict, ph_value, brix_value, tds_value) -> dict:
+    return {
+        "ph_status": _parameter_status(ph_value, product.get("ph_min"), product.get("ph_max")),
+        "brix_status": _parameter_status(brix_value, product.get("brix_min"), product.get("brix_max")),
+        "tds_status": _parameter_status(tds_value, product.get("tds_min"), product.get("tds_max")),
+    }
+
+
+def _parameter_status(value, min_value, max_value) -> str:
+    if value is None:
+        return "not_checked"
+    if min_value not in (None, "") and value < float(min_value):
+        return "warning"
+    if max_value not in (None, "") and value > float(max_value):
+        return "warning"
+    return "pass"
 
 
 def get_daily_summary(day: str = None) -> dict:

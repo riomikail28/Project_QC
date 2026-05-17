@@ -25,7 +25,7 @@ class LoginRequest:
 
 @dataclass
 class BatchCreateRequest:
-    batch_code: str
+    batch_code: str | None = None
     product_id: str | None = None
     product_name: str | None = None
     production_date: str | None = None
@@ -33,6 +33,10 @@ class BatchCreateRequest:
     shift: str | None = None
     operator_id: str | None = None
     qc_officer_id: str | None = None
+    ph_value: float | None = None
+    brix_value: float | None = None
+    tds_value: float | None = None
+    notes: str | None = None
 
 
 @dataclass
@@ -122,7 +126,7 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
         )
     if model is BatchCreateRequest:
         return BatchCreateRequest(
-            batch_code=_required(data, "batch_code", 80),
+            batch_code=_optional_str(data, "batch_code", 80),
             product_id=_optional_str(data, "product_id", 120),
             product_name=_optional_str(data, "product_name", 160),
             production_date=_optional_str(data, "production_date", 20),
@@ -130,6 +134,10 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             shift=_optional_str(data, "shift", 40),
             operator_id=_optional_str(data, "operator_id", 80),
             qc_officer_id=_optional_str(data, "qc_officer_id", 80),
+            ph_value=_number(data, "ph_value", False, 0, 14),
+            brix_value=_number(data, "brix_value", False, 0, 100),
+            tds_value=_number(data, "tds_value", False, 0, 1000000),
+            notes=_optional_str(data, "notes", 1000),
         )
     if model is TemperatureLogRequest:
         return TemperatureLogRequest(

@@ -470,6 +470,15 @@ class AdminService:
             "expired_date": row.get("expired_date"),
             "status": row.get("status") or row.get("final_qc_status") or "pending",
             "created_by": row.get("created_by") or row.get("operator_id"),
+            "ph_value": row.get("ph_value"),
+            "ph_status": row.get("ph_status") or "not_checked",
+            "brix_value": row.get("brix_value"),
+            "brix_status": row.get("brix_status") or "not_checked",
+            "tds_value": row.get("tds_value"),
+            "tds_status": row.get("tds_status") or "not_checked",
+            "parameter_notes": row.get("parameter_notes"),
+            "parameter_checked_by": row.get("parameter_checked_by"),
+            "parameter_checked_at": row.get("parameter_checked_at"),
             "created_at": row.get("created_at"),
         } for row in rows])
 

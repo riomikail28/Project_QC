@@ -104,8 +104,12 @@ def test_create_batch_without_product_id_uses_default_product(client, staff_head
     assert db.inserted["status"] == "in_progress"
 
 
-def test_create_batch_requires_batch_code(client, staff_headers):
-    response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
+def test_create_batch_generates_batch_code_when_empty(client, staff_headers):
+    db = BatchDb()
+    with patch("backend.services.batch_service.get_client", return_value=db), patch(
+        "backend.api.batch_routes.write_audit"
+    ):
+        response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
 
-    assert response.status_code == 400
-    assert response.get_json()["message"] == "Field batch_code is required"
+    assert response.status_code == 201
+    assert response.get_json()["batch"]["batch_code"].startswith("QC-")
