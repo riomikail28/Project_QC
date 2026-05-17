@@ -1,5 +1,7 @@
 """Facility management routes for rooms and devices."""
 
+import logging
+
 from flask import Blueprint, current_app, g, jsonify, request
 
 from backend.middleware.security_middleware import require_auth, require_role
@@ -7,6 +9,7 @@ from backend.services.audit_service import write_audit
 from backend.database.supabase_client import get_client, supabase_error_response
 
 facility_bp = Blueprint("facility_bp", __name__)
+logger = logging.getLogger("qc.routes.facility")
 
 
 def _require_supabase():
@@ -108,14 +111,35 @@ def facility_device_detail(device_id):
         return error
     from backend.monitoring.facility_manager import delete_device, update_device
 
+    payload = request.get_json(silent=True) or {}
+    logger.info(
+        "Facility device request: method=%s device_id=%s payload=%s",
+        request.method,
+        device_id,
+        payload,
+    )
+
     if request.method in ("PATCH", "PUT"):
-        device = update_device(device_id, request.get_json(silent=True) or {})
+        device = update_device(device_id, payload)
         if not device:
             return jsonify({"success": False, "message": "Gagal mengubah unit"}), 503
         write_audit("update", "facility_device", device_id, after=device)
         return jsonify({"success": True, "data": device, "message": "Device updated"})
 
-    success = delete_device(device_id)
-    write_audit("delete", "facility_device", device_id, after={"success": success})
-    status = 200 if success else 503
-    return jsonify({"success": success, "data": {"id": device_id}, "message": "Device deleted" if success else "Gagal menghapus unit"}), status
+    result = delete_device(device_id)
+    status = int(result.get("status") or (200 if result.get("success") else 500))
+    logger.info(
+        "Facility device delete result: device_id=%s status=%s result=%s",
+        device_id,
+        status,
+        result,
+    )
+    if result.get("success"):
+        write_audit("delete", "facility_device", device_id, after=result.get("data") or {"id": device_id})
+    return jsonify({
+        "success": bool(result.get("success")),
+        "data": result.get("data"),
+        "error": result.get("error"),
+        "error_code": result.get("error_code"),
+        "message": "Device deleted" if result.get("success") else result.get("error"),
+    }), status

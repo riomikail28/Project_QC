@@ -126,20 +126,108 @@ def add_device(
         return None
 
 def delete_device(device_id: str):
-    """Delete a specific device."""
+    """Delete a specific persisted device with clear API-level failure reasons."""
+    device_id = str(device_id or "").strip()
+    logger.info("Delete facility device requested: device_id=%s", device_id)
+    if not device_id:
+        return _delete_result(False, None, "Device id is required", "FACILITY_DEVICE_INVALID_ID", 400)
     if _is_synthetic_id(device_id):
-        logger.info("Ignoring delete for synthetic device id: %s", device_id)
-        return True
+        logger.info("Rejecting delete for synthetic device id: %s", device_id)
+        return _delete_result(False, {"id": device_id}, "Device not found", "FACILITY_DEVICE_NOT_FOUND", 404)
     try:
         sb = get_client()
         if not sb:
-            direct_db_query("facility_devices", "DELETE", None, f"id=eq.{device_id}")
-            return True
-        sb.table("facility_devices").delete().eq("id", device_id).execute()
-        return True
+            existing = direct_db_query("facility_devices", "GET", None, f"id=eq.{device_id}&limit=1")
+            logger.info("Direct device lookup response: device_id=%s response=%s", device_id, _safe_log(existing))
+            if not existing:
+                return _delete_result(False, {"id": device_id}, "Device not found", "FACILITY_DEVICE_NOT_FOUND", 404)
+            conflict = _direct_device_log_conflict(device_id)
+            if conflict:
+                return conflict
+            deleted = direct_db_query("facility_devices", "DELETE", None, f"id=eq.{device_id}")
+            logger.info("Direct device delete response: device_id=%s response=%s", device_id, _safe_log(deleted))
+            return _delete_result(True, {"id": device_id}, None, None, 200)
+
+        lookup = sb.table("facility_devices").select("*").eq("id", device_id).limit(1).execute()
+        logger.info("Supabase device lookup response: device_id=%s response=%s", device_id, _safe_log(getattr(lookup, "data", None)))
+        device = (lookup.data or [None])[0]
+        if not device:
+            return _delete_result(False, {"id": device_id}, "Device not found", "FACILITY_DEVICE_NOT_FOUND", 404)
+
+        conflict = _supabase_device_log_conflict(sb, device_id)
+        if conflict:
+            return conflict
+
+        res = sb.table("facility_devices").delete().eq("id", device_id).execute()
+        logger.info("Supabase device delete response: device_id=%s response=%s", device_id, _safe_log(getattr(res, "data", None)))
+        return _delete_result(True, {"id": device_id, **device}, None, None, 200)
     except Exception as e:
-        logger.error("Delete device error: %s", e)
-        return False
+        logger.exception("Delete device exception: device_id=%s exception=%s", device_id, e)
+        if _is_relation_conflict(e):
+            return _delete_result(
+                False,
+                {"id": device_id},
+                "Device cannot be deleted because it is still referenced by monitoring logs",
+                "FACILITY_DEVICE_IN_USE",
+                409,
+            )
+        return _delete_result(False, {"id": device_id}, str(e), "FACILITY_DEVICE_DELETE_FAILED", 500)
+
+
+def _delete_result(success: bool, data, error: str | None, error_code: str | None, status: int):
+    return {
+        "success": success,
+        "data": data,
+        "error": error,
+        "error_code": error_code,
+        "status": status,
+    }
+
+
+def _supabase_device_log_conflict(sb, device_id: str):
+    for table in ("facility_logs", "temperature_logs"):
+        try:
+            res = sb.table(table).select("id").eq("device_id", device_id).limit(1).execute()
+            logger.info("Supabase device relation check: device_id=%s table=%s response=%s", device_id, table, _safe_log(getattr(res, "data", None)))
+            if res.data:
+                return _delete_result(
+                    False,
+                    {"id": device_id, "related_table": table},
+                    "Device cannot be deleted because it is still referenced by monitoring logs",
+                    "FACILITY_DEVICE_IN_USE",
+                    409,
+                )
+        except Exception as exc:
+            logger.warning("Device relation check skipped: device_id=%s table=%s exception=%s", device_id, table, exc)
+    return None
+
+
+def _direct_device_log_conflict(device_id: str):
+    for table in ("facility_logs", "temperature_logs"):
+        try:
+            rows = direct_db_query(table, "GET", None, f"device_id=eq.{device_id}&limit=1")
+            logger.info("Direct device relation check: device_id=%s table=%s response=%s", device_id, table, _safe_log(rows))
+            if rows:
+                return _delete_result(
+                    False,
+                    {"id": device_id, "related_table": table},
+                    "Device cannot be deleted because it is still referenced by monitoring logs",
+                    "FACILITY_DEVICE_IN_USE",
+                    409,
+                )
+        except Exception as exc:
+            logger.warning("Direct device relation check skipped: device_id=%s table=%s exception=%s", device_id, table, exc)
+    return None
+
+
+def _is_relation_conflict(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "foreign key" in text or "violates" in text and "constraint" in text or "23503" in text
+
+
+def _safe_log(value):
+    text = str(value)
+    return text[:1000]
 
 
 def is_default_device_id(device_id: str) -> bool:

@@ -16,6 +16,9 @@ class FacilityQuery:
     def order(self, *args, **kwargs):
         return self
 
+    def limit(self, *args, **kwargs):
+        return self
+
     def insert(self, payload):
         self.mode = "insert"
         self.payload = payload
@@ -64,6 +67,8 @@ class FacilityDb:
         self.rows = {
             "facility_rooms": [{"id": "room-1", "name": "PPIC", "slug": "ppic"}],
             "facility_devices": [{"id": "device-1", "room_id": "room-1", "name": "Chiller", "device_type": "chiller"}],
+            "facility_logs": [],
+            "temperature_logs": [],
         }
 
     def table(self, table):
@@ -112,5 +117,55 @@ def test_admin_device_crud_allows_default_device_delete(client, admin_headers):
         deleted = client.delete("/api/admin/facility/devices/default-room-ppic-freezer", headers=admin_headers)
 
     assert updated["target_temperature"] == -20
-    assert deleted.status_code in (200, 503)
+    assert deleted.status_code == 404
     assert deleted.status_code != 409
+
+
+def test_delete_facility_device_success(client, admin_headers):
+    db = FacilityDb()
+    with patch("backend.monitoring.facility_manager.get_client", return_value=db):
+        response = client.delete("/api/facility/devices/device-1", headers=admin_headers)
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["data"]["id"] == "device-1"
+    assert body["error"] is None
+    assert not db.rows["facility_devices"]
+
+
+def test_delete_facility_device_not_found(client, admin_headers):
+    db = FacilityDb()
+    with patch("backend.monitoring.facility_manager.get_client", return_value=db):
+        response = client.delete("/api/facility/devices/missing-device", headers=admin_headers)
+
+    body = response.get_json()
+    assert response.status_code == 404
+    assert body["success"] is False
+    assert body["error_code"] == "FACILITY_DEVICE_NOT_FOUND"
+
+
+def test_delete_facility_device_relation_conflict(client, admin_headers):
+    db = FacilityDb()
+    db.rows["facility_logs"] = [{"id": "log-1", "device_id": "device-1"}]
+    with patch("backend.monitoring.facility_manager.get_client", return_value=db):
+        response = client.delete("/api/facility/devices/device-1", headers=admin_headers)
+
+    body = response.get_json()
+    assert response.status_code == 409
+    assert body["success"] is False
+    assert body["error_code"] == "FACILITY_DEVICE_IN_USE"
+    assert db.rows["facility_devices"]
+
+
+def test_delete_facility_device_supabase_unavailable(client, admin_headers, app):
+    app.config["TESTING"] = False
+    try:
+        with patch("backend.api.facility_routes.get_client", return_value=None):
+            response = client.delete("/api/facility/devices/device-1", headers=admin_headers)
+    finally:
+        app.config["TESTING"] = True
+
+    body = response.get_json()
+    assert response.status_code == 503
+    assert body["success"] is False

@@ -575,9 +575,9 @@ const adminApp = {
                 };
                 if (this.crudMode === 'addDevice') {
                     payload.room_id = this.crudContext.roomId;
-                    await API.post('/admin/facility/devices', payload);
+                    await API.post('/facility/devices', payload);
                 } else {
-                    await API.patch(`/admin/facility/devices/${this.crudId}`, payload);
+                    await API.patch(`/facility/devices/${this.crudId}`, payload);
                 }
                 await this.loadFacilityManager();
             }
@@ -623,7 +623,7 @@ const adminApp = {
             : 'Hapus unit monitoring ini?';
         if (!confirm(message)) return;
         try {
-            await API.delete(`/admin/facility/devices/${id}`);
+            await API.delete(`/facility/devices/${id}`);
             await this.loadFacilityManager();
         } catch (error) {
             alert(`Gagal menghapus unit: ${error.message || 'Coba lagi'}`);
