@@ -27,13 +27,13 @@
         </a>
         <label class="search-bar">
             <i class="fas fa-magnifying-glass"></i>
-            <input type="search" placeholder="Search batch, alert, product">
+            <input type="search" placeholder="Cari batch, alert, produk...">
         </label>
         <nav class="desktop-nav" aria-label="Desktop navigation">
-            <a href="dashboard.html" class="active">Home</a>
-            <a href="monitoring.html">Monitor</a>
-            <a href="inspection.html">Check</a>
-            <a href="profile.html">Profile</a>
+            <a href="dashboard.html" class="active">Beranda</a>
+            <a href="monitoring.html">Monitoring</a>
+            <a href="inspection.html">QC Check</a>
+            <a href="profile.html">Profil</a>
             <a href="/admin/" class="admin-link" data-admin-only hidden>Admin</a>
         </nav>
         <div class="nav-actions">
@@ -52,8 +52,8 @@
     <main class="app-shell page-grid">
         <section class="dashboard-hero">
             <div class="glass-card welcome-banner animate-in">
-                <span class="eyebrow">ASTRO QC Command Center</span>
-                <h1 id="greetingText">Good Morning, QC Team</h1>
+                <span class="eyebrow">Pusat Kendali ASTRO QC</span>
+                <h1 id="greetingText">Selamat Pagi, Tim QC</h1>
                 <p>Ringkasan real-time untuk produksi, suhu fasilitas, approval, dan alert abnormal hari ini.</p>
             </div>
             <div class="glass-card health-card-main animate-in">
@@ -64,7 +64,7 @@
                     </svg>
                     <div class="score-text">
                         <span class="val" id="healthValue">0</span>
-                        <span class="label">Health</span>
+                        <span class="label">Kondisi</span>
                     </div>
                 </div>
                 <div class="health-info">
@@ -142,8 +142,8 @@
             </div>
             <div class="panel-card">
                 <div class="section-header">
-                    <h3 class="section-title">Abnormal Alert Feed</h3>
-                    <button class="section-link" onclick="openAlertDrawer()" style="border:0;background:transparent;padding:0">View all</button>
+                    <h3 class="section-title">Alert Suhu Fasilitas</h3>
+                    <button class="section-link" onclick="openAlertDrawer()" style="border:0;background:transparent;padding:0">Lihat semua</button>
                 </div>
                 <div id="criticalList" class="activity-list">
                     <div class="skeleton skeleton-card"></div>
@@ -152,8 +152,8 @@
             </div>
             <div class="panel-card">
                 <div class="section-header">
-                    <h3 class="section-title">Today QC Summary</h3>
-                    <span class="section-link">Today</span>
+                    <h3 class="section-title">Ringkasan QC Hari Ini</h3>
+                    <span class="section-link">Hari ini</span>
                 </div>
                 <div class="approval-list" id="todaySummaryList">
                     <div class="skeleton skeleton-card"></div>
@@ -170,8 +170,8 @@
                     <span>Evidence akan muncul setelah staff upload foto.</span>
                 </div>
                 <div class="finding-reason">
-                    <strong>Reason</strong>
-                    <p>Belum ada reason aktif. Jika ada deviasi suhu, batch, atau foto evidence, catatan korektif akan tampil di sini.</p>
+                    <strong>Catatan</strong>
+                    <p>Belum ada catatan aktif. Jika ada deviasi suhu, batch, atau foto evidence, catatan korektif akan tampil di sini.</p>
                 </div>
             </div>
         </section>
@@ -225,8 +225,8 @@
             <div class="alert-drawer-title">
                 <div class="alert-icon"><i class="fas fa-bell"></i></div>
                 <div>
-                    <h3>Active Alerts</h3>
-                    <p>Corrective actions required</p>
+                    <h3>Alert Aktif</h3>
+                    <p>Tindakan korektif diperlukan</p>
                 </div>
             </div>
             <button class="icon-button" onclick="closeAlertDrawer()" aria-label="Close alerts"><i class="fas fa-times"></i></button>
@@ -238,10 +238,10 @@
     </aside>
 
     <nav class="bottom-nav">
-        <a href="dashboard.html" class="nav-item active"><i class="fas fa-chart-pie"></i><span>Home</span></a>
-        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
-        <a href="inspection.html" class="nav-item"><i class="fas fa-clipboard-check"></i><span>QC</span></a>
-        <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+        <a href="dashboard.html" class="nav-item active"><i class="fas fa-chart-pie"></i><span>Beranda</span></a>
+        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitoring</span></a>
+        <a href="inspection.html" class="nav-item"><i class="fas fa-clipboard-check"></i><span>QC Check</span></a>
+        <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profil</span></a>
     </nav>
 
     <script src="../js/config.js"></script>

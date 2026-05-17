@@ -113,11 +113,11 @@ function renderDevices(devices, options = {}) {
     deviceList.innerHTML = devices.map(device => `
         <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
             <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
-            <div class="status-badge ${device.recorded_at ? "success" : "muted"} device-status">${device.recorded_at ? '<span class="online-dot"></span>Realtime' : 'No data'}</div>
+            <div class="status-badge ${device.recorded_at ? "success" : "muted"} device-status">${device.recorded_at ? '<span class="online-dot"></span>Aktif' : 'Belum ada data'}</div>
             <div class="device-name">${device.display_name || device.name}</div>
             <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
             <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
-            <div class="device-meta">${device.recorded_at ? `Last update: ${new Date(device.recorded_at).toLocaleTimeString()} - Staff checker: QC Team` : "Belum ada log"}</div>
+            <div class="device-meta">${device.recorded_at ? `Update: ${new Date(device.recorded_at).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})} - Petugas: QC` : "Belum ada log"}</div>
             <div class="sparkline"></div>
             <div class="health-bar"><span></span></div>
         </div>
@@ -129,7 +129,7 @@ function openLogModal(deviceId) {
     const device = (room?.devices || []).find(item => item.id === deviceId);
     if (!device) return;
     if (!isUuid(room.id) || !isUuid(device.id) || !isUuid(device.room_id || room.id)) {
-        showMonitoringToast("Unit belum tersinkron dengan database. Refresh data facility.", true);
+        showMonitoringToast("Data ruangan/unit belum sinkron. Refresh halaman.", true);
         return;
     }
 
@@ -212,11 +212,11 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     const deviceId = document.getElementById("selected-device-id").value;
     const roomId = document.getElementById("selected-room-id").value;
     if (!isUuid(roomId)) {
-        showMonitoringToast("Room belum tersinkron dengan database. Refresh data facility.", true);
+        showMonitoringToast("Data ruangan/unit belum sinkron. Refresh halaman.", true);
         return;
     }
     if (!isUuid(deviceId)) {
-        showMonitoringToast("Unit belum tersinkron dengan database. Refresh data facility.", true);
+        showMonitoringToast("Data ruangan/unit belum sinkron. Refresh halaman.", true);
         return;
     }
     const formData = new FormData();
@@ -229,13 +229,13 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
     try {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
         selectedPhotoFiles.forEach(file => formData.append("photo", file));
 
         const result = await API.upload("/monitoring/log", formData);
         if (result.success) {
-            showMonitoringToast("Log suhu berhasil disimpan");
+            showMonitoringToast("QC berhasil disimpan");
             closeModal();
             loadRecentLogs();
         } else {
@@ -309,7 +309,7 @@ function bindUnitFilters() {
     document.querySelectorAll(".filter-chip").forEach(button => {
         button.addEventListener("click", () => {
             const label = button.textContent.trim().toLowerCase();
-            activeUnitFilter = label.startsWith("chiller") ? "chiller" : label.startsWith("freezer") ? "freezer" : label.startsWith("critical") ? "critical" : label.startsWith("active") ? "active" : "all";
+            activeUnitFilter = label.startsWith("chiller") ? "chiller" : label.startsWith("freezer") ? "freezer" : label.includes("kritis") ? "critical" : label.includes("aktif") ? "active" : "all";
             document.querySelectorAll(".filter-chip").forEach(item => item.classList.toggle("active", item === button));
             renderDevices(filteredDevices(selectedRoomId === "all" || !selectedRoomId ? null : (facilityStructure.find(room => room.id === selectedRoomId)?.devices || [])));
         });

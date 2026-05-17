@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Monitoring | ASTRO QC Enterprise</title>
+    <title>Monitoring Suhu | ASTRO QC</title>
     <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../styles/monitoring.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -34,22 +34,22 @@
 
     <main class="app-shell page-grid">
         <section class="glass-card monitor-hero animate-in">
-            <span class="eyebrow">Live Facility Control</span>
-            <h1>Freezer, chiller, dan room temperature dalam satu layar.</h1>
-            <p>Status warna, sparkline, staff checker, dan log suhu dibuat cepat dibaca di area kitchen.</p>
+            <span class="eyebrow">Kendali Fasilitas Langsung</span>
+            <h1>Pantau suhu chiller, freezer, dan ruangan.</h1>
+            <p>Cek suhu harian dengan cepat dan mudah.</p>
         </section>
 
         <section class="page-grid">
             <div class="section-header">
-                <h3 class="section-title">Filter Unit</h3>
-                <span class="status-badge success"><span class="online-dot"></span>Active</span>
+                <h3 class="section-title">Filter</h3>
+                <span class="status-badge success"><span class="online-dot"></span>Aktif</span>
             </div>
             <div class="filter-row">
-                <button class="filter-chip active">All</button>
+                <button class="filter-chip active">Semua</button>
                 <button class="filter-chip">Chiller</button>
                 <button class="filter-chip">Freezer</button>
-                <button class="filter-chip">Critical only</button>
-                <button class="filter-chip">Active only</button>
+                <button class="filter-chip">Hanya Kritis</button>
+                <button class="filter-chip">Hanya Aktif</button>
             </div>
             <div class="room-selector" id="room-list"></div>
         </section>
@@ -62,7 +62,7 @@
 
         <section>
             <div class="section-header">
-                <h3 class="section-title">Device Grid</h3>
+                <h3 class="section-title">Daftar Unit</h3>
                 <span class="section-link" id="deviceCount">0 Unit</span>
             </div>
             <div class="device-grid" id="device-list"></div>
@@ -71,7 +71,7 @@
         <section class="panel-card">
             <div class="section-header">
                 <h3 class="section-title">Log Terakhir</h3>
-                <span class="section-link">History</span>
+                <span class="section-link">Riwayat</span>
             </div>
             <div id="recent-logs" class="activity-list"></div>
         </section>
@@ -95,11 +95,11 @@
             <div class="sheet-title">
                 <div class="alert-icon"><i id="sheet-icon" class="fas fa-temperature-low"></i></div>
                 <div>
-                    <span class="eyebrow">Temperature Log</span>
+                    <span class="eyebrow">Input Suhu</span>
                     <h3 id="modal-title" style="margin:2px 0 0">Log Chiller</h3>
                 </div>
             </div>
-            <button onclick="closeModal()" class="close-sheet" aria-label="Close"><i class="fas fa-times"></i></button>
+            <button onclick="closeModal()" class="close-sheet" aria-label="Tutup"><i class="fas fa-times"></i></button>
         </div>
 
         <form id="monitoring-form" class="sheet-form">
@@ -122,13 +122,13 @@
                 </div>
             </div>
             <div>
-                <label>Temuan / Catatan</label>
-                <textarea id="input-reason" rows="3" placeholder="Tuliskan anomali atau tindakan koreksi..."></textarea>
+                <label>Catatan</label>
+                <textarea id="input-reason" rows="3" placeholder="Tulis catatan jika ada"></textarea>
             </div>
             <div>
-                <label>Foto Temuan (Bisa Multiple)</label>
+                <label>Foto Bukti</label>
                 <div class="photo-grid">
-                    <div class="photo-placeholder" onclick="triggerPhoto()"><i class="fas fa-camera"></i><span>Ambil Foto</span></div>
+                    <div class="photo-placeholder" onclick="triggerPhoto()"><i class="fas fa-camera"></i><span>Upload Foto</span></div>
                     <div id="photo-preview" class="photo-preview" style="display:none">
                         <img src="" id="preview-img" alt="Preview">
                         <div id="multi-photo-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--accent-blue); color:white; border-radius:50%; width:20px; height:20px; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid white;"></div>

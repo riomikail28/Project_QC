@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>New Batch | QC Central Kitchen</title>
+    <title>Buat Batch | ASTRO QC</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="../css/new_batch.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,8 +13,8 @@
         <div class="new-batch-header-content">
             <a href="dashboard.html" class="new-batch-back"><i class="fas fa-chevron-left"></i></a>
             <div>
-                <h2 class="new-batch-title">NEW PRODUCTION</h2>
-                <p class="new-batch-subtitle">Register Batch Record</p>
+                <h2 class="new-batch-title">Buat Batch</h2>
+                <p class="new-batch-subtitle">Data awal produksi</p>
             </div>
         </div>
     </header>
@@ -22,25 +22,25 @@
     <div class="form-card">
         <form id="newBatchForm">
             <div class="form-group">
-                <label class="input-label">Select Product</label>
+                <label class="input-label">Pilih Produk</label>
                 <select id="productId" class="input-field" required>
-                    <option value="">Loading products...</option>
+                    <option value="">Memuat produk...</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label class="input-label">Batch Code</label>
-                <input type="text" id="batchCode" class="input-field" placeholder="Auto: QC-YYYYMMDD-HHMMSS">
+                <label class="input-label">Kode Batch</label>
+                <input type="text" id="batchCode" class="input-field" placeholder="Buat Otomatis">
             </div>
 
             <div class="form-group">
-                <label class="input-label">Production Date</label>
+                <label class="input-label">Tanggal Produksi</label>
                 <input type="date" id="productionDate" class="input-field" required>
             </div>
 
             <div class="optional-parameter-card">
                 <div>
-                    <h3>Optional Quality Parameter</h3>
+                    <h3>Parameter Opsional</h3>
                     <p>Opsional, isi hanya jika produk membutuhkan pengecekan pH, Brix, atau TDS.</p>
                 </div>
                 <div class="parameter-grid">
@@ -61,12 +61,12 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="input-label" for="parameterNotes">Parameter Notes</label>
+                    <label class="input-label" for="parameterNotes">Catatan</label>
                     <textarea id="parameterNotes" class="input-field" rows="3" placeholder="Catatan parameter opsional"></textarea>
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary new-batch-submit">START INSPECTION</button>
+            <button type="submit" class="btn-primary new-batch-submit">Lanjut QC Check</button>
         </form>
     </div>
 
@@ -86,7 +86,7 @@
                 const products = await API.get('/products');
                 productRows = products || [];
                 const select = document.getElementById('productId');
-                select.innerHTML = '<option value="">Select Product</option>';
+                select.innerHTML = '<option value="">Pilih produk</option>';
                 products.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.product_code;
@@ -105,9 +105,9 @@
 
         function renderStandards(product) {
             const helpers = {
-                phStandard: product && product.ph_min != null && product.ph_max != null ? `pH standard: ${product.ph_min} - ${product.ph_max}` : '',
-                brixStandard: product && product.brix_min != null && product.brix_max != null ? `Brix standard: ${product.brix_min} - ${product.brix_max} %` : '',
-                tdsStandard: product && product.tds_min != null && product.tds_max != null ? `TDS standard: ${product.tds_min} - ${product.tds_max}` : ''
+                phStandard: product && product.ph_min != null && product.ph_max != null ? `Standar pH: ${product.ph_min} - ${product.ph_max}` : '',
+                brixStandard: product && product.brix_min != null && product.brix_max != null ? `Standar Brix: ${product.brix_min} - ${product.brix_max} %` : '',
+                tdsStandard: product && product.tds_min != null && product.tds_max != null ? `Standar TDS: ${product.tds_min} - ${product.tds_max}` : ''
             };
             Object.entries(helpers).forEach(([id, text]) => {
                 const el = document.getElementById(id);
@@ -125,7 +125,7 @@
             const btn = e.target.querySelector('button');
             const originalText = btn.innerText;
             btn.disabled = true;
-            btn.innerText = 'CREATING...';
+            btn.innerText = 'Membuat...';
 
             const payload = {
                 product_id: document.getElementById('productId').value,

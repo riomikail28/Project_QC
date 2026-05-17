@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QC Check | ASTRO QC Enterprise</title>
+    <title>QC Check | ASTRO QC</title>
     <link rel="stylesheet" href="../styles/global.css">
     <link rel="stylesheet" href="../styles/qc.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,14 +15,14 @@
             <div class="logo-icon"><i class="fas fa-clipboard-check"></i></div>
             <div>
                 <div class="brand-name">QC Check</div>
-                <div class="brand-sub">Quick Staff Input</div>
+                <div class="brand-sub">Sistem QC Dapur</div>
             </div>
         </a>
         <nav class="desktop-nav" aria-label="Desktop navigation">
-            <a href="dashboard.html">Home</a>
-            <a href="monitoring.html">Monitor</a>
-            <a href="inspection.html" class="active">Check</a>
-            <a href="profile.html">Profile</a>
+            <a href="dashboard.html">Beranda</a>
+            <a href="monitoring.html">Monitoring</a>
+            <a href="inspection.html" class="active">QC Check</a>
+            <a href="profile.html">Profil</a>
             <a href="/admin/" data-admin-only hidden>Admin</a>
         </nav>
         <div class="nav-actions">
@@ -37,35 +37,35 @@
                 <div class="section-header">
                     <div>
                         <h1 class="simple-qc-title">QC Check</h1>
-                        <p class="simple-qc-subtitle">Cooking Check dan Final Check untuk batch yang sama.</p>
+                        <p class="simple-qc-subtitle">Pilih produk, lalu simpan hasil pengecekan.</p>
                     </div>
                 </div>
                 <div class="simple-field">
                     <label for="productSearch">Pilih Produk / SKU</label>
                     <input class="input-field input-large" id="productSearch" placeholder="Cari kode SKU atau nama produk" autocomplete="off">
-                    <p class="simple-qc-message product-search-help" id="productSearchHelp">Ketik minimal 2 huruf untuk mencari produk.</p>
+                    <p class="simple-qc-message product-search-help" id="productSearchHelp">Ketik minimal 2 huruf.</p>
                     <div class="product-picker-list" id="productPickerList"></div>
-                    <button class="btn-secondary manual-sku-toggle" id="manualSkuToggle" type="button">Input SKU manual</button>
+                    <button class="btn-secondary manual-sku-toggle" id="manualSkuToggle" type="button">Input Manual</button>
                     <div id="manualSkuWrap" hidden>
-                        <input class="input-field" id="qcSku" placeholder="Masukkan SKU manual" autocomplete="off">
+                        <input class="input-field" id="qcSku" placeholder="Masukkan SKU" autocomplete="off">
                     </div>
                     <div class="selected-product-card" id="selectedProductCard" hidden></div>
-                    <p class="simple-qc-message" id="productDetected">Pilih produk untuk mencari batch aktif.</p>
+                    <p class="simple-qc-message" id="productDetected">Pilih produk terlebih dahulu.</p>
                 </div>
                 <div class="simple-field" id="activeBatchPanel" hidden>
-                    <label>Batch Aktif</label>
+                    <label>Batch</label>
                     <div id="activeBatchList" class="batch-choice-list"></div>
                     <p class="simple-qc-message" id="activeBatchEmpty" hidden>Belum ada batch aktif. Batch baru akan dibuat saat submit.</p>
-                    <button class="btn-secondary batch-new-btn" id="createNewBatchBtn" type="button">Buat Batch Baru Saat Submit</button>
+                    <button class="btn-secondary batch-new-btn" id="createNewBatchBtn" type="button">Buat Batch Baru</button>
                 </div>
                 <div class="simple-field">
                     <label>Jenis Pengecekan</label>
                     <div class="qc-stage-selector" role="radiogroup" aria-label="Jenis Pengecekan">
                         <button class="qc-stage-option active" type="button" data-stage="cooking_check">
-                            <strong>Cooking Check</strong>
+                            <strong>Cek Masakan</strong>
                         </button>
                         <button class="qc-stage-option" type="button" data-stage="final_check">
-                            <strong>Final Check</strong>
+                            <strong>Cek Label Akhir</strong>
                         </button>
                     </div>
                 </div>
@@ -74,9 +74,9 @@
                     <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
                     <div class="upload-zone simple-upload" onclick="document.getElementById('cookingPhoto').click()">
                         <i class="fas fa-cloud-arrow-up"></i>
-                        <strong>Foto Masakan / Thermometer</strong>
-                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
-                        <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <strong>Foto Masakan / Termometer</strong>
+                        <button class="btn-secondary upload-action" type="button">Upload Foto</button>
+                        <span>Opsional, maksimal 10MB.</span>
                         <div class="photo-preview" id="cookingPhotoPreview" hidden></div>
                         <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
@@ -85,16 +85,16 @@
                     <div class="upload-zone simple-upload" onclick="document.getElementById('barcodePhoto').click()">
                         <i class="fas fa-barcode"></i>
                         <strong>Foto Barcode</strong>
-                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
-                        <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <button class="btn-secondary upload-action" type="button">Upload Foto</button>
+                        <span>Opsional, maksimal 10MB.</span>
                         <div class="photo-preview" id="barcodePhotoPreview" hidden></div>
                         <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
                     <div class="upload-zone simple-upload" onclick="document.getElementById('labelPhoto').click()">
                         <i class="fas fa-tag"></i>
                         <strong>Foto Label Cetak</strong>
-                        <button class="btn-secondary upload-action" type="button">Ambil Foto</button>
-                        <span>Direkomendasikan, JPG/PNG/WEBP maksimal 10MB.</span>
+                        <button class="btn-secondary upload-action" type="button">Upload Foto</button>
+                        <span>Opsional, maksimal 10MB.</span>
                         <div class="photo-preview" id="labelPhotoPreview" hidden></div>
                         <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                     </div>
@@ -108,23 +108,23 @@
                     </div>
                 </div>
                 <div class="simple-field optional-notes">
-                    <button class="notes-toggle" id="notesToggle" type="button">+ Tambah catatan opsional</button>
+                    <button class="notes-toggle" id="notesToggle" type="button">+ Tambah Catatan</button>
                     <div id="notesWrap" hidden>
-                    <label for="qcNotes">Catatan opsional</label>
-                    <textarea class="input-field simple-notes" id="qcNotes" rows="4" placeholder="Contoh: label buram, suhu kurang, kemasan rusak"></textarea>
+                    <label for="qcNotes">Catatan</label>
+                    <textarea class="input-field simple-notes" id="qcNotes" rows="4" placeholder="Tambahkan catatan jika ada"></textarea>
                     </div>
                 </div>
-                <button class="btn-primary simple-submit" id="submitQcBtn" type="button"><i class="fas fa-paper-plane"></i>Submit QC Check</button>
+                <button class="btn-primary simple-submit" id="submitQcBtn" type="button"><i class="fas fa-paper-plane"></i>Simpan QC</button>
                 <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
             </div>
         </section>
     </main>
 
     <nav class="bottom-nav">
-        <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Home</span></a>
-        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitor</span></a>
-        <a href="inspection.html" class="nav-item active"><i class="fas fa-clipboard-check"></i><span>QC</span></a>
-        <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Beranda</span></a>
+        <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitoring</span></a>
+        <a href="inspection.html" class="nav-item active"><i class="fas fa-clipboard-check"></i><span>QC Check</span></a>
+        <a href="profile.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Profil</span></a>
     </nav>
 
     <script src="../js/config.js"></script>

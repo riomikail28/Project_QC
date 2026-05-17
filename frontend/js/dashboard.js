@@ -52,7 +52,7 @@ const Dashboard = {
         this.setHtml('criticalList', '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>');
         this.setHtml('realtimeMonitoringList', '<div class="skeleton skeleton-card"></div>');
         this.setHtml('todaySummaryList', '<div class="skeleton skeleton-card"></div>');
-        this.setHtml('qcStatusList', '<span class="status-badge muted">Loading...</span>');
+        this.setHtml('qcStatusList', '<span class="status-badge muted">Memuat...</span>');
     },
 
     renderSummary(data = {}) {
@@ -79,7 +79,7 @@ const Dashboard = {
 
         if (score === null || score === undefined) {
             value.textContent = '--';
-            label.textContent = 'No data available yet';
+            label.textContent = 'Belum ada data';
             label.style.color = '#64748b';
             progress.style.strokeDashoffset = 283;
             progress.style.stroke = '#94a3b8';
@@ -94,15 +94,15 @@ const Dashboard = {
         progress.style.strokeDashoffset = circumference - (cleanScore / 100) * circumference;
 
         if (cleanScore >= 90) {
-            label.textContent = 'Excellent Quality Control';
+            label.textContent = 'Kondisi QC Baik';
             label.style.color = '#22c55e';
             progress.style.stroke = '#22c55e';
         } else if (cleanScore >= 70) {
-            label.textContent = 'Stable Operations';
+            label.textContent = 'Operasional Stabil';
             label.style.color = '#f59e0b';
             progress.style.stroke = '#f59e0b';
         } else {
-            label.textContent = 'Attention Required';
+            label.textContent = 'Perlu Perhatian';
             label.style.color = '#ef4444';
             progress.style.stroke = '#ef4444';
         }
@@ -113,7 +113,7 @@ const Dashboard = {
         if (!chart) return;
         if (!rows.length || rows.every(row => Number(row.count || 0) === 0)) {
             chart.classList.add('empty-chart');
-            chart.innerHTML = '<div class="empty-state compact">No data available yet</div>';
+            chart.innerHTML = '<div class="empty-state compact">Belum ada data</div>';
             return;
         }
 
@@ -134,7 +134,7 @@ const Dashboard = {
         const items = data.items || [];
         const total = Number(data.total || 0);
         if (!total) {
-            list.innerHTML = '<span class="status-badge muted">No data available yet</span>';
+            list.innerHTML = '<span class="status-badge muted">Belum ada data</span>';
             pie.style.background = 'conic-gradient(#cbd5e1 0 100%)';
             return;
         }
@@ -158,7 +158,7 @@ const Dashboard = {
         const container = document.getElementById('realtimeMonitoringList');
         if (!container) return;
         if (!rows.length) {
-            container.innerHTML = '<div class="empty-state compact">No data available yet</div>';
+            container.innerHTML = '<div class="empty-state compact">Belum ada data</div>';
             return;
         }
         container.innerHTML = rows.slice(0, 5).map(row => `
@@ -177,15 +177,15 @@ const Dashboard = {
         const container = document.getElementById('criticalList');
         if (!container) return;
         if (!alerts.length) {
-            container.innerHTML = '<div class="empty-state compact">No data available yet</div>';
+            container.innerHTML = '<div class="empty-state compact">Belum ada data</div>';
             return;
         }
         container.innerHTML = alerts.slice(0, 5).map(alert => `
             <div class="alert-card fail">
                 <div class="alert-icon"><i data-lucide="triangle-alert"></i></div>
                 <div class="alert-info">
-                    <h4>${alert.zone || 'QC Alert'}</h4>
-                    <p>${alert.description || 'Temperature abnormal'}${alert.created_at ? ` - ${this.time(alert.created_at)}` : ''}</p>
+                    <h4>${alert.zone || 'Alert QC'}</h4>
+                    <p>${alert.description || 'Suhu abnormal'}${alert.created_at ? ` - ${this.time(alert.created_at)}` : ''}</p>
                 </div>
                 <div class="alert-status fail">${alert.temperature_c ?? alert.severity ?? 'Open'}</div>
             </div>
@@ -196,14 +196,14 @@ const Dashboard = {
         const container = document.getElementById('todaySummaryList');
         if (!container) return;
         if (!data.has_data) {
-            container.innerHTML = '<div class="empty-state compact">No data available yet</div>';
+            container.innerHTML = '<div class="empty-state compact">Belum ada data</div>';
             return;
         }
         const rows = [
-            ['camera', 'Photo inspection', `${data.photo_evidence || 0} evidence uploaded`, 'success'],
-            ['clipboard-check', 'QC submitted', `${data.qc_submitted || 0} report hari ini`, 'success'],
-            ['thermometer', 'Temperature logs', `${data.temperature_logs || 0} input suhu`, 'warning'],
-            ['qr-code', 'Barcode labels', `${data.barcode_labels || 0} label tercatat`, 'muted'],
+            ['camera', 'Foto Inspeksi', `${data.photo_evidence || 0} foto diupload`, 'success'],
+            ['clipboard-check', 'QC Terkirim', `${data.qc_submitted || 0} laporan hari ini`, 'success'],
+            ['thermometer', 'Log Suhu', `${data.temperature_logs || 0} input suhu`, 'warning'],
+            ['qr-code', 'Label Barcode', `${data.barcode_labels || 0} label tercatat`, 'muted'],
         ];
         container.innerHTML = rows.map(([icon, title, subtitle, tone]) => `
             <div class="alert-card">
@@ -217,7 +217,7 @@ const Dashboard = {
     renderError() {
         this.text('healthValue', '--');
         const label = document.getElementById('healthLabel');
-        if (label) label.textContent = 'Dashboard API error';
+        if (label) label.textContent = 'Gagal memuat dashboard';
         const errorHtml = '<div class="empty-state compact error">Gagal memuat data real. Coba refresh atau cek koneksi.</div>';
         ['criticalList', 'realtimeMonitoringList', 'todaySummaryList'].forEach(id => this.setHtml(id, errorHtml));
     },
@@ -236,7 +236,7 @@ const Dashboard = {
         try {
             return new Date(value).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         } catch {
-            return 'Just now';
+            return 'Baru saja';
         }
     },
 
