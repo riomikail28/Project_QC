@@ -9,13 +9,6 @@ const modal = document.getElementById("log-modal");
 const overlay = document.getElementById("overlay");
 const deviceCountLabel = document.getElementById("deviceCount");
 const currentRoomLabel = document.getElementById("currentRoomName");
-const DEFAULT_ROOMS = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
-const DEFAULT_UNITS = [
-    { type: "room_temp", name: "Suhu Ruangan", threshold_temp: 25 },
-    { type: "chiller", name: "Chiller", threshold_temp: 5 },
-    { type: "freezer", name: "Freezer", threshold_temp: -18 },
-];
-
 let facilityStructure = [];
 let selectedRoomId = null;
 let selectedPhotoFiles = [];
@@ -40,16 +33,14 @@ async function loadFacilityStructure() {
             window.location.href = "/login.html";
             return;
         }
-        const structure = await res.json();
-        facilityStructure = ensureDefaultMatrix(Array.isArray(structure) ? structure : []);
-        if (!facilityStructure.length && latestTemperatureLogs.length) {
-            facilityStructure = structureFromLogs(latestTemperatureLogs);
-        }
+        const envelope = await res.json();
+        const structure = Array.isArray(envelope) ? envelope : (envelope.data || []);
+        facilityStructure = normalizeFacilityStructure(structure);
         renderRoomSelector();
         if (facilityStructure.length) selectRoom("all");
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
-        facilityStructure = ensureDefaultMatrix([]);
+        facilityStructure = [];
         renderRoomSelector();
         selectRoom("all");
     }
@@ -57,14 +48,6 @@ async function loadFacilityStructure() {
 
 function renderRoomSelector() {
     if (!facilityStructure.length) {
-        if (latestTemperatureLogs.length) {
-            facilityStructure = structureFromLogs(latestTemperatureLogs);
-            if (facilityStructure.length) {
-                renderRoomSelector();
-                selectRoom(preferredRoomId());
-                return;
-            }
-        }
         roomList.innerHTML = `<div class="room-chip active">Belum ada unit</div>`;
         currentRoomLabel.innerText = "Belum ada unit monitoring";
         renderDevices([], { hasLogs: false });
@@ -109,13 +92,6 @@ function iconForType(type) {
 }
 
 function renderDevices(devices, options = {}) {
-    if (!devices.length && latestTemperatureLogs.length && !facilityStructure.length) {
-        facilityStructure = structureFromLogs(latestTemperatureLogs);
-        if (facilityStructure.length) {
-            selectRoom(preferredRoomId());
-            return;
-        }
-    }
     const totalDevices = allDevices().length;
     deviceCountLabel.innerText = `${devices.length} Unit`;
     document.getElementById("summaryUnitCount").innerText = totalDevices || devices.length;
@@ -152,6 +128,10 @@ function openLogModal(deviceId) {
     const room = facilityStructure.find(item => (item.devices || []).some(device => device.id === deviceId));
     const device = (room?.devices || []).find(item => item.id === deviceId);
     if (!device) return;
+    if (!isUuid(room.id) || !isUuid(device.id) || !isUuid(device.room_id || room.id)) {
+        showMonitoringToast("Unit belum tersinkron dengan database. Refresh data facility.", true);
+        return;
+    }
 
     document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
     document.getElementById("selected-device-id").value = deviceId;
@@ -229,9 +209,19 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     }
 
     const user = JSON.parse(localStorage.getItem("qc_user") || "{}");
+    const deviceId = document.getElementById("selected-device-id").value;
+    const roomId = document.getElementById("selected-room-id").value;
+    if (!isUuid(roomId)) {
+        showMonitoringToast("Room belum tersinkron dengan database. Refresh data facility.", true);
+        return;
+    }
+    if (!isUuid(deviceId)) {
+        showMonitoringToast("Unit belum tersinkron dengan database. Refresh data facility.", true);
+        return;
+    }
     const formData = new FormData();
-    formData.append("device_id", document.getElementById("selected-device-id").value);
-    formData.append("room_id", document.getElementById("selected-room-id").value);
+    formData.append("device_id", deviceId);
+    formData.append("room_id", roomId);
     formData.append("staff_id", user.id || user.user_id || user.sub || "");
     formData.append("temperature", document.getElementById("input-temp").value);
     formData.append("humidity", document.getElementById("input-rh").value || "");
@@ -271,8 +261,6 @@ async function loadRecentLogs() {
         }
         const logs = await res.json();
         latestTemperatureLogs = Array.isArray(logs) ? logs : [];
-        const fallbackStructure = structureFromLogs(latestTemperatureLogs);
-        facilityStructure = mergeLogStructure(ensureDefaultMatrix(facilityStructure), fallbackStructure);
         renderRoomSelector();
         selectRoom(selectedRoomId || "all");
         const container = document.getElementById("recent-logs");
@@ -317,42 +305,6 @@ function showMonitoringToast(message, isError = false) {
     alert(message);
 }
 
-function structureFromLogs(logs) {
-    const grouped = new Map(DEFAULT_ROOMS.map(roomName => [
-        roomName,
-        { id: `default-room-${safeId(roomName)}`, name: roomName, devices: new Map(DEFAULT_UNITS.map(unit => [unit.type, defaultDevice(roomName, unit)])) }
-    ]));
-    (logs || []).forEach(log => {
-        const roomName = log.zone || log.facility_rooms?.name || log.room_name || "QC Area";
-        const deviceType = log.device_type || log.facility_devices?.type || "room_temp";
-        const normalizedType = deviceType === "ambient" ? "room_temp" : deviceType;
-        const deviceName = unitName(normalizedType, log.facility_devices?.name || log.device_name || log.unit_name);
-        const roomId = log.room_id || `log-room-${safeId(roomName)}`;
-        if (!grouped.has(roomName)) {
-            grouped.set(roomName, { id: roomId, name: roomName, devices: new Map() });
-        }
-        grouped.get(roomName).devices.set(normalizedType, {
-            id: log.device_id || `${roomId}-${safeId(normalizedType)}`,
-            room_id: roomId,
-            name: deviceName,
-            display_name: `${roomName} - ${deviceName}`,
-            type: normalizedType,
-            threshold_temp: log.threshold_temp || log.threshold_c || log.facility_devices?.threshold_temp || (normalizedType === "freezer" ? -18 : normalizedType === "chiller" ? 5 : 25),
-            last_temperature_c: log.temperature_c,
-            recorded_at: log.recorded_at || log.created_at,
-        });
-    });
-    const preferred = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
-    const orderedNames = [
-        ...preferred.filter(name => grouped.has(name)),
-        ...Array.from(grouped.keys()).filter(name => !preferred.includes(name)).sort(),
-    ];
-    return orderedNames.map(name => {
-        const room = grouped.get(name);
-        return { id: room.id, name: room.name, devices: Array.from(room.devices.values()) };
-    });
-}
-
 function bindUnitFilters() {
     document.querySelectorAll(".filter-chip").forEach(button => {
         button.addEventListener("click", () => {
@@ -377,70 +329,6 @@ function filteredDevices(devices = null) {
     return source;
 }
 
-function ensureDefaultMatrix(structure) {
-    const byName = new Map((structure || []).map(room => [room.name, { ...room, devices: normalizeRoomDevices(room) }]));
-    DEFAULT_ROOMS.forEach(roomName => {
-        if (!byName.has(roomName)) {
-            byName.set(roomName, {
-                id: `default-room-${safeId(roomName)}`,
-                name: roomName,
-                devices: DEFAULT_UNITS.map(unit => defaultDevice(roomName, unit)),
-            });
-        }
-    });
-    return [
-        ...DEFAULT_ROOMS.map(name => byName.get(name)),
-        ...Array.from(byName.values()).filter(room => !DEFAULT_ROOMS.includes(room.name)).sort((a, b) => a.name.localeCompare(b.name)),
-    ];
-}
-
-function normalizeRoomDevices(room) {
-    const byType = new Map(DEFAULT_UNITS.map(unit => [unit.type, defaultDevice(room.name, unit, room.id)]));
-    (room.devices || []).forEach(device => {
-        const type = device.type === "ambient" ? "room_temp" : device.type;
-        byType.set(type, {
-            ...device,
-            id: device.id || `${room.id || `default-room-${safeId(room.name)}`}-${safeId(type)}`,
-            room_id: device.room_id || room.id || `default-room-${safeId(room.name)}`,
-            name: unitName(type, device.name),
-            display_name: `${room.name} - ${unitName(type, device.name)}`,
-            type,
-            threshold_temp: device.threshold_temp ?? defaultThreshold(type),
-        });
-    });
-    return Array.from(byType.values());
-}
-
-function mergeLogStructure(baseStructure, logStructure) {
-    const byName = new Map(baseStructure.map(room => [room.name, { ...room, devices: [...(room.devices || [])] }]));
-    (logStructure || []).forEach(logRoom => {
-        const room = byName.get(logRoom.name) || { ...logRoom, devices: normalizeRoomDevices(logRoom) };
-        const byType = new Map((room.devices || []).map(device => [device.type, device]));
-        (logRoom.devices || []).forEach(device => byType.set(device.type, device));
-        room.devices = Array.from(byType.values());
-        byName.set(logRoom.name, room);
-    });
-    return [
-        ...DEFAULT_ROOMS.map(name => byName.get(name)).filter(Boolean),
-        ...Array.from(byName.values()).filter(room => !DEFAULT_ROOMS.includes(room.name)).sort((a, b) => a.name.localeCompare(b.name)),
-    ];
-}
-
-function defaultDevice(roomName, unit, roomId = null) {
-    const resolvedRoomId = roomId || `default-room-${safeId(roomName)}`;
-    return {
-        id: `${resolvedRoomId}-${safeId(unit.type)}`,
-        room_id: resolvedRoomId,
-        name: unit.name,
-        display_name: `${roomName} - ${unit.name}`,
-        type: unit.type,
-        threshold_temp: unit.threshold_temp,
-        is_default: true,
-        last_temperature_c: null,
-        recorded_at: null,
-    };
-}
-
 function unitName(type, fallback) {
     if (type === "room_temp") return "Suhu Ruangan";
     if (type === "chiller" || type === "undercounter") return "Chiller";
@@ -456,4 +344,30 @@ function defaultThreshold(type) {
 
 function safeId(value) {
     return String(value || "unit").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unit";
+}
+
+function normalizeFacilityStructure(structure) {
+    return (structure || [])
+        .filter(room => isUuid(room.id))
+        .map(room => ({
+            ...room,
+            devices: (room.devices || [])
+                .filter(device => isUuid(device.id) && isUuid(device.room_id || room.id))
+                .map(device => {
+                    const type = device.device_type || device.type || "room_temp";
+                    return {
+                        ...device,
+                        room_id: device.room_id || room.id,
+                        type,
+                        device_type: type,
+                        name: unitName(type, device.name),
+                        display_name: `${room.name} - ${unitName(type, device.name)}`,
+                        threshold_temp: device.threshold_temp ?? device.target_temperature ?? defaultThreshold(type),
+                    };
+                })
+        }));
+}
+
+function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }

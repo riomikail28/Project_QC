@@ -13,6 +13,7 @@ from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
 from backend.services.monitoring_service import MonitoringService
 from backend.services.request_validation import TemperatureLogRequest, request_payload, validate_model
+from backend.monitoring.facility_manager import is_uuid
 
 logger = logging.getLogger("qc.routes.monitoring")
 
@@ -34,6 +35,20 @@ def log_facility_data():
         storage_path (str, optional)
     """
     data = validate_model(TemperatureLogRequest, request_payload())
+    if not is_uuid(data.room_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid room_id",
+            "error_code": "INVALID_ROOM_ID",
+            "message": f"room_id must be a valid UUID. Received synthetic id: {data.room_id}",
+        }), 400
+    if data.device_id and not is_uuid(data.device_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid device_id",
+            "error_code": "INVALID_DEVICE_ID",
+            "message": f"device_id must be a valid UUID. Received synthetic id: {data.device_id}",
+        }), 400
 
     staff_id = data.staff_id or current_actor_id()
     data = TemperatureLogRequest(

@@ -389,6 +389,10 @@ const adminApp = {
         return Boolean((typeof deviceOrId === 'object' && deviceOrId?.is_default) || String(id || '').startsWith('default-'));
     },
 
+    isUuid(value) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+    },
+
     renderDeviceDeleteButton(device) {
         return `<button class="btn-danger btn-sm" onclick="adminApp.deleteDevice('${device.id}', ${device?.is_default ? 'true' : 'false'})"><i data-lucide="trash-2"></i> Hapus</button>`;
     },
@@ -618,6 +622,10 @@ const adminApp = {
     },
 
     async deleteDevice(id, isDefault = false) {
+        if (!this.isUuid(id)) {
+            alert('Unit ini belum tersimpan di database. Refresh facility setup.');
+            return;
+        }
         const message = isDefault
             ? 'Unit default akan dihapus dari database. Lanjutkan?'
             : 'Hapus unit monitoring ini?';
@@ -767,22 +775,24 @@ const adminApp = {
 
     renderEvidenceCell(row) {
         const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || '';
-        const storagePath = row.storage_path || '';
         const evidenceUrls = evidence.split(';').filter(Boolean);
-        const storagePaths = storagePath.split(';').filter(Boolean);
-        if (!evidenceUrls.length && !storagePaths.length) return '-';
+        if (!evidenceUrls.length) return 'No photo';
 
-        const previewButton = evidenceUrls.length
-            ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`
-            : '';
-        const links = evidenceUrls.map((url, index) => (
-            `<a href="${this.escapeAttr(url)}" target="_blank" rel="noopener" class="admin-evidence-link">Foto ${index + 1}</a>`
-        )).join('');
-        const paths = storagePaths.map(path => (
-            `<code class="admin-evidence-path">${this.escapeHtml(path)}</code>`
-        )).join('');
+        const firstUrl = evidenceUrls[0];
+        const meta = {
+            url: evidence,
+            file_name: row.file_name || row.storage_path || '',
+            created_at: row.created_at || row.recorded_at || '',
+            staff: row.staff_name || row.uploaded_by || row.staff_id || '',
+        };
+        const previewButton = `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(meta)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`;
 
-        return `<div class="admin-evidence-cell">${previewButton}${links}${paths}</div>`;
+        return `
+            <div class="admin-evidence-cell">
+                <img src="${this.escapeAttr(firstUrl)}" alt="Evidence photo" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border-color);">
+                ${previewButton}
+            </div>
+        `;
     },
 
     escapeHtml(value) {
@@ -893,8 +903,9 @@ const adminApp = {
         }
     },
 
-    previewImage(url) {
-        const urls = url.split(';').filter(u => u);
+    previewImage(input) {
+        const meta = typeof input === 'object' ? input : { url: input };
+        const urls = String(meta.url || '').split(';').filter(u => u);
         const container = document.getElementById('modal-image-container') || document.getElementById('modal-image').parentElement;
         
         if (urls.length > 1) {
@@ -902,6 +913,15 @@ const adminApp = {
         } else {
             container.innerHTML = `<img id="modal-image" src="${urls[0]}" style="max-width: 100%; border-radius: 8px;">`;
         }
+        const details = `
+            <div class="admin-muted" style="margin-top:12px; display:grid; gap:4px;">
+                ${meta.file_name ? `<div>File: ${this.escapeHtml(meta.file_name)}</div>` : ''}
+                ${meta.created_at ? `<div>Tanggal: ${this.escapeHtml(new Date(meta.created_at).toLocaleString('id-ID'))}</div>` : ''}
+                ${meta.staff ? `<div>Staff: ${this.escapeHtml(meta.staff)}</div>` : ''}
+                ${urls[0] ? `<a class="admin-evidence-link" href="${this.escapeAttr(urls[0])}" target="_blank" rel="noopener">Buka di tab baru</a>` : ''}
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', details);
         
         document.getElementById('image-modal').classList.add('active');
     }

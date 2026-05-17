@@ -2,6 +2,8 @@ from unittest.mock import patch
 
 from tests.conftest import FakeSupabase
 
+ROOM_ID = "11111111-1111-4111-8111-111111111111"
+DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
 def test_monitoring_structure_requires_auth(client):
     response = client.get("/api/facility/structure")
@@ -26,8 +28,8 @@ def test_temperature_log_validates_empty_request(client, staff_headers):
 
 def test_temperature_log_saves_normal_reading(client, staff_headers):
     fake_db = FakeSupabase({
-        "facility_rooms": [{"name": "Chiller Room"}],
-        "facility_devices": [{"id": "device-1", "type": "chiller", "threshold_temp": 4}],
+        "facility_rooms": [{"id": ROOM_ID, "name": "Chiller Room"}],
+        "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 4}],
     })
 
     with patch("backend.api.temperature_routes.get_client", return_value=fake_db), patch(
@@ -36,7 +38,7 @@ def test_temperature_log_saves_normal_reading(client, staff_headers):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,
-            json={"room_id": "room-1", "device_id": "device-1", "temperature": 3.2},
+            json={"room_id": ROOM_ID, "device_id": DEVICE_ID, "temperature": 3.2},
         )
 
     assert response.status_code == 200
@@ -98,8 +100,8 @@ class RecordingQuery:
 class RecordingSupabase:
     def __init__(self):
         self.fixtures = {
-            "facility_rooms": [{"id": "room-1", "name": "Chiller Room"}],
-            "facility_devices": [{"id": "device-1", "type": "chiller", "threshold_temp": 4}],
+            "facility_rooms": [{"id": ROOM_ID, "name": "Chiller Room"}],
+            "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 4}],
         }
         self.inserted = {}
 
@@ -117,8 +119,8 @@ def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers)
             "/api/monitoring/log",
             headers=staff_headers,
             data={
-                "room_id": "room-1",
-                "device_id": "device-1",
+                "room_id": ROOM_ID,
+                "device_id": DEVICE_ID,
                 "temperature": "3.2",
                 "humidity": "55",
                 "reason": "normal check",
@@ -141,7 +143,7 @@ def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers)
     assert payload["storage_path"] == "staff/2026-05-16/temp.jpg"
 
 
-def test_monitoring_structure_returns_default_room_unit_matrix(monkeypatch):
+def test_monitoring_structure_returns_empty_when_master_data_empty(monkeypatch):
     from backend.monitoring import facility_manager
 
     monkeypatch.setattr(facility_manager, "get_client", lambda: None)
@@ -149,12 +151,10 @@ def test_monitoring_structure_returns_default_room_unit_matrix(monkeypatch):
 
     structure = facility_manager.get_monitoring_structure()
 
-    assert len(structure) == 6
-    assert [room["name"] for room in structure] == ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"]
-    assert all([device["name"] for device in room["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"] for room in structure)
+    assert structure == []
 
 
-def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
+def test_monitoring_structure_does_not_fall_back_to_recent_logs(monkeypatch):
     from backend.monitoring import facility_manager
 
     def fake_direct(table, method="GET", payload=None, filters=""):
@@ -186,28 +186,23 @@ def test_monitoring_structure_falls_back_to_recent_logs(monkeypatch):
 
     structure = facility_manager.get_monitoring_structure()
 
-    assert len(structure) == 6
-    ppic = next(room for room in structure if room["name"] == "PPIC")
-    kitchen = next(room for room in structure if room["name"] == "Kitchen")
-    assert [device["name"] for device in ppic["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"]
-    assert next(device for device in ppic["devices"] if device["type"] == "chiller")["last_temperature_c"] == 3.5
-    assert next(device for device in kitchen["devices"] if device["type"] == "freezer")["last_temperature_c"] == -19
+    assert structure == []
 
 
-def test_monitoring_structure_merges_logs_when_master_devices_empty(monkeypatch):
+def test_monitoring_structure_requires_real_devices(monkeypatch):
     from backend.monitoring import facility_manager
 
     def fake_direct(table, method="GET", payload=None, filters=""):
         if table == "facility_rooms":
-            return [{"id": "room-ppic", "name": "PPIC"}, {"id": "room-grouper", "name": "Grouper"}]
+            return [{"id": ROOM_ID, "name": "PPIC"}, {"id": "not-a-uuid", "name": "Grouper"}]
         if table == "facility_devices":
             return []
         if table == "facility_logs":
             return [
                 {
                     "id": "log-1",
-                    "room_id": "room-ppic",
-                    "device_id": "device-chiller",
+                    "room_id": ROOM_ID,
+                    "device_id": DEVICE_ID,
                     "temperature_c": 3.5,
                     "facility_rooms": {"name": "PPIC"},
                     "facility_devices": {"name": "Chiller", "type": "chiller", "threshold_temp": 5},
@@ -220,10 +215,7 @@ def test_monitoring_structure_merges_logs_when_master_devices_empty(monkeypatch)
 
     structure = facility_manager.get_monitoring_structure()
 
-    ppic = next(room for room in structure if room["name"] == "PPIC")
-    grouper = next(room for room in structure if room["name"] == "Grouper")
-    assert next(device for device in ppic["devices"] if device["type"] == "chiller")["last_temperature_c"] == 3.5
-    assert [device["name"] for device in grouper["devices"]] == ["Suhu Ruangan", "Chiller", "Freezer"]
+    assert structure == [{"id": ROOM_ID, "name": "PPIC", "devices": []}]
 
 
 def test_monitoring_latest_falls_back_to_temperature_logs_when_facility_logs_empty():
@@ -260,5 +252,5 @@ def test_delete_default_facility_device_is_not_locked_permanently(client, admin_
     )
 
     body = response.get_json()
-    assert response.status_code != 409
-    assert "Default unit" not in body.get("detail", "")
+    assert response.status_code == 400
+    assert body["error_code"] == "INVALID_DEVICE_ID"

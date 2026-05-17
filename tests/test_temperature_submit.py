@@ -4,6 +4,9 @@ from unittest.mock import patch
 
 from tests.test_monitoring import RecordingSupabase
 
+ROOM_ID = "11111111-1111-4111-8111-111111111111"
+DEVICE_ID = "22222222-2222-4222-8222-222222222222"
+
 
 def test_submit_temperature_without_photo_succeeds(client, staff_headers):
     db = RecordingSupabase()
@@ -14,7 +17,7 @@ def test_submit_temperature_without_photo_succeeds(client, staff_headers):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,
-            data={"room_id": "room-1", "device_id": "device-1", "temperature": "4.5"},
+            data={"room_id": ROOM_ID, "device_id": DEVICE_ID, "temperature": "4.5"},
         )
 
     assert response.status_code == 200
@@ -38,8 +41,8 @@ def test_submit_temperature_with_photo_succeeds(client, staff_headers):
             "/api/monitoring/log",
             headers=staff_headers,
             data={
-                "room_id": "room-1",
-                "device_id": "device-1",
+                "room_id": ROOM_ID,
+                "device_id": DEVICE_ID,
                 "temperature": "4.5",
                 "photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 10), "temp.jpg"),
             },

@@ -1,6 +1,7 @@
 import logging
 import csv
 import io
+import os
 from datetime import datetime, timedelta, timezone
 
 from backend.database.supabase_client import get_client
@@ -131,6 +132,7 @@ class AdminService:
         item.setdefault("report_type", "qc_report")
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
         item["photo_url"] = item.get("photo_url") or item.get("product_photo_url") or item.get("temperature_photo_url") or item.get("barcode_photo_url")
+        self.normalize_evidence_url(item)
         return item
 
     def _normalize_qc_finding(self, row):
@@ -141,6 +143,7 @@ class AdminService:
         item["display_title"] = item.get("reason") or "QC Finding"
         item["product_name"] = item.get("product_name") or "QC Finding"
         item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_id")
+        self.normalize_evidence_url(item)
         return item
 
     def _include_finding_for_status(self, row, status_filter):
@@ -259,9 +262,37 @@ class AdminService:
         normalized = []
         for row in rows[:limit]:
             item = dict(row or {})
-            item["photo_url"] = item.get("photo_url") or item.get("public_url") or item.get("signed_url")
+            self.normalize_evidence_url(item)
             normalized.append(item)
         return self._empty(normalized)
+
+    def normalize_evidence_url(self, record):
+        url = (
+            record.get("public_url")
+            or record.get("signed_url")
+            or record.get("photo_url")
+            or record.get("product_photo_url")
+            or record.get("temperature_photo_url")
+            or record.get("barcode_photo_url")
+        )
+        storage_path = record.get("storage_path") or record.get("product_storage_path") or record.get("temperature_storage_path") or record.get("barcode_storage_path")
+        if not url and storage_path:
+            url = self._public_storage_url(storage_path, record.get("bucket") or "qc-evidence")
+        record["photo_url"] = url
+        record["storage_path"] = storage_path
+        record["has_photo"] = bool(url)
+        return record
+
+    def _public_storage_url(self, storage_path, bucket="qc-evidence"):
+        first_path = str(storage_path or "").split(";")[0].strip()
+        if not first_path:
+            return None
+        if first_path.startswith("http://") or first_path.startswith("https://"):
+            return first_path
+        base = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+        if not base:
+            return None
+        return f"{base}/storage/v1/object/public/{bucket}/{first_path.lstrip('/')}"
 
     def get_daily_staff_report(self, date=None, staff_id=None, status_filter=None, limit=500):
         date = date or datetime.now(timezone.utc).date().isoformat()
@@ -426,7 +457,7 @@ class AdminService:
     def _temperature_report_row(self, row):
         room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id")
         device = row.get("device_name") or row.get("device_type") or (row.get("facility_devices") or {}).get("name") or row.get("device_id")
-        return {
+        return self.normalize_evidence_url({
             "id": row.get("id"),
             "staff_id": row.get("staff_id") or row.get("created_by"),
             "staff_name": row.get("staff_name"),
@@ -440,7 +471,7 @@ class AdminService:
             "storage_path": row.get("storage_path"),
             "notes": row.get("reason") or row.get("notes"),
             "created_at": row.get("recorded_at") or row.get("created_at"),
-        }
+        })
 
     def _evidence_from_reports(self, rows):
         evidence = []

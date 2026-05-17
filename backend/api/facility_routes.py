@@ -31,7 +31,7 @@ def facility_structure():
         return error
     from backend.monitoring.facility_manager import get_monitoring_structure
 
-    return jsonify(get_monitoring_structure())
+    return jsonify({"success": True, "data": get_monitoring_structure(), "message": "OK"})
 
 
 @facility_bp.route("/api/facility/rooms", methods=["GET", "POST"])

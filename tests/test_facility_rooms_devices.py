@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+ROOM_ID = "11111111-1111-4111-8111-111111111111"
+DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
 class FacilityQuery:
     def __init__(self, table, db):
@@ -40,7 +42,8 @@ class FacilityQuery:
     def execute(self):
         rows = self.db.rows.setdefault(self.table, [])
         if self.mode == "insert":
-            row = {"id": f"{self.table}-{len(rows) + 1}", **self.payload}
+            generated_id = f"33333333-3333-4333-8333-{len(rows) + 1:012d}"
+            row = {"id": generated_id, **self.payload}
             rows.append(row)
             return SimpleNamespace(data=[row])
         if self.mode == "update":
@@ -65,8 +68,8 @@ class FacilityQuery:
 class FacilityDb:
     def __init__(self):
         self.rows = {
-            "facility_rooms": [{"id": "room-1", "name": "PPIC", "slug": "ppic"}],
-            "facility_devices": [{"id": "device-1", "room_id": "room-1", "name": "Chiller", "device_type": "chiller"}],
+            "facility_rooms": [{"id": ROOM_ID, "name": "PPIC", "slug": "ppic"}],
+            "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "name": "Chiller", "device_type": "chiller"}],
             "facility_logs": [],
             "temperature_logs": [],
         }
@@ -107,7 +110,7 @@ def test_admin_device_crud_allows_default_device_delete(client, admin_headers):
         created = client.post(
             "/api/admin/facility/devices",
             headers=admin_headers,
-            json={"room_id": "room-1", "name": "Freezer", "device_type": "freezer", "target_temperature": -18},
+            json={"room_id": ROOM_ID, "name": "Freezer", "device_type": "freezer", "target_temperature": -18},
         ).get_json()["data"]
         updated = client.put(
             f"/api/admin/facility/devices/{created['id']}",
@@ -117,27 +120,28 @@ def test_admin_device_crud_allows_default_device_delete(client, admin_headers):
         deleted = client.delete("/api/admin/facility/devices/default-room-ppic-freezer", headers=admin_headers)
 
     assert updated["target_temperature"] == -20
-    assert deleted.status_code == 404
+    assert deleted.status_code == 400
     assert deleted.status_code != 409
 
 
 def test_delete_facility_device_success(client, admin_headers):
     db = FacilityDb()
     with patch("backend.monitoring.facility_manager.get_client", return_value=db):
-        response = client.delete("/api/facility/devices/device-1", headers=admin_headers)
+        response = client.delete(f"/api/facility/devices/{DEVICE_ID}", headers=admin_headers)
 
     body = response.get_json()
     assert response.status_code == 200
     assert body["success"] is True
-    assert body["data"]["id"] == "device-1"
+    assert body["data"]["id"] == DEVICE_ID
     assert body["error"] is None
     assert not db.rows["facility_devices"]
 
 
 def test_delete_facility_device_not_found(client, admin_headers):
     db = FacilityDb()
+    missing_id = "44444444-4444-4444-8444-444444444444"
     with patch("backend.monitoring.facility_manager.get_client", return_value=db):
-        response = client.delete("/api/facility/devices/missing-device", headers=admin_headers)
+        response = client.delete(f"/api/facility/devices/{missing_id}", headers=admin_headers)
 
     body = response.get_json()
     assert response.status_code == 404
@@ -147,9 +151,9 @@ def test_delete_facility_device_not_found(client, admin_headers):
 
 def test_delete_facility_device_relation_conflict(client, admin_headers):
     db = FacilityDb()
-    db.rows["facility_logs"] = [{"id": "log-1", "device_id": "device-1"}]
+    db.rows["facility_logs"] = [{"id": "log-1", "device_id": DEVICE_ID}]
     with patch("backend.monitoring.facility_manager.get_client", return_value=db):
-        response = client.delete("/api/facility/devices/device-1", headers=admin_headers)
+        response = client.delete(f"/api/facility/devices/{DEVICE_ID}", headers=admin_headers)
 
     body = response.get_json()
     assert response.status_code == 409
