@@ -82,12 +82,9 @@ Sistem ini dirancang untuk:
 - Traceability System
 
 ---
-
-## 📚 Tugas Akhir / Skripsi
-
-**Judul Penelitian:**
-
-**PERANCANGAN SISTEM INFORMASI QUALITY CONTROL TRACEABILITY BERBASIS WEB PADA CENTRAL KITCHEN PT ASTRO TECHNOLOGIES INDONESIA MENGGUNAKAN METODE AGILE DEVELOPMENT**
+## jika ada yang ingin mencoba silahkan untuk bantu menjadi QA tester
+username : admin
+password admin123
 
 ---
 
@@ -98,6 +95,8 @@ Program Studi Sistem Informasi
 Universitas Indraprasta PGRI (UNINDRA)
 
 ---
+
+
 
 ### "Transforming Quality Control Into Intelligent Digital Operations"
 
