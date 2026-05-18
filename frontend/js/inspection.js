@@ -1,11 +1,15 @@
 /**
  * Simple mobile QC check.
  * One SKU/barcode submission creates one qc_report.
+ *
+ * Product Picker is the primary mode.
+ * Manual SKU entry is only a fallback when a product is not registered.
+ * Form fields appear progressively to minimize scroll on mobile.
  */
 
 const Inspection = {
-    selectedStatus: 'pass',
-    selectedStage: 'cooking_check',
+    selectedStatus: null,
+    selectedStage: null,
     selectedBatch: null,
     products: [],
     selectedProduct: null,
@@ -26,63 +30,104 @@ const Inspection = {
         this.bindSubmit();
         this.updateStageFields();
         this.updateSubmitState();
+        this.updateProgressiveFields();
     },
+
+    /* ═══════════════════════════════════════════════
+       Data Loading
+       ═══════════════════════════════════════════════ */
 
     async loadProducts() {
         try {
             const response = await API.get('/inspection/products');
             this.products = response?.data || [];
-            this.renderProductPrompt('Ketik minimal 2 huruf.');
         } catch (error) {
             this.products = [];
             this.message('Gagal memuat produk. Gunakan input manual jika perlu.', true);
-            this.renderProductPrompt('Produk kosong. Gunakan input manual jika perlu.');
         }
     },
+
+    /* ═══════════════════════════════════════════════
+       Product Search Binding
+       ═══════════════════════════════════════════════ */
 
     bindProductSearch() {
         const input = document.getElementById('productSearch');
         if (!input) return;
+        let debounce = null;
         input.addEventListener('input', () => {
-            this.selectedProduct = null;
-            this.updateSelectedProductCard();
-            const query = input.value.trim().toLowerCase();
-            if (query.length < 2) {
-                this.renderProductPrompt('Ketik minimal 2 huruf.');
+            clearTimeout(debounce);
+            debounce = setTimeout(() => {
+                this.selectedProduct = null;
+                this.updateSelectedProductCard();
+                this.updateProgressiveFields();
+                const query = input.value.trim().toLowerCase();
+                const helpEl = document.getElementById('productSearchHelp');
+                if (query.length < 2) {
+                    this.clearProductList();
+                    if (helpEl) {
+                        helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                        helpEl.hidden = false;
+                    }
+                    this.updateSubmitState();
+                    return;
+                }
+                if (helpEl) helpEl.hidden = true;
+                const matches = this.products.filter(item => {
+                    const code = String(item.product_code || '').toLowerCase();
+                    const name = String(item.product_name || '').toLowerCase();
+                    const barcode = String(item.barcode || '').toLowerCase();
+                    return code.includes(query) || name.includes(query) || barcode.includes(query);
+                });
+                this.renderProductOptions(matches.slice(0, 5));
                 this.updateSubmitState();
-                return;
-            }
-            const matches = this.products.filter(item => {
-                const code = String(item.product_code || '').toLowerCase();
-                const name = String(item.product_name || '').toLowerCase();
-                return code.includes(query) || name.includes(query);
-            });
-            this.renderProductOptions(matches.slice(0, 5));
-            this.updateSubmitState();
+            }, 150);
         });
     },
 
+    /* ═══════════════════════════════════════════════
+       Manual SKU Fallback
+       ═══════════════════════════════════════════════ */
+
     bindManualSku() {
-        const button = document.getElementById('manualSkuToggle');
-        if (!button) return;
-        button.addEventListener('click', () => {
-            this.manualMode = !this.manualMode;
-            this.selectedProduct = null;
-            this.selectedBatch = null;
-            this.forceNewBatch = false;
-            const wrap = document.getElementById('manualSkuWrap');
-            if (wrap) wrap.hidden = !this.manualMode;
-            button.textContent = this.manualMode ? 'Pilih dari daftar produk' : 'Input Manual';
-            this.updateSelectedProductCard();
-            this.renderActiveBatches([]);
-            const productMessage = document.getElementById('productDetected');
-            if (productMessage) productMessage.textContent = this.manualMode
-                ? 'Mode manual aktif.'
-                : 'Pilih produk terlebih dahulu.';
-            this.renderProductPrompt(this.manualMode ? '' : 'Ketik minimal 2 huruf.');
-            this.updateSubmitState();
-        });
+        // Manual SKU toggle is now rendered dynamically inside product list
+        // when no search results are found, or via the fallback button.
     },
+
+    toggleManualMode() {
+        this.manualMode = !this.manualMode;
+        this.selectedProduct = null;
+        this.selectedBatch = null;
+        this.forceNewBatch = false;
+        const wrap = document.getElementById('manualSkuWrap');
+        const searchInput = document.getElementById('productSearch');
+        const helpEl = document.getElementById('productSearchHelp');
+        if (wrap) wrap.hidden = !this.manualMode;
+        if (this.manualMode) {
+            if (searchInput) searchInput.value = '';
+            this.clearProductList();
+            if (helpEl) helpEl.hidden = true;
+            document.getElementById('qcSku')?.focus();
+        } else {
+            if (helpEl) {
+                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.hidden = false;
+            }
+            if (searchInput) searchInput.focus();
+        }
+        this.updateSelectedProductCard();
+        this.renderActiveBatches([]);
+        const productMessage = document.getElementById('productDetected');
+        if (productMessage) productMessage.textContent = this.manualMode
+            ? 'Mode input SKU manual aktif.'
+            : 'Pilih produk terlebih dahulu.';
+        this.updateProgressiveFields();
+        this.updateSubmitState();
+    },
+
+    /* ═══════════════════════════════════════════════
+       Notes Toggle
+       ═══════════════════════════════════════════════ */
 
     bindNotesToggle() {
         const button = document.getElementById('notesToggle');
@@ -95,6 +140,10 @@ const Inspection = {
         });
     },
 
+    /* ═══════════════════════════════════════════════
+       Status / Stage Bindings
+       ═══════════════════════════════════════════════ */
+
     bindStatus() {
         document.querySelectorAll('.qc-status-option').forEach(button => {
             button.addEventListener('click', () => {
@@ -102,6 +151,7 @@ const Inspection = {
                 document.querySelectorAll('.qc-status-option').forEach(item => {
                     item.classList.toggle('active', item === button);
                 });
+                this.updateSubmitState();
             });
         });
     },
@@ -114,10 +164,15 @@ const Inspection = {
                     item.classList.toggle('active', item === button);
                 });
                 this.updateStageFields();
+                this.updateProgressiveFields();
                 this.updateSubmitState();
             });
         });
     },
+
+    /* ═══════════════════════════════════════════════
+       SKU Lookup (manual mode)
+       ═══════════════════════════════════════════════ */
 
     bindSkuLookup() {
         const input = document.getElementById('qcSku');
@@ -126,11 +181,16 @@ const Inspection = {
         input.addEventListener('input', () => {
             clearTimeout(timer);
             this.updateSubmitState();
+            this.updateProgressiveFields();
             timer = setTimeout(() => {
                 if (this.manualMode) this.lookupActiveBatches(input.value.trim());
             }, 400);
         });
     },
+
+    /* ═══════════════════════════════════════════════
+       Batch New
+       ═══════════════════════════════════════════════ */
 
     bindBatchNew() {
         const button = document.getElementById('createNewBatchBtn');
@@ -143,6 +203,10 @@ const Inspection = {
         });
     },
 
+    /* ═══════════════════════════════════════════════
+       Completion State
+       ═══════════════════════════════════════════════ */
+
     bindCompletionState() {
         ['productSearch', 'qcSku', 'qcTemp'].forEach(id => {
             const input = document.getElementById(id);
@@ -150,34 +214,76 @@ const Inspection = {
         });
     },
 
-    updateStageFields() {
+    /* ═══════════════════════════════════════════════
+       Stage Fields Visibility
+       ═══════════════════════════════════════════════ */
+
+    updateStageFields(hasContext = this.hasProductContext()) {
         const cooking = document.getElementById('cookingFields');
         const final = document.getElementById('finalFields');
-        if (cooking) cooking.hidden = this.selectedStage !== 'cooking_check';
-        if (final) final.hidden = this.selectedStage !== 'final_check';
+        if (cooking) cooking.hidden = !(hasContext && this.selectedStage === 'cooking_check');
+        if (final) final.hidden = !(hasContext && this.selectedStage === 'final_check');
     },
+
+    /* ═══════════════════════════════════════════════
+       Progressive Disclosure
+       ═══════════════════════════════════════════════ */
+
+    updateProgressiveFields() {
+        const hasProduct = Boolean(this.selectedProduct);
+        const hasContext = this.hasProductContext();
+
+        // Show/hide stage, status, notes, and submit fields
+        const stageField = document.getElementById('stageField');
+        const statusField = document.getElementById('statusField');
+        const notesField = document.getElementById('notesField');
+        const submitBtn = document.getElementById('submitQcBtn');
+        const batchPanel = document.getElementById('activeBatchPanel');
+
+        // Search input visibility when product is selected
+        const pickerField = document.getElementById('productPickerField');
+        if (pickerField) pickerField.hidden = hasProduct;
+        if (batchPanel && !hasContext) batchPanel.hidden = true;
+
+        // Stage appears after product is selected
+        if (stageField) stageField.hidden = !hasContext;
+
+        // Stage-specific fields, status, notes appear after stage is selected
+        const hasStage = Boolean(this.selectedStage);
+        if (statusField) statusField.hidden = !(hasContext && hasStage);
+        if (notesField) notesField.hidden = !(hasContext && hasStage);
+        if (submitBtn) submitBtn.style.display = (hasContext && hasStage) ? '' : 'none';
+
+        // Update stage fields visibility
+        this.updateStageFields(hasContext);
+    },
+
+    /* ═══════════════════════════════════════════════
+       Photo Validation & Preview
+       ═══════════════════════════════════════════════ */
 
     bindPhotoValidation() {
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
             const input = document.getElementById(id);
             if (!input) return;
-            const zone = input.closest('.upload-zone');
             input.addEventListener('change', event => {
-            const file = (event.target.files || [])[0];
-            if (!file) return;
-            try {
-                API.validatePhoto(file);
-                zone.querySelector('span').textContent = file.name;
-                this.renderPhotoPreview(id, file);
-            } catch (err) {
-                this.message(err.message || 'Upload gagal', true);
-                input.value = '';
-                zone.querySelector('span').textContent = 'Opsional, maksimal 10MB.';
-                this.clearPhotoPreview(id);
-            }
-        });
+                const file = (event.target.files || [])[0];
+                if (!file) return;
+                try {
+                    API.validatePhoto(file);
+                    this.renderPhotoPreview(id, file);
+                } catch (err) {
+                    this.message(err.message || 'Upload gagal', true);
+                    input.value = '';
+                    this.clearPhotoPreview(id);
+                }
+            });
         });
     },
+
+    /* ═══════════════════════════════════════════════
+       Submit
+       ═══════════════════════════════════════════════ */
 
     bindSubmit() {
         const button = document.getElementById('submitQcBtn');
@@ -195,7 +301,15 @@ const Inspection = {
         const barcodePhoto = (document.getElementById('barcodePhoto')?.files || [])[0];
         const labelPhoto = (document.getElementById('labelPhoto')?.files || [])[0];
         if (!this.selectedProduct && !manualSku) {
-            this.message('Pilih produk atau masukkan SKU manual terlebih dahulu', true);
+            this.message('Pilih produk terlebih dahulu.', true);
+            return;
+        }
+        if (!this.selectedStage) {
+            this.message('Pilih jenis pengecekan terlebih dahulu.', true);
+            return;
+        }
+        if (!this.selectedStatus) {
+            this.message('Pilih status QC terlebih dahulu.', true);
             return;
         }
         if (this.selectedStage === 'cooking_check' && !temperature) {
@@ -243,36 +357,55 @@ const Inspection = {
                 if (input) input.value = '';
                 this.clearPhotoPreview(id);
             });
-            document.querySelectorAll('.upload-zone span').forEach(item => {
-                item.textContent = 'Opsional, maksimal 10MB.';
-            });
             this.selectedBatch = null;
             this.selectedProduct = null;
+            this.selectedStage = null;
+            this.selectedStatus = null;
             this.manualMode = false;
             this.forceNewBatch = false;
+            // Reset stage option buttons
+            document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.qc-status-option').forEach(item => item.classList.remove('active'));
+            const manualWrap = document.getElementById('manualSkuWrap');
+            if (manualWrap) manualWrap.hidden = true;
             this.updateSelectedProductCard();
             this.renderActiveBatches([]);
-            this.renderProductPrompt('Ketik minimal 2 huruf.');
+            this.clearProductList();
+            const helpEl = document.getElementById('productSearchHelp');
+            if (helpEl) {
+                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.hidden = false;
+            }
+            this.updateProgressiveFields();
             this.updateSubmitState();
             this.message('QC berhasil disimpan', false);
             if (typeof this.loadRecentSubmissions === 'function') this.loadRecentSubmissions();
         } catch (error) {
             this.message(`Gagal menyimpan QC: ${error.message || 'server tidak merespons'}`, true);
         } finally {
-            button.disabled = false;
             button.innerHTML = original;
+            this.updateSubmitState();
         }
     },
+
+    /* ═══════════════════════════════════════════════
+       Submit Button State
+       ═══════════════════════════════════════════════ */
 
     updateSubmitState() {
         const button = document.getElementById('submitQcBtn');
         if (!button) return;
-        const manualSku = document.getElementById('qcSku')?.value?.trim();
         const temperature = document.getElementById('qcTemp')?.value;
-        const hasProduct = Boolean(this.selectedProduct || manualSku);
+        const hasProduct = this.hasProductContext();
+        const hasStage = Boolean(this.selectedStage);
+        const hasStatus = Boolean(this.selectedStatus);
         const hasStageData = this.selectedStage !== 'cooking_check' || Boolean(temperature);
-        button.disabled = !(hasProduct && hasStageData);
+        button.disabled = !(hasProduct && hasStage && hasStatus && hasStageData);
     },
+
+    /* ═══════════════════════════════════════════════
+       Messages
+       ═══════════════════════════════════════════════ */
 
     message(text, isError = false) {
         const el = document.getElementById('qcSubmitMessage');
@@ -280,6 +413,10 @@ const Inspection = {
         el.textContent = text;
         el.classList.toggle('error', isError);
     },
+
+    /* ═══════════════════════════════════════════════
+       Active Batches Lookup
+       ═══════════════════════════════════════════════ */
 
     async lookupActiveBatches(sku) {
         const productEl = document.getElementById('productDetected');
@@ -294,7 +431,7 @@ const Inspection = {
             if (productEl) {
                 productEl.textContent = batches.length
                     ? `Ditemukan ${batches.length} batch.`
-                    : 'Produk tidak ditemukan atau belum ada batch aktif.';
+                    : 'Belum ada batch aktif. Batch baru akan dibuat saat submit.';
             }
             this.renderActiveBatches(batches);
         } catch (error) {
@@ -303,11 +440,19 @@ const Inspection = {
         }
     },
 
+    /* ═══════════════════════════════════════════════
+       Render: Product Options
+       ═══════════════════════════════════════════════ */
+
     renderProductOptions(products) {
         const list = document.getElementById('productPickerList');
         if (!list) return;
         if (!products.length) {
-            list.innerHTML = '<div class="simple-qc-message product-empty-state">Produk tidak ditemukan. Gunakan input manual jika perlu.</div>';
+            list.innerHTML = `
+                <div class="product-empty-state">
+                    <p class="simple-qc-message">Produk tidak ditemukan.</p>
+                    <button class="btn-secondary manual-sku-toggle" type="button" onclick="Inspection.toggleManualMode()">Input SKU manual</button>
+                </div>`;
             return;
         }
         list.innerHTML = '';
@@ -324,11 +469,14 @@ const Inspection = {
         });
     },
 
-    renderProductPrompt(text) {
+    clearProductList() {
         const list = document.getElementById('productPickerList');
-        if (!list) return;
-        list.innerHTML = text ? `<div class="simple-qc-message product-empty-state">${this.escapeHtml(text)}</div>` : '';
+        if (list) list.innerHTML = '';
     },
+
+    /* ═══════════════════════════════════════════════
+       Select Product
+       ═══════════════════════════════════════════════ */
 
     selectProduct(product) {
         this.selectedProduct = product;
@@ -336,21 +484,25 @@ const Inspection = {
         this.selectedBatch = null;
         this.forceNewBatch = false;
         const manualWrap = document.getElementById('manualSkuWrap');
-        const manualButton = document.getElementById('manualSkuToggle');
         const search = document.getElementById('productSearch');
         const manualInput = document.getElementById('qcSku');
         if (manualWrap) manualWrap.hidden = true;
-        if (manualButton) manualButton.textContent = 'Input Manual';
-        if (search) search.value = `${product.product_code || ''} - ${product.product_name || ''}`.trim();
+        if (search) search.value = '';
         if (manualInput) manualInput.value = '';
         this.updateSelectedProductCard();
-        this.renderProductPrompt('');
+        this.clearProductList();
+        const helpEl = document.getElementById('productSearchHelp');
+        if (helpEl) helpEl.hidden = true;
+        const productMsg = document.getElementById('productDetected');
+        if (productMsg) productMsg.textContent = '';
         this.lookupActiveBatches(product.product_code);
+        this.updateProgressiveFields();
         this.updateSubmitState();
-        document.querySelectorAll('.product-picker-option').forEach(item => {
-            item.classList.toggle('active', item.textContent.includes(product.product_code || '__none__'));
-        });
     },
+
+    /* ═══════════════════════════════════════════════
+       Selected Product Card
+       ═══════════════════════════════════════════════ */
 
     updateSelectedProductCard() {
         const card = document.getElementById('selectedProductCard');
@@ -363,7 +515,7 @@ const Inspection = {
         card.hidden = false;
         card.innerHTML = `
             <div>
-                <small>Produk Terpilih</small>
+                <small>Produk dipilih</small>
                 <strong>${this.escapeHtml(this.selectedProduct.product_code || '-')}</strong>
                 <span>${this.escapeHtml(this.selectedProduct.product_name || '-')}</span>
             </div>
@@ -372,32 +524,51 @@ const Inspection = {
         card.querySelector('.change-product-btn')?.addEventListener('click', () => {
             this.selectedProduct = null;
             this.selectedBatch = null;
+            this.selectedStage = null;
+            this.selectedStatus = null;
             this.forceNewBatch = false;
-            document.getElementById('productSearch')?.focus();
+            document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.qc-status-option').forEach(item => item.classList.remove('active'));
             this.updateSelectedProductCard();
             this.renderActiveBatches([]);
-            this.renderProductPrompt('Ketik minimal 2 huruf.');
+            this.clearProductList();
+            const helpEl = document.getElementById('productSearchHelp');
+            if (helpEl) {
+                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.hidden = false;
+            }
+            const productMsg = document.getElementById('productDetected');
+            if (productMsg) productMsg.textContent = 'Pilih produk terlebih dahulu.';
+            this.updateProgressiveFields();
             this.updateSubmitState();
+            document.getElementById('productSearch')?.focus();
         });
     },
+
+    /* ═══════════════════════════════════════════════
+       Render: Active Batches
+       ═══════════════════════════════════════════════ */
 
     renderActiveBatches(batches) {
         const panel = document.getElementById('activeBatchPanel');
         const list = document.getElementById('activeBatchList');
         const empty = document.getElementById('activeBatchEmpty');
         if (!panel || !list) return;
-        const hasContext = Boolean(this.selectedProduct || this.manualMode);
+        const hasContext = this.hasProductContext();
         panel.hidden = !hasContext;
         if (empty) empty.hidden = Boolean(batches.length);
         list.innerHTML = '';
+        const createBtn = document.getElementById('createNewBatchBtn');
+        if (createBtn) createBtn.textContent = 'Buat Batch Baru';
         batches.forEach(batch => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'batch-choice';
             button.innerHTML = `
                 <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
-                <small>Tahap Terakhir: ${this.stageLabel(batch.last_stage)} | Status: ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</small>
-                <span>Lanjutkan Batch</span>
+                <small>Tahap terakhir: ${this.stageLabel(batch.last_stage)}</small>
+                <small>Status terakhir: ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</small>
+                <span>Lanjutkan Batch Ini</span>
             `;
             button.addEventListener('click', () => {
                 this.selectedBatch = batch;
@@ -409,6 +580,10 @@ const Inspection = {
             list.appendChild(button);
         });
     },
+
+    /* ═══════════════════════════════════════════════
+       Render: Photo Preview
+       ═══════════════════════════════════════════════ */
 
     renderPhotoPreview(inputId, file) {
         const preview = document.getElementById(`${inputId}Preview`);
@@ -425,8 +600,6 @@ const Inspection = {
             const input = document.getElementById(inputId);
             if (input) input.value = '';
             this.clearPhotoPreview(inputId);
-            const zone = input?.closest('.upload-zone');
-            if (zone) zone.querySelector('span').textContent = 'Opsional, maksimal 10MB.';
         });
     },
 
@@ -435,6 +608,15 @@ const Inspection = {
         if (!preview) return;
         preview.hidden = true;
         preview.innerHTML = '';
+    },
+
+    /* ═══════════════════════════════════════════════
+       Helpers
+       ═══════════════════════════════════════════════ */
+
+    hasProductContext() {
+        const manualSku = document.getElementById('qcSku')?.value?.trim();
+        return Boolean(this.selectedProduct || (this.manualMode && manualSku));
     },
 
     stageLabel(value) {
