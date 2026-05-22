@@ -26,12 +26,19 @@ const ITDV = {
         const grid = document.getElementById('moduleGrid');
         grid.innerHTML = this.modules.map(module => `
             <article class="module-card ${module.completed ? 'completed' : ''}">
-                <div class="module-meta">
-                    <span>${this.escape(module.category)}</span>
-                    <span>${module.duration_minutes || 0} menit</span>
+                <div class="module-card-top">
+                    <div class="module-icon">${this.escape(this.moduleInitial(module.title))}</div>
+                    <div class="module-meta">
+                        <span>Difficulty</span>
+                        <strong>${this.escape(module.difficulty || this.moduleDifficulty(module.category))}</strong>
+                    </div>
                 </div>
                 <h3>${this.escape(module.title)}</h3>
                 <p>${this.escape(module.summary)}</p>
+                <div class="module-detail-grid">
+                    <div><span>Module</span><strong>${this.escape(module.category)}</strong></div>
+                    <div><span>Estimated time</span><strong>${module.duration_minutes || 0} menit</strong></div>
+                </div>
                 <ul>
                     ${(module.objectives || []).map(item => `<li>${this.escape(item)}</li>`).join('')}
                 </ul>
@@ -91,17 +98,22 @@ const ITDV = {
             return;
         }
         card.innerHTML = `
-            <h3>${this.escape(simulation.title)}</h3>
+            <div class="case-header">
+                <span>Studi Kasus</span>
+                <h3>${this.escape(simulation.title)}</h3>
+            </div>
             <p>${this.escape(simulation.scenario)}</p>
             <div class="scenario-facts">
-                <div class="fact-box"><span>Area</span><strong>${this.escape(simulation.area)}</strong></div>
+                <div class="fact-box"><span>Case</span><strong>${this.escape(simulation.area || 'PPIC Chiller')}</strong></div>
                 <div class="fact-box"><span>Target</span><strong>${simulation.target_c}&deg;C</strong></div>
                 <div class="fact-box"><span>Aktual</span><strong>${simulation.actual_c}&deg;C</strong></div>
             </div>
+            <h4>Pilih tindakan</h4>
             <div class="option-stack">
                 ${(simulation.options || []).map(option => `
                     <button class="option-btn" type="button" onclick="ITDV.submitSimulation('${simulation.id}', '${option.key}')">
-                        ${option.key}. ${this.escape(option.label)}
+                        <span>${option.key}</span>
+                        <strong>${this.escape(option.label)}</strong>
                     </button>
                 `).join('')}
             </div>
@@ -114,7 +126,10 @@ const ITDV = {
         document.getElementById('simulationResult').innerHTML = `
             <div class="result-score">${result.score || 0}</div>
             <p>${this.escape(result.feedback || '')}</p>
-            <p><strong>Aksi ideal:</strong> ${(result.best_actions || []).join(' lalu ')}</p>
+            <div class="feedback-card">
+                <strong>Aksi ideal</strong>
+                <span>${(result.best_actions || []).join(' lalu ')}</span>
+            </div>
         `;
         await this.loadProgress();
     },
@@ -130,7 +145,11 @@ const ITDV = {
         }
         form.dataset.quizId = quiz.id;
         form.innerHTML = `
-            <h3>${this.escape(quiz.title)}</h3>
+            <div class="quiz-intro">
+                <span>Assessment</span>
+                <h3>${this.escape(quiz.title)}</h3>
+                <p>Pilih satu jawaban terbaik untuk setiap pertanyaan.</p>
+            </div>
             ${(quiz.questions || []).map((question, index) => `
                 <div class="question-block">
                     <strong>${index + 1}. ${this.escape(question.text)}</strong>
@@ -251,6 +270,22 @@ const ITDV = {
             '"': '&quot;',
             "'": '&#039;'
         }[char]));
+    },
+
+    moduleInitial(title) {
+        return String(title || 'QC')
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(part => part.charAt(0).toUpperCase())
+            .join('') || 'QC';
+    },
+
+    moduleDifficulty(category) {
+        const value = String(category || '').toLowerCase();
+        if (value.includes('haccp') || value.includes('trace')) return 'Intermediate';
+        if (value.includes('suhu') || value.includes('monitor')) return 'Practical';
+        return 'Beginner';
     }
 };
 

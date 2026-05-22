@@ -266,6 +266,11 @@ class LearningService:
                 409,
                 {"progress": progress},
             )
+        existing = self._certificate_record(user)
+        if existing:
+            existing["pdf_filename"] = f"{existing['certificate_id']}.pdf"
+            existing["pdf_base64"] = base64.b64encode(self._simple_certificate_pdf(existing)).decode("ascii")
+            return self._ok(existing)
         cert_id = f"ITDV-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid4())[:8].upper()}"
         name = user.get("name") or user.get("username") or "Peserta"
         payload = {
@@ -288,10 +293,14 @@ class LearningService:
         return self._ok(certificate_data)
 
     def certificate_pdf(self, user):
-        result = self.certificate(user)
-        if not result.get("success"):
-            return result
-        data = result["data"]
+        data = self._certificate_record(user)
+        if not data:
+            progress = self.progress(user["id"])["data"]
+            return self._fail(
+                "Generate sertifikat terlebih dahulu sebelum mengunduh PDF",
+                404 if self._certificate_unlocked(progress) else 409,
+                {"progress": progress},
+            )
         pdf = self._simple_certificate_pdf(data)
         return self._ok({
             "filename": f"{data['certificate_id']}.pdf",
@@ -417,6 +426,27 @@ class LearningService:
             limit=1,
         ) if self.repo.available() else []
         return bool(rows or LOCAL_CERTIFICATES.get((user_id, "ITDV-QC-FOOD")))
+
+    def _certificate_record(self, user):
+        user_id = user["id"]
+        rows = self.repo.fetch_table(
+            "itdv_certificates",
+            filters=[("eq", "user_id", user_id), ("eq", "program_code", "ITDV-QC-FOOD")],
+            order_by="issued_at",
+            desc=True,
+            limit=1,
+        ) if self.repo.available() else []
+        row = (rows or [LOCAL_CERTIFICATES.get((user_id, "ITDV-QC-FOOD"))])[0]
+        if not row:
+            return None
+        return {
+            "certificate_id": row.get("certificate_id"),
+            "user_id": user_id,
+            "program_code": row.get("program_code") or "ITDV-QC-FOOD",
+            "participant_name": row.get("participant_name") or user.get("name") or user.get("username") or "Peserta",
+            "program_name": "Simulasi Quality Control Industri Pangan",
+            "issued_at": row.get("issued_at") or _now(),
+        }
 
     def _best_attempt_score(self, user_id, table, local_rows):
         rows = self.repo.fetch_table(

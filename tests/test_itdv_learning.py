@@ -191,7 +191,34 @@ def test_certificate_is_persisted_after_all_requirements_complete():
     assert result["data"]["pdf_base64"]
 
 
+def test_certificate_generation_is_idempotent_when_certificate_exists():
+    repo = RecordingRepo()
+    repo.completed_modules = {module["slug"] for module in MODULES}
+    repo.simulation_attempts = [{"simulation_id": "ppic-chiller-001", "score": 100}]
+    repo.quiz_attempts = [{"quiz_id": "qc-basic-quiz", "score": 100}]
+
+    first = LearningService(repository=repo).certificate({"id": "student-6", "username": "student"})
+    second = LearningService(repository=repo).certificate({"id": "student-6", "username": "student"})
+
+    assert first["data"]["certificate_id"] == second["data"]["certificate_id"]
+    assert len(repo.certificates) == 1
+
+
 def test_certificate_pdf_is_simple_pdf_after_requirements_complete():
+    repo = RecordingRepo()
+    repo.completed_modules = {module["slug"] for module in MODULES}
+    repo.simulation_attempts = [{"simulation_id": "ppic-chiller-001", "score": 100}]
+    repo.quiz_attempts = [{"quiz_id": "qc-basic-quiz", "score": 100}]
+    LearningService(repository=repo).certificate({"id": "student-6", "username": "student"})
+
+    result = LearningService(repository=repo).certificate_pdf({"id": "student-6", "username": "student"})
+
+    assert result["success"] is True
+    assert result["data"]["content_type"] == "application/pdf"
+    assert result["data"]["bytes"].startswith(b"%PDF-1.4")
+
+
+def test_certificate_pdf_does_not_generate_certificate_as_side_effect():
     repo = RecordingRepo()
     repo.completed_modules = {module["slug"] for module in MODULES}
     repo.simulation_attempts = [{"simulation_id": "ppic-chiller-001", "score": 100}]
@@ -199,9 +226,9 @@ def test_certificate_pdf_is_simple_pdf_after_requirements_complete():
 
     result = LearningService(repository=repo).certificate_pdf({"id": "student-6", "username": "student"})
 
-    assert result["success"] is True
-    assert result["data"]["content_type"] == "application/pdf"
-    assert result["data"]["bytes"].startswith(b"%PDF-1.4")
+    assert result["success"] is False
+    assert result["status"] == 404
+    assert repo.certificates == []
 
 
 def test_learning_api_endpoints(client, staff_headers):
@@ -324,6 +351,17 @@ class RecordingRepo:
         return [payload]
 
     def upsert_certificate(self, payload):
+        existing = next(
+            (
+                item for item in self.certificates
+                if item.get("user_id") == payload.get("user_id")
+                and item.get("program_code") == payload.get("program_code")
+            ),
+            None,
+        )
+        if existing:
+            existing.update(payload)
+            return [existing]
         self.certificates.append(payload)
         return [payload]
 

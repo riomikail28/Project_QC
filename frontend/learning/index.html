@@ -20,28 +20,60 @@
         <nav class="itdv-nav">
             <a href="/staff/dashboard.html">QC System</a>
             <a href="#modules">Modul</a>
-            <a href="#mentor">Mentor</a>
             <a href="#simulation">Simulasi</a>
             <a href="#quiz">Quiz</a>
+            <a href="#certificate">Sertifikat</a>
             <a href="career.html">Career</a>
+            <a href="#mentor">Mentor</a>
         </nav>
     </header>
 
-    <main class="itdv-shell">
-        <section class="itdv-hero">
-            <div>
+    <main class="itdv-shell learnhub-page">
+        <section class="itdv-hero learnhub-hero">
+            <div class="hero-copy">
                 <h1>QC LearnHub AI</h1>
                 <p>Platform simulasi pembelajaran Quality Control industri pangan berbasis kasus nyata central kitchen.</p>
                 <div class="target-users" aria-label="Target pengguna">
-                    <span>✓ SMK Tata Boga</span>
-                    <span>✓ Mahasiswa</span>
-                    <span>✓ Peserta Magang</span>
-                    <span>✓ Fresh Graduate</span>
+                    <span>&check; SMK Tata Boga</span>
+                    <span>&check; Mahasiswa</span>
+                    <span>&check; Peserta Magang</span>
+                    <span>&check; Fresh Graduate</span>
+                </div>
+                <div class="hero-actions">
+                    <a class="primary-btn hero-cta" href="#modules">Mulai Belajar</a>
+                    <a class="secondary-btn hero-cta" href="#simulation">Lihat Simulasi</a>
                 </div>
             </div>
+            <div class="hero-learning-card" aria-label="Preview alur belajar">
+                <div class="hero-step active">
+                    <span>01</span>
+                    <strong>Learning</strong>
+                    <small>Materi HACCP dan QC dasar</small>
+                </div>
+                <div class="hero-step">
+                    <span>02</span>
+                    <strong>Simulation</strong>
+                    <small>Kasus PPIC Chiller 11&deg;C</small>
+                </div>
+                <div class="hero-step">
+                    <span>03</span>
+                    <strong>Quiz</strong>
+                    <small>Penilaian otomatis</small>
+                </div>
+            </div>
+        </section>
+
+        <section id="certificate" class="content-section progress-dashboard">
+            <div class="section-heading">
+                <h2>Progress Dashboard</h2>
+                <span>Pantau kesiapan belajar sebelum mengunduh sertifikat.</span>
+            </div>
             <div class="progress-panel">
-                <span>Progress Belajar</span>
-                <strong id="progressPercent">0%</strong>
+                <div class="progress-overview">
+                    <span>Progress total</span>
+                    <strong id="progressPercent">0%</strong>
+                    <small id="progressText">0 dari 5 modul selesai</small>
+                </div>
                 <div class="progress-stack">
                     <div class="progress-row">
                         <div><span>Learning</span><strong id="learningPercent">0%</strong></div>
@@ -60,7 +92,6 @@
                         <div class="progress-track"><div id="certificateProgressBar"></div></div>
                     </div>
                 </div>
-                <small id="progressText">0 dari 5 modul selesai</small>
                 <button id="certificateBtn" class="primary-btn" type="button">Generate Sertifikat</button>
             </div>
         </section>
@@ -86,29 +117,35 @@
             </div>
         </section>
 
-        <section id="modules" class="content-section">
+        <section id="modules" class="content-section learning-center">
             <div class="section-heading">
                 <h2>Learning Center</h2>
-                <span>HACCP, Food Safety, QC Dasar, Traceability, Monitoring Suhu</span>
+                <span>HACCP, Food Safety, QC Dasar, Traceability, Monitoring Suhu.</span>
             </div>
             <div id="moduleGrid" class="module-grid"></div>
         </section>
 
-        <section id="mentor" class="content-section mentor-section">
-            <div>
+        <section id="mentor" class="content-section mentor-section chat-section">
+            <div class="mentor-intro">
                 <div class="section-heading">
                     <h2>AI Mentor</h2>
-                    <span>Mentor rule-based untuk kasus food safety, HACCP, dan corrective action</span>
+                    <span>Chat assistant rule-based untuk food safety, HACCP, dan corrective action.</span>
                 </div>
-                <form id="mentorForm" class="mentor-card">
+                <form id="mentorForm" class="mentor-card chat-composer">
                     <label for="mentorQuestion">Pertanyaan</label>
-                    <textarea id="mentorQuestion" placeholder="Kenapa suhu 11°C berbahaya?" required>Kenapa suhu 11°C berbahaya?</textarea>
+                    <textarea id="mentorQuestion" placeholder="Kenapa suhu 11&deg;C berbahaya?" required>Kenapa suhu 11°C berbahaya?</textarea>
                     <button class="primary-btn" type="submit">Tanya Mentor</button>
                 </form>
             </div>
-            <div class="mentor-card">
-                <h3>Jawaban Mentor</h3>
-                <div id="mentorAnswer" class="empty-result">Ajukan pertanyaan untuk melihat jawaban.</div>
+            <div class="mentor-card chat-window">
+                <div class="chat-header">
+                    <div>
+                        <h3>Jawaban Mentor</h3>
+                        <span>Guidance berbasis aturan HACCP</span>
+                    </div>
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <div class="chat-bubble assistant-bubble" id="mentorAnswer">Ajukan pertanyaan untuk melihat jawaban.</div>
                 <div id="mentorTopics" class="mentor-topics"></div>
                 <div class="mentor-history">
                     <h4>Riwayat</h4>
@@ -117,25 +154,25 @@
             </div>
         </section>
 
-        <section id="simulation" class="content-section two-column">
+        <section id="simulation" class="content-section two-column simulation-study">
             <div>
                 <div class="section-heading">
                     <h2>Simulation Mode</h2>
-                    <span>Kasus nyata deviasi suhu PPIC Chiller</span>
+                    <span>Studi kasus nyata: PPIC Chiller, target 5&deg;C, aktual 11&deg;C.</span>
                 </div>
                 <div id="simulationCard" class="scenario-card"></div>
             </div>
-            <div class="result-panel">
-                <h3>Hasil Simulasi</h3>
+            <div class="result-panel feedback-panel">
+                <h3>Feedback Simulasi</h3>
                 <div id="simulationResult" class="empty-result">Pilih tindakan untuk melihat skor dan feedback.</div>
             </div>
         </section>
 
-        <section id="quiz" class="content-section two-column">
+        <section id="quiz" class="content-section two-column quiz-learning">
             <div>
                 <div class="section-heading">
                     <h2>Quiz</h2>
-                    <span>Multiple choice dengan nilai otomatis</span>
+                    <span>Multiple choice dengan nilai otomatis seperti platform belajar.</span>
                 </div>
                 <form id="quizForm" class="quiz-card"></form>
             </div>
@@ -143,6 +180,20 @@
                 <h3>Nilai Quiz</h3>
                 <div id="quizResult" class="empty-result">Jawab semua pertanyaan lalu submit.</div>
             </div>
+        </section>
+
+        <section class="content-section career-preview">
+            <div class="section-heading">
+                <h2>Karier setelah belajar</h2>
+                <span>Rekomendasi role berdasarkan hasil learning, simulation, dan quiz.</span>
+            </div>
+            <div class="career-path-grid">
+                <article><strong>QC</strong><span>Quality Control produksi pangan</span></article>
+                <article><strong>QA</strong><span>Sistem mutu dan dokumentasi</span></article>
+                <article><strong>Food Safety</strong><span>HACCP dan keamanan pangan</span></article>
+                <article><strong>Supply Chain</strong><span>Traceability dan alur bahan</span></article>
+            </div>
+            <a class="secondary-btn career-link" href="career.html">Lihat Career Recommendation</a>
         </section>
 
         <section id="certificatePanel" class="certificate-panel" hidden>
