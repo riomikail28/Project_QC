@@ -64,8 +64,6 @@ def request_payload() -> dict[str, Any]:
         payload = request.form.to_dict()
     else:
         payload = request.get_json(silent=True) or {}
-    if "notes" in payload and "reason" not in payload:
-        payload["reason"] = payload.get("notes")
     return payload
 
 
@@ -140,6 +138,8 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             notes=_optional_str(data, "notes", 1000),
         )
     if model is TemperatureLogRequest:
+        if "notes" in data and "reason" not in data:
+            data = {**data, "reason": data.get("notes")}
         return TemperatureLogRequest(
             room_id=_required(data, "room_id", 80),
             device_id=_optional_str(data, "device_id", 80),

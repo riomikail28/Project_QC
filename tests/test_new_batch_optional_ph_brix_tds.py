@@ -41,6 +41,21 @@ def test_create_batch_without_optional_parameters_succeeds(client, staff_headers
     assert "ph_value" not in db.inserted
 
 
+def test_create_batch_with_notes_does_not_create_unknown_reason(client, staff_headers):
+    response, db = _create(client, staff_headers, {"notes": "Parameter normal"})
+
+    assert response.status_code == 201
+    assert db.inserted["parameter_notes"] == "Parameter normal"
+    assert "reason" not in db.inserted
+
+
+def test_create_batch_ignores_legacy_reason_field(client, staff_headers):
+    response, db = _create(client, staff_headers, {"reason": "Legacy client note"})
+
+    assert response.status_code == 201
+    assert "reason" not in db.inserted
+
+
 def test_create_batch_with_ph_succeeds(client, staff_headers):
     response, db = _create(client, staff_headers, {"ph_value": 5.2})
 

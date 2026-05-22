@@ -118,7 +118,12 @@ def create_new_batch():
     Returns:
         JSON with created batch record
     """
-    data = validate_model(BatchCreateRequest, request_payload())
+    payload = request_payload()
+    # Legacy/mobile clients may still send `reason` for note-like text. Batch
+    # creation persists the user-facing note as `notes`/`parameter_notes`, so
+    # ignore `reason` here instead of surfacing an unknown_fields error.
+    payload.pop("reason", None)
+    data = validate_model(BatchCreateRequest, payload)
 
     product_id = data.product_id
     batch_code = data.batch_code or f"QC-{datetime.now().strftime('%Y%m%d-%H%M%S')}"

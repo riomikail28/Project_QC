@@ -32,6 +32,24 @@
     margin-top: 12px;
 }
 
+.new-batch-message {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.new-batch-message.success {
+    border-color: rgba(34, 197, 94, 0.28);
+    background: #f0fdf4;
+    color: #166534;
+}
+
 .optional-parameter-card {
     display: grid;
     gap: 14px;

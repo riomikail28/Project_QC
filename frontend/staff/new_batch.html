@@ -66,6 +66,7 @@
                 </div>
             </div>
 
+            <div id="newBatchMessage" class="new-batch-message" role="status" aria-live="polite" hidden></div>
             <button type="submit" class="btn-primary new-batch-submit">Lanjut QC Check</button>
         </form>
     </div>
@@ -120,12 +121,36 @@
             return value === '' ? undefined : Number(value);
         }
 
+        function showBatchMessage(message, type = 'error') {
+            const el = document.getElementById('newBatchMessage');
+            if (!el) return;
+            el.textContent = message;
+            el.className = `new-batch-message ${type}`;
+            el.hidden = false;
+        }
+
+        function clearBatchMessage() {
+            const el = document.getElementById('newBatchMessage');
+            if (!el) return;
+            el.textContent = '';
+            el.hidden = true;
+        }
+
+        function batchErrorMessage(error) {
+            const detail = error && error.data && error.data.details;
+            if (detail && Array.isArray(detail.unknown_fields)) {
+                return 'Data batch tidak valid. Muat ulang halaman lalu coba lagi.';
+            }
+            return (error && error.message) || 'Batch belum bisa dibuat. Periksa data lalu coba lagi.';
+        }
+
         document.getElementById('newBatchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
             const originalText = btn.innerText;
             btn.disabled = true;
             btn.innerText = 'Membuat...';
+            clearBatchMessage();
 
             const payload = {
                 product_id: document.getElementById('productId').value,
@@ -149,7 +174,7 @@
                     throw new Error(res.error || 'Unknown error');
                 }
             } catch (err) {
-                alert('Gagal membuat batch: ' + err.message);
+                showBatchMessage(batchErrorMessage(err));
                 btn.disabled = false;
                 btn.innerText = originalText;
             }
