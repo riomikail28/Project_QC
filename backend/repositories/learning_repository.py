@@ -36,7 +36,7 @@ class LearningRepository:
             return None
         try:
             data = {**payload, "updated_at": _now()}
-            return self.sb.table("itdv_learning_progress").upsert(
+            return self.sb.table("itdv_progress").upsert(
                 data,
                 on_conflict="user_id,module_slug",
             ).execute().data

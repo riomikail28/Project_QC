@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Recommendation | QC LearnHub AI</title>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="learning.css">
+</head>
+<body>
+    <header class="itdv-header">
+        <a class="itdv-brand" href="/learning/">
+            <span class="brand-mark">IT</span>
+            <span>
+                <strong>QC LearnHub AI</strong>
+                <small>Career Recommendation</small>
+            </span>
+        </a>
+        <nav class="itdv-nav">
+            <a href="/learning/">Learning</a>
+            <a href="/learning/#simulation">Simulasi</a>
+            <a href="/learning/#quiz">Quiz</a>
+            <a href="/staff/dashboard.html">QC System</a>
+        </nav>
+    </header>
+
+    <main class="itdv-shell">
+        <section class="career-hero">
+            <div>
+                <h1>Career Recommendation</h1>
+                <p>Rekomendasi jalur karier berbasis skor learning, simulation, dan quiz. Sistem ini memakai aturan sederhana, bukan AI.</p>
+            </div>
+            <div class="career-score-card">
+                <span>Rekomendasi Utama</span>
+                <strong id="primaryCareer">Loading...</strong>
+                <small id="primaryMatch">0% match</small>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div class="section-heading">
+                <h2>Ranking Karier</h2>
+                <span>QC, QA, Food Safety, Auditor, Supply Chain</span>
+            </div>
+            <div id="careerGrid" class="career-grid">
+                <div class="career-card">Loading rekomendasi...</div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div class="section-heading">
+                <h2>Dasar Skor</h2>
+                <span>Skor tertinggi digunakan untuk simulation dan quiz</span>
+            </div>
+            <div class="score-strip">
+                <div><span>Learning</span><strong id="careerLearningScore">0%</strong></div>
+                <div><span>Simulation</span><strong id="careerSimulationScore">0%</strong></div>
+                <div><span>Quiz</span><strong id="careerQuizScore">0%</strong></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="career.js"></script>
+</body>
+</html>

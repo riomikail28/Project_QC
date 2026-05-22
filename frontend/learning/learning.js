@@ -12,9 +12,11 @@ const ITDV = {
             this.loadModules(),
             this.loadProgress(),
             this.loadSimulations(),
-            this.loadQuizzes()
+            this.loadQuizzes(),
+            this.loadMentorHistory()
         ]);
         document.getElementById('certificateBtn').addEventListener('click', () => this.generateCertificate());
+        document.getElementById('mentorForm').addEventListener('submit', event => this.askMentor(event));
         if (window.lucide) lucide.createIcons();
     },
 
@@ -49,9 +51,34 @@ const ITDV = {
     async loadProgress() {
         const response = await API.get('/learning/progress');
         const progress = response.data || {};
-        document.getElementById('progressPercent').textContent = `${progress.percent || 0}%`;
-        document.getElementById('progressBar').style.width = `${progress.percent || 0}%`;
+        const values = {
+            learning: progress.learning_percent ?? progress.percent ?? 0,
+            simulation: progress.simulation_percent ?? 0,
+            quiz: progress.quiz_percent ?? 0,
+            certificate: progress.certificate_percent ?? 0
+        };
+        const overall = Math.round((values.learning + values.simulation + values.quiz + values.certificate) / 4);
+        document.getElementById('progressPercent').textContent = `${overall}%`;
+        this.setProgressBar('learning', values.learning);
+        this.setProgressBar('simulation', values.simulation);
+        this.setProgressBar('quiz', values.quiz);
+        this.setProgressBar('certificate', values.certificate);
         document.getElementById('progressText').textContent = `${progress.completed_modules || 0} dari ${progress.total_modules || 0} modul selesai`;
+        const certificateBtn = document.getElementById('certificateBtn');
+        const unlocked = values.learning >= 100 && values.simulation >= 100 && values.quiz >= 100;
+        if (certificateBtn) {
+            certificateBtn.disabled = !unlocked;
+            certificateBtn.textContent = unlocked ? 'Generate Sertifikat PDF' : 'Sertifikat Terkunci';
+            certificateBtn.title = unlocked ? 'Generate sertifikat PDF' : 'Selesaikan 100% modul, simulation, dan quiz';
+        }
+    },
+
+    setProgressBar(key, value) {
+        const percent = Math.max(0, Math.min(100, Number(value) || 0));
+        const label = document.getElementById(`${key}Percent`);
+        const bar = document.getElementById(`${key}ProgressBar`);
+        if (label) label.textContent = `${percent}%`;
+        if (bar) bar.style.width = `${percent}%`;
     },
 
     async loadSimulations() {
@@ -89,6 +116,7 @@ const ITDV = {
             <p>${this.escape(result.feedback || '')}</p>
             <p><strong>Aksi ideal:</strong> ${(result.best_actions || []).join(' lalu ')}</p>
         `;
+        await this.loadProgress();
     },
 
     async loadQuizzes() {
@@ -119,6 +147,46 @@ const ITDV = {
         form.addEventListener('submit', event => this.submitQuiz(event));
     },
 
+    async askMentor(event) {
+        event.preventDefault();
+        const question = document.getElementById('mentorQuestion').value.trim();
+        if (!question) return;
+        const response = await API.post('/learning/mentor', { question });
+        const data = response.data || {};
+        this.renderMentorAnswer(data);
+        await this.loadMentorHistory();
+    },
+
+    async loadMentorHistory() {
+        try {
+            const response = await API.get('/learning/mentor/history');
+            this.renderMentorHistory(response.data || []);
+        } catch (error) {
+            this.renderMentorHistory([]);
+        }
+    },
+
+    renderMentorAnswer(data) {
+        document.getElementById('mentorAnswer').textContent = data.answer || 'Belum ada jawaban.';
+        document.getElementById('mentorTopics').innerHTML = (data.topics || [])
+            .map(topic => `<span>${this.escape(topic)}</span>`)
+            .join('');
+    },
+
+    renderMentorHistory(items) {
+        const list = document.getElementById('mentorHistoryList');
+        if (!items.length) {
+            list.textContent = 'Belum ada riwayat.';
+            return;
+        }
+        list.innerHTML = items.map(item => `
+            <article class="mentor-history-item">
+                <strong>${this.escape(item.question)}</strong>
+                <p>${this.escape(item.answer)}</p>
+            </article>
+        `).join('');
+    },
+
     async submitQuiz(event) {
         event.preventDefault();
         const form = event.currentTarget;
@@ -133,6 +201,7 @@ const ITDV = {
             <p>${result.correct || 0} dari ${result.total || 0} jawaban benar.</p>
             <p>${result.passed ? 'Lulus minimum score.' : 'Ulangi materi sebelum mencoba lagi.'}</p>
         `;
+        await this.loadProgress();
     },
 
     async generateCertificate() {
@@ -148,9 +217,30 @@ const ITDV = {
             });
             document.getElementById('certificatePanel').hidden = false;
             document.getElementById('certificatePanel').scrollIntoView({ behavior: 'smooth' });
+            if (cert.pdf_base64) {
+                this.downloadPdf(cert.pdf_base64, cert.pdf_filename || `${cert.certificate_id || 'ITDV-Certificate'}.pdf`);
+            }
+            await this.loadProgress();
         } catch (error) {
             alert(error.message || 'Sertifikat belum bisa dibuat.');
         }
+    },
+
+    downloadPdf(base64, filename) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     },
 
     escape(value) {

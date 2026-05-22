@@ -54,7 +54,7 @@ Tabel baru memakai prefix `itdv_` agar terpisah dari tabel QC operasional:
 
 ```text
 itdv_modules
-itdv_learning_progress
+itdv_progress
 itdv_simulations
 itdv_simulation_attempts
 itdv_quizzes

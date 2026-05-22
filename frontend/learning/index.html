@@ -20,24 +20,69 @@
         <nav class="itdv-nav">
             <a href="/staff/dashboard.html">QC System</a>
             <a href="#modules">Modul</a>
+            <a href="#mentor">Mentor</a>
             <a href="#simulation">Simulasi</a>
             <a href="#quiz">Quiz</a>
+            <a href="career.html">Career</a>
         </nav>
     </header>
 
     <main class="itdv-shell">
         <section class="itdv-hero">
             <div>
-                <p class="eyebrow">Digital Training Platform</p>
-                <h1>Platform pembelajaran QC berbasis kasus central kitchen.</h1>
-                <p>Mahasiswa dan siswa SMK dapat belajar HACCP, food safety, traceability, monitoring suhu, dan keputusan QC melalui simulasi operasional.</p>
+                <h1>QC LearnHub AI</h1>
+                <p>Platform simulasi pembelajaran Quality Control industri pangan berbasis kasus nyata central kitchen.</p>
+                <div class="target-users" aria-label="Target pengguna">
+                    <span>✓ SMK Tata Boga</span>
+                    <span>✓ Mahasiswa</span>
+                    <span>✓ Peserta Magang</span>
+                    <span>✓ Fresh Graduate</span>
+                </div>
             </div>
             <div class="progress-panel">
                 <span>Progress Belajar</span>
                 <strong id="progressPercent">0%</strong>
-                <div class="progress-track"><div id="progressBar"></div></div>
+                <div class="progress-stack">
+                    <div class="progress-row">
+                        <div><span>Learning</span><strong id="learningPercent">0%</strong></div>
+                        <div class="progress-track"><div id="learningProgressBar"></div></div>
+                    </div>
+                    <div class="progress-row">
+                        <div><span>Simulation</span><strong id="simulationPercent">0%</strong></div>
+                        <div class="progress-track"><div id="simulationProgressBar"></div></div>
+                    </div>
+                    <div class="progress-row">
+                        <div><span>Quiz</span><strong id="quizPercent">0%</strong></div>
+                        <div class="progress-track"><div id="quizProgressBar"></div></div>
+                    </div>
+                    <div class="progress-row">
+                        <div><span>Certificate</span><strong id="certificatePercent">0%</strong></div>
+                        <div class="progress-track"><div id="certificateProgressBar"></div></div>
+                    </div>
+                </div>
                 <small id="progressText">0 dari 5 modul selesai</small>
                 <button id="certificateBtn" class="primary-btn" type="button">Generate Sertifikat</button>
+            </div>
+        </section>
+
+        <section class="content-section why-section">
+            <div class="why-copy">
+                <h2>Mengapa belajar QC industri penting?</h2>
+                <p>Quality Control di industri pangan bukan hanya pemeriksaan akhir, tetapi rangkaian keputusan yang menjaga keamanan produk, konsistensi mutu, traceability, dan kesiapan audit. Pembelajaran berbasis kasus membantu peserta memahami risiko nyata sebelum masuk ke area produksi.</p>
+            </div>
+            <div class="why-points" aria-label="Manfaat belajar QC industri">
+                <div>
+                    <strong>Keamanan pangan</strong>
+                    <span>Memahami deviasi suhu, kontaminasi, dan critical control point.</span>
+                </div>
+                <div>
+                    <strong>Kesiapan kerja</strong>
+                    <span>Melatih cara berpikir staff QC saat menghadapi kasus operasional.</span>
+                </div>
+                <div>
+                    <strong>Dokumentasi audit</strong>
+                    <span>Membiasakan pencatatan evidence, tindakan korektif, dan traceability.</span>
+                </div>
             </div>
         </section>
 
@@ -47,6 +92,29 @@
                 <span>HACCP, Food Safety, QC Dasar, Traceability, Monitoring Suhu</span>
             </div>
             <div id="moduleGrid" class="module-grid"></div>
+        </section>
+
+        <section id="mentor" class="content-section mentor-section">
+            <div>
+                <div class="section-heading">
+                    <h2>AI Mentor</h2>
+                    <span>Mentor rule-based untuk kasus food safety, HACCP, dan corrective action</span>
+                </div>
+                <form id="mentorForm" class="mentor-card">
+                    <label for="mentorQuestion">Pertanyaan</label>
+                    <textarea id="mentorQuestion" placeholder="Kenapa suhu 11°C berbahaya?" required>Kenapa suhu 11°C berbahaya?</textarea>
+                    <button class="primary-btn" type="submit">Tanya Mentor</button>
+                </form>
+            </div>
+            <div class="mentor-card">
+                <h3>Jawaban Mentor</h3>
+                <div id="mentorAnswer" class="empty-result">Ajukan pertanyaan untuk melihat jawaban.</div>
+                <div id="mentorTopics" class="mentor-topics"></div>
+                <div class="mentor-history">
+                    <h4>Riwayat</h4>
+                    <div id="mentorHistoryList">Belum ada riwayat.</div>
+                </div>
+            </div>
         </section>
 
         <section id="simulation" class="content-section two-column">
