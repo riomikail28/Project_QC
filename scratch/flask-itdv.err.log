@@ -8,3 +8,4 @@ INFO:werkzeug: * Restarting with stat
 JWT_SECRET_KEY/SECRET_KEY not set; using local development secret.
 WARNING:werkzeug: * Debugger is active!
 INFO:werkzeug: * Debugger PIN: 111-786-001
+INFO:werkzeug:127.0.0.1 - - [22/May/2026 21:35:31] "GET /learning/ HTTP/1.1" 200 -
