@@ -30,6 +30,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 ADMIN_DIR = os.path.join(FRONTEND_DIR, "admin")
 STAFF_DIR = os.path.join(FRONTEND_DIR, "staff")
+LEARNING_DIR = os.path.join(FRONTEND_DIR, "learning")
 
 
 def create_app() -> Flask:
@@ -64,6 +65,7 @@ def create_app() -> Flask:
     from backend.api.staff_routes import staff_bp
     from backend.api.facility_routes import facility_bp
     from backend.api.health_routes import health_bp
+    from backend.api.learning_routes import learning_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -119,6 +121,7 @@ def create_app() -> Flask:
     app.register_blueprint(staff_bp)
     app.register_blueprint(facility_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(learning_bp)
 
     # Frontend routes for Vercel/serverless deployment.
     @app.route("/")
@@ -151,6 +154,15 @@ def create_app() -> Flask:
     @app.route("/staff/<path:filename>")
     def staff_file(filename):
         return send_from_directory(STAFF_DIR, filename)
+
+    @app.route("/learning")
+    @app.route("/learning/")
+    def learning_index():
+        return send_from_directory(LEARNING_DIR, "index.html")
+
+    @app.route("/learning/<path:filename>")
+    def learning_file(filename):
+        return send_from_directory(LEARNING_DIR, filename)
 
     @app.route("/<path:filename>.html")
     def frontend_html(filename):

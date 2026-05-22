@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITDV Learning Center | QC Central Kitchen</title>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="learning.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <header class="itdv-header">
+        <a class="itdv-brand" href="/staff/dashboard.html">
+            <span class="brand-mark">IT</span>
+            <span>
+                <strong>ITDV Learning Center</strong>
+                <small>Simulasi Quality Control Industri Pangan</small>
+            </span>
+        </a>
+        <nav class="itdv-nav">
+            <a href="/staff/dashboard.html">QC System</a>
+            <a href="#modules">Modul</a>
+            <a href="#simulation">Simulasi</a>
+            <a href="#quiz">Quiz</a>
+        </nav>
+    </header>
+
+    <main class="itdv-shell">
+        <section class="itdv-hero">
+            <div>
+                <p class="eyebrow">Digital Training Platform</p>
+                <h1>Platform pembelajaran QC berbasis kasus central kitchen.</h1>
+                <p>Mahasiswa dan siswa SMK dapat belajar HACCP, food safety, traceability, monitoring suhu, dan keputusan QC melalui simulasi operasional.</p>
+            </div>
+            <div class="progress-panel">
+                <span>Progress Belajar</span>
+                <strong id="progressPercent">0%</strong>
+                <div class="progress-track"><div id="progressBar"></div></div>
+                <small id="progressText">0 dari 5 modul selesai</small>
+                <button id="certificateBtn" class="primary-btn" type="button">Generate Sertifikat</button>
+            </div>
+        </section>
+
+        <section id="modules" class="content-section">
+            <div class="section-heading">
+                <h2>Learning Center</h2>
+                <span>HACCP, Food Safety, QC Dasar, Traceability, Monitoring Suhu</span>
+            </div>
+            <div id="moduleGrid" class="module-grid"></div>
+        </section>
+
+        <section id="simulation" class="content-section two-column">
+            <div>
+                <div class="section-heading">
+                    <h2>Simulation Mode</h2>
+                    <span>Kasus nyata deviasi suhu PPIC Chiller</span>
+                </div>
+                <div id="simulationCard" class="scenario-card"></div>
+            </div>
+            <div class="result-panel">
+                <h3>Hasil Simulasi</h3>
+                <div id="simulationResult" class="empty-result">Pilih tindakan untuk melihat skor dan feedback.</div>
+            </div>
+        </section>
+
+        <section id="quiz" class="content-section two-column">
+            <div>
+                <div class="section-heading">
+                    <h2>Quiz</h2>
+                    <span>Multiple choice dengan nilai otomatis</span>
+                </div>
+                <form id="quizForm" class="quiz-card"></form>
+            </div>
+            <div class="result-panel">
+                <h3>Nilai Quiz</h3>
+                <div id="quizResult" class="empty-result">Jawab semua pertanyaan lalu submit.</div>
+            </div>
+        </section>
+
+        <section id="certificatePanel" class="certificate-panel" hidden>
+            <div class="certificate-sheet">
+                <span>Sertifikat Penyelesaian</span>
+                <h2 id="certificateName">Peserta</h2>
+                <p>Telah menyelesaikan program ITDV Simulasi Quality Control Industri Pangan.</p>
+                <strong id="certificateId">ITDV-</strong>
+                <small id="certificateDate"></small>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="learning.js"></script>
+</body>
+</html>

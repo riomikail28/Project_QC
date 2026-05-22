@@ -33,6 +33,7 @@
             <a href="dashboard.html" class="active">Beranda</a>
             <a href="monitoring.html">Monitoring</a>
             <a href="inspection.html">QC Check</a>
+            <a href="/learning/">ITDV</a>
             <a href="profile.html">Profil</a>
             <a href="/admin/" class="admin-link" data-admin-only hidden>Admin</a>
         </nav>
@@ -180,6 +181,7 @@
     <div class="fab-container">
         <div id="fabMenu" style="display:none; gap:10px; flex-direction:column;">
             <button class="fab-mini" data-action="finding" onclick="openQcFinding()" title="QC Temuan"><i class="fas fa-camera"></i></button>
+            <button class="fab-mini" data-action="learning" onclick="window.location.href='/learning/'" title="ITDV Learning"><i class="fas fa-graduation-cap"></i></button>
             <button class="fab-mini" data-action="scan" onclick="window.location.href='inspection.html'" title="Quick Scan"><i class="fas fa-qrcode"></i></button>
             <button class="fab-mini" data-action="batch" onclick="window.location.href='new_batch.html'" title="New Batch"><i class="fas fa-plus"></i></button>
         </div>
