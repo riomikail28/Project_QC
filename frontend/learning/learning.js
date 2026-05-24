@@ -2,6 +2,7 @@ const ITDV = {
     modules: [],
     simulations: [],
     quizzes: [],
+    progress: {},
 
     async init() {
         if (!Auth.check()) {
@@ -13,7 +14,8 @@ const ITDV = {
             this.loadProgress(),
             this.loadSimulations(),
             this.loadQuizzes(),
-            this.loadMentorHistory()
+            this.loadMentorHistory(),
+            this.loadCareerPreview()
         ]);
         document.getElementById('certificateBtn').addEventListener('click', () => this.generateCertificate());
         document.getElementById('mentorForm').addEventListener('submit', event => this.askMentor(event));
@@ -42,11 +44,34 @@ const ITDV = {
                 <ul>
                     ${(module.objectives || []).map(item => `<li>${this.escape(item)}</li>`).join('')}
                 </ul>
-                <button class="secondary-btn" type="button" onclick="ITDV.completeModule('${module.slug}')">
+                <button class="secondary-btn" type="button" onclick="ITDV.toggleModule('${module.slug}')">
+                    Buka Modul
+                </button>
+                <div id="moduleDetail-${this.escapeAttr(module.slug)}" class="module-learning-detail" hidden>
+                    <div>
+                        <span>Tujuan belajar</span>
+                        <p>${(module.objectives || []).map(item => this.escape(item)).join(', ') || 'Memahami praktik QC industri pangan.'}</p>
+                    </div>
+                    <div>
+                        <span>Materi ringkas</span>
+                        <p>${this.escape(this.moduleMaterial(module))}</p>
+                    </div>
+                    <div>
+                        <span>Contoh kasus</span>
+                        <p>${this.escape(this.moduleCase(module))}</p>
+                    </div>
+                </div>
+                <button class="primary-btn" type="button" onclick="ITDV.completeModule('${module.slug}')" ${module.completed ? 'disabled' : ''}>
                     ${module.completed ? 'Selesai' : 'Tandai selesai'}
                 </button>
             </article>
         `).join('');
+    },
+
+    toggleModule(slug) {
+        const panel = document.getElementById(`moduleDetail-${slug}`);
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
     },
 
     async completeModule(slug) {
@@ -58,6 +83,7 @@ const ITDV = {
     async loadProgress() {
         const response = await API.get('/learning/progress');
         const progress = response.data || {};
+        this.progress = progress;
         const values = {
             learning: progress.learning_percent ?? progress.percent ?? 0,
             simulation: progress.simulation_percent ?? 0,
@@ -69,22 +95,25 @@ const ITDV = {
         this.setProgressBar('learning', values.learning);
         this.setProgressBar('simulation', values.simulation);
         this.setProgressBar('quiz', values.quiz);
-        this.setProgressBar('certificate', values.certificate);
+        const certificateReady = values.learning >= 100 && values.simulation >= 100 && values.quiz >= 100;
+        const certificateStatus = values.certificate >= 100 ? 'Terbit' : (certificateReady ? 'Siap' : 'Terkunci');
+        this.setProgressBar('certificate', values.certificate, certificateStatus);
         document.getElementById('progressText').textContent = `${progress.completed_modules || 0} dari ${progress.total_modules || 0} modul selesai`;
         const certificateBtn = document.getElementById('certificateBtn');
-        const unlocked = values.learning >= 100 && values.simulation >= 100 && values.quiz >= 100;
         if (certificateBtn) {
-            certificateBtn.disabled = !unlocked;
-            certificateBtn.textContent = unlocked ? 'Generate Sertifikat PDF' : 'Sertifikat Terkunci';
-            certificateBtn.title = unlocked ? 'Generate sertifikat PDF' : 'Selesaikan 100% modul, simulation, dan quiz';
+            certificateBtn.disabled = !certificateReady;
+            certificateBtn.textContent = certificateReady ? 'Generate Sertifikat PDF' : 'Sertifikat Terkunci';
+            certificateBtn.title = certificateReady
+                ? 'Generate sertifikat PDF'
+                : 'Selesaikan 100% modul, simulation, dan quiz minimal 75';
         }
     },
 
-    setProgressBar(key, value) {
+    setProgressBar(key, value, displayValue) {
         const percent = Math.max(0, Math.min(100, Number(value) || 0));
         const label = document.getElementById(`${key}Percent`);
         const bar = document.getElementById(`${key}ProgressBar`);
-        if (label) label.textContent = `${percent}%`;
+        if (label) label.textContent = displayValue || `${percent}%`;
         if (bar) bar.style.width = `${percent}%`;
     },
 
@@ -123,15 +152,20 @@ const ITDV = {
     async submitSimulation(id, selectedAction) {
         const response = await API.post(`/learning/simulations/${id}/submit`, { selected_action: selectedAction });
         const result = response.data || {};
+        const simulation = this.simulations.find(item => item.id === id) || {};
+        const details = this.simulationFeedbackDetails(simulation, result);
         document.getElementById('simulationResult').innerHTML = `
+            <div class="result-status ${result.passed ? 'passed' : 'failed'}">${result.passed ? 'Benar' : 'Salah'}</div>
             <div class="result-score">${result.score || 0}</div>
-            <p>${this.escape(result.feedback || '')}</p>
-            <div class="feedback-card">
-                <strong>Aksi ideal</strong>
-                <span>${(result.best_actions || []).join(' lalu ')}</span>
+            <div class="feedback-list">
+                <div class="feedback-card"><strong>Alasan HACCP</strong><span>${this.escape(details.haccp)}</span></div>
+                <div class="feedback-card warning"><strong>Risiko</strong><span>${this.escape(details.risk)}</span></div>
+                <div class="feedback-card"><strong>Corrective action</strong><span>${this.escape(details.correctiveAction)}</span></div>
+                <div class="feedback-card"><strong>Aksi ideal</strong><span>${this.escape((result.best_actions || []).join(' lalu '))}</span></div>
             </div>
         `;
         await this.loadProgress();
+        await this.loadCareerPreview();
     },
 
     async loadQuizzes() {
@@ -215,12 +249,17 @@ const ITDV = {
         });
         const response = await API.post(`/learning/quizzes/${form.dataset.quizId}/submit`, { answers });
         const result = response.data || {};
+        const quiz = this.quizzes.find(item => item.id === form.dataset.quizId) || {};
         document.getElementById('quizResult').innerHTML = `
             <div class="result-score">${result.score || 0}</div>
             <p>${result.correct || 0} dari ${result.total || 0} jawaban benar.</p>
-            <p>${result.passed ? 'Lulus minimum score.' : 'Ulangi materi sebelum mencoba lagi.'}</p>
+            <p>${result.passed ? 'Lulus minimum score 75.' : 'Belum mencapai minimum score 75. Ulangi materi sebelum mencoba lagi.'}</p>
+            <div class="quiz-review-list">
+                ${(result.items || []).map((item, index) => this.renderQuizReviewItem(quiz, item, index)).join('')}
+            </div>
         `;
         await this.loadProgress();
+        await this.loadCareerPreview();
     },
 
     async generateCertificate() {
@@ -240,9 +279,74 @@ const ITDV = {
                 this.downloadPdf(cert.pdf_base64, cert.pdf_filename || `${cert.certificate_id || 'ITDV-Certificate'}.pdf`);
             }
             await this.loadProgress();
+            await this.loadCareerPreview();
         } catch (error) {
             alert(error.message || 'Sertifikat belum bisa dibuat.');
         }
+    },
+
+    async loadCareerPreview() {
+        try {
+            const response = await API.get('/learning/career-recommendation');
+            const items = (response.data || {}).recommendations || [];
+            const grid = document.getElementById('careerPreviewGrid');
+            if (!grid || !items.length) return;
+            grid.innerHTML = items.slice(0, 4).map((item, index) => `
+                <article class="${index === 0 ? 'primary-career' : ''}">
+                    <strong>${this.escape(item.title)}</strong>
+                    <span>${item.match_percent || 0}% match</span>
+                    <small>${this.escape((item.reasons || [])[0] || 'Rekomendasi berdasarkan skor belajar.')}</small>
+                </article>
+            `).join('');
+        } catch (error) {
+            console.error('Career preview failed', error);
+        }
+    },
+
+    renderQuizReviewItem(quiz, item, index) {
+        const question = (quiz.questions || []).find(row => row.id === item.question_id) || {};
+        const selected = this.optionLabel(question, item.selected);
+        const correct = this.optionLabel(question, item.correct_answer);
+        return `
+            <article class="quiz-review-item ${item.is_correct ? 'correct' : 'incorrect'}">
+                <strong>${index + 1}. ${item.is_correct ? 'Benar' : 'Salah'}</strong>
+                <p>${this.escape(question.text || item.question_id)}</p>
+                <span>Jawaban kamu: ${this.escape(selected || '-')}</span>
+                <span>Jawaban benar: ${this.escape(correct || '-')}</span>
+                <small>${this.escape(this.quizExplanation(question))}</small>
+            </article>
+        `;
+    },
+
+    optionLabel(question, key) {
+        const option = (question.options || []).find(item => item.key === key);
+        return option ? `${option.key}. ${option.label}` : key;
+    },
+
+    quizExplanation(question) {
+        const text = String(question.text || '').toLowerCase();
+        if (text.includes('suhu') || text.includes('chiller')) {
+            return 'Deviasi suhu harus langsung diinvestigasi, produk terdampak ditahan, dan risiko keamanan pangan dikendalikan.';
+        }
+        if (text.includes('traceability') || text.includes('batch')) {
+            return 'Traceability membantu menemukan jalur batch untuk audit, investigasi, dan recall jika ada risiko produk.';
+        }
+        if (text.includes('haccp') || text.includes('ccp')) {
+            return 'CCP adalah titik kendali kritis untuk bahaya keamanan pangan signifikan, sehingga wajib dimonitor dan diverifikasi.';
+        }
+        return 'Pembahasan mengikuti prinsip QC industri: cek bukti, nilai risiko, dan ambil corrective action.';
+    },
+
+    simulationFeedbackDetails(simulation, result) {
+        const target = simulation.target_c ?? 5;
+        const actual = simulation.actual_c ?? 11;
+        return {
+            haccp: `Suhu penyimpanan adalah titik kontrol. Aktual ${actual}°C melebihi target ${target}°C sehingga deviasi harus dicatat dan dikendalikan.`,
+            risk: `Risiko mikroba meningkat bila produk tetap diproses pada suhu ${actual}°C tanpa evaluasi durasi deviasi dan kondisi produk.`,
+            correctiveAction: result.passed
+                ? 'Tahan produk terdampak, investigasi penyebab, pindahkan ke chiller aman, eskalasi maintenance, lalu lanjut hanya setelah risiko terkendali.'
+                : 'Jangan lanjut produksi. Lakukan investigasi, hold product, corrective action, dan verifikasi suhu kembali ke batas aman.'
+        };
     },
 
     downloadPdf(base64, filename) {
@@ -270,6 +374,34 @@ const ITDV = {
             '"': '&quot;',
             "'": '&#039;'
         }[char]));
+    },
+
+    escapeAttr(value) {
+        return this.escape(value).replace(/\s+/g, '-');
+    },
+
+    moduleMaterial(module) {
+        const slug = String(module.slug || '').toLowerCase();
+        const map = {
+            haccp: 'Pelajari bahaya pangan, CCP, critical limit, monitoring, verifikasi, dan corrective action saat terjadi deviasi.',
+            'food-safety': 'Fokus pada personal hygiene, sanitasi area, pencegahan kontaminasi silang, dan kontrol risiko produk.',
+            'qc-dasar': 'Kenali parameter mutu, sampling, inspeksi visual, evidence foto, status PASS/HOLD/FAIL, dan pencatatan hasil QC.',
+            traceability: 'Pahami pelacakan batch dari bahan baku sampai distribusi agar investigasi dan recall dapat dilakukan cepat.',
+            'monitoring-suhu': 'Pelajari batas aman chiller/freezer, pembacaan alert, eskalasi, dan dokumentasi monitoring suhu.'
+        };
+        return map[slug] || module.summary || 'Materi ringkas Quality Control industri pangan.';
+    },
+
+    moduleCase(module) {
+        const slug = String(module.slug || '').toLowerCase();
+        const map = {
+            haccp: 'Produk berada di chiller 11°C. Tentukan apakah ini deviasi CCP dan tindakan korektif apa yang harus dicatat.',
+            'food-safety': 'Area persiapan menerima bahan dengan kemasan basah. Nilai risiko kontaminasi dan tindakan sanitasi yang diperlukan.',
+            'qc-dasar': 'Batch baru memiliki aroma tidak sesuai standar. Tentukan status HOLD dan evidence yang perlu dilampirkan.',
+            traceability: 'Ada komplain produk. Telusuri batch, bahan baku, waktu produksi, dan jalur distribusi.',
+            'monitoring-suhu': 'PPIC Chiller target 5°C tetapi aktual 11°C. Tentukan investigasi, hold product, dan eskalasi.'
+        };
+        return map[slug] || 'Gunakan kasus operasional central kitchen untuk menerapkan materi modul.';
     },
 
     moduleInitial(title) {

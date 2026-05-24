@@ -93,8 +93,18 @@ def test_quiz_submit_persists_score_and_answers():
 
     assert result["success"] is True
     assert result["data"]["score"] == 67
+    assert result["data"]["passed"] is False
     assert repo.attempts[-1]["table"] == "itdv_quiz_attempts"
     assert repo.attempts[-1]["payload"]["answers"] == answers
+
+
+def test_quiz_progress_requires_minimum_score_75():
+    repo = RecordingRepo()
+    repo.quiz_attempts = [{"quiz_id": "qc-basic-quiz", "score": 70}]
+
+    result = LearningService(repository=repo).progress("student-8")
+
+    assert result["data"]["quiz_percent"] == 0
 
 
 def test_progress_breakdown_uses_existing_attempt_and_certificate_tables():

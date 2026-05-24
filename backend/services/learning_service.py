@@ -164,6 +164,7 @@ class LearningService:
             "quiz_id",
             [item.get("id") for item in self._quizzes()],
             LOCAL_QUIZ_ATTEMPTS,
+            minimum_score=75,
         )
         certificate_percent = 100 if self._has_certificate(user_id) else 0
         return self._ok({
@@ -254,7 +255,7 @@ class LearningService:
             "score": score,
             "correct": correct,
             "total": len(quiz["questions"]),
-            "passed": score >= 70,
+            "passed": score >= 75,
             "items": items,
         })
 
@@ -262,7 +263,7 @@ class LearningService:
         progress = self.progress(user["id"])["data"]
         if not self._certificate_unlocked(progress):
             return self._fail(
-                "Selesaikan 100% modul, quiz, dan simulation sebelum generate sertifikat",
+                "Selesaikan 100% modul, simulation, dan quiz minimal 75 sebelum generate sertifikat",
                 409,
                 {"progress": progress},
             )
@@ -405,17 +406,21 @@ class LearningService:
             progress.setdefault(slug, {"module_slug": slug, "status": "completed"})
         return progress
 
-    def _attempt_percent(self, user_id, table, id_field, total_ids, local_rows):
+    def _attempt_percent(self, user_id, table, id_field, total_ids, local_rows, minimum_score=70):
         expected = {item for item in total_ids if item}
         if not expected:
             return 0
         rows = self.repo.fetch_table(
             table,
-            filters=[("eq", "user_id", user_id), ("gte", "score", 70)],
+            filters=[("eq", "user_id", user_id), ("gte", "score", minimum_score)],
         ) if self.repo.available() else []
-        passed = {row.get(id_field) for row in rows if row.get(id_field) in expected}
+        passed = {
+            row.get(id_field)
+            for row in rows
+            if row.get(id_field) in expected and int(row.get("score") or 0) >= minimum_score
+        }
         for row in local_rows:
-            if row.get("user_id") == user_id and int(row.get("score") or 0) >= 70 and row.get(id_field) in expected:
+            if row.get("user_id") == user_id and int(row.get("score") or 0) >= minimum_score and row.get(id_field) in expected:
                 passed.add(row.get(id_field))
         return self._percent(len(passed), len(expected))
 
