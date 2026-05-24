@@ -202,6 +202,11 @@ select {
   gap: 12px;
 }
 
+.admin-topbar .profile-dropdown {
+  border-color: var(--border-color);
+  background: rgba(255,255,255,.97);
+}
+
 .admin-search {
   min-width: min(34vw, 360px);
   min-height: 42px;

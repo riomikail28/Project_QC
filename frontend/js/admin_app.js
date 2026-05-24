@@ -52,7 +52,7 @@ const adminApp = {
         const user = Auth.user() || {};
         const name = user.full_name || user.name || user.username || 'Admin';
         const profile = document.querySelector('.user-profile span');
-        const avatar = document.querySelector('.user-profile div');
+        const avatar = document.querySelector('.user-profile .profile-menu-avatar, .user-profile .user-avatar');
         if (profile) profile.textContent = name;
         if (avatar) avatar.textContent = name.slice(0, 1).toUpperCase();
     },
