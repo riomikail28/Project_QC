@@ -64,8 +64,8 @@ const Auth = {
 
     homeForRole(roleOverride) {
         return this.canAccessAdmin(roleOverride === undefined ? this.role() : roleOverride)
-            ? '/admin/dashboard'
-            : '/staff/dashboard';
+            ? '/admin/admin_panel.html'
+            : '/staff/dashboard.html';
     },
 
     requireRole(requiredRole) {
@@ -75,11 +75,11 @@ const Auth = {
         }
         const required = String(requiredRole || '').toLowerCase();
         if (required === 'admin' && !this.isAdmin()) {
-            window.location.href = '/staff/dashboard';
+            window.location.href = '/staff/dashboard.html';
             return false;
         }
         if (required === 'staff' && this.isAdmin()) {
-            window.location.href = '/admin/dashboard';
+            window.location.href = '/admin/admin_panel.html';
             return false;
         }
         return true;

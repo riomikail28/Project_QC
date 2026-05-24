@@ -34,7 +34,7 @@
             <a href="monitoring.html">Monitoring</a>
             <a href="inspection.html">QC Check</a>
             <a href="profile.html">Profil</a>
-            <a href="/admin/dashboard" class="admin-link" data-admin-only hidden>Admin Dashboard</a>
+            <a href="/admin/admin_panel.html" class="admin-link" data-admin-only hidden>Admin Dashboard</a>
         </nav>
         <div class="nav-actions">
             <div class="nav-clock">
@@ -453,11 +453,11 @@
             if (window.lucide) lucide.createIcons();
             Auth.refreshSessionRole();
             if (Auth.isAdmin()) {
-                window.location.replace('/admin/dashboard');
+                window.location.replace('/admin/admin_panel.html');
                 return;
             }
             if (window.location.hash === '#admin' && Auth.isAdmin()) {
-                window.location.replace('/admin/dashboard');
+                window.location.replace('/admin/admin_panel.html');
                 return;
             }
             if (!Auth.check()) window.location.href = 'login.html';

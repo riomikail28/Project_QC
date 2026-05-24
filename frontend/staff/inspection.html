@@ -23,7 +23,7 @@
             <a href="monitoring.html">Monitoring</a>
             <a href="inspection.html" class="active">QC Check</a>
             <a href="profile.html">Profil</a>
-            <a href="/admin/dashboard" data-admin-only hidden>Admin Dashboard</a>
+            <a href="/admin/admin_panel.html" data-admin-only hidden>Admin Dashboard</a>
         </nav>
         <div class="nav-actions">
             <button class="nav-btn" onclick="window.location.href='new_batch.html'" aria-label="New batch"><i class="fas fa-plus"></i></button>
@@ -205,7 +205,7 @@
             if (!Auth.check()) window.location.href = 'login.html';
             Auth.refreshSessionRole();
             if (Auth.isAdmin()) {
-                window.location.replace('/admin/dashboard');
+                window.location.replace('/admin/admin_panel.html');
                 return;
             }
             ['productSearch','qcSku','qcTemp','qcNotes'].forEach(id => {

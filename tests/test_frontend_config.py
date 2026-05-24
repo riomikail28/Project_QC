@@ -65,8 +65,8 @@ def test_staff_profile_hides_staff_action_menu_items():
 def test_staff_pages_mark_admin_links_as_role_based():
     for page_name in ["dashboard.html", "monitoring.html", "inspection.html", "profile.html"]:
         html = (ROOT / "frontend" / "staff" / page_name).read_text(encoding="utf-8")
-        assert 'href="/admin/dashboard"' in html
-        admin_index = html.index('href="/admin/dashboard"')
+        assert 'href="/admin/admin_panel.html"' in html
+        admin_index = html.index('href="/admin/admin_panel.html"')
         tag_start = html.rfind("<", 0, admin_index)
         tag_end = html.find(">", admin_index)
         admin_tag = html[tag_start:tag_end]

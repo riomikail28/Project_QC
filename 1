@@ -1,0 +1,19 @@
+warning: in the working copy of 'backend/api/batch_routes.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/api/batch_routes.py b/backend/api/batch_routes.py[m
+[1mindex 44c7320..3fe3ae1 100644[m
+[1m--- a/backend/api/batch_routes.py[m
+[1m+++ b/backend/api/batch_routes.py[m
+[36m@@ -118,7 +118,12 @@[m [mdef create_new_batch():[m
+     Returns:[m
+         JSON with created batch record[m
+     """[m
+[31m-    data = validate_model(BatchCreateRequest, request_payload())[m
+[32m+[m[32m    payload = request_payload()[m
+[32m+[m[32m    # Legacy/mobile clients may still send `reason` for note-like text. Batch[m
+[32m+[m[32m    # creation persists the user-facing note as `notes`/`parameter_notes`, so[m
+[32m+[m[32m    # ignore `reason` here instead of surfacing an unknown_fields error.[m
+[32m+[m[32m    payload.pop("reason", None)[m
+[32m+[m[32m    data = validate_model(BatchCreateRequest, payload)[m
+ [m
+     product_id = data.product_id[m
+     batch_code = data.batch_code or f"QC-{datetime.now().strftime('%Y%m%d-%H%M%S')}"[m

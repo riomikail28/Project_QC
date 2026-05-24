@@ -61,7 +61,7 @@ const ProfilePage = {
             element.style.display = isAdmin ? 'none' : '';
         });
         const brand = document.querySelector('.nav-brand');
-        if (brand && isAdmin) brand.setAttribute('href', '/admin/dashboard');
+        if (brand && isAdmin) brand.setAttribute('href', '/admin/admin_panel.html');
     },
 
     renderSummary(data) {

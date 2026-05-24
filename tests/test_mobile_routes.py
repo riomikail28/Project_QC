@@ -5,18 +5,18 @@ def test_admin_hash_route_redirect_pattern_serves_admin_panel(client):
     assert b"QC Enterprise" in response.data
 
 
-def test_admin_dashboard_alias_serves_redirect(client):
-    response = client.get("/admin/dashboard")
+def test_admin_dashboard_html_serves_static_file(client):
+    response = client.get("/admin/admin_panel.html")
 
     assert response.status_code == 200
-    assert b"/admin/" in response.data
+    assert b"QC Enterprise" in response.data
 
 
-def test_staff_dashboard_alias_serves_redirect(client):
-    response = client.get("/staff/dashboard")
+def test_staff_dashboard_html_serves_static_file(client):
+    response = client.get("/staff/dashboard.html")
 
     assert response.status_code == 200
-    assert b"/staff/dashboard.html" in response.data
+    assert b"Dashboard" in response.data
 
 
 def test_staff_mobile_routes_serve_pages(client):

@@ -32,7 +32,9 @@ def test_admin_navigation_is_internal_sections():
     assert "dashboard.html#admin" not in html
 
 
-def test_admin_dashboard_alias_exists_for_role_routing():
+def test_admin_uses_explicit_html_route_for_role_routing():
+    admin_page = ROOT / "frontend" / "admin" / "admin_panel.html"
     alias = ROOT / "frontend" / "admin" / "dashboard"
-    assert alias.exists()
-    assert "/admin/" in alias.read_text(encoding="utf-8")
+
+    assert admin_page.exists()
+    assert not alias.exists()

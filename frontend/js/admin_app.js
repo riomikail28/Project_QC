@@ -40,7 +40,7 @@ const adminApp = {
 
     checkAuth() {
         if (!Auth.check() || !Auth.isAdmin()) {
-            window.location.href = Auth.check() ? '/staff/dashboard' : '/staff/login.html';
+            window.location.href = Auth.check() ? '/staff/dashboard.html' : '/staff/login.html';
             return;
         }
 

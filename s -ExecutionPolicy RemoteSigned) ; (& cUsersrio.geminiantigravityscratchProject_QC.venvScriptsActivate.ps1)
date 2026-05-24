@@ -1,0 +1,23 @@
+warning: in the working copy of 'backend/services/request_validation.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/services/request_validation.py b/backend/services/request_validation.py[m
+[1mindex f5600fe..cc0a9cf 100644[m
+[1m--- a/backend/services/request_validation.py[m
+[1m+++ b/backend/services/request_validation.py[m
+[36m@@ -64,8 +64,6 @@[m [mdef request_payload() -> dict[str, Any]:[m
+         payload = request.form.to_dict()[m
+     else:[m
+         payload = request.get_json(silent=True) or {}[m
+[31m-    if "notes" in payload and "reason" not in payload:[m
+[31m-        payload["reason"] = payload.get("notes")[m
+     return payload[m
+ [m
+ [m
+[36m@@ -140,6 +138,8 @@[m [mdef validate_model(model: Type[Any], data: dict[str, Any]) -> Any:[m
+             notes=_optional_str(data, "notes", 1000),[m
+         )[m
+     if model is TemperatureLogRequest:[m
+[32m+[m[32m        if "notes" in data and "reason" not in data:[m
+[32m+[m[32m            data = {**data, "reason": data.get("notes")}[m
+         return TemperatureLogRequest([m
+             room_id=_required(data, "room_id", 80),[m
+             device_id=_optional_str(data, "device_id", 80),[m
