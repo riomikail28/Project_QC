@@ -13,8 +13,8 @@
         <a class="itdv-brand" href="/staff/dashboard.html">
             <span class="brand-mark">IT</span>
             <span>
-                <strong>ITDV Learning Center</strong>
-                <small>Simulasi Quality Control Industri Pangan</small>
+                <strong>QC LearnHub AI</strong>
+                <small>Learning Center QC Pangan</small>
             </span>
         </a>
         <nav class="itdv-nav">
@@ -33,55 +33,46 @@
             <div class="hero-copy">
                 <h1>QC LearnHub AI</h1>
                 <p>Platform simulasi pembelajaran Quality Control industri pangan berbasis kasus nyata central kitchen.</p>
+                <p class="hero-safe-note">Materi mengacu pada prinsip HACCP, GMP, food safety, traceability, dan kompetensi kerja QC pangan.</p>
                 <div class="target-users" aria-label="Target pengguna">
                     <span>&check; SMK Tata Boga</span>
-                    <span>&check; Mahasiswa</span>
+                    <span>&check; Mahasiswa Teknologi Pangan</span>
                     <span>&check; Peserta Magang</span>
-                    <span>&check; Fresh Graduate</span>
+                    <span>&check; Fresh Graduate Calon QC</span>
                 </div>
                 <div class="hero-actions">
                     <a class="primary-btn hero-cta" href="#modules">Mulai Belajar</a>
                     <a class="secondary-btn hero-cta" href="#simulation">Lihat Simulasi</a>
                 </div>
             </div>
-            <div class="hero-learning-card" aria-label="Preview alur belajar">
-                <div class="hero-step active">
-                    <span>01</span>
-                    <strong>Mulai Belajar</strong>
-                    <small>Pilih modul pertama</small>
-                </div>
-                <div class="hero-step">
-                    <span>02</span>
-                    <strong>Modul</strong>
-                    <small>Tujuan, materi, dan kasus</small>
-                </div>
-                <div class="hero-step">
-                    <span>03</span>
-                    <strong>Simulasi</strong>
-                    <small>Kasus PPIC Chiller 11&deg;C</small>
-                </div>
-                <div class="hero-step">
-                    <span>04</span>
-                    <strong>Quiz</strong>
-                    <small>Penilaian otomatis</small>
-                </div>
-                <div class="hero-step">
-                    <span>05</span>
-                    <strong>Sertifikat</strong>
-                    <small>Terbuka setelah syarat terpenuhi</small>
-                </div>
-                <div class="hero-step">
-                    <span>06</span>
-                    <strong>Career</strong>
-                    <small>Rekomendasi berdasarkan skor</small>
+            <div class="hero-competency-panel" aria-label="Kompetensi QC pangan">
+                <h2>Alur Kompetensi QC Pangan</h2>
+                <p>Dari hygiene dasar sampai keputusan corrective action, dokumentasi, traceability, dan simulasi kasus suhu.</p>
+                <div class="competency-mini-list">
+                    <span>HACCP</span>
+                    <span>GMP</span>
+                    <span>CCP</span>
+                    <span>Traceability</span>
                 </div>
             </div>
+        </section>
+
+        <section class="learning-path-section" aria-label="Learning path">
+            <div class="path-step active"><span>01</span><strong>Modul</strong></div>
+            <div class="path-line"></div>
+            <div class="path-step"><span>02</span><strong>Simulasi</strong></div>
+            <div class="path-line"></div>
+            <div class="path-step"><span>03</span><strong>Quiz</strong></div>
+            <div class="path-line"></div>
+            <div class="path-step"><span>04</span><strong>Sertifikat</strong></div>
+            <div class="path-line"></div>
+            <div class="path-step"><span>05</span><strong>Career</strong></div>
         </section>
 
         <section id="certificate" class="content-section progress-dashboard">
             <div class="section-heading">
                 <h2>Progress Dashboard</h2>
-                <span>Pantau kesiapan belajar sebelum mengunduh sertifikat.</span>
+                <span>Pantau kesiapan belajar sebelum mengunduh sertifikat penyelesaian pelatihan internal.</span>
             </div>
             <div class="progress-panel">
                 <div class="progress-overview">
@@ -107,7 +98,7 @@
                         <div class="progress-track"><div id="certificateProgressBar"></div></div>
                     </div>
                 </div>
-                <button id="certificateBtn" class="primary-btn" type="button">Generate Sertifikat</button>
+                <button id="certificateBtn" class="primary-btn" type="button">Generate Sertifikat Internal</button>
             </div>
         </section>
 
@@ -135,7 +126,7 @@
         <section id="modules" class="content-section learning-center">
             <div class="section-heading">
                 <h2>Learning Center</h2>
-                <span>HACCP, Food Safety, QC Dasar, Traceability, Monitoring Suhu.</span>
+                <span>12 modul kompetensi: hygiene, GMP, HACCP, bahaya pangan, CCP, critical limit, monitoring, corrective action, dokumentasi, traceability, cold chain, dan studi kasus.</span>
             </div>
             <div id="moduleGrid" class="module-grid"></div>
         </section>
@@ -144,11 +135,17 @@
             <div class="mentor-intro">
                 <div class="section-heading">
                     <h2>AI Mentor</h2>
-                    <span>Chat assistant rule-based untuk food safety, HACCP, dan corrective action.</span>
+                    <span>Chat assistant rule-based untuk HACCP, CCP, food safety, dan corrective action.</span>
                 </div>
                 <form id="mentorForm" class="mentor-card chat-composer">
                     <label for="mentorQuestion">Pertanyaan</label>
-                    <textarea id="mentorQuestion" placeholder="Kenapa suhu 11&deg;C berbahaya?" required>Kenapa suhu 11°C berbahaya?</textarea>
+                    <textarea id="mentorQuestion" placeholder="Kenapa suhu chiller 11&deg;C berbahaya?" required>Kenapa suhu chiller 11°C berbahaya?</textarea>
+                    <div class="quick-prompts" aria-label="Quick prompt mentor">
+                        <button type="button" data-prompt="Apa itu HACCP?">Apa itu HACCP?</button>
+                        <button type="button" data-prompt="Apa itu CCP?">Apa itu CCP?</button>
+                        <button type="button" data-prompt="Kenapa suhu chiller 11°C berbahaya?">Kenapa suhu chiller 11°C berbahaya?</button>
+                        <button type="button" data-prompt="Apa tindakan korektif jika suhu melewati batas?">Apa tindakan korektif jika suhu melewati batas?</button>
+                    </div>
                     <button class="primary-btn" type="submit">Tanya Mentor</button>
                 </form>
             </div>
@@ -160,7 +157,10 @@
                     </div>
                     <i data-lucide="sparkles"></i>
                 </div>
-                <div class="chat-bubble assistant-bubble" id="mentorAnswer">Ajukan pertanyaan untuk melihat jawaban.</div>
+                <div class="chat-thread">
+                    <div class="chat-bubble user-bubble" id="mentorUserBubble">Kenapa suhu chiller 11°C berbahaya?</div>
+                    <div class="chat-bubble assistant-bubble" id="mentorAnswer">Ajukan pertanyaan untuk melihat jawaban mentor.</div>
+                </div>
                 <div id="mentorTopics" class="mentor-topics"></div>
                 <div class="mentor-history">
                     <h4>Riwayat</h4>
@@ -173,7 +173,7 @@
             <div>
                 <div class="section-heading">
                     <h2>Simulation Mode</h2>
-                    <span>Studi kasus nyata: PPIC Chiller, target 5&deg;C, aktual 11&deg;C.</span>
+                    <span>Kasus: PPIC Chiller 11&deg;C, target 5&deg;C, risiko pertumbuhan mikroba.</span>
                 </div>
                 <div id="simulationCard" class="scenario-card"></div>
             </div>
@@ -203,19 +203,21 @@
                 <span>Rekomendasi role berdasarkan hasil learning, simulation, dan quiz.</span>
             </div>
             <div id="careerPreviewGrid" class="career-path-grid">
-                <article><strong>QC</strong><span>Quality Control produksi pangan</span></article>
-                <article><strong>QA</strong><span>Sistem mutu dan dokumentasi</span></article>
-                <article><strong>Food Safety</strong><span>HACCP dan keamanan pangan</span></article>
-                <article><strong>Supply Chain</strong><span>Traceability dan alur bahan</span></article>
+                <article><strong>QC Staff</strong><span>Quality Control produksi pangan</span></article>
+                <article><strong>QA Staff</strong><span>Sistem mutu dan dokumentasi</span></article>
+                <article><strong>Food Safety Officer</strong><span>HACCP dan keamanan pangan</span></article>
+                <article><strong>Production Control</strong><span>Kontrol proses produksi</span></article>
+                <article><strong>Warehouse QC</strong><span>Cold chain dan bahan baku</span></article>
+                <article><strong>Auditor Internal</strong><span>Audit trail dan evidence</span></article>
             </div>
             <a class="secondary-btn career-link" href="career.html">Lihat Career Recommendation</a>
         </section>
 
         <section id="certificatePanel" class="certificate-panel" hidden>
             <div class="certificate-sheet">
-                <span>Sertifikat Penyelesaian</span>
+                <span>Sertifikat Penyelesaian QC LearnHub</span>
                 <h2 id="certificateName">Peserta</h2>
-                <p>Telah menyelesaikan program ITDV Simulasi Quality Control Industri Pangan.</p>
+                <p>Sertifikat penyelesaian pelatihan internal untuk simulasi Quality Control industri pangan.</p>
                 <strong id="certificateId">ITDV-</strong>
                 <small id="certificateDate"></small>
             </div>

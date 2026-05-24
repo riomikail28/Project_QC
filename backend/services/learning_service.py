@@ -12,58 +12,150 @@ logger = logging.getLogger("qc.services.learning")
 
 MODULES = [
     {
-        "slug": "haccp",
-        "title": "HACCP",
+        "slug": "food-safety-hygiene",
+        "title": "Dasar Food Safety dan Hygiene",
         "category": "Food Safety",
-        "duration_minutes": 45,
-        "summary": "Identifikasi bahaya, CCP, critical limit, monitoring, corrective action, dan verifikasi.",
-        "objectives": ["Mengenali bahaya pangan", "Menentukan CCP", "Membuat tindakan korektif"],
+        "duration_minutes": 25,
+        "summary": "Fondasi keamanan pangan, hygiene area, dan pencegahan kontaminasi pada central kitchen.",
+        "objectives": ["Memahami risiko food safety", "Mengenali sumber kontaminasi", "Menjaga hygiene area kerja"],
+        "learning_material": "Food safety berfokus pada pengendalian bahaya yang dapat membuat produk tidak aman dikonsumsi. Staff QC perlu membaca kondisi area, hygiene pekerja, alur bahan, suhu, dan kebersihan alat sebelum produk dilepas.",
+        "case_study": "Area preparation menerima bahan dingin dengan kemasan basah. Staff QC menilai kebersihan kemasan, suhu penerimaan, dan risiko kontaminasi silang sebelum bahan masuk proses.",
+        "competencies": ["Menilai risiko keamanan pangan dasar", "Mencatat temuan hygiene", "Menentukan tindakan pencegahan awal"],
     },
     {
-        "slug": "food-safety",
-        "title": "Food Safety",
-        "category": "Sanitasi",
+        "slug": "gmp-personal-hygiene",
+        "title": "GMP dan Personal Hygiene",
+        "category": "GMP",
+        "duration_minutes": 25,
+        "summary": "Praktik GMP, kebersihan personel, sanitasi alat, dan disiplin area produksi.",
+        "objectives": ["Memahami GMP", "Mengecek personal hygiene", "Mencegah kontaminasi silang"],
+        "learning_material": "GMP mengatur praktik produksi yang konsisten dan higienis. Pemeriksaan meliputi APD, cuci tangan, kondisi alat, pemisahan area bersih/kotor, dan perilaku pekerja di area produksi.",
+        "case_study": "Operator masuk area packing tanpa hairnet lengkap. QC perlu melakukan hold sementara pada proses, koreksi APD, dan mencatat temuan hygiene.",
+        "competencies": ["Melakukan checklist GMP", "Mengidentifikasi pelanggaran hygiene", "Memberi rekomendasi perbaikan area"],
+    },
+    {
+        "slug": "haccp-principles",
+        "title": "Prinsip HACCP",
+        "category": "HACCP",
         "duration_minutes": 35,
-        "summary": "Prinsip keamanan pangan, personal hygiene, kontaminasi silang, dan alur sanitasi area produksi.",
-        "objectives": ["Mencegah kontaminasi", "Memahami hygiene", "Menilai risiko area"],
+        "summary": "Prinsip HACCP mulai dari analisis bahaya, CCP, critical limit, monitoring, corrective action, verification, dan dokumentasi.",
+        "objectives": ["Memahami alur HACCP", "Menghubungkan bahaya dengan CCP", "Membaca dokumen monitoring"],
+        "learning_material": "HACCP adalah pendekatan sistematis untuk mengidentifikasi, mengevaluasi, dan mengendalikan bahaya signifikan dalam proses pangan. Di central kitchen, HACCP membantu QC membuat keputusan berbasis risiko.",
+        "case_study": "Suhu chiller naik ke 11°C saat produk menunggu rilis. QC menentukan apakah titik tersebut termasuk kontrol kritis dan bagaimana produk ditahan.",
+        "competencies": ["Menjelaskan prinsip HACCP", "Membaca alur proses", "Menghubungkan deviasi dengan risiko produk"],
     },
     {
-        "slug": "qc-dasar",
-        "title": "QC Dasar",
-        "category": "Quality Control",
+        "slug": "hazard-identification",
+        "title": "Identifikasi Bahaya Pangan",
+        "category": "HACCP",
+        "duration_minutes": 35,
+        "summary": "Identifikasi bahaya biologis, kimia, fisik, dan alergen pada proses central kitchen.",
+        "objectives": ["Mengenali bahaya biologis", "Mengenali bahaya kimia/fisik", "Mengenali risiko alergen"],
+        "learning_material": "Bahaya biologis mencakup mikroba, kimia mencakup residu bahan pembersih, fisik mencakup serpihan benda asing, dan alergen mencakup kontaminasi silang bahan pemicu alergi.",
+        "case_study": "Produk seafood diproses dekat menu non-seafood. QC menilai risiko alergen, alat yang dipakai, dan label pemisahan bahan.",
+        "competencies": ["Mengklasifikasi bahaya pangan", "Menentukan sumber risiko", "Menulis temuan bahaya dalam checklist"],
+    },
+    {
+        "slug": "ccp-determination",
+        "title": "Penentuan CCP",
+        "category": "HACCP",
         "duration_minutes": 30,
-        "summary": "Parameter mutu dasar, sampling, inspeksi visual, evidence, dan keputusan pass/warning/fail.",
-        "objectives": ["Membaca parameter QC", "Melakukan sampling", "Mencatat evidence"],
+        "summary": "Cara menentukan titik kendali kritis berdasarkan risiko dan kemampuan proses mengendalikan bahaya.",
+        "objectives": ["Memahami konsep CCP", "Membedakan CP dan CCP", "Menentukan titik kendali proses"],
+        "learning_material": "CCP adalah titik proses yang wajib dikendalikan untuk mencegah, menghilangkan, atau menurunkan bahaya signifikan ke tingkat aman. Tidak semua kontrol mutu adalah CCP.",
+        "case_study": "Proses chilling setelah cooking perlu dikaji apakah menjadi CCP karena memengaruhi pertumbuhan mikroba pada produk matang.",
+        "competencies": ["Menganalisis titik kendali", "Membedakan CP dan CCP", "Memberi alasan penentuan CCP"],
     },
     {
-        "slug": "traceability",
-        "title": "Traceability",
-        "category": "Batch",
-        "duration_minutes": 40,
-        "summary": "Pelacakan batch dari bahan baku, proses, penyimpanan, distribusi, sampai audit trail.",
-        "objectives": ["Melacak batch", "Menganalisis audit trail", "Menyiapkan recall simulation"],
+        "slug": "critical-limit",
+        "title": "Critical Limit",
+        "category": "HACCP",
+        "duration_minutes": 25,
+        "summary": "Batas kritis untuk suhu, waktu, visual, dan parameter proses yang harus dipenuhi.",
+        "objectives": ["Membaca batas kritis", "Menilai deviasi", "Mengambil keputusan hold"],
+        "learning_material": "Critical limit adalah batas terukur yang memisahkan kondisi aman dan tidak aman. Contohnya target suhu chiller 5°C, suhu cooking minimum, atau waktu pendinginan tertentu.",
+        "case_study": "Chiller target 5°C tercatat 11°C. QC menilai bahwa limit terlewati dan produk perlu ditahan sampai evaluasi selesai.",
+        "competencies": ["Membaca parameter kritis", "Menentukan status deviasi", "Mencatat limit yang dilanggar"],
     },
     {
-        "slug": "monitoring-suhu",
-        "title": "Monitoring Suhu",
+        "slug": "ccp-monitoring",
+        "title": "Monitoring CCP",
+        "category": "Monitoring",
+        "duration_minutes": 30,
+        "summary": "Teknik monitoring CCP, frekuensi cek, evidence, dan pencatatan hasil monitoring.",
+        "objectives": ["Menjalankan monitoring", "Mencatat evidence", "Mengeskalasi hasil abnormal"],
+        "learning_material": "Monitoring CCP memastikan batas kritis dipantau secara konsisten. Catatan harus berisi waktu, area, parameter, hasil, petugas, dan tindakan bila terjadi deviasi.",
+        "case_study": "Staff mencatat suhu PPIC Chiller pada slot 07:00, 13:00, 16:00, dan 19:00 untuk memastikan cold chain terkendali.",
+        "competencies": ["Melakukan pencatatan monitoring", "Membaca tren suhu", "Membuat evidence monitoring"],
+    },
+    {
+        "slug": "corrective-action",
+        "title": "Corrective Action",
+        "category": "CAPA",
+        "duration_minutes": 30,
+        "summary": "Tindakan korektif saat critical limit terlewati, termasuk hold product, investigasi, dan eskalasi.",
+        "objectives": ["Menahan produk terdampak", "Investigasi penyebab", "Menentukan tindakan perbaikan"],
+        "learning_material": "Corrective action harus mengendalikan produk terdampak dan memperbaiki penyebab deviasi. Tindakan dicatat agar keputusan rilis/reject dapat diaudit.",
+        "case_study": "Saat suhu chiller 11°C, QC menahan produk, memindahkan ke chiller aman, memeriksa pintu/sensor, dan meminta maintenance mengecek unit.",
+        "competencies": ["Menentukan hold product", "Menyusun tindakan korektif", "Mencatat eskalasi dan hasil verifikasi"],
+    },
+    {
+        "slug": "verification-documentation",
+        "title": "Verification dan Documentation",
+        "category": "Documentation",
+        "duration_minutes": 30,
+        "summary": "Verifikasi hasil monitoring, review dokumen, audit trail, dan kelengkapan evidence.",
+        "objectives": ["Memverifikasi catatan QC", "Mengecek kelengkapan evidence", "Membaca audit trail"],
+        "learning_material": "Verification memastikan sistem kontrol berjalan efektif. Dokumentasi menjadi bukti bahwa monitoring, deviasi, dan corrective action dilakukan secara konsisten.",
+        "case_study": "Supervisor mereview log suhu, foto evidence, jam input, dan catatan corrective action sebelum menutup deviasi.",
+        "competencies": ["Melakukan review dokumen", "Menilai kelengkapan evidence", "Menyiapkan data untuk audit internal"],
+    },
+    {
+        "slug": "traceability-recall",
+        "title": "Traceability dan Recall",
+        "category": "Traceability",
+        "duration_minutes": 35,
+        "summary": "Pelacakan batch, bahan baku, proses, distribusi, dan simulasi recall produk.",
+        "objectives": ["Melacak batch", "Menghubungkan bahan dan produk", "Menyiapkan data recall"],
+        "learning_material": "Traceability memungkinkan tim menelusuri produk dari bahan baku sampai distribusi. Saat ada deviasi, data batch membantu menentukan produk terdampak.",
+        "case_study": "Komplain muncul dari batch tertentu. QC menelusuri supplier, waktu produksi, suhu penyimpanan, dan area distribusi.",
+        "competencies": ["Membaca alur batch", "Menentukan produk terdampak", "Menyusun data recall internal"],
+    },
+    {
+        "slug": "chiller-freezer-monitoring",
+        "title": "Monitoring Suhu Chiller/Freezer",
         "category": "Cold Chain",
         "duration_minutes": 25,
-        "summary": "Pemantauan suhu chiller/freezer, batas kritis, alert, investigasi, dan eskalasi.",
-        "objectives": ["Membaca deviasi suhu", "Memilih aksi korektif", "Menyimpan log monitoring"],
+        "summary": "Monitoring suhu chiller/freezer, deviasi cold chain, dan pengendalian produk dingin.",
+        "objectives": ["Membaca suhu chiller/freezer", "Menilai deviasi cold chain", "Mengambil tindakan cepat"],
+        "learning_material": "Cold chain menjaga produk tetap pada suhu aman. Deviasi harus dilihat dari suhu aktual, durasi, produk terdampak, dan kondisi unit penyimpanan.",
+        "case_study": "Freezer menunjukkan -9°C dari target -18°C. QC mengecek durasi, kondisi produk, pintu, dan eskalasi maintenance.",
+        "competencies": ["Menginterpretasi suhu cold chain", "Menentukan prioritas eskalasi", "Mencatat log suhu harian"],
+    },
+    {
+        "slug": "central-kitchen-case",
+        "title": "Studi Kasus Central Kitchen",
+        "category": "Case Study",
+        "duration_minutes": 40,
+        "summary": "Simulasi keputusan QC dari penerimaan bahan, proses, penyimpanan, sampai rilis produk.",
+        "objectives": ["Menganalisis kasus nyata", "Menggabungkan HACCP dan GMP", "Membuat keputusan QC"],
+        "learning_material": "Studi kasus menggabungkan food safety, GMP, HACCP, monitoring suhu, corrective action, dokumentasi, dan traceability dalam satu alur kerja QC.",
+        "case_study": "Produk ready meal melewati cooking, chilling, packing, dan penyimpanan. Peserta menentukan titik risiko dan tindakan QC di setiap tahap.",
+        "competencies": ["Membuat analisis kasus QC", "Menyusun keputusan berbasis risiko", "Menentukan evidence yang wajib dicatat"],
     },
 ]
 
 SIMULATIONS = [
     {
         "id": "ppic-chiller-001",
-        "title": "PPIC Chiller Temperature Deviation",
+        "title": "PPIC Chiller 11°C",
         "area": "PPIC Chiller",
         "target_c": 5,
         "actual_c": 11,
-        "scenario": "Saat monitoring pagi, suhu aktual PPIC Chiller berada di atas target. Produk masih menunggu rilis produksi.",
+        "scenario": "Saat monitoring pagi, PPIC Chiller tercatat 11°C dari target 5°C. Produk ready meal masih menunggu rilis produksi.",
         "options": [
-            {"key": "A", "label": "Investigasi", "score": 70, "feedback": "Benar sebagai langkah awal: cek durasi deviasi, sensor, pintu, dan kondisi produk."},
-            {"key": "B", "label": "Corrective Action", "score": 100, "feedback": "Paling tepat jika disertai hold product, pindah chiller cadangan, dan eskalasi maintenance."},
+            {"key": "A", "label": "Investigasi dan tahan produk", "score": 85, "feedback": "Tepat: tahan produk terdampak, cek durasi deviasi, sensor, pintu, dan kondisi produk."},
+            {"key": "B", "label": "Corrective action", "score": 100, "feedback": "Paling tepat jika disertai hold product, pindah chiller cadangan, eskalasi maintenance, dan dokumentasi deviasi."},
             {"key": "C", "label": "Lanjut produksi", "score": 0, "feedback": "Tidak aman. Deviasi suhu harus dikendalikan sebelum produksi dilanjutkan."},
         ],
         "best_actions": ["A", "B"],
@@ -73,12 +165,12 @@ SIMULATIONS = [
 QUIZZES = [
     {
         "id": "qc-basic-quiz",
-        "title": "Quiz QC Dasar",
-        "module_slug": "qc-dasar",
+        "title": "Quiz HACCP dan Food Safety Central Kitchen",
+        "module_slug": "haccp-principles",
         "questions": [
             {
                 "id": "q1",
-                "text": "Apa tindakan pertama saat suhu chiller melewati critical limit?",
+                "text": "Saat suhu PPIC Chiller 11°C dari target 5°C, keputusan QC paling aman adalah...",
                 "options": [
                     {"key": "A", "label": "Catat saja di akhir shift"},
                     {"key": "B", "label": "Investigasi dan tahan produk terdampak"},
@@ -89,12 +181,12 @@ QUIZZES = [
             },
             {
                 "id": "q2",
-                "text": "Traceability batch berguna terutama untuk apa?",
+                "text": "Bahaya pangan biologis dalam central kitchen terutama berkaitan dengan...",
                 "options": [
-                    {"key": "A", "label": "Menentukan jalur recall dan audit produk"},
-                    {"key": "B", "label": "Menghapus kebutuhan QC"},
-                    {"key": "C", "label": "Mengubah resep produksi"},
-                    {"key": "D", "label": "Mengganti approval supervisor"},
+                    {"key": "A", "label": "Pertumbuhan mikroba pada bahan atau produk"},
+                    {"key": "B", "label": "Serpihan plastik dari kemasan"},
+                    {"key": "C", "label": "Residu bahan pembersih"},
+                    {"key": "D", "label": "Label harga yang tidak sesuai"},
                 ],
                 "answer": "A",
             },
@@ -108,6 +200,28 @@ QUIZZES = [
                     {"key": "D", "label": "Tidak perlu monitoring"},
                 ],
                 "answer": "B",
+            },
+            {
+                "id": "q4",
+                "text": "Dokumentasi corrective action saat deviasi suhu minimal harus memuat...",
+                "options": [
+                    {"key": "A", "label": "Jam, area, suhu aktual, produk terdampak, tindakan, PIC, dan verifikasi"},
+                    {"key": "B", "label": "Nama menu favorit staff"},
+                    {"key": "C", "label": "Hanya foto tanpa catatan"},
+                    {"key": "D", "label": "Nomor invoice pembelian"},
+                ],
+                "answer": "A",
+            },
+            {
+                "id": "q5",
+                "text": "Traceability batch berguna terutama untuk apa?",
+                "options": [
+                    {"key": "A", "label": "Menentukan jalur recall dan audit produk"},
+                    {"key": "B", "label": "Menghapus kebutuhan QC"},
+                    {"key": "C", "label": "Mengubah resep produksi"},
+                    {"key": "D", "label": "Mengganti approval supervisor"},
+                ],
+                "answer": "A",
             },
         ],
     }
@@ -286,7 +400,7 @@ class LearningService:
             LOCAL_CERTIFICATES[(user["id"], "ITDV-QC-FOOD")] = payload
         certificate_data = {
             **payload,
-            "program_name": "Simulasi Quality Control Industri Pangan",
+            "program_name": "QC LearnHub - Pelatihan Internal Quality Control Pangan",
             "issued_at": _now(),
         }
         certificate_data["pdf_filename"] = f"{cert_id}.pdf"
@@ -320,25 +434,29 @@ class LearningService:
             return all(slug in modules for slug in slugs)
 
         recommendations = [
-            self._career("QC", self._average(learning_score, simulation_score, quiz_score), [
+            self._career("QC Staff", self._average(learning_score, simulation_score, quiz_score), [
                 "Cocok untuk inspeksi proses, sampling, monitoring suhu, dan keputusan pass/fail.",
                 "Skor simulation dan quiz menunjukkan kesiapan membaca kasus operasional QC.",
             ]),
-            self._career("QA", self._average(learning_score, quiz_score, 85 if has("haccp") else 45), [
+            self._career("QA Staff", self._average(learning_score, quiz_score, 85 if has("haccp-principles", "verification-documentation") else 45), [
                 "Cocok untuk dokumentasi mutu, verifikasi SOP, CAPA, dan kontrol sistem kualitas.",
                 "Progress modul dan pemahaman quiz menjadi indikator kesiapan QA.",
             ]),
-            self._career("Food Safety", self._average(quiz_score, 90 if has("haccp", "food-safety") else 45, simulation_score), [
+            self._career("Food Safety Officer", self._average(quiz_score, 90 if has("haccp-principles", "food-safety-hygiene", "hazard-identification") else 45, simulation_score), [
                 "Cocok untuk HACCP, hygiene, pencegahan kontaminasi, dan food safety compliance.",
                 "Materi HACCP/Food Safety dan skor kasus suhu menjadi dasar rekomendasi.",
             ]),
-            self._career("Auditor", self._average(learning_score, quiz_score, 90 if has("haccp", "traceability") else 40), [
+            self._career("Production Control", self._average(simulation_score, learning_score, 85 if has("ccp-monitoring", "corrective-action") else 45), [
+                "Cocok untuk koordinasi proses, monitoring jadwal produksi, dan eskalasi deviasi operasional.",
+                "Kemampuan membaca kasus dan mengambil tindakan cepat mendukung jalur produksi.",
+            ]),
+            self._career("Warehouse QC", self._average(simulation_score, 90 if has("traceability-recall", "chiller-freezer-monitoring") else 45, learning_score), [
+                "Cocok untuk kontrol penerimaan, penyimpanan, cold chain, dan traceability gudang.",
+                "Pemahaman suhu dan batch membantu menjaga mutu bahan serta produk jadi.",
+            ]),
+            self._career("Auditor Internal", self._average(learning_score, quiz_score, 90 if has("haccp-principles", "traceability-recall", "verification-documentation") else 40), [
                 "Cocok untuk audit internal, audit trail, traceability, dan pemeriksaan evidence.",
                 "Kesiapan auditor meningkat saat modul traceability dan HACCP selesai.",
-            ]),
-            self._career("Supply Chain", self._average(simulation_score, 90 if has("traceability") else 45, learning_score), [
-                "Cocok untuk alur batch, cold chain, traceability, dan koordinasi risiko produk.",
-                "Pemahaman traceability dan keputusan pada kasus suhu mendukung jalur ini.",
             ]),
         ]
         recommendations.sort(key=lambda item: item["match_percent"], reverse=True)
@@ -449,7 +567,7 @@ class LearningService:
             "user_id": user_id,
             "program_code": row.get("program_code") or "ITDV-QC-FOOD",
             "participant_name": row.get("participant_name") or user.get("name") or user.get("username") or "Peserta",
-            "program_name": "Simulasi Quality Control Industri Pangan",
+            "program_name": "QC LearnHub - Pelatihan Internal Quality Control Pangan",
             "issued_at": row.get("issued_at") or _now(),
         }
 
@@ -538,12 +656,12 @@ class LearningService:
     def _simple_certificate_pdf(self, data):
         lines = [
             "QC LearnHub AI",
-            "Certificate of Completion",
+            "Sertifikat Penyelesaian QC LearnHub",
             f"Participant: {data.get('participant_name') or 'Peserta'}",
             f"Program: {data.get('program_name') or 'Simulasi Quality Control Industri Pangan'}",
             f"Certificate ID: {data.get('certificate_id')}",
             f"Issued At: {str(data.get('issued_at') or '')[:10]}",
-            "This certificate confirms completion of learning modules, simulation, and quiz.",
+            "Sertifikat penyelesaian pelatihan internal berdasarkan modul HACCP, GMP, food safety, traceability, dan kompetensi kerja QC pangan.",
         ]
         text = ["BT", "/F1 26 Tf", "72 760 Td", f"({self._pdf_escape(lines[0])}) Tj"]
         text.extend(["/F1 18 Tf", "0 -44 Td", f"({self._pdf_escape(lines[1])}) Tj"])

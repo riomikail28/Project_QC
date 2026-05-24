@@ -7,12 +7,12 @@ def test_learning_modules_and_progress_without_database():
 
     modules = service.modules(user_id)
     assert modules["success"] is True
-    assert len(modules["data"]) == 5
+    assert len(modules["data"]) == 12
 
-    progress = service.complete_module(user_id, "haccp")
+    progress = service.complete_module(user_id, "haccp-principles")
     assert progress["data"]["completed_modules"] == 1
-    assert progress["data"]["percent"] == 20
-    assert progress["data"]["learning_percent"] == 20
+    assert progress["data"]["percent"] == 8
+    assert progress["data"]["learning_percent"] == 8
     assert progress["data"]["simulation_percent"] == 0
     assert progress["data"]["quiz_percent"] == 0
     assert progress["data"]["certificate_percent"] == 0
@@ -22,11 +22,11 @@ def test_learning_progress_is_persisted_to_repository():
     repo = RecordingRepo()
     service = LearningService(repository=repo)
 
-    result = service.complete_module("student-2", "haccp")
+    result = service.complete_module("student-2", "haccp-principles")
 
     assert result["success"] is True
     assert repo.progress_payloads[-1]["user_id"] == "student-2"
-    assert repo.progress_payloads[-1]["module_slug"] == "haccp"
+    assert repo.progress_payloads[-1]["module_slug"] == "haccp-principles"
     assert repo.progress_payloads[-1]["status"] == "completed"
 
 
@@ -69,7 +69,7 @@ def test_simulation_answer_and_score_are_persisted():
     assert result["success"] is True
     assert repo.attempts[-1]["table"] == "itdv_simulation_attempts"
     assert repo.attempts[-1]["payload"]["selected_action"] == "A"
-    assert repo.attempts[-1]["payload"]["score"] == 70
+    assert repo.attempts[-1]["payload"]["score"] == 85
     assert "Dalam HACCP" in repo.attempts[-1]["payload"]["feedback"]
 
 
@@ -77,22 +77,22 @@ def test_quiz_auto_score():
     result = LearningService(repository=NoDatabaseRepo()).submit_quiz(
         "student-1",
         "qc-basic-quiz",
-        {"q1": "B", "q2": "A", "q3": "B"},
+        {"q1": "B", "q2": "A", "q3": "B", "q4": "A", "q5": "A"},
     )
 
     assert result["success"] is True
     assert result["data"]["score"] == 100
-    assert result["data"]["correct"] == 3
+    assert result["data"]["correct"] == 5
 
 
 def test_quiz_submit_persists_score_and_answers():
     repo = RecordingRepo()
-    answers = {"q1": "B", "q2": "A", "q3": "D"}
+    answers = {"q1": "B", "q2": "A", "q3": "D", "q4": "A", "q5": "B"}
 
     result = LearningService(repository=repo).submit_quiz("student-4", "qc-basic-quiz", answers)
 
     assert result["success"] is True
-    assert result["data"]["score"] == 67
+    assert result["data"]["score"] == 60
     assert result["data"]["passed"] is False
     assert repo.attempts[-1]["table"] == "itdv_quiz_attempts"
     assert repo.attempts[-1]["payload"]["answers"] == answers
@@ -124,14 +124,21 @@ def test_progress_breakdown_uses_existing_attempt_and_certificate_tables():
 
 def test_career_recommendation_is_rule_based_and_ranked():
     repo = RecordingRepo()
-    repo.completed_modules = {"haccp", "food-safety", "traceability", "monitoring-suhu", "qc-dasar"}
+    repo.completed_modules = {module["slug"] for module in MODULES}
     repo.simulation_attempts = [{"simulation_id": "ppic-chiller-001", "score": 100}]
     repo.quiz_attempts = [{"quiz_id": "qc-basic-quiz", "score": 100}]
 
     result = LearningService(repository=repo).career_recommendation("student-8")
 
     assert result["success"] is True
-    assert result["data"]["primary"]["title"] in {"QC", "QA", "Food Safety", "Auditor", "Supply Chain"}
+    assert result["data"]["primary"]["title"] in {
+        "QC Staff",
+        "QA Staff",
+        "Food Safety Officer",
+        "Production Control",
+        "Warehouse QC",
+        "Auditor Internal",
+    }
     assert [item["title"] for item in result["data"]["recommendations"]] == [
         item["title"] for item in sorted(
             result["data"]["recommendations"],
@@ -140,11 +147,12 @@ def test_career_recommendation_is_rule_based_and_ranked():
         )
     ]
     assert {item["title"] for item in result["data"]["recommendations"]} == {
-        "QC",
-        "QA",
-        "Food Safety",
-        "Auditor",
-        "Supply Chain",
+        "QC Staff",
+        "QA Staff",
+        "Food Safety Officer",
+        "Production Control",
+        "Warehouse QC",
+        "Auditor Internal",
     }
 
 
@@ -277,7 +285,7 @@ def test_learning_api_endpoints(client, staff_headers):
     quiz = client.post(
         "/api/learning/quizzes/qc-basic-quiz/submit",
         headers=staff_headers,
-        json={"answers": {"q1": "B", "q2": "A", "q3": "B"}},
+        json={"answers": {"q1": "B", "q2": "A", "q3": "B", "q4": "A", "q5": "A"}},
     )
     assert quiz.status_code == 200
     assert quiz.get_json()["data"]["score"] == 100

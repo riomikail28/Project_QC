@@ -1773,3 +1773,249 @@ body:has(.learnhub-page) {
         min-height: 140px;
     }
 }
+
+/* ITDV competency redesign */
+.hero-safe-note {
+    max-width: 680px;
+    padding-left: 14px;
+    border-left: 4px solid var(--itdv-green);
+    color: var(--itdv-ink) !important;
+    font-size: clamp(14px, 1.7vw, 16px) !important;
+    line-height: 1.55 !important;
+}
+
+.hero-competency-panel {
+    display: grid;
+    gap: 16px;
+    align-self: center;
+    padding: clamp(22px, 4vw, 34px);
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 28px 70px rgba(37, 99, 235, 0.16);
+    backdrop-filter: blur(20px);
+}
+
+.hero-competency-panel h2 {
+    margin: 0;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.04;
+    letter-spacing: 0;
+}
+
+.hero-competency-panel p {
+    margin: 0;
+    color: var(--itdv-muted);
+    font-size: 16px;
+    line-height: 1.65;
+}
+
+.competency-mini-list,
+.quick-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.competency-mini-list span,
+.quick-prompts button {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(191, 219, 254, 0.8);
+    border-radius: 8px;
+    background: #f8fbff;
+    color: var(--itdv-blue);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.competency-mini-list span {
+    padding: 0 12px;
+}
+
+.learning-path-section {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr auto 1fr auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--itdv-line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--itdv-shadow);
+}
+
+.path-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.path-step span {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: #eef4ff;
+    color: var(--itdv-blue);
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.path-step strong {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.path-step.active span {
+    background: var(--itdv-blue);
+    color: white;
+}
+
+.path-line {
+    height: 2px;
+    min-width: 28px;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.4), rgba(16, 185, 129, 0.35));
+}
+
+.learnhub-page .module-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.learnhub-page .module-card {
+    min-height: 0;
+    gap: 12px;
+    padding: 18px;
+}
+
+.learnhub-page .module-card h3 {
+    font-size: 20px;
+    line-height: 1.18;
+}
+
+.learnhub-page .module-card p {
+    display: -webkit-box;
+    min-height: 72px;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    font-size: 13px;
+}
+
+.module-icon {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+    font-size: 13px;
+}
+
+.module-detail-grid {
+    grid-template-columns: 1fr;
+}
+
+.module-detail-grid div {
+    padding: 10px;
+}
+
+.module-learning-detail {
+    margin-top: 0;
+    max-height: 360px;
+    overflow: auto;
+}
+
+.module-learning-detail ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.module-card.in-progress {
+    border-color: rgba(37, 99, 235, 0.38);
+}
+
+.quick-prompts button {
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.quick-prompts button:hover {
+    background: #eef4ff;
+}
+
+.chat-thread {
+    display: grid;
+    gap: 12px;
+}
+
+.user-bubble {
+    justify-self: start;
+    max-width: 82%;
+    background: #f8fbff;
+}
+
+.assistant-bubble {
+    justify-self: end;
+    max-width: 86%;
+    background: #eef4ff;
+}
+
+.learnhub-page .scenario-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fact-box.risk strong {
+    color: #c2410c;
+    font-size: clamp(18px, 2vw, 24px);
+}
+
+.quiz-question-card {
+    margin-bottom: 12px;
+    padding: 16px;
+    border: 1px solid rgba(191, 219, 254, 0.72);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.career-path-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.certificate-sheet span {
+    letter-spacing: 0;
+}
+
+@media (max-width: 1020px) {
+    .learnhub-page .module-grid,
+    .career-path-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .learning-path-section {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .path-line {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .learnhub-page .module-grid,
+    .career-path-grid,
+    .learnhub-page .scenario-facts,
+    .learning-path-section {
+        grid-template-columns: 1fr;
+    }
+
+    .path-step {
+        width: 100%;
+    }
+
+    .user-bubble,
+    .assistant-bubble {
+        max-width: 100%;
+    }
+}
