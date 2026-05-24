@@ -23,3 +23,8 @@ def test_staff_mobile_routes_serve_pages(client):
     for path in ["/dashboard.html", "/monitoring.html", "/inspection.html", "/profile.html", "/alerts.html"]:
         response = client.get(path)
         assert response.status_code == 200
+
+
+def test_dashboard_extensionless_aliases_do_not_download_static_files(client):
+    assert client.get("/admin/dashboard").status_code == 404
+    assert client.get("/staff/dashboard").status_code == 404

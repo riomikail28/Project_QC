@@ -28,6 +28,8 @@ def test_profile_dropdown_click_outside_logout_and_routes_are_wired():
     assert "Auth.logout()" in js
     assert 'href="/staff/profile.html"' in js
     assert 'href="/admin/admin_panel.html#section-facility"' in js
+    assert "ð" not in js
+    assert "â" not in js
 
 
 def test_profile_dropdown_staff_and_admin_menu_rules_are_role_based():

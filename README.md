@@ -1,108 +1,189 @@
-# 🚀 ASTRO QC Enterprise
-### Intelligent Quality Control & Traceability System for Central Kitchen
+# QC Enterprise - Quality Control & Traceability System for Central Kitchen
 
-ASTRO QC Enterprise adalah sistem informasi **Quality Control (QC) dan Traceability berbasis web** yang dirancang untuk membantu operasional **Central Kitchen PT Astro Technologies Indonesia** dalam melakukan monitoring, pencatatan, validasi, dan pengawasan proses produksi secara real-time.
+Sistem digital untuk monitoring suhu, QC inspection, batch traceability, approval, audit trail, dan pembelajaran HACCP berbasis web.
 
-Proyek ini dikembangkan sebagai **Tugas Akhir/Skripsi** dengan tujuan meningkatkan efisiensi proses QC lapangan, mengurangi kesalahan pencatatan manual, serta menyediakan dashboard monitoring yang terintegrasi antara **staff operasional** dan **administrator**.
+Demo link: https://project-qc-mu.vercel.app/
 
----
+## Demo Account
 
-## ✨ Fitur Utama
+Admin:
 
-### 👨‍🍳 Staff QC Features
-- 🌡️ Monitoring suhu Chiller & Freezer real-time
-- 📸 Upload foto bukti pengecekan
-- 🏷️ Barcode produk & traceability
-- 📝 Input data QC lapangan
-- 📊 Dashboard aktivitas staff
-- 🔔 Alert dan notifikasi otomatis
-- 📱 Mobile-first interface untuk penggunaan di lapangan
+```text
+demo.admin@qcenterprise.id
+demo123456
+```
 
-### 👨‍💼 Admin Features
-- 📈 Dashboard analytics
-- 📋 Laporan QC seluruh staff
-- 📷 Monitoring foto evidence
-- 🏷️ Tracking barcode produk
-- ✅ Approval & review sistem
-- 🧾 Audit trail
-- 🚨 Critical alert monitoring
-- 📊 Statistik performa operasional
+Staff:
 
----
+```text
+demo.staff@qcenterprise.id
+demo123456
+```
 
-## 🛠️ Technology Stack
+> Catatan: akun demo dibuat melalui seed database `supabase/seed/001_demo_seed.sql`. Jangan menyimpan Supabase service role key atau secret lain di repository.
 
-### Frontend
-- HTML5
-- CSS3
+## Key Features
+
+- Admin enterprise dashboard
+- Staff mobile-first QC workflow
+- Temperature monitoring schedule
+- Batch production
+- QC inspection
+- PASS/HOLD/FAIL decision
+- Photo evidence upload
+- Traceability
+- Alerts
+- Reports
+- Audit trail
+- ITDV Learning Center
+- HACCP competency modules
+- Module mini quiz
+- Certificate completion
+- Career recommendation
+
+## Tech Stack
+
+- HTML
+- CSS
 - JavaScript
-- Responsive Mobile UI
-
-### Backend
-- Python
-- Flask REST API
-- JWT Authentication
-- RBAC (Role-Based Access Control)
-
-### Database & Cloud
-- Supabase
-- PostgreSQL
-- Supabase Storage
-- Realtime Database
-
-### Deployment
+- Python Flask
+- Supabase PostgreSQL
 - Vercel
-- GitHub Actions
-- Docker
-- Kubernetes
+- Pytest
 
----
+## Screenshots
 
-## 🎯 Tujuan Sistem
+Tambahkan screenshot pada section berikut saat materi demo final sudah siap:
 
-Sistem ini dirancang untuk:
+- Admin Dashboard
+- Staff Mobile Dashboard
+- QC Check
+- Monitoring Schedule
+- Learning Center
 
-✔ Mengurangi pencatatan manual  
-✔ Mempercepat proses monitoring QC  
-✔ Meningkatkan akurasi data produksi  
-✔ Mempermudah pelacakan produk (Traceability)  
-✔ Membantu pengambilan keputusan berbasis data  
-✔ Mendukung transformasi digital operasional Central Kitchen
+## Problem Statement
 
----
+QC central kitchen masih banyak dilakukan manual sehingga rawan human error, keterlambatan monitoring suhu, dan sulit traceability.
 
-## 📱 Tampilan Sistem
+## Solution
 
-- Dashboard Monitoring
-- Monitoring Suhu
-- Quality Control Inspection
-- Staff Profile
-- Admin Analytics
-- Audit Trail
-- Traceability System
+QC Enterprise membantu digitalisasi monitoring, inspeksi, traceability, dan pelatihan QC. Admin mendapatkan dashboard enterprise untuk memantau batch, alert suhu, approval, dan laporan. Staff mendapatkan workflow mobile-first untuk monitoring suhu, QC check, upload evidence, dan keputusan PASS/HOLD/FAIL di lapangan.
 
----
-## jika ada yang ingin mencoba silahkan untuk bantu menjadi QA tester
-username : admin
-password admin123
+## Target Users
 
----
+- Central kitchen
+- Catering
+- Bakery
+- Frozen food
+- Cloud kitchen
+- UMKM makanan
+- SMK Tata Boga
+- Mahasiswa Teknologi Pangan
 
-## 👨‍💻 Developer
+## Installation
 
-Rio Mikail  
-Program Studi Sistem Informasi  
-Universitas Indraprasta PGRI (UNINDRA)
+1. Clone repository.
 
----
+```bash
+git clone <repository-url>
+cd Project_QC
+```
 
+2. Buat virtual environment dan install dependency.
 
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-### "Transforming Quality Control Into Intelligent Digital Operations"
+3. Copy environment template.
 
-<img width="545" height="777" alt="image" src="https://github.com/user-attachments/assets/460580fd-3322-478f-8dd8-64ea675bac64" />
-<img width="513" height="777" alt="image" src="https://github.com/user-attachments/assets/cc0dd10d-8d75-40f9-9ed8-3d292ddec72a" />
-<img width="507" height="775" alt="image" src="https://github.com/user-attachments/assets/d1d93d7a-dafa-4c0a-9a1f-0e495ae2ae46" />
-<img width="524" height="774" alt="image" src="https://github.com/user-attachments/assets/722fd36e-215e-4d8b-ab24-bf8eb812ed52" />
-<img width="508" height="764" alt="image" src="https://github.com/user-attachments/assets/75fbcdd2-0ab1-4437-9bcf-00f5e1f9b428" />
+```bash
+copy .env.example .env
+```
 
+4. Isi konfigurasi Supabase dan JWT di `.env`.
+
+5. Jalankan aplikasi lokal.
+
+```bash
+python api/app.py
+```
+
+6. Buka aplikasi:
+
+```text
+http://localhost:5000/staff/login.html
+http://localhost:5000/admin/admin_panel.html
+http://localhost:5000/learning/
+```
+
+## Environment Variables
+
+Gunakan `.env.example` sebagai template. Variable utama:
+
+- `JWT_SECRET_KEY`
+- `JWT_ISSUER`
+- `CORS_ORIGINS`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_STORAGE_BUCKET`
+- `MAX_UPLOAD_BYTES`
+
+Jangan commit file `.env`, service role key, refresh token, atau credential production.
+
+## Demo Data
+
+Seed demo tersedia di:
+
+```text
+supabase/seed/001_demo_seed.sql
+```
+
+Seed tersebut menambahkan:
+
+- akun demo admin dan staff
+- produk demo
+- batch demo
+- monitoring suhu normal dan alert
+- QC PASS/HOLD/FAIL
+- barcode traceability
+- progress awal ITDV Learning
+
+Jalankan seed melalui Supabase SQL editor atau pipeline migration internal setelah schema utama selesai diterapkan.
+
+## Testing
+
+Jalankan seluruh test:
+
+```bash
+pytest
+```
+
+Jika `pytest` tidak tersedia di PATH Windows:
+
+```bash
+.venv\Scripts\python.exe -m pytest
+```
+
+Syntax check JavaScript frontend:
+
+```powershell
+Get-ChildItem frontend -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+```
+
+## Roadmap
+
+- IoT temperature integration
+- WhatsApp notification
+- AI anomaly detection
+- Export PDF report
+- Multi-tenant SaaS
+
+## License / Author
+
+Author: Rio Mikail
+
+Project portfolio: QC Enterprise - Central Kitchen Quality Control System

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared avatar profile dropdown for admin and staff topbars.
  */
 
@@ -66,17 +66,17 @@ const ProfileMenu = {
             </div>
             <div class="profile-dropdown-divider"></div>
             <a class="profile-dropdown-item" role="menuitem" href="/staff/profile.html">
-                <span class="profile-dropdown-icon">👤</span>
+                <span class="profile-dropdown-icon">P</span>
                 <strong>Profile</strong>
             </a>
             ${isAdmin ? `
                 <a class="profile-dropdown-item" role="menuitem" href="/admin/admin_panel.html#section-facility">
-                    <span class="profile-dropdown-icon">⚙</span>
+                    <span class="profile-dropdown-icon">S</span>
                     <strong>Settings</strong>
                 </a>
             ` : ''}
             <button class="profile-dropdown-item logout" role="menuitem" type="button" data-profile-logout>
-                <span class="profile-dropdown-icon">🚪</span>
+                <span class="profile-dropdown-icon">L</span>
                 <strong>Logout</strong>
             </button>
         `;
@@ -145,3 +145,4 @@ const ProfileMenu = {
 };
 
 document.addEventListener('DOMContentLoaded', () => ProfileMenu.init());
+
