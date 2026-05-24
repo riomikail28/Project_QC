@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from backend.services.learning_service import LearningService, MODULES
 
 
@@ -8,6 +10,10 @@ def test_learning_modules_and_progress_without_database():
     modules = service.modules(user_id)
     assert modules["success"] is True
     assert len(modules["data"]) == 12
+
+    quiz = service.submit_module_mini_quiz(user_id, "haccp-principles", passing_module_answers("haccp-principles"))
+    assert quiz["data"]["score"] == 100
+    assert quiz["data"]["passed"] is True
 
     progress = service.complete_module(user_id, "haccp-principles")
     assert progress["data"]["completed_modules"] == 1
@@ -22,12 +28,55 @@ def test_learning_progress_is_persisted_to_repository():
     repo = RecordingRepo()
     service = LearningService(repository=repo)
 
+    service.submit_module_mini_quiz("student-2", "haccp-principles", passing_module_answers("haccp-principles"))
     result = service.complete_module("student-2", "haccp-principles")
 
     assert result["success"] is True
     assert repo.progress_payloads[-1]["user_id"] == "student-2"
     assert repo.progress_payloads[-1]["module_slug"] == "haccp-principles"
     assert repo.progress_payloads[-1]["status"] == "completed"
+
+
+def test_module_detail_can_be_opened_by_slug_and_hides_answers():
+    service = LearningService(repository=NoDatabaseRepo())
+
+    result = service.module_detail("student-module-detail", "haccp-principles")
+
+    assert result["success"] is True
+    assert result["data"]["slug"] == "haccp-principles"
+    assert result["data"]["mini_quiz"]
+    assert all("answer" not in question for question in result["data"]["mini_quiz"])
+    assert result["data"]["key_points"]
+
+
+def test_complete_module_is_locked_before_mini_quiz_passes():
+    service = LearningService(repository=NoDatabaseRepo())
+
+    result = service.complete_module("student-locked", "haccp-principles")
+
+    assert result["success"] is False
+    assert result["status"] == 409
+    assert result["message"] == "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul."
+
+
+def test_module_mini_quiz_unlocks_complete_after_score_70():
+    service = LearningService(repository=NoDatabaseRepo())
+    user_id = "student-unlocked"
+
+    failed = service.submit_module_mini_quiz(user_id, "haccp-principles", {
+        "haccp-principles-q1": "B",
+        "haccp-principles-q2": "A",
+        "haccp-principles-q3": "D",
+    })
+    assert failed["data"]["passed"] is False
+    assert service.complete_module(user_id, "haccp-principles")["status"] == 409
+
+    passed = service.submit_module_mini_quiz(user_id, "haccp-principles", passing_module_answers("haccp-principles"))
+    assert passed["data"]["score"] == 100
+
+    completed = service.complete_module(user_id, "haccp-principles")
+    assert completed["success"] is True
+    assert "haccp-principles" in completed["data"]["module_slugs"]
 
 
 def test_simulation_scoring():
@@ -254,6 +303,24 @@ def test_learning_api_endpoints(client, staff_headers):
     assert modules.status_code == 200
     assert modules.get_json()["success"] is True
 
+    module_detail = client.get("/api/learning/modules/haccp-principles", headers=staff_headers)
+    assert module_detail.status_code == 200
+    assert module_detail.get_json()["data"]["slug"] == "haccp-principles"
+
+    locked_complete = client.post("/api/learning/modules/haccp-principles/complete", headers=staff_headers)
+    assert locked_complete.status_code == 409
+
+    mini_quiz = client.post(
+        "/api/learning/modules/haccp-principles/mini-quiz",
+        headers=staff_headers,
+        json={"answers": passing_module_answers("haccp-principles")},
+    )
+    assert mini_quiz.status_code == 200
+    assert mini_quiz.get_json()["data"]["score"] == 100
+
+    complete = client.post("/api/learning/modules/haccp-principles/complete", headers=staff_headers)
+    assert complete.status_code == 200
+
     progress = client.get("/api/learning/progress", headers=staff_headers)
     assert progress.status_code == 200
     assert progress.get_json()["success"] is True
@@ -294,6 +361,19 @@ def test_learning_api_endpoints(client, staff_headers):
     assert certificate.status_code == 409
 
 
+def test_learning_module_frontend_routes_to_detail_page():
+    learning_js = Path("frontend/learning/learning.js").read_text(encoding="utf-8")
+    module_html = Path("frontend/learning/module.html").read_text(encoding="utf-8")
+    module_js = Path("frontend/learning/module.js").read_text(encoding="utf-8")
+
+    assert "module.html?slug=" in learning_js
+    assert "module-start-link" in learning_js
+    assert "/learning/modules/${slug}" in module_js
+    assert "/learning/modules/${this.module.slug}/mini-quiz" in module_js
+    assert "/learning/modules/${this.module.slug}/complete" in module_js
+    assert "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul." in module_html
+
+
 def test_repository_uses_final_progress_table_name():
     repo = RecordingSupabaseRepo()
 
@@ -332,6 +412,7 @@ class RecordingRepo:
         self.certificates = []
         self.simulation_attempts = []
         self.quiz_attempts = []
+        self.module_quiz_attempts = []
         self.mentor_history = []
 
     def available(self):
@@ -353,6 +434,8 @@ class RecordingRepo:
                 {"user_id": "student-8", **row}
                 for row in self.quiz_attempts
             ]
+        if table == "itdv_module_quiz_attempts":
+            return self.module_quiz_attempts
         if table == "itdv_certificates":
             return self.certificates
         if table == "itdv_mentor_history":
@@ -366,6 +449,8 @@ class RecordingRepo:
 
     def insert_attempt(self, table, payload):
         self.attempts.append({"table": table, "payload": payload})
+        if table == "itdv_module_quiz_attempts":
+            self.module_quiz_attempts.append(payload)
         return [payload]
 
     def upsert_certificate(self, payload):
@@ -403,3 +488,11 @@ class RecordingSupabaseRepo:
 
     def upsert_progress(self, payload):
         return self.repo.upsert_progress(payload)
+
+
+def passing_module_answers(slug):
+    return {
+        f"{slug}-q1": "A",
+        f"{slug}-q2": "B",
+        f"{slug}-q3": "A",
+    }

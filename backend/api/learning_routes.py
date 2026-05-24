@@ -46,6 +46,19 @@ def modules():
     return _safe(lambda: _service().modules(_user()["id"]))
 
 
+@learning_bp.route("/modules/<module_slug>", methods=["GET"])
+@require_auth
+def module_detail(module_slug):
+    return _safe(lambda: _service().module_detail(_user()["id"], module_slug))
+
+
+@learning_bp.route("/modules/<module_slug>/mini-quiz", methods=["POST"])
+@require_auth
+def module_mini_quiz(module_slug):
+    payload = request.get_json(silent=True) or {}
+    return _safe(lambda: _service().submit_module_mini_quiz(_user()["id"], module_slug, payload.get("answers") or {}))
+
+
 @learning_bp.route("/modules/<module_slug>/complete", methods=["POST"])
 @require_auth
 def complete_module(module_slug):

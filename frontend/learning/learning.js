@@ -35,6 +35,7 @@ const ITDV = {
         const grid = document.getElementById('moduleGrid');
         grid.innerHTML = this.modules.map((module, index) => {
             const status = this.moduleStatus(module);
+            const actionLabel = status.key === 'new' ? 'Mulai Modul' : 'Lanjutkan';
             return `
             <article class="module-card ${module.completed ? 'completed' : ''} ${status.key === 'process' ? 'in-progress' : ''}">
                 <div class="module-card-top">
@@ -50,50 +51,18 @@ const ITDV = {
                     <div><span>Kompetensi</span><strong>${this.escape(module.category)}</strong></div>
                     <div><span>Estimasi waktu</span><strong>${module.duration_minutes || 0} menit</strong></div>
                 </div>
-                <button class="secondary-btn" type="button" onclick="ITDV.toggleModule('${module.slug}')">
-                    Mulai Modul
-                </button>
-                <div id="moduleDetail-${this.escapeAttr(module.slug)}" class="module-learning-detail" hidden>
-                    <div>
-                        <span>Tujuan belajar</span>
-                        <p>${(module.objectives || []).map(item => this.escape(item)).join(', ') || 'Memahami praktik QC industri pangan.'}</p>
-                    </div>
-                    <div>
-                        <span>Materi ringkas</span>
-                        <p>${this.escape(this.moduleMaterial(module))}</p>
-                    </div>
-                    <div>
-                        <span>Contoh kasus</span>
-                        <p>${this.escape(this.moduleCase(module))}</p>
-                    </div>
-                    <div>
-                        <span>Kompetensi yang dicapai</span>
-                        <ul>${this.moduleCompetencies(module).map(item => `<li>${this.escape(item)}</li>`).join('')}</ul>
-                    </div>
-                    <button class="primary-btn" type="button" onclick="ITDV.completeModule('${module.slug}')" ${module.completed ? 'disabled' : ''}>
-                        ${module.completed ? 'Selesai' : 'Tandai Selesai'}
-                    </button>
+                <div class="module-competency-list">
+                    ${this.moduleCompetencies(module).slice(0, 2).map(item => `<span>${this.escape(item)}</span>`).join('')}
                 </div>
+                <a class="secondary-btn module-start-link" data-module-slug="${this.escapeAttr(module.slug)}" href="module.html?slug=${encodeURIComponent(module.slug)}">${actionLabel}</a>
             </article>
         `; }).join('');
-    },
-
-    toggleModule(slug) {
-        const panel = document.getElementById(`moduleDetail-${slug}`);
-        if (!panel) return;
-        this.startedModules.add(slug);
-        localStorage.setItem('itdv_started_modules', JSON.stringify([...this.startedModules]));
-        panel.hidden = !panel.hidden;
-        this.loadModules().then(() => {
-            const nextPanel = document.getElementById(`moduleDetail-${slug}`);
-            if (nextPanel) nextPanel.hidden = false;
+        grid.querySelectorAll('[data-module-slug]').forEach(link => {
+            link.addEventListener('click', () => {
+                this.startedModules.add(link.dataset.moduleSlug);
+                localStorage.setItem('itdv_started_modules', JSON.stringify([...this.startedModules]));
+            });
         });
-    },
-
-    async completeModule(slug) {
-        await API.post(`/learning/modules/${slug}/complete`, {});
-        await this.loadModules();
-        await this.loadProgress();
     },
 
     async loadProgress() {
@@ -440,7 +409,7 @@ const ITDV = {
 
     moduleStatus(module) {
         if (module.completed) return { key: 'done', label: 'Selesai' };
-        if (this.startedModules.has(module.slug)) return { key: 'process', label: 'Proses' };
+        if (module.mini_quiz_passed || this.startedModules.has(module.slug)) return { key: 'process', label: 'Proses' };
         return { key: 'new', label: 'Belum mulai' };
     },
 

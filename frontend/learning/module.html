@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Modul | QC LearnHub AI</title>
+    <link rel="stylesheet" href="../styles/global.css">
+    <link rel="stylesheet" href="learning.css">
+    <link rel="stylesheet" href="module.css">
+</head>
+<body>
+    <header class="itdv-header">
+        <a class="itdv-brand" href="/learning/">
+            <span class="brand-mark">IT</span>
+            <span>
+                <strong>QC LearnHub AI</strong>
+                <small>Detail Modul</small>
+            </span>
+        </a>
+        <nav class="itdv-nav">
+            <a href="/learning/">Learning</a>
+            <a href="/learning/#simulation">Simulasi</a>
+            <a href="/learning/#quiz">Quiz</a>
+            <a href="/learning/career.html">Career</a>
+        </nav>
+    </header>
+
+    <main class="itdv-shell module-page">
+        <section class="module-detail-hero">
+            <a class="module-back-link" href="/learning/">Kembali ke Learning Center</a>
+            <div>
+                <span id="moduleCategory">Modul</span>
+                <h1 id="moduleTitle">Memuat modul...</h1>
+                <p id="moduleSummary">Mohon tunggu.</p>
+            </div>
+            <div class="module-status-panel">
+                <small>Status</small>
+                <strong id="moduleStatus">Belum mulai</strong>
+                <span id="moduleDuration">0 menit</span>
+            </div>
+        </section>
+
+        <section class="module-detail-layout">
+            <article class="module-learning-sheet">
+                <div class="module-section">
+                    <h2>Tujuan Belajar</h2>
+                    <ul id="moduleObjectives"></ul>
+                </div>
+                <div class="module-section">
+                    <h2>Materi Lengkap</h2>
+                    <p id="moduleMaterial"></p>
+                </div>
+                <div class="module-section">
+                    <h2>Contoh Kasus Central Kitchen</h2>
+                    <p id="moduleCase"></p>
+                </div>
+                <div class="module-section">
+                    <h2>Kompetensi yang Dicapai</h2>
+                    <ul id="moduleCompetencies"></ul>
+                </div>
+                <div class="module-section key-points">
+                    <h2>Ringkasan Poin Penting</h2>
+                    <ul id="moduleKeyPoints"></ul>
+                </div>
+                <label class="read-confirmation">
+                    <input id="readConfirmation" type="checkbox">
+                    <span>Saya sudah membaca materi, contoh kasus, dan ringkasan poin penting modul ini.</span>
+                </label>
+            </article>
+
+            <aside class="module-quiz-panel">
+                <div>
+                    <span>Mini Quiz</span>
+                    <h2>Validasi Pemahaman</h2>
+                    <p>Selesaikan mini quiz minimal 70 untuk menyelesaikan modul.</p>
+                </div>
+                <form id="miniQuizForm" class="mini-quiz-form"></form>
+                <div id="miniQuizResult" class="mini-quiz-result">Kerjakan semua soal untuk membuka tombol selesai.</div>
+                <button id="completeModuleBtn" class="primary-btn" type="button" disabled>Tandai Selesai</button>
+            </aside>
+        </section>
+    </main>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="module.js"></script>
+</body>
+</html>

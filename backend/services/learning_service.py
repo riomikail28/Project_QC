@@ -230,6 +230,7 @@ QUIZZES = [
 LOCAL_PROGRESS = {}
 LOCAL_SIMULATION_ATTEMPTS = []
 LOCAL_QUIZ_ATTEMPTS = []
+LOCAL_MODULE_QUIZ_ATTEMPTS = []
 LOCAL_CERTIFICATES = {}
 LOCAL_MENTOR_HISTORY = []
 
@@ -241,14 +242,83 @@ class LearningService:
     def modules(self, user_id):
         progress = self._progress_map(user_id)
         return self._ok([
-            {**module, "completed": progress.get(module["slug"], {}).get("status") == "completed"}
+            {
+                **module,
+                "completed": progress.get(module["slug"], {}).get("status") == "completed",
+                "mini_quiz_passed": self._module_quiz_passed(user_id, module["slug"]),
+            }
             for module in self._modules()
         ])
+
+    def module_detail(self, user_id, module_slug):
+        module = self._module(module_slug)
+        if not module:
+            return self._fail("Modul tidak ditemukan", 404)
+        progress = self._progress_map(user_id)
+        best_score = self._best_module_quiz_score(user_id, module_slug)
+        return self._ok({
+            **module,
+            "completed": progress.get(module_slug, {}).get("status") == "completed",
+            "mini_quiz_passed": best_score >= 70,
+            "mini_quiz_score": best_score,
+            "mini_quiz": [
+                {key: value for key, value in question.items() if key != "answer"}
+                for question in self._module_mini_quiz(module)
+            ],
+            "key_points": self._module_key_points(module),
+        })
+
+    def submit_module_mini_quiz(self, user_id, module_slug, answers):
+        module = self._module(module_slug)
+        if not module:
+            return self._fail("Modul tidak ditemukan", 404)
+        answers = answers or {}
+        questions = self._module_mini_quiz(module)
+        items = []
+        correct = 0
+        for question in questions:
+            selected = answers.get(question["id"])
+            is_correct = selected == question["answer"]
+            correct += 1 if is_correct else 0
+            items.append({
+                "question_id": question["id"],
+                "selected": selected,
+                "correct_answer": question["answer"],
+                "is_correct": is_correct,
+                "explanation": question.get("explanation"),
+            })
+        score = round((correct / len(questions)) * 100) if questions else 0
+        payload = {
+            "user_id": user_id,
+            "module_slug": module_slug,
+            "score": score,
+            "answers": answers,
+            "passed": score >= 70,
+        }
+        saved = self.repo.insert_attempt("itdv_module_quiz_attempts", payload) if self.repo.available() else None
+        if not saved:
+            self._log_persistence_fallback("module mini quiz attempt", user_id)
+            LOCAL_MODULE_QUIZ_ATTEMPTS.append(payload)
+        return self._ok({
+            "module_slug": module_slug,
+            "score": score,
+            "correct": correct,
+            "total": len(questions),
+            "passed": score >= 70,
+            "items": items,
+            "message": "Mini quiz lulus" if score >= 70 else "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul.",
+        })
 
     def complete_module(self, user_id, module_slug):
         module = self._module(module_slug)
         if not module:
             return self._fail("Modul tidak ditemukan", 404)
+        if not self._module_quiz_passed(user_id, module_slug):
+            return self._fail(
+                "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul.",
+                409,
+                {"mini_quiz_score": self._best_module_quiz_score(user_id, module_slug)},
+            )
         payload = {
             "user_id": user_id,
             "module_slug": module_slug,
@@ -523,6 +593,74 @@ class LearningService:
         for slug in LOCAL_PROGRESS.get(user_id, set()):
             progress.setdefault(slug, {"module_slug": slug, "status": "completed"})
         return progress
+
+    def _module_quiz_passed(self, user_id, module_slug):
+        return self._best_module_quiz_score(user_id, module_slug) >= 70
+
+    def _best_module_quiz_score(self, user_id, module_slug):
+        rows = self.repo.fetch_table(
+            "itdv_module_quiz_attempts",
+            filters=[("eq", "user_id", user_id), ("eq", "module_slug", module_slug)],
+        ) if self.repo.available() else []
+        scores = [int(row.get("score") or 0) for row in rows]
+        scores.extend(
+            int(row.get("score") or 0)
+            for row in LOCAL_MODULE_QUIZ_ATTEMPTS
+            if row.get("user_id") == user_id and row.get("module_slug") == module_slug
+        )
+        return max(scores or [0])
+
+    def _module_mini_quiz(self, module):
+        slug = module.get("slug")
+        title = module.get("title")
+        category = module.get("category")
+        return [
+            {
+                "id": f"{slug}-q1",
+                "text": f"Apa fokus utama modul {title}?",
+                "options": [
+                    {"key": "A", "label": module.get("summary")},
+                    {"key": "B", "label": "Menghapus pencatatan QC agar proses lebih cepat"},
+                    {"key": "C", "label": "Mengabaikan deviasi bila produk terlihat normal"},
+                    {"key": "D", "label": "Mengganti approval supervisor"},
+                ],
+                "answer": "A",
+                "explanation": "Fokus modul mengikuti ringkasan kompetensi dan praktik QC pangan yang dijelaskan pada materi.",
+            },
+            {
+                "id": f"{slug}-q2",
+                "text": "Jika ditemukan deviasi pada proses central kitchen, tindakan QC yang paling tepat adalah...",
+                "options": [
+                    {"key": "A", "label": "Melanjutkan proses tanpa catatan"},
+                    {"key": "B", "label": "Menilai risiko, menahan produk terdampak bila perlu, dan mencatat evidence"},
+                    {"key": "C", "label": "Mengubah target parameter agar sesuai hasil aktual"},
+                    {"key": "D", "label": "Menunggu sampai akhir shift tanpa eskalasi"},
+                ],
+                "answer": "B",
+                "explanation": "Deviasi harus dinilai berbasis risiko, dikendalikan, dan didokumentasikan.",
+            },
+            {
+                "id": f"{slug}-q3",
+                "text": f"Kompetensi kerja yang paling terkait dengan modul {category} ini adalah...",
+                "options": [
+                    {"key": "A", "label": "Membuat keputusan QC berbasis risiko dan bukti"},
+                    {"key": "B", "label": "Menghilangkan kebutuhan monitoring suhu"},
+                    {"key": "C", "label": "Mengganti SOP tanpa verifikasi"},
+                    {"key": "D", "label": "Mengabaikan traceability batch"},
+                ],
+                "answer": "A",
+                "explanation": "Kompetensi QC pangan menekankan keputusan berbasis risiko, evidence, dan pencatatan.",
+            },
+        ]
+
+    def _module_key_points(self, module):
+        points = list(module.get("objectives") or [])
+        points.extend((module.get("competencies") or [])[:2])
+        return points[:5] or [
+            "Baca risiko proses",
+            "Ambil keputusan QC berbasis bukti",
+            "Catat evidence dan tindakan",
+        ]
 
     def _attempt_percent(self, user_id, table, id_field, total_ids, local_rows, minimum_score=70):
         expected = {item for item in total_ids if item}
