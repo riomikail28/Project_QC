@@ -19,11 +19,11 @@
             </div>
         </a>
         <nav class="desktop-nav" aria-label="Desktop navigation">
-            <a href="dashboard.html">Beranda</a>
+            <a href="dashboard.html">Dashboard</a>
             <a href="monitoring.html">Monitoring</a>
             <a href="inspection.html" class="active">QC Check</a>
             <a href="profile.html">Profil</a>
-            <a href="/admin/" data-admin-only hidden>Admin</a>
+            <a href="/admin/dashboard" data-admin-only hidden>Admin Dashboard</a>
         </nav>
         <div class="nav-actions">
             <button class="nav-btn" onclick="window.location.href='new_batch.html'" aria-label="New batch"><i class="fas fa-plus"></i></button>
@@ -38,6 +38,12 @@
                     <div>
                         <h1 class="simple-qc-title">QC Check</h1>
                         <p class="simple-qc-subtitle">Pilih produk, lalu simpan hasil pengecekan.</p>
+                        <div class="field-qc-stepper" aria-label="Progress QC Check">
+                            <div class="field-qc-step active" data-step="product"><span>1</span><strong>Produk</strong></div>
+                            <div class="field-qc-step" data-step="stage"><span>2</span><strong>Jenis</strong></div>
+                            <div class="field-qc-step" data-step="result"><span>3</span><strong>Hasil</strong></div>
+                            <div class="field-qc-step" data-step="submit"><span>4</span><strong>Simpan</strong></div>
+                        </div>
                     </div>
                 </div>
 
@@ -92,7 +98,7 @@
                             <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                         </div>
                         <div class="photo-preview" id="cookingPhotoPreview" hidden></div>
-                        <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                        <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                     </div>
                 </div>
 
@@ -106,7 +112,7 @@
                             <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                         </div>
                         <div class="photo-preview" id="barcodePhotoPreview" hidden></div>
-                        <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                        <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                     </div>
                     <div class="upload-card-compact" id="labelUploadCard">
                         <div class="upload-card-header" onclick="document.getElementById('labelPhoto').click()">
@@ -117,7 +123,7 @@
                             <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                         </div>
                         <div class="photo-preview" id="labelPhotoPreview" hidden></div>
-                        <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                        <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                     </div>
                 </div>
 
@@ -141,9 +147,41 @@
                 </div>
 
                 <!-- ═══ STEP 7: Submit ═══ -->
+                <section class="qc-submit-summary" id="qcSubmitSummary" hidden aria-live="polite">
+                    <div>
+                        <span>Summary sebelum submit</span>
+                        <strong id="summaryProduct">Produk belum dipilih</strong>
+                    </div>
+                    <dl>
+                        <div><dt>Batch</dt><dd id="summaryBatch">Batch baru</dd></div>
+                        <div><dt>Jenis</dt><dd id="summaryStage">-</dd></div>
+                        <div><dt>Status</dt><dd id="summaryStatus">-</dd></div>
+                        <div><dt>Evidence</dt><dd id="summaryEvidence">Belum ada foto</dd></div>
+                    </dl>
+                </section>
                 <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Simpan QC</button>
                 <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
             </div>
+            <aside class="panel-card qc-field-context" aria-label="Konteks QC lapangan">
+                <div class="context-card active-batch-context">
+                    <div>
+                        <span>Batch aktif</span>
+                        <strong id="contextBatchCount">Belum ada produk</strong>
+                    </div>
+                    <div id="contextBatchList" class="context-list">
+                        Pilih produk untuk melihat batch aktif.
+                    </div>
+                </div>
+                <div class="context-card">
+                    <div>
+                        <span>Riwayat QC terbaru</span>
+                        <strong>Perangkat ini</strong>
+                    </div>
+                    <div id="recentQcList" class="context-list">
+                        Belum ada riwayat QC dari perangkat ini.
+                    </div>
+                </div>
+            </aside>
         </section>
     </main>
 
@@ -166,6 +204,10 @@
             if (window.lucide) lucide.createIcons();
             if (!Auth.check()) window.location.href = 'login.html';
             Auth.refreshSessionRole();
+            if (Auth.isAdmin()) {
+                window.location.replace('/admin/dashboard');
+                return;
+            }
             ['productSearch','qcSku','qcTemp','qcNotes'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;

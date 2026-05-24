@@ -40,8 +40,7 @@ const adminApp = {
 
     checkAuth() {
         if (!Auth.check() || !Auth.isAdmin()) {
-            alert("Akses ditolak. Anda harus login sebagai admin.");
-            window.location.href = '/login.html';
+            window.location.href = Auth.check() ? '/staff/dashboard' : '/staff/login.html';
             return;
         }
 
@@ -178,6 +177,7 @@ const adminApp = {
         switch(target) {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
+            case 'alerts': this.loadOverview(); break;
             case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
             case 'facility': this.loadFacilityManager(); break;
@@ -203,6 +203,8 @@ const adminApp = {
             document.getElementById('metric-qc-pending').innerText = res.total_qc_pending || 0;
             document.getElementById('metric-alerts').innerText = res.total_open_alerts || 0;
             document.getElementById('alert-badge').innerText = res.total_open_alerts || 0;
+            this.setText('alerts-open-count', res.total_open_alerts || 0);
+            this.setText('alerts-pending-count', res.total_qc_pending || 0);
 
             this.initCharts(res, trendEnvelope?.data || [], statusEnvelope?.data || {});
         }

@@ -18,15 +18,21 @@ def test_admin_imports_global_design_system():
 def test_admin_navigation_is_internal_sections():
     html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
     for label in (
-        "Overview",
-        "Products",
+        "Dashboard",
+        "Monitoring",
+        "Batch Production",
+        "QC Inspection",
+        "Alerts",
+        "Reports",
         "Staff",
-        "QC Reports",
-        "Temperature Logs",
-        "Barcode Traceability",
-        "Approvals",
-        "Audit Trail",
+        "Learning ITDV",
         "Settings",
     ):
         assert label in html
     assert "dashboard.html#admin" not in html
+
+
+def test_admin_dashboard_alias_exists_for_role_routing():
+    alias = ROOT / "frontend" / "admin" / "dashboard"
+    assert alias.exists()
+    assert "/admin/" in alias.read_text(encoding="utf-8")

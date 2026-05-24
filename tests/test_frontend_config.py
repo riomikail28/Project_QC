@@ -58,15 +58,15 @@ def test_staff_profile_hides_staff_action_menu_items():
     assert "My QC Activity" not in html
     assert "My Upload Evidence" not in html
     assert "My Temperature Logs" not in html
-    assert "Open Admin Panel" in html
+    assert "Open Admin Panel" not in html
     assert "hidden" in html
 
 
 def test_staff_pages_mark_admin_links_as_role_based():
     for page_name in ["dashboard.html", "monitoring.html", "inspection.html", "profile.html"]:
         html = (ROOT / "frontend" / "staff" / page_name).read_text(encoding="utf-8")
-        assert 'href="/admin/"' in html
-        admin_index = html.index('href="/admin/"')
+        assert 'href="/admin/dashboard"' in html
+        admin_index = html.index('href="/admin/dashboard"')
         tag_start = html.rfind("<", 0, admin_index)
         tag_end = html.find(">", admin_index)
         admin_tag = html[tag_start:tag_end]
@@ -85,6 +85,8 @@ def test_auth_supports_super_admin_and_role_visibility():
     assert "API.get('/profile/me')" in auth_js
     assert "element.hidden = !canAccessAdmin" in auth_js
     assert "element.style.display = canAccessAdmin ? '' : 'none'" in auth_js
+    assert "homeForRole" in auth_js
+    assert "requireRole" in auth_js
 
 
 def test_staff_pages_refresh_role_from_session():

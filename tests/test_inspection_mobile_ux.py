@@ -39,6 +39,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "renderPhotoPreview" in js
     assert "+ Tambah Catatan" in html
     assert "notesWrap" in html
+    assert "capture=\"environment\"" in html
 
 
 def test_qc_check_helper_text_not_duplicated():
@@ -66,6 +67,22 @@ def test_qc_check_compact_upload_cards():
     assert "upload-card-compact" in html
     assert "upload-card-compact" in css
     assert "Ambil Foto" in html
+
+
+def test_qc_check_field_mobile_ux_has_step_summary_and_context():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "field-qc-stepper" in html
+    assert "qcSubmitSummary" in html
+    assert "contextBatchList" in html
+    assert "recentQcList" in html
+    assert "updateSummary" in js
+    assert "renderContextBatches" in js
+    assert "rememberRecentSubmission" in js
+    assert ".qc-status-option" in css
+    assert "min-height: 76px" in css
 
 
 def test_qc_check_manual_sku_only_fallback():

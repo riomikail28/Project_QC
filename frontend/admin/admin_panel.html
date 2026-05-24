@@ -20,17 +20,18 @@
                 <span>QC Enterprise</span>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="#section-overview" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a></li>
-                <li><a href="#section-monitoring" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Temperature Logs</span></a></li>
-                <li><a href="#section-sku" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
+                <li><a href="#section-overview" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
+                <li><a href="#section-monitoring" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Monitoring</span></a></li>
+                <li><a href="#section-daily-reports" class="sidebar-item admin-nav-link" data-target="daily-reports" data-section="daily-reports"><i data-lucide="factory"></i><span>Batch Production</span></a></li>
+                <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="clipboard-check"></i><span>QC Inspection</span></a></li>
+                <li><a href="#section-alerts" class="sidebar-item admin-nav-link" data-target="alerts" data-section="alerts"><i data-lucide="bell-ring"></i><span>Alerts</span></a></li>
+                <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Reports</span></a></li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
-                <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="file-text"></i><span>QC Reports</span></a></li>
-                <li><a href="#section-daily-reports" class="sidebar-item admin-nav-link" data-target="daily-reports" data-section="daily-reports"><i data-lucide="calendar-days"></i><span>Reports Harian</span></a></li>
-                <li><a href="#section-traceability" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Barcode Traceability</span></a></li>
-                <li><a href="#section-approval" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
-                <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="history"></i><span>Audit Trail</span></a></li>
+                <li><a href="/learning/" class="sidebar-item"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
                 <li><a href="#section-facility" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
-                <li><a href="/dashboard.html" class="sidebar-item"><i data-lucide="home"></i><span>Home</span></a></li>
+                <li><a href="#section-sku" class="sidebar-item admin-nav-link admin-sub-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
+                <li><a href="#section-approval" class="sidebar-item admin-nav-link admin-sub-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
+                <li><a href="#section-traceability" class="sidebar-item admin-nav-link admin-sub-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Traceability</span></a></li>
                 <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>
         </aside>
@@ -45,6 +46,10 @@
                     <h2 id="page-title" style="margin:0; font-size: 1.2rem;">Overview</h2>
                 </div>
                 <div class="topbar-right">
+                    <label class="admin-search">
+                        <i data-lucide="search"></i>
+                        <input type="search" placeholder="Search report, batch, staff...">
+                    </label>
                     <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
                         <i data-lucide="moon"></i>
                     </button>
@@ -64,6 +69,17 @@
                 
                 <!-- SECTION: Overview -->
                 <section id="section-overview" class="dashboard-section active">
+                    <div class="admin-hero-strip">
+                        <div>
+                            <span>Enterprise Quality Command</span>
+                            <h1>Central Kitchen QC Dashboard</h1>
+                            <p>Monitoring produksi, suhu, approval, dan inspeksi lapangan dalam satu workspace admin.</p>
+                        </div>
+                        <div class="admin-hero-actions">
+                            <button class="btn-secondary" onclick="adminApp.navigateTo('monitoring')"><i data-lucide="thermometer"></i> Realtime Monitoring</button>
+                            <button class="btn-primary" onclick="adminApp.navigateTo('approval')"><i data-lucide="badge-check"></i> Pending Approval</button>
+                        </div>
+                    </div>
                     <div class="metric-grid">
                         <div class="metric-card">
                             <div class="metric-header">
@@ -117,6 +133,29 @@
                     </div>
                     <div class="metric-grid" id="monitoring-grid">
                         <!-- Devices loaded via JS -->
+                    </div>
+                </section>
+
+                <section id="section-alerts" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Alerts</h3>
+                                <p class="admin-muted">Ringkasan alert suhu dan deviasi QC yang perlu tindakan.</p>
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh Summary</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric-card">
+                                <div class="metric-header"><span>Open Temperature Alerts</span><i data-lucide="bell-ring" class="metric-icon" style="color: var(--danger-color)"></i></div>
+                                <div class="metric-value" id="alerts-open-count">0</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-header"><span>Pending Approval</span><i data-lucide="badge-alert" class="metric-icon" style="color: var(--warning-color)"></i></div>
+                                <div class="metric-value" id="alerts-pending-count">0</div>
+                            </div>
+                        </div>
+                        <p class="admin-muted">Detail alert suhu tersedia di menu Monitoring. Queue approval tersedia di menu Approvals.</p>
                     </div>
                 </section>
 

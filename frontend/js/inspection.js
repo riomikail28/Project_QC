@@ -31,6 +31,7 @@ const Inspection = {
         this.updateStageFields();
         this.updateSubmitState();
         this.updateProgressiveFields();
+        this.loadRecentSubmissions();
     },
 
     /* ═══════════════════════════════════════════════
@@ -152,6 +153,7 @@ const Inspection = {
                     item.classList.toggle('active', item === button);
                 });
                 this.updateSubmitState();
+                this.updateSummary();
             });
         });
     },
@@ -166,6 +168,7 @@ const Inspection = {
                 this.updateStageFields();
                 this.updateProgressiveFields();
                 this.updateSubmitState();
+                this.updateSummary();
             });
         });
     },
@@ -200,6 +203,7 @@ const Inspection = {
             this.forceNewBatch = true;
             document.querySelectorAll('.batch-choice').forEach(item => item.classList.remove('active'));
             button.textContent = 'Batch baru akan dibuat';
+            this.updateSummary();
         });
     },
 
@@ -208,9 +212,12 @@ const Inspection = {
        ═══════════════════════════════════════════════ */
 
     bindCompletionState() {
-        ['productSearch', 'qcSku', 'qcTemp'].forEach(id => {
+        ['productSearch', 'qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
             const input = document.getElementById(id);
-            if (input) input.addEventListener('input', () => this.updateSubmitState());
+            if (input) input.addEventListener('input', () => {
+                this.updateSubmitState();
+                this.updateSummary();
+            });
         });
     },
 
@@ -272,10 +279,12 @@ const Inspection = {
                 try {
                     API.validatePhoto(file);
                     this.renderPhotoPreview(id, file);
+                    this.updateSummary();
                 } catch (err) {
                     this.message(err.message || 'Upload gagal', true);
                     input.value = '';
                     this.clearPhotoPreview(id);
+                    this.updateSummary();
                 }
             });
         });
@@ -347,6 +356,14 @@ const Inspection = {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Menyimpan...';
             const response = await API.upload('/inspection/submit', formData);
             if (!response.success) throw new Error(response.message || response.error || 'Submit gagal');
+            this.rememberRecentSubmission({
+                product_name: this.selectedProduct?.product_name || 'Manual SKU',
+                sku_code: sku,
+                batch_code: this.selectedBatch?.batch_code || 'Batch baru',
+                qc_stage: this.selectedStage,
+                status: this.selectedStatus,
+                created_at: new Date().toISOString()
+            });
             ['productSearch', 'qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
                 localStorage.removeItem(id);
                 const el = document.getElementById(id);
@@ -378,8 +395,9 @@ const Inspection = {
             }
             this.updateProgressiveFields();
             this.updateSubmitState();
+            this.updateSummary();
             this.message('QC berhasil disimpan', false);
-            if (typeof this.loadRecentSubmissions === 'function') this.loadRecentSubmissions();
+            this.loadRecentSubmissions();
         } catch (error) {
             this.message(`Gagal menyimpan QC: ${error.message || 'server tidak merespons'}`, true);
         } finally {
@@ -401,11 +419,50 @@ const Inspection = {
         const hasStatus = Boolean(this.selectedStatus);
         const hasStageData = this.selectedStage !== 'cooking_check' || Boolean(temperature);
         button.disabled = !(hasProduct && hasStage && hasStatus && hasStageData);
+        this.updateStepState();
+        this.updateSummary();
     },
 
     /* ═══════════════════════════════════════════════
        Messages
        ═══════════════════════════════════════════════ */
+
+    updateStepState() {
+        const hasProduct = this.hasProductContext();
+        const hasStage = Boolean(this.selectedStage);
+        const hasStatus = Boolean(this.selectedStatus);
+        const canSubmit = Boolean(hasProduct && hasStage && hasStatus && !document.getElementById('submitQcBtn')?.disabled);
+        const steps = { product: hasProduct, stage: hasProduct && hasStage, result: hasProduct && hasStage && hasStatus, submit: canSubmit };
+        document.querySelectorAll('.field-qc-step').forEach(step => {
+            const isActive = Boolean(steps[step.dataset.step]);
+            step.classList.toggle('active', isActive);
+            step.classList.toggle('done', isActive && step.dataset.step !== 'submit');
+        });
+    },
+
+    updateSummary() {
+        const panel = document.getElementById('qcSubmitSummary');
+        if (!panel) return;
+        const hasContext = this.hasProductContext();
+        const hasStage = Boolean(this.selectedStage);
+        panel.hidden = !(hasContext && hasStage);
+        if (!hasContext) return;
+        const manualSku = document.getElementById('qcSku')?.value?.trim();
+        const productName = this.selectedProduct?.product_name || 'Manual SKU';
+        const sku = this.selectedProduct?.product_code || manualSku || '-';
+        const photos = ['cookingPhoto', 'barcodePhoto', 'labelPhoto']
+            .reduce((total, id) => total + (document.getElementById(id)?.files?.length || 0), 0);
+        this.setText('summaryProduct', `${productName} (${sku})`);
+        this.setText('summaryBatch', this.selectedBatch?.batch_code || (this.forceNewBatch ? 'Batch baru' : 'Batch baru otomatis'));
+        this.setText('summaryStage', this.selectedStage ? this.stageLabel(this.selectedStage) : '-');
+        this.setText('summaryStatus', this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
+        this.setText('summaryEvidence', photos ? `${photos} foto terlampir` : 'Belum ada foto');
+    },
+
+    setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    },
 
     message(text, isError = false) {
         const el = document.getElementById('qcSubmitMessage');
@@ -423,6 +480,7 @@ const Inspection = {
         if (!sku) {
             if (productEl) productEl.textContent = 'Isi SKU untuk mencari batch.';
             this.renderActiveBatches([]);
+            this.renderContextBatches([]);
             return;
         }
         try {
@@ -498,6 +556,7 @@ const Inspection = {
         this.lookupActiveBatches(product.product_code);
         this.updateProgressiveFields();
         this.updateSubmitState();
+        this.updateSummary();
     },
 
     /* ═══════════════════════════════════════════════
@@ -514,10 +573,14 @@ const Inspection = {
         }
         card.hidden = false;
         card.innerHTML = `
-            <div>
+            <div class="selected-product-main">
                 <small>Produk dipilih</small>
                 <strong>${this.escapeHtml(this.selectedProduct.product_code || '-')}</strong>
                 <span>${this.escapeHtml(this.selectedProduct.product_name || '-')}</span>
+            </div>
+            <div class="selected-product-meta">
+                <span>Barcode: ${this.escapeHtml(this.selectedProduct.barcode || this.selectedProduct.product_code || '-')}</span>
+                <span>Kategori: ${this.escapeHtml(this.selectedProduct.category || this.selectedProduct.product_category || '-')}</span>
             </div>
             <button class="btn-secondary change-product-btn" type="button">Ganti Produk</button>
         `;
@@ -541,6 +604,7 @@ const Inspection = {
             if (productMsg) productMsg.textContent = 'Pilih produk terlebih dahulu.';
             this.updateProgressiveFields();
             this.updateSubmitState();
+            this.updateSummary();
             document.getElementById('productSearch')?.focus();
         });
     },
@@ -558,6 +622,7 @@ const Inspection = {
         panel.hidden = !hasContext;
         if (empty) empty.hidden = Boolean(batches.length);
         list.innerHTML = '';
+        this.renderContextBatches(batches);
         const createBtn = document.getElementById('createNewBatchBtn');
         if (createBtn) createBtn.textContent = 'Buat Batch Baru';
         batches.forEach(batch => {
@@ -576,6 +641,7 @@ const Inspection = {
                 document.querySelectorAll('.batch-choice').forEach(item => item.classList.toggle('active', item === button));
                 const newBtn = document.getElementById('createNewBatchBtn');
                 if (newBtn) newBtn.textContent = 'Buat Batch Baru';
+                this.updateSummary();
             });
             list.appendChild(button);
         });
@@ -608,6 +674,51 @@ const Inspection = {
         if (!preview) return;
         preview.hidden = true;
         preview.innerHTML = '';
+        this.updateSummary();
+    },
+
+    renderContextBatches(batches) {
+        const count = document.getElementById('contextBatchCount');
+        const list = document.getElementById('contextBatchList');
+        if (!count || !list) return;
+        if (!this.hasProductContext()) {
+            count.textContent = 'Belum ada produk';
+            list.textContent = 'Pilih produk untuk melihat batch aktif.';
+            return;
+        }
+        count.textContent = batches.length ? `${batches.length} batch ditemukan` : 'Batch baru otomatis';
+        if (!batches.length) {
+            list.textContent = 'Belum ada batch aktif. Sistem akan membuat batch baru saat submit.';
+            return;
+        }
+        list.innerHTML = batches.slice(0, 3).map(batch => `
+            <article class="context-row">
+                <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
+                <span>${this.stageLabel(batch.last_stage)} - ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</span>
+            </article>
+        `).join('');
+    },
+
+    rememberRecentSubmission(item) {
+        const key = 'qc_recent_submissions';
+        const current = JSON.parse(localStorage.getItem(key) || '[]');
+        localStorage.setItem(key, JSON.stringify([item, ...current].slice(0, 5)));
+    },
+
+    loadRecentSubmissions() {
+        const list = document.getElementById('recentQcList');
+        if (!list) return;
+        const items = JSON.parse(localStorage.getItem('qc_recent_submissions') || '[]');
+        if (!items.length) {
+            list.textContent = 'Belum ada riwayat QC dari perangkat ini.';
+            return;
+        }
+        list.innerHTML = items.map(item => `
+            <article class="context-row">
+                <strong>${this.escapeHtml(item.product_name || item.sku_code || '-')}</strong>
+                <span>${this.stageLabel(item.qc_stage)} - ${this.escapeHtml(String(item.status || '-').toUpperCase())}</span>
+            </article>
+        `).join('');
     },
 
     /* ═══════════════════════════════════════════════

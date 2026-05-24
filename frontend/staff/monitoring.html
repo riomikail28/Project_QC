@@ -19,11 +19,11 @@
             </div>
         </a>
         <nav class="desktop-nav" aria-label="Desktop navigation">
-            <a href="dashboard.html">Home</a>
-            <a href="monitoring.html" class="active">Monitor</a>
-            <a href="inspection.html">Check</a>
-            <a href="profile.html">Profile</a>
-            <a href="/admin/" data-admin-only hidden>Admin</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="monitoring.html" class="active">Monitoring</a>
+            <a href="inspection.html">QC Check</a>
+            <a href="profile.html">Profil</a>
+            <a href="/admin/dashboard" data-admin-only hidden>Admin Dashboard</a>
         </nav>
         <div class="nav-actions">
             <button class="nav-btn" id="offlineIndicator" style="display:none" aria-label="Offline mode"><i class="fas fa-wifi-slash"></i></button>
@@ -150,6 +150,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
             Auth.refreshSessionRole();
+            if (Auth.isAdmin()) {
+                window.location.replace('/admin/dashboard');
+                return;
+            }
         });
     </script>
 </body>

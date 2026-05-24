@@ -40,11 +40,12 @@ const ProfilePage = {
         this.text('fullName', displayName);
         this.text('roleInfo', role.toUpperCase());
         this.text('departmentInfo', user.department || 'No department data');
+        this.text('statusInfo', user.status || user.account_status || 'Active');
         this.text('displayShift', user.shift || 'No shift data');
         this.text('lastLogin', user.last_login ? new Date(user.last_login).toLocaleString('id-ID') : 'No login record');
         this.text('avatarSmall', initials);
         this.text('avatarInitials', initials);
-        this.text('accountId', user.id || '-');
+        this.applyProfileNavigation(isAdmin);
 
         const roleEl = document.getElementById('displayRole');
         if (roleEl) {
@@ -52,6 +53,15 @@ const ProfilePage = {
             roleEl.className = 'role-pill ' + (isAdmin ? 'admin' : 'staff');
         }
         Auth.applyRoleVisibility(role);
+    },
+
+    applyProfileNavigation(isAdmin) {
+        document.querySelectorAll('[data-staff-nav]').forEach(element => {
+            element.hidden = Boolean(isAdmin);
+            element.style.display = isAdmin ? 'none' : '';
+        });
+        const brand = document.querySelector('.nav-brand');
+        if (brand && isAdmin) brand.setAttribute('href', '/admin/dashboard');
     },
 
     renderSummary(data) {

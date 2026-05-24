@@ -62,6 +62,29 @@ const Auth = {
         }
     },
 
+    homeForRole(roleOverride) {
+        return this.canAccessAdmin(roleOverride === undefined ? this.role() : roleOverride)
+            ? '/admin/dashboard'
+            : '/staff/dashboard';
+    },
+
+    requireRole(requiredRole) {
+        if (!this.check()) {
+            window.location.href = '/staff/login.html';
+            return false;
+        }
+        const required = String(requiredRole || '').toLowerCase();
+        if (required === 'admin' && !this.isAdmin()) {
+            window.location.href = '/staff/dashboard';
+            return false;
+        }
+        if (required === 'staff' && this.isAdmin()) {
+            window.location.href = '/admin/dashboard';
+            return false;
+        }
+        return true;
+    },
+
     role() {
         const user = this.user() || {};
         return this.normalizeRole(user.role || localStorage.getItem('qc_role'));
@@ -82,7 +105,7 @@ const Auth = {
 
     applyRoleVisibility(roleOverride) {
         const canAccessAdmin = roleOverride === undefined ? this.isAdmin() : this.canAccessAdmin(roleOverride);
-        document.querySelectorAll('[data-admin-only], #adminNavLink, #openAdminBtn').forEach(element => {
+        document.querySelectorAll('[data-admin-only], #adminNavLink').forEach(element => {
             element.hidden = !canAccessAdmin;
             element.style.display = canAccessAdmin ? '' : 'none';
             element.setAttribute('aria-hidden', canAccessAdmin ? 'false' : 'true');

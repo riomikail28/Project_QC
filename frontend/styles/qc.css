@@ -501,3 +501,344 @@
     font-size: 12px;
   }
 }
+
+/* Field QC mobile UX upgrade */
+.inspection-page {
+  max-width: 1120px;
+}
+
+.inspection-page .qc-layout-single {
+  gap: 14px;
+}
+
+.inspection-page .simple-qc-card,
+.qc-field-context {
+  border-radius: 18px;
+}
+
+.inspection-page .section-header > div {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.field-qc-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.field-qc-step {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  padding: 9px 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .96);
+  color: var(--muted);
+  text-align: center;
+}
+
+.field-qc-step span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.field-qc-step strong {
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.field-qc-step.active,
+.field-qc-step.done {
+  border-color: rgba(37, 99, 235, .36);
+  background: rgba(239, 246, 255, .98);
+  color: var(--primary);
+}
+
+.field-qc-step.active span,
+.field-qc-step.done span {
+  background: var(--primary);
+  color: #fff;
+}
+
+.inspection-page .simple-qc-title {
+  font-size: clamp(30px, 9vw, 42px);
+}
+
+.inspection-page .simple-field {
+  gap: 10px;
+}
+
+.inspection-page .simple-field label {
+  font-size: 15px;
+}
+
+.inspection-page .input-field {
+  min-height: 54px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.inspection-page .product-picker-option,
+.inspection-page .batch-choice,
+.inspection-page .selected-product-card,
+.inspection-page .qc-stage-option {
+  min-height: 68px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.selected-product-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.selected-product-main {
+  display: grid;
+  gap: 3px;
+}
+
+.selected-product-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.selected-product-meta span {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .64);
+  overflow-wrap: anywhere;
+}
+
+.inspection-page .change-product-btn {
+  min-height: 42px;
+  justify-content: center;
+}
+
+.inspection-page .qc-stage-option strong {
+  font-size: 15px;
+}
+
+.inspection-page .qc-status-selector {
+  gap: 10px;
+}
+
+.inspection-page .qc-status-option {
+  min-height: 76px;
+  border-radius: 16px;
+  font-size: clamp(18px, 5.2vw, 26px);
+  letter-spacing: 0;
+}
+
+.inspection-page .qc-status-option[data-status="pass"].active {
+  border-color: rgba(16, 185, 129, .55);
+  background: #10b981;
+}
+
+.inspection-page .qc-status-option[data-status="hold"].active {
+  border-color: rgba(245, 158, 11, .55);
+  background: #f59e0b;
+}
+
+.inspection-page .qc-status-option[data-status="fail"].active {
+  border-color: rgba(239, 68, 68, .55);
+  background: #ef4444;
+}
+
+.inspection-page .upload-card-compact {
+  border-radius: 16px;
+}
+
+.inspection-page .upload-card-header {
+  min-height: 64px;
+  padding: 14px;
+}
+
+.inspection-page .upload-card-info i {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, .1);
+  font-size: 18px;
+}
+
+.inspection-page .upload-card-info span {
+  font-size: 15px;
+}
+
+.inspection-page .upload-card-btn,
+.inspection-page .batch-new-btn,
+.inspection-page .notes-toggle {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.inspection-page .photo-preview {
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  padding: 10px 14px;
+}
+
+.inspection-page .photo-preview img {
+  width: 54px;
+  height: 54px;
+}
+
+.qc-submit-summary,
+.context-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .94);
+}
+
+.qc-submit-summary > div,
+.context-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.qc-submit-summary span,
+.context-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.qc-submit-summary strong,
+.context-card strong {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.qc-submit-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.qc-submit-summary dl div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(239, 246, 255, .78);
+}
+
+.qc-submit-summary dt {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.qc-submit-summary dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.qc-field-context {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 14px;
+  background: rgba(248, 250, 252, .82);
+}
+
+.context-list {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.context-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(239, 246, 255, .72);
+}
+
+.context-row strong {
+  font-size: 13px;
+}
+
+.context-row span {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: none;
+}
+
+@media (min-width: 860px) {
+  .inspection-page .qc-layout-single {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    align-items: start;
+  }
+
+  .qc-field-context {
+    position: sticky;
+    top: 88px;
+  }
+}
+
+@media (max-width: 640px) {
+  .inspection-page {
+    width: min(100% - 18px, 680px);
+    padding-top: 8px;
+  }
+
+  .inspection-page .simple-qc-card {
+    padding: 14px;
+  }
+
+  .inspection-page .section-header {
+    margin-bottom: 0;
+  }
+
+  .inspection-page .qc-layout-single {
+    grid-template-columns: 1fr;
+  }
+
+  .inspection-page .simple-submit {
+    min-height: 62px;
+    border-radius: 18px;
+    font-size: 17px;
+  }
+
+  .qc-field-context {
+    order: 2;
+  }
+}
+
+@media (max-width: 360px) {
+  .field-qc-step strong {
+    font-size: 10px;
+  }
+
+  .selected-product-meta,
+  .qc-submit-summary dl {
+    grid-template-columns: 1fr;
+  }
+}
