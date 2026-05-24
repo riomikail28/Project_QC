@@ -39,6 +39,22 @@
             <p>Cek suhu harian dengan cepat dan mudah.</p>
         </section>
 
+        <section class="daily-schedule-card" aria-labelledby="dailyScheduleTitle">
+            <div class="schedule-head">
+                <div>
+                    <span class="eyebrow">Jadwal Monitoring Hari Ini</span>
+                    <h3 id="dailyScheduleTitle">Tugas suhu harian</h3>
+                    <p id="scheduleMessage">Memuat jadwal...</p>
+                </div>
+                <div class="schedule-progress">
+                    <strong id="scheduleProgressCount">0/4</strong>
+                    <span>selesai</span>
+                </div>
+            </div>
+            <div class="schedule-progress-bar"><span id="scheduleProgressBar"></span></div>
+            <div id="scheduleSlotGrid" class="schedule-slot-grid"></div>
+        </section>
+
         <section class="page-grid">
             <div class="section-header">
                 <h3 class="section-title">Filter</h3>
@@ -105,6 +121,8 @@
         <form id="monitoring-form" class="sheet-form">
             <input type="hidden" id="selected-device-id">
             <input type="hidden" id="selected-room-id">
+            <input type="hidden" id="selected-slot-time">
+            <div class="slot-context" id="slotContext">Slot monitoring aktif akan muncul di sini.</div>
             <div class="input-grid">
                 <div>
                     <label>Temperatur</label>
@@ -145,6 +163,7 @@
     <script type="module" src="../js/camera-module.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/profile-menu.js"></script>
     <script src="../js/monitoring.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

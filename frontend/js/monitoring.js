@@ -14,9 +14,11 @@ let selectedRoomId = null;
 let selectedPhotoFiles = [];
 let latestTemperatureLogs = [];
 let activeUnitFilter = "all";
+let todaySchedule = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     bindUnitFilters();
+    loadTodaySchedule();
     loadFacilityStructure();
     loadRecentLogs();
 });
@@ -125,6 +127,11 @@ function renderDevices(devices, options = {}) {
 }
 
 function openLogModal(deviceId) {
+    const activeSlot = activeMonitoringSlot();
+    if (!activeSlot) {
+        showMonitoringToast(scheduleUnavailableMessage(), true);
+        return;
+    }
     const room = facilityStructure.find(item => (item.devices || []).some(device => device.id === deviceId));
     const device = (room?.devices || []).find(item => item.id === deviceId);
     if (!device) return;
@@ -136,6 +143,14 @@ function openLogModal(deviceId) {
     document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
     document.getElementById("selected-device-id").value = deviceId;
     document.getElementById("selected-room-id").value = device.room_id || room.id;
+    document.getElementById("selected-slot-time").value = activeSlot.time;
+    const slotContext = document.getElementById("slotContext");
+    if (slotContext) {
+        slotContext.innerHTML = `
+            <strong>Slot ${activeSlot.time}</strong>
+            <span>${activeSlot.label}${activeSlot.status === "pending" ? " - input akan dicatat pada jadwal ini" : ""}</span>
+        `;
+    }
 
     const iconEl = document.getElementById("sheet-icon");
     if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;
@@ -226,6 +241,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     formData.append("temperature", document.getElementById("input-temp").value);
     formData.append("humidity", document.getElementById("input-rh").value || "");
     formData.append("reason", document.getElementById("input-reason").value);
+    formData.append("slot_time", document.getElementById("selected-slot-time").value);
 
     try {
         submitBtn.disabled = true;
@@ -233,10 +249,11 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         selectedPhotoFiles.forEach(file => formData.append("photo", file));
 
-        const result = await API.upload("/monitoring/log", formData);
+        const result = await API.upload("/facility/monitoring/submit", formData);
         if (result.success) {
-            showMonitoringToast("QC berhasil disimpan");
+            showMonitoringToast(result.schedule?.message || "Monitoring suhu berhasil disimpan");
             closeModal();
+            await loadTodaySchedule();
             loadRecentLogs();
         } else {
             showMonitoringToast(result.message || result.error || "Gagal menyimpan log suhu", true);
@@ -294,6 +311,69 @@ async function loadRecentLogs() {
     } catch (err) {
         console.error("Gagal memuat log", err);
     }
+}
+
+async function loadTodaySchedule() {
+    try {
+        const response = await API.get("/facility/monitoring/schedule/today");
+        todaySchedule = response.data || null;
+        renderTodaySchedule();
+    } catch (err) {
+        console.error("Gagal memuat jadwal monitoring", err);
+        todaySchedule = null;
+        renderTodaySchedule();
+    }
+}
+
+function renderTodaySchedule() {
+    const grid = document.getElementById("scheduleSlotGrid");
+    const message = document.getElementById("scheduleMessage");
+    const count = document.getElementById("scheduleProgressCount");
+    const bar = document.getElementById("scheduleProgressBar");
+    if (!grid || !message || !count || !bar) return;
+
+    if (!todaySchedule) {
+        message.textContent = "Jadwal belum bisa dimuat. Coba refresh halaman.";
+        count.textContent = "0/4";
+        bar.style.width = "0%";
+        grid.innerHTML = ["07:00", "13:00", "16:00", "19:00"].map(time => `
+            <article class="schedule-slot upcoming">
+                <strong>${time}</strong>
+                <span>Belum waktunya</span>
+            </article>
+        `).join("");
+        return;
+    }
+
+    const completed = todaySchedule.completed_count || 0;
+    const total = todaySchedule.total_slots || 4;
+    message.textContent = todaySchedule.message || todaySchedule.progress_text || `${completed}/${total} monitoring selesai hari ini.`;
+    count.textContent = `${completed}/${total}`;
+    bar.style.width = `${Math.max(0, Math.min(100, Math.round((completed / total) * 100)))}%`;
+    grid.innerHTML = (todaySchedule.slots || []).map(slot => `
+        <article class="schedule-slot ${slot.status}">
+            <strong>${slot.time}</strong>
+            <span>${slot.label}</span>
+            ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
+        </article>
+    `).join("");
+}
+
+function activeMonitoringSlot() {
+    if (!todaySchedule) return null;
+    const current = todaySchedule.current_slot;
+    if (current && current.status === "pending") return current;
+    return null;
+}
+
+function scheduleUnavailableMessage() {
+    if (!todaySchedule) return "Jadwal monitoring belum siap. Tunggu sebentar atau refresh halaman.";
+    if ((todaySchedule.completed_count || 0) >= (todaySchedule.total_slots || 4)) {
+        return "Monitoring hari ini selesai. Tugas berikutnya besok pukul 07:00.";
+    }
+    const next = todaySchedule.next_slot;
+    if (next && next.status === "upcoming") return `Slot ${next.time} belum waktunya.`;
+    return "Belum ada slot monitoring yang menunggu input.";
 }
 
 function showMonitoringToast(message, isError = false) {

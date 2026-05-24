@@ -5,8 +5,12 @@ import logging
 from flask import Blueprint, current_app, g, jsonify, request
 
 from backend.middleware.security_middleware import require_auth, require_role
-from backend.services.audit_service import write_audit
+from backend.services.audit_service import current_actor_id, write_audit
 from backend.database.supabase_client import get_client, supabase_error_response
+from backend.monitoring.facility_manager import is_uuid
+from backend.services.monitoring_schedule_service import MonitoringScheduleService
+from backend.services.monitoring_service import MonitoringService
+from backend.services.request_validation import TemperatureLogRequest, request_payload, validate_model
 
 facility_bp = Blueprint("facility_bp", __name__)
 logger = logging.getLogger("qc.routes.facility")
@@ -32,6 +36,71 @@ def facility_structure():
     from backend.monitoring.facility_manager import get_monitoring_structure
 
     return jsonify({"success": True, "data": get_monitoring_structure(), "message": "OK"})
+
+
+@facility_bp.route("/api/facility/monitoring/schedule/today", methods=["GET"])
+@require_auth
+def monitoring_schedule_today():
+    sb = get_client()
+    if not sb:
+        body, status = supabase_error_response()
+        return jsonify(body), status
+    return jsonify(MonitoringScheduleService(sb).today())
+
+
+@facility_bp.route("/api/facility/monitoring/submit", methods=["POST"])
+@require_auth
+def monitoring_schedule_submit():
+    data = validate_model(TemperatureLogRequest, request_payload())
+    if not is_uuid(data.room_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid room_id",
+            "error_code": "INVALID_ROOM_ID",
+            "message": f"room_id must be a valid UUID. Received synthetic id: {data.room_id}",
+        }), 400
+    if data.device_id and not is_uuid(data.device_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid device_id",
+            "error_code": "INVALID_DEVICE_ID",
+            "message": f"device_id must be a valid UUID. Received synthetic id: {data.device_id}",
+        }), 400
+
+    sb = get_client()
+    if not sb:
+        body, status = supabase_error_response()
+        return jsonify(body), status
+
+    resolved = MonitoringScheduleService(sb).resolve_submission(data.slot_time)
+    if not resolved.get("success"):
+        return jsonify({
+            "success": False,
+            "message": resolved.get("message"),
+            "schedule": resolved.get("schedule"),
+        }), int(resolved.get("status") or 400)
+
+    scheduled_data = TemperatureLogRequest(
+        room_id=data.room_id,
+        device_id=data.device_id,
+        staff_id=data.staff_id or current_actor_id(),
+        temperature=data.temperature,
+        humidity=data.humidity,
+        reason=data.reason or data.notes,
+        notes=data.notes,
+        photo_url=data.photo_url,
+        storage_path=data.storage_path,
+        threshold=data.threshold,
+        monitoring_date=resolved["monitoring_date"],
+        slot_time=resolved["slot_time"],
+        schedule_status=resolved["schedule_status"],
+        submitted_at=resolved["submitted_at"],
+        is_late=resolved["is_late"],
+    )
+    body, status = MonitoringService(sb, audit_writer=write_audit).log_facility_data(scheduled_data, request.files)
+    if body.get("success"):
+        body["schedule"] = MonitoringScheduleService(sb).today()["data"]
+    return jsonify(body), status
 
 
 @facility_bp.route("/api/facility/rooms", methods=["GET", "POST"])

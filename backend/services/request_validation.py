@@ -51,6 +51,11 @@ class TemperatureLogRequest:
     photo_url: str | None = None
     storage_path: str | None = None
     threshold: float | None = None
+    monitoring_date: str | None = None
+    slot_time: str | None = None
+    schedule_status: str | None = None
+    submitted_at: str | None = None
+    is_late: bool | None = None
 
 
 @dataclass
@@ -151,6 +156,14 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             photo_url=_optional_str(data, "photo_url", 4096),
             storage_path=_optional_str(data, "storage_path", 4096),
             threshold=_number(data, "threshold", False, -80, 100),
+            monitoring_date=_optional_str(data, "monitoring_date", 20),
+            slot_time=_optional_str(data, "slot_time", 10),
+            schedule_status=_optional_str(data, "schedule_status", 40),
+            submitted_at=_optional_str(data, "submitted_at", 40),
+            is_late=(
+                str(data.get("is_late", "")).lower() in {"1", "true", "yes"}
+                if "is_late" in data else None
+            ),
         )
     if model is QCValidateRequest:
         unit_type = _optional_str(data, "unit_type", 40) or "chiller"
