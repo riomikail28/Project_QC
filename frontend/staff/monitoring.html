@@ -111,7 +111,7 @@
     </nav>
 
     <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
-    <div id="log-modal" class="bottom-sheet">
+    <div id="log-modal" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
             <div class="sheet-title">
@@ -121,47 +121,52 @@
                     <h3 id="modal-title" style="margin:2px 0 0">Log Chiller</h3>
                 </div>
             </div>
-            <button onclick="closeModal()" class="close-sheet" aria-label="Tutup"><i class="fas fa-times"></i></button>
+            <button onclick="closeModal()" class="close-sheet" aria-label="Close modal"><i class="fas fa-times"></i></button>
         </div>
 
         <form id="monitoring-form" class="sheet-form">
-            <input type="hidden" id="selected-device-id">
-            <input type="hidden" id="selected-room-id">
-            <input type="hidden" id="selected-slot-time">
-            <div class="slot-context" id="slotContext">Slot monitoring aktif akan muncul di sini.</div>
-            <div class="input-grid">
+            <div class="sheet-body">
+                <input type="hidden" id="selected-device-id">
+                <input type="hidden" id="selected-room-id">
+                <input type="hidden" id="selected-slot-time">
+                <div class="slot-context" id="slotContext">Slot monitoring aktif akan muncul di sini.</div>
+                <div class="input-grid">
+                    <div>
+                        <label>Temperatur</label>
+                        <div class="input-with-unit">
+                            <input type="number" step="0.1" id="input-temp" placeholder="0.0" required>
+                            <span class="unit">C</span>
+                        </div>
+                    </div>
+                    <div id="humidity-group">
+                        <label>Kelembapan</label>
+                        <div class="input-with-unit">
+                            <input type="number" step="1" id="input-rh" placeholder="0">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
                 <div>
-                    <label>Temperatur</label>
-                    <div class="input-with-unit">
-                        <input type="number" step="0.1" id="input-temp" placeholder="0.0" required>
-                        <span class="unit">C</span>
-                    </div>
+                    <label>Catatan</label>
+                    <textarea id="input-reason" rows="3" placeholder="Tulis catatan jika ada"></textarea>
                 </div>
-                <div id="humidity-group">
-                    <label>Kelembapan</label>
-                    <div class="input-with-unit">
-                        <input type="number" step="1" id="input-rh" placeholder="0">
-                        <span class="unit">%</span>
+                <div>
+                    <label>Foto Bukti</label>
+                    <div class="photo-grid">
+                        <div class="photo-placeholder" onclick="triggerPhoto()"><i class="fas fa-camera"></i><span>Upload Foto</span></div>
+                        <div id="photo-preview" class="photo-preview" style="display:none">
+                            <img src="" id="preview-img" alt="Preview">
+                            <div id="multi-photo-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--accent-blue); color:white; border-radius:50%; width:20px; height:20px; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid white;"></div>
+                            <button type="button" class="remove-photo" onclick="removePhoto()" aria-label="Hapus foto"><i class="fas fa-times"></i></button>
+                        </div>
                     </div>
+                    <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none">
                 </div>
             </div>
-            <div>
-                <label>Catatan</label>
-                <textarea id="input-reason" rows="3" placeholder="Tulis catatan jika ada"></textarea>
+            <div class="sheet-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-cloud-arrow-up"></i>Simpan Laporan</button>
             </div>
-            <div>
-                <label>Foto Bukti</label>
-                <div class="photo-grid">
-                    <div class="photo-placeholder" onclick="triggerPhoto()"><i class="fas fa-camera"></i><span>Upload Foto</span></div>
-                    <div id="photo-preview" class="photo-preview" style="display:none">
-                        <img src="" id="preview-img" alt="Preview">
-                        <div id="multi-photo-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--accent-blue); color:white; border-radius:50%; width:20px; height:20px; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid white;"></div>
-                        <button type="button" class="remove-photo" onclick="removePhoto()"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none">
-            </div>
-            <button type="submit" class="btn-primary"><i class="fas fa-cloud-arrow-up"></i>Simpan Laporan</button>
         </form>
     </div>
 

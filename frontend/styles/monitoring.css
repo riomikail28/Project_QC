@@ -344,9 +344,12 @@
   right: 0;
   bottom: 0;
   z-index: 120;
-  max-height: 88vh;
-  overflow: auto;
-  padding: 10px 16px 22px;
+  width: min(900px, 95vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px 16px 0;
   border-radius: 26px 26px 0 0;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, .98);
@@ -368,7 +371,7 @@
   inset: 0;
   z-index: 110;
   display: none;
-  background: rgba(0, 0, 0, .58);
+  background: rgba(15, 23, 42, .55);
   backdrop-filter: blur(8px);
 }
 
@@ -385,10 +388,15 @@
 }
 
 .sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 14px;
+  background: inherit;
 }
 
 .sheet-title {
@@ -398,8 +406,32 @@
 }
 
 .sheet-form {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
+}
+
+.sheet-body {
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   gap: 16px;
+  padding: 0 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .38) transparent;
+}
+
+.sheet-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 0 max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: inherit;
 }
 
 .input-grid {
@@ -418,6 +450,12 @@
   border-radius: 16px;
   background: rgba(255,255,255,.92);
   color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+  max-height: 220px;
 }
 
 .unit {
@@ -479,7 +517,7 @@
   .bottom-sheet {
     left: 50%;
     right: auto;
-    width: min(560px, calc(100% - 32px));
+    width: min(900px, 95vw);
     transform: translate(-50%, 110%);
     border-radius: 26px;
     bottom: 22px;
@@ -487,6 +525,18 @@
 
   .bottom-sheet.active {
     transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 520px) {
+  .bottom-sheet {
+    width: 96vw;
+    max-height: 90vh;
+  }
+
+  .sheet-footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }
 

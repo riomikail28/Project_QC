@@ -52,6 +52,10 @@ body.admin-drawer-open {
   overflow: hidden;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 button,
 input,
 select {
@@ -618,12 +622,30 @@ select {
 }
 
 input,
-select {
+select,
+textarea {
   min-height: 40px;
   border: 1px solid var(--border-color) !important;
   border-radius: 13px !important;
   background: rgba(255, 255, 255, .78);
   color: var(--text-primary);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, .74) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, .14);
+}
+
+textarea {
+  width: 100%;
+  min-height: 90px;
+  max-height: 220px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .enterprise-modal {
@@ -632,8 +654,8 @@ select {
   z-index: 100;
   display: none;
   place-items: center;
-  padding: 20px;
-  background: rgba(0,0,0,.58);
+  padding: 24px;
+  background: rgba(15, 23, 42, .55);
   backdrop-filter: blur(10px);
 }
 
@@ -657,7 +679,10 @@ select {
 }
 
 .modal-content {
-  width: min(620px, 100%);
+  width: min(900px, 95vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-color);
   border-radius: 22px;
   background: rgba(255,255,255,.96);
@@ -666,15 +691,71 @@ select {
 }
 
 .modal-header,
-.modal-body {
+.modal-body,
+.modal-footer {
   padding: 18px;
 }
 
 .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   border-bottom: 1px solid var(--border-color);
+  background: inherit;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-header h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .42) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, .36);
+  background-clip: content-box;
+}
+
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  border-top: 1px solid var(--border-color);
+  background: inherit;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.admin-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-form-grid label:has(textarea),
+.admin-form-grid label:has(#learn-description),
+.admin-form-grid label:has(#learn-material),
+.admin-form-grid label:has(#learn-case),
+.admin-form-grid label:has(#learn-competencies),
+.admin-form-grid label:has(#learn-question),
+.admin-form-grid label:has(#learn-sim-scenario) {
+  grid-column: 1 / -1;
 }
 
 .admin-evidence-cell {
@@ -872,5 +953,30 @@ select {
   .enterprise-table td[colspan] {
     display: block;
     text-align: center;
+  }
+
+  .enterprise-modal {
+    padding: 12px;
+  }
+
+  .modal-content {
+    width: 96vw;
+    max-height: 90vh;
+    border-radius: 18px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 14px;
+  }
+
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }

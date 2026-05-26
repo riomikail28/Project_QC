@@ -415,31 +415,34 @@
     </div>
 
     <!-- Image Preview Modal -->
-    <div class="enterprise-modal" id="image-modal">
+    <div class="enterprise-modal" id="image-modal" role="dialog" aria-modal="true" aria-labelledby="image-modal-title">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="margin:0;">Evidence Preview</h3>
-                <button class="icon-btn" onclick="document.getElementById('image-modal').classList.remove('active')"><i data-lucide="x"></i></button>
+                <h3 id="image-modal-title" style="margin:0;">Evidence Preview</h3>
+                <button class="icon-btn modal-close-btn" type="button" onclick="adminApp.closeImageModal()" aria-label="Close modal"><i data-lucide="x"></i></button>
             </div>
             <div class="modal-body" style="text-align:center;" id="modal-image-container">
                 <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px;">
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="adminApp.closeImageModal()">Close</button>
+            </div>
         </div>
     </div>
 
-    <div class="enterprise-modal" id="crud-modal">
+    <div class="enterprise-modal" id="crud-modal" role="dialog" aria-modal="true" aria-labelledby="crud-title">
         <div class="modal-content">
             <form id="crud-form">
                 <div class="modal-header">
                     <h3 id="crud-title" style="margin:0;">Form</h3>
-                    <button type="button" class="icon-btn" onclick="adminApp.closeCrudModal()"><i data-lucide="x"></i></button>
+                    <button type="button" class="icon-btn modal-close-btn" onclick="adminApp.closeCrudModal()" aria-label="Close modal"><i data-lucide="x"></i></button>
                 </div>
                 <div class="modal-body">
                     <div id="crud-fields" class="admin-form-grid"></div>
-                    <div class="admin-form-actions">
-                        <button type="button" class="btn-secondary" onclick="adminApp.closeCrudModal()">Batal</button>
-                        <button type="submit" class="btn-primary"><i data-lucide="save"></i> Simpan</button>
-                    </div>
+                </div>
+                <div class="modal-footer admin-form-actions">
+                    <button type="button" class="btn-secondary" onclick="adminApp.closeCrudModal()">Cancel</button>
+                    <button type="submit" class="btn-primary"><i data-lucide="save"></i> Save</button>
                 </div>
             </form>
         </div>

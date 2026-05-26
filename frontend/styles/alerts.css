@@ -3,7 +3,7 @@
   inset: 0;
   z-index: 120;
   display: none;
-  background: rgba(15, 23, 42, .22);
+  background: rgba(15, 23, 42, .55);
   backdrop-filter: blur(8px);
 }
 
@@ -18,8 +18,8 @@
   width: min(440px, 100%);
   padding: 18px;
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
   border-left: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(239,246,255,.96));
   box-shadow: -24px 0 60px rgba(37, 99, 235, .16);
@@ -32,10 +32,15 @@
 }
 
 .alert-drawer-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  padding-bottom: 14px;
+  background: inherit;
 }
 
 .alert-drawer-title {
@@ -57,11 +62,26 @@
 }
 
 .alert-drawer-body {
+  min-height: 0;
   overflow-y: auto;
   display: grid;
   align-content: start;
   gap: 12px;
-  padding-bottom: 16px;
+  padding: 2px 2px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .38) transparent;
+}
+
+.alert-drawer-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  background: inherit;
 }
 
 #findingDrawer {
@@ -90,13 +110,6 @@
   max-height: 220px;
   object-fit: contain;
   background: rgba(15, 23, 42, .06);
-}
-
-#submitFindingBtn {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  box-shadow: 0 -8px 18px rgba(15, 23, 42, .08);
 }
 
 .alert-action-box {
@@ -137,6 +150,11 @@
 
   .alert-drawer-body {
     min-height: 0;
+  }
+
+  .alert-drawer-footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 
   #findingDrawer .alert-drawer-body {

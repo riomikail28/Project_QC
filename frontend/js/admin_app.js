@@ -19,6 +19,7 @@ const adminApp = {
         this.setupMobileDrawer();
         this.safeRun(() => this.setupThemeToggle(), 'theme toggle');
         this.safeRun(() => this.setupCrudForm(), 'crud form');
+        this.safeRun(() => this.setupModalBehavior(), 'modal behavior');
         this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
         this.refreshIcons();
         
@@ -427,6 +428,25 @@ const adminApp = {
         });
     },
 
+    setupModalBehavior() {
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (document.getElementById('crud-modal')?.classList.contains('active')) this.closeCrudModal();
+            if (document.getElementById('image-modal')?.classList.contains('active')) this.closeImageModal();
+        });
+        document.querySelectorAll('.enterprise-modal').forEach(modal => {
+            modal.addEventListener('click', event => {
+                if (event.target !== modal) return;
+                if (modal.id === 'crud-modal') this.closeCrudModal();
+                if (modal.id === 'image-modal') this.closeImageModal();
+            });
+        });
+    },
+
+    setModalOpen(open) {
+        document.body.classList.toggle('modal-open', open);
+    },
+
     openCrudModal(title, mode, fieldsHtml, context = {}) {
         this.crudMode = mode;
         this.crudId = context.id || null;
@@ -434,6 +454,7 @@ const adminApp = {
         document.getElementById('crud-title').innerText = title;
         document.getElementById('crud-fields').innerHTML = fieldsHtml;
         document.getElementById('crud-modal').classList.add('active');
+        this.setModalOpen(true);
         this.refreshIcons();
     },
 
@@ -443,6 +464,16 @@ const adminApp = {
         this.crudMode = null;
         this.crudId = null;
         this.crudContext = {};
+        this.setModalOpen(this.anyModalOpen());
+    },
+
+    closeImageModal() {
+        document.getElementById('image-modal')?.classList.remove('active');
+        this.setModalOpen(this.anyModalOpen());
+    },
+
+    anyModalOpen() {
+        return Boolean(document.querySelector('.enterprise-modal.active'));
     },
 
     openStaffModal(staff = null) {
@@ -1268,6 +1299,7 @@ const adminApp = {
         container.insertAdjacentHTML('beforeend', details);
         
         document.getElementById('image-modal').classList.add('active');
+        this.setModalOpen(true);
     }
 };
 

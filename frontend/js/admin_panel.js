@@ -161,20 +161,26 @@ function openModal(title, contentHtml, action, id = null) {
     currentId = id;
 
     overlay.style.display = "flex";
+    document.body.classList.add("modal-open");
     setTimeout(() => {
         sheet.style.transform = "translateY(0)";
     }, 10);
 }
 
 function closeModal() {
-    sheet.style.transform = "translateY(100%)";
+    sheet.style.transform = "translateY(12px)";
     setTimeout(() => {
         overlay.style.display = "none";
+        document.body.classList.remove("modal-open");
     }, 300);
 }
 
 overlay.addEventListener("click", event => {
     if (event.target === overlay) closeModal();
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && overlay.style.display === "flex") closeModal();
 });
 
 function openAddStaff() {

@@ -188,7 +188,7 @@
     </div>
 
     <div class="alert-drawer-overlay" id="findingOverlay" onclick="closeQcFinding()"></div>
-    <aside class="alert-drawer" id="findingDrawer" aria-label="QC Temuan">
+    <aside class="alert-drawer" id="findingDrawer" role="dialog" aria-modal="true" aria-label="QC Temuan">
         <div class="alert-drawer-header">
             <div class="alert-drawer-title">
                 <div class="alert-icon"><i class="fas fa-camera"></i></div>
@@ -197,7 +197,7 @@
                     <p>Foto evidence dan reason temuan</p>
                 </div>
             </div>
-            <button class="icon-button" onclick="closeQcFinding()" aria-label="Close QC Temuan"><i class="fas fa-times"></i></button>
+            <button class="icon-button" onclick="closeQcFinding()" aria-label="Close modal"><i class="fas fa-times"></i></button>
         </div>
         <div class="alert-drawer-body">
             <input type="file" id="findingPhotoInput" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none" onchange="handleFindingPhoto(event)">
@@ -214,14 +214,17 @@
                 <strong>Deskripsi Temuan</strong>
                 <textarea id="findingReason" placeholder="Jelaskan temuan Anda (misal: Ada serangga di area packing, kabel terkelupas, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
             </div>
-            <button class="btn-primary" id="submitFindingBtn" onclick="submitQcFinding()"><i class="fas fa-paper-plane"></i>Kirim Laporan Temuan</button>
             <p style="text-align:center; margin-top:12px; font-size:12px; color:var(--text-muted)">Atau buka dashboard inspeksi lengkap:</p>
             <button class="btn-secondary" onclick="window.location.href='inspection.html'" style="width:100%; padding:12px; margin-top:4px;"><i class="fas fa-clipboard-check"></i>Buka QC Check</button>
+        </div>
+        <div class="alert-drawer-footer">
+            <button type="button" class="btn-secondary" onclick="closeQcFinding()">Cancel</button>
+            <button class="btn-primary" id="submitFindingBtn" onclick="submitQcFinding()"><i class="fas fa-paper-plane"></i>Kirim Laporan Temuan</button>
         </div>
     </aside>
 
     <div class="alert-drawer-overlay" id="alertDrawerOverlay" onclick="closeAlertDrawer()"></div>
-    <aside class="alert-drawer" id="alertDrawer" aria-label="Active alerts">
+    <aside class="alert-drawer" id="alertDrawer" role="dialog" aria-modal="true" aria-label="Active alerts">
         <div class="alert-drawer-header">
             <div class="alert-drawer-title">
                 <div class="alert-icon"><i class="fas fa-bell"></i></div>
@@ -230,11 +233,14 @@
                     <p>Tindakan korektif diperlukan</p>
                 </div>
             </div>
-            <button class="icon-button" onclick="closeAlertDrawer()" aria-label="Close alerts"><i class="fas fa-times"></i></button>
+            <button class="icon-button" onclick="closeAlertDrawer()" aria-label="Close modal"><i class="fas fa-times"></i></button>
         </div>
         <div id="alertDrawerList" class="alert-drawer-body">
             <div class="skeleton skeleton-card"></div>
             <div class="skeleton skeleton-card"></div>
+        </div>
+        <div class="alert-drawer-footer">
+            <button type="button" class="btn-secondary" onclick="closeAlertDrawer()">Close</button>
         </div>
     </aside>
 
@@ -311,22 +317,26 @@
         function openAlertDrawer() {
             document.getElementById('alertDrawerOverlay').classList.add('active');
             document.getElementById('alertDrawer').classList.add('active');
+            document.body.classList.add('modal-open');
             loadAlertDrawer();
         }
 
         function closeAlertDrawer() {
             document.getElementById('alertDrawerOverlay').classList.remove('active');
             document.getElementById('alertDrawer').classList.remove('active');
+            if (!document.querySelector('.alert-drawer.active')) document.body.classList.remove('modal-open');
         }
 
         function openQcFinding() {
             document.getElementById('findingOverlay').classList.add('active');
             document.getElementById('findingDrawer').classList.add('active');
+            document.body.classList.add('modal-open');
         }
 
         function closeQcFinding() {
             document.getElementById('findingOverlay').classList.remove('active');
             document.getElementById('findingDrawer').classList.remove('active');
+            if (!document.querySelector('.alert-drawer.active')) document.body.classList.remove('modal-open');
         }
 
         let selectedFindingPhotos = [];
@@ -476,6 +486,11 @@
             const user = Auth.user();
             if (user?.username) document.getElementById('userInitial').innerText = user.username.substring(0, 2).toUpperCase();
             Dashboard.init();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            closeAlertDrawer();
+            closeQcFinding();
         });
     </script>
 </body>
