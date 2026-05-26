@@ -680,7 +680,7 @@ textarea {
 
 .modal-content {
   width: min(900px, 95vw);
-  max-height: 85vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
@@ -690,16 +690,26 @@ textarea {
   overflow: hidden;
 }
 
+.modal-content > form {
+  min-height: 0;
+  max-height: inherit;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .modal-header,
 .modal-body,
 .modal-footer {
-  padding: 18px;
+  padding: 24px;
 }
 
 .modal-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 5;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   background: inherit;
   display: flex;
@@ -716,14 +726,16 @@ textarea {
 }
 
 .modal-body {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 32px;
   scrollbar-width: thin;
   scrollbar-color: rgba(37, 99, 235, .42) transparent;
 }
 
 .modal-body::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
@@ -736,8 +748,9 @@ textarea {
 .modal-footer {
   position: sticky;
   bottom: 0;
-  z-index: 10;
-  border-top: 1px solid var(--border-color);
+  z-index: 5;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(0,0,0,.08);
   background: inherit;
   display: flex;
   justify-content: flex-end;
@@ -968,7 +981,7 @@ textarea {
   .modal-header,
   .modal-body,
   .modal-footer {
-    padding: 14px;
+    padding: 16px;
   }
 
   .admin-form-grid {

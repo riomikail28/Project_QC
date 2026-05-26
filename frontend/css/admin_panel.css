@@ -152,7 +152,7 @@
 
 .modal-sheet {
     width: min(900px, 95vw);
-    max-height: 85vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -175,7 +175,8 @@
 .modal-header {
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 5;
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -208,8 +209,15 @@
 }
 
 #modal-form-content {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 18px 24px;
+    padding: 24px;
+    scrollbar-width: thin;
+}
+
+#modal-form-content::-webkit-scrollbar {
+    width: 8px;
 }
 
 @media (max-width: 640px) {

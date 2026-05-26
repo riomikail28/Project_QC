@@ -22,14 +22,16 @@ def test_admin_modal_css_prevents_viewport_overflow_and_keeps_regions_visible():
     css = read("frontend/css/admin_enterprise.css")
 
     assert "width: min(900px, 95vw);" in css
-    assert "max-height: 85vh;" in css
+    assert "max-height: 90vh;" in css
     assert "display: flex;" in css
     assert "flex-direction: column;" in css
+    assert ".modal-content > form" in css
+    assert "max-height: inherit;" in css
     assert ".modal-header" in css and "position: sticky;" in css and "top: 0;" in css
-    assert ".modal-body" in css and "overflow-y: auto;" in css
-    assert ".modal-footer" in css and "bottom: 0;" in css
+    assert ".modal-body" in css and "flex: 1;" in css and "overflow-y: auto;" in css
+    assert ".modal-footer" in css and "bottom: 0;" in css and "flex-shrink: 0;" in css
+    assert "width: 8px;" in css
     assert "width: 96vw;" in css
-    assert "max-height: 90vh;" in css
     assert "body.modal-open" in css
 
 
@@ -68,9 +70,11 @@ def test_staff_modals_and_drawers_have_sticky_scrollable_regions():
     assert dashboard_html.count('aria-label="Close modal"') >= 2
     assert 'aria-label="Close modal"' in monitoring_html
     assert ".alert-drawer-footer" in alerts_css and "position: sticky;" in alerts_css
-    assert ".alert-drawer-body" in alerts_css and "overflow-y: auto;" in alerts_css
+    assert ".alert-drawer-body" in alerts_css and "flex: 1;" in alerts_css and "overflow-y: auto;" in alerts_css
     assert ".sheet-footer" in monitoring_css and "position: sticky;" in monitoring_css
-    assert ".sheet-body" in monitoring_css and "overflow-y: auto;" in monitoring_css
+    assert ".sheet-body" in monitoring_css and "flex: 1;" in monitoring_css and "overflow-y: auto;" in monitoring_css
+    assert ".sheet-body::-webkit-scrollbar" in monitoring_css
+    assert ".alert-drawer-body::-webkit-scrollbar" in alerts_css
     assert 'document.body.classList.add("modal-open")' in monitoring_js
     assert 'event.key === "Escape"' in monitoring_js
 

@@ -34,7 +34,8 @@
 .alert-drawer-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 5;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -62,6 +63,7 @@
 }
 
 .alert-drawer-body {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
@@ -72,15 +74,20 @@
   scrollbar-color: rgba(37, 99, 235, .38) transparent;
 }
 
+.alert-drawer-body::-webkit-scrollbar {
+  width: 8px;
+}
+
 .alert-drawer-footer {
   position: sticky;
   bottom: 0;
-  z-index: 10;
+  z-index: 5;
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  padding: 16px 0 0;
+  border-top: 1px solid rgba(0,0,0,.08);
   background: inherit;
 }
 
