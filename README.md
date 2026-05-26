@@ -156,6 +156,16 @@ Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, 
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 
+## Install PWA
+
+QC Enterprise dapat dipasang sebagai PWA dari browser modern.
+
+1. Buka aplikasi di browser, misalnya `/staff/login.html`.
+2. Login atau biarkan halaman login terbuka.
+3. Di Chrome/Edge desktop, klik ikon install di address bar atau menu `Install app`.
+4. Di Android Chrome, buka menu browser lalu pilih `Add to Home screen` atau `Install app`.
+5. Setelah terpasang, aplikasi akan terbuka dalam mode standalone dengan tampilan portrait.
+
 ## Demo Data
 
 Seed demo tersedia di:
