@@ -158,14 +158,22 @@ function openLogModal(deviceId) {
     document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
     modal.classList.add("active");
     overlay.classList.add("active");
+    document.body.classList.add("modal-open");
 }
 
 function closeModal() {
     modal.classList.remove("active");
     overlay.classList.remove("active");
+    document.body.classList.remove("modal-open");
     document.getElementById("monitoring-form").reset();
     removePhoto();
 }
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && modal?.classList.contains("active")) {
+        closeModal();
+    }
+});
 
 function triggerPhoto() {
     document.getElementById("photo-input").click();

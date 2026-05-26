@@ -62,6 +62,11 @@ def log_facility_data():
         photo_url=data.photo_url,
         storage_path=data.storage_path,
         threshold=data.threshold,
+        monitoring_date=data.monitoring_date,
+        slot_time=data.slot_time,
+        schedule_status=data.schedule_status,
+        submitted_at=data.submitted_at,
+        is_late=data.is_late,
     )
 
     try:
