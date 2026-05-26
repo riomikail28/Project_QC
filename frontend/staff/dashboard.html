@@ -177,14 +177,14 @@
         </section>
     </main>
 
-    <div class="fab-container">
-        <div id="fabMenu" style="display:none; gap:10px; flex-direction:column;">
-            <button class="fab-mini" data-action="finding" onclick="openQcFinding()" title="QC Temuan"><i class="fas fa-camera"></i></button>
-            <button class="fab-mini" data-action="learning" onclick="window.location.href='/learning/'" title="ITDV Learning"><i class="fas fa-graduation-cap"></i></button>
-            <button class="fab-mini" data-action="scan" onclick="window.location.href='inspection.html'" title="Quick Scan"><i class="fas fa-qrcode"></i></button>
-            <button class="fab-mini" data-action="batch" onclick="window.location.href='new_batch.html'" title="New Batch"><i class="fas fa-plus"></i></button>
+    <div class="fab-container" data-quick-actions>
+        <div class="quick-action-menu" data-quick-actions-menu hidden>
+            <button class="quick-action-item" data-quick-action="photo" type="button"><span>Ambil Foto</span><span class="quick-action-icon"><i class="fas fa-camera"></i></span></button>
+            <button class="quick-action-item" data-quick-action="batch" type="button"><span>Buat Batch</span><span class="quick-action-icon"><i class="fas fa-plus"></i></span></button>
+            <button class="quick-action-item" data-quick-action="qc" type="button"><span>QC Check</span><span class="quick-action-icon"><i class="fas fa-clipboard-check"></i></span></button>
+            <button class="quick-action-item" data-quick-action="monitoring" type="button"><span>Monitoring</span><span class="quick-action-icon"><i class="fas fa-temperature-half"></i></span></button>
         </div>
-        <button id="mainFab" class="fab" aria-label="Quick actions"><i class="fas fa-plus"></i></button>
+        <button id="mainFab" class="fab" data-quick-actions-trigger type="button" aria-label="Quick actions" aria-expanded="false"><i class="fas fa-plus"></i></button>
     </div>
 
     <div class="alert-drawer-overlay" id="findingOverlay" onclick="closeQcFinding()"></div>
@@ -252,6 +252,7 @@
     <script src="../js/profile-menu.js"></script>
     <script src="../js/utils.js"></script>
     <script src="../js/dashboard.js"></script>
+    <script src="../js/quick-actions.js"></script>
     <script>
         function alertTime(value) {
             if (window.Utils && typeof Utils.formatTime === 'function') return Utils.formatTime(value);
@@ -474,14 +475,6 @@
             document.getElementById('greetingText').innerText = hour < 12 ? 'Good Morning, QC Team' : hour < 18 ? 'Good Afternoon, QC Team' : 'Good Evening, QC Team';
             const user = Auth.user();
             if (user?.username) document.getElementById('userInitial').innerText = user.username.substring(0, 2).toUpperCase();
-            const mainFab = document.getElementById('mainFab');
-            const fabMenu = document.getElementById('fabMenu');
-            mainFab.addEventListener('click', () => {
-                const visible = fabMenu.style.display === 'flex';
-                fabMenu.style.display = visible ? 'none' : 'flex';
-                mainFab.classList.toggle('rotated');
-                document.querySelectorAll('.fab-mini').forEach((btn, i) => setTimeout(() => btn.classList.toggle('visible'), i * 45));
-            });
             Dashboard.init();
         });
     </script>

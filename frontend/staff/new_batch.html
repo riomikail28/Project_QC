@@ -30,7 +30,8 @@
 
             <div class="form-group">
                 <label class="input-label">Kode Batch</label>
-                <input type="text" id="batchCode" class="input-field" placeholder="Buat Otomatis">
+                <input type="text" id="batchCode" class="input-field" placeholder="Kosongkan untuk kode otomatis">
+                <small class="batch-code-helper">Kode batch akan dibuat otomatis jika dikosongkan.</small>
             </div>
 
             <div class="form-group">
@@ -71,9 +72,20 @@
         </form>
     </div>
 
+    <div class="new-batch-quick-actions" data-quick-actions>
+        <div class="new-batch-quick-menu" data-quick-actions-menu hidden>
+            <button class="new-batch-quick-item" data-quick-action="photo" type="button"><span>Ambil Foto</span><i class="fas fa-camera"></i></button>
+            <button class="new-batch-quick-item" data-quick-action="batch" type="button"><span>Buat Batch</span><i class="fas fa-plus"></i></button>
+            <button class="new-batch-quick-item" data-quick-action="qc" type="button"><span>QC Check</span><i class="fas fa-clipboard-check"></i></button>
+            <button class="new-batch-quick-item" data-quick-action="monitoring" type="button"><span>Monitoring</span><i class="fas fa-temperature-half"></i></button>
+        </div>
+        <button class="new-batch-fab" data-quick-actions-trigger type="button" aria-label="Quick actions" aria-expanded="false"><i class="fas fa-plus"></i></button>
+    </div>
+
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/utils.js"></script>
+    <script src="../js/quick-actions.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             if (!Auth.check()) window.location.href = 'login.html';
@@ -154,11 +166,12 @@
 
             const payload = {
                 product_id: document.getElementById('productId').value,
-                batch_code: document.getElementById('batchCode').value,
                 production_date: document.getElementById('productionDate').value,
                 operator_id: Auth.user().id,
                 notes: document.getElementById('parameterNotes').value
             };
+            const batchCode = document.getElementById('batchCode').value.trim();
+            if (batchCode) payload.batch_code = batchCode;
             const ph = optionalNumber('phValue');
             const brix = optionalNumber('brixValue');
             const tds = optionalNumber('tdsValue');

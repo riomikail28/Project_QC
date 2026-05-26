@@ -6,6 +6,7 @@ Handles batch creation, status determination, and QC scoring.
 """
 
 import logging
+import secrets
 from datetime import date, datetime, timezone
 from uuid import UUID
 from backend.database.supabase_client import direct_db_query, get_client, get_last_db_error
@@ -19,6 +20,30 @@ def _looks_like_uuid(value: str) -> bool:
         return True
     except (TypeError, ValueError):
         return False
+
+
+def generate_batch_code() -> str:
+    """Generate a staff-friendly batch code with enough entropy for rapid submits."""
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    suffix = secrets.token_hex(2).upper()
+    return f"BATCH-{timestamp}-{suffix}"
+
+
+def is_duplicate_batch_code_error(exc: Exception) -> bool:
+    code = str(getattr(exc, "code", "") or getattr(exc, "status_code", ""))
+    message = " ".join(str(part) for part in (
+        code,
+        getattr(exc, "message", ""),
+        getattr(exc, "details", ""),
+        getattr(exc, "hint", ""),
+        exc,
+    ) if part)
+    message = message.lower()
+    return (
+        "23505" in message
+        or "production_batches_batch_code_key" in message
+        or ("duplicate key" in message and "batch_code" in message)
+    )
 
 
 def determine_batch_status(results: list) -> str:

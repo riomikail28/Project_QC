@@ -26,7 +26,7 @@
             <a href="/admin/admin_panel.html" data-admin-only hidden>Admin Dashboard</a>
         </nav>
         <div class="nav-actions">
-            <button class="nav-btn" onclick="window.location.href='new_batch.html'" aria-label="New batch"><i class="fas fa-plus"></i></button>
+            <button class="nav-fab-trigger" data-quick-actions-trigger type="button" aria-label="Quick actions" aria-expanded="false"><i class="fas fa-plus"></i></button>
             <div class="user-avatar">QC</div>
         </div>
     </header>
@@ -185,6 +185,16 @@
         </section>
     </main>
 
+    <div class="fab-container" data-quick-actions>
+        <div class="quick-action-menu" data-quick-actions-menu hidden>
+            <button class="quick-action-item" data-quick-action="photo" type="button"><span>Ambil Foto</span><span class="quick-action-icon"><i class="fas fa-camera"></i></span></button>
+            <button class="quick-action-item" data-quick-action="batch" type="button"><span>Buat Batch</span><span class="quick-action-icon"><i class="fas fa-plus"></i></span></button>
+            <button class="quick-action-item" data-quick-action="qc" type="button"><span>QC Check</span><span class="quick-action-icon"><i class="fas fa-clipboard-check"></i></span></button>
+            <button class="quick-action-item" data-quick-action="monitoring" type="button"><span>Monitoring</span><span class="quick-action-icon"><i class="fas fa-temperature-half"></i></span></button>
+        </div>
+        <button class="fab" data-quick-actions-trigger type="button" aria-label="Quick actions" aria-expanded="false"><i class="fas fa-plus"></i></button>
+    </div>
+
     <nav class="bottom-nav">
         <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Beranda</span></a>
         <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitoring</span></a>
@@ -199,6 +209,7 @@
     <script src="../js/profile-menu.js"></script>
     <script src="../js/ui-mobile.js"></script>
     <script src="../js/inspection.js"></script>
+    <script src="../js/quick-actions.js"></script>
     <script src="../js/mobile-nav.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

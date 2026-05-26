@@ -9,7 +9,6 @@ Supabase tables: production_batches, production_batch_logs, products
 
 from flask import Blueprint, g, request, jsonify
 import logging
-from datetime import datetime
 
 from backend.services.batch_service import (
     determine_batch_status,
@@ -17,7 +16,9 @@ from backend.services.batch_service import (
     get_batches,
     get_batch_detail,
     create_batch,
+    generate_batch_code,
     get_daily_summary,
+    is_duplicate_batch_code_error,
 )
 from backend.database.supabase_client import get_client
 from backend.services.storage_service import delete_photo, upload_file_storage
@@ -126,7 +127,8 @@ def create_new_batch():
     data = validate_model(BatchCreateRequest, payload)
 
     product_id = data.product_id
-    batch_code = data.batch_code or f"QC-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    manual_batch_code = bool(data.batch_code)
+    batch_code = data.batch_code or generate_batch_code()
 
     try:
         uploaded = None
@@ -139,23 +141,31 @@ def create_new_batch():
             storage_path = uploaded.storage_path
 
         try:
-            batch = create_batch(
-                product_id=product_id,
-                product_name=data.product_name,
-                batch_code=batch_code,
-                production_date=data.production_date,
-                expired_date=data.expired_date,
-                shift=data.shift,
-                operator_id=data.operator_id,
-                qc_officer_id=data.qc_officer_id,
-                photo_url=photo_url,
-                storage_path=storage_path,
-                ph_value=data.ph_value,
-                brix_value=data.brix_value,
-                tds_value=data.tds_value,
-                parameter_notes=data.notes,
-                parameter_checked_by=data.operator_id or (getattr(g, "current_user", {}) or {}).get("id"),
-            )
+            for attempt in range(3):
+                try:
+                    batch = create_batch(
+                        product_id=product_id,
+                        product_name=data.product_name,
+                        batch_code=batch_code,
+                        production_date=data.production_date,
+                        expired_date=data.expired_date,
+                        shift=data.shift,
+                        operator_id=data.operator_id,
+                        qc_officer_id=data.qc_officer_id,
+                        photo_url=photo_url,
+                        storage_path=storage_path,
+                        ph_value=data.ph_value,
+                        brix_value=data.brix_value,
+                        tds_value=data.tds_value,
+                        parameter_notes=data.notes,
+                        parameter_checked_by=data.operator_id or (getattr(g, "current_user", {}) or {}).get("id"),
+                    )
+                    break
+                except Exception as exc:
+                    if is_duplicate_batch_code_error(exc) and not manual_batch_code and attempt < 2:
+                        batch_code = generate_batch_code()
+                        continue
+                    raise
         except Exception:
             if uploaded:
                 delete_photo(uploaded.storage_path)
@@ -194,6 +204,12 @@ def create_new_batch():
         logger.error("Batch photo validation failed: %s", e)
         return jsonify({"success": False, "error": f"Upload gagal: {str(e)}"}), 400
     except Exception as e:
+        if is_duplicate_batch_code_error(e):
+            return jsonify({
+                "success": False,
+                "error_code": "DUPLICATE_BATCH_CODE",
+                "message": "Kode batch sudah digunakan. Gunakan kode lain atau kosongkan agar sistem membuat otomatis.",
+            }), 409
         logger.error("Failed to create batch: %s", e)
         return jsonify({"success": False, "message": f"Gagal membuat batch: {str(e)}"}), 503
 
