@@ -574,13 +574,24 @@ class LearningService:
 
     def _modules(self):
         rows = self.repo.fetch_table("itdv_modules", order_by="sort_order") if self.repo.available() else []
+        rows = [self._module_public(row) for row in rows if not row.get("archived") and row.get("published", True) is not False]
         return rows or MODULES
 
     def _simulations(self):
         rows = self.repo.fetch_table("itdv_simulations", order_by="created_at") if self.repo.available() else []
+        rows = [self._simulation_public(row) for row in rows if not row.get("archived") and row.get("published", True) is not False]
         return rows or SIMULATIONS
 
     def _quizzes(self):
+        question_rows = self.repo.fetch_table("itdv_quiz_questions", order_by="created_at") if self.repo.available() else []
+        question_rows = [row for row in question_rows if not row.get("archived") and row.get("published", True) is not False]
+        if question_rows:
+            return [{
+                "id": "itdv-main-quiz",
+                "title": "Quiz ITDV Learning Center",
+                "module_slug": None,
+                "questions": [self._question_public(row) for row in question_rows],
+            }]
         rows = self.repo.fetch_table("itdv_quizzes", order_by="created_at") if self.repo.available() else []
         return rows or QUIZZES
 
@@ -612,6 +623,14 @@ class LearningService:
 
     def _module_mini_quiz(self, module):
         slug = module.get("slug")
+        rows = self.repo.fetch_table(
+            "itdv_module_mini_quizzes",
+            filters=[("eq", "module_slug", slug)],
+            order_by="created_at",
+        ) if self.repo.available() else []
+        rows = [row for row in rows if not row.get("archived") and row.get("published", True) is not False]
+        if rows:
+            return [self._question_public(row) for row in rows]
         title = module.get("title")
         category = module.get("category")
         return [
@@ -661,6 +680,45 @@ class LearningService:
             "Ambil keputusan QC berbasis bukti",
             "Catat evidence dan tindakan",
         ]
+
+    def _module_public(self, row):
+        duration = row.get("duration_minutes")
+        if duration is None:
+            duration = row.get("estimated_time")
+        return {
+            **row,
+            "summary": row.get("summary") or row.get("description") or "",
+            "duration_minutes": duration or 0,
+            "objectives": row.get("objectives") or row.get("competencies") or [],
+            "competencies": row.get("competencies") or row.get("objectives") or [],
+            "learning_material": row.get("learning_material") or row.get("summary") or row.get("description") or "",
+            "case_study": row.get("case_study") or "",
+        }
+
+    def _simulation_public(self, row):
+        options = row.get("options") or []
+        if not options and any(row.get(f"option_{key}") for key in ("a", "b", "c")):
+            best = (row.get("best_actions") or [""])[0]
+            options = [
+                {"key": "A", "label": row.get("option_a"), "score": 100 if best == "A" else 0},
+                {"key": "B", "label": row.get("option_b"), "score": 100 if best == "B" else 0},
+                {"key": "C", "label": row.get("option_c"), "score": 100 if best == "C" else 0},
+            ]
+        return {**row, "options": options, "best_actions": row.get("best_actions") or []}
+
+    def _question_public(self, row):
+        return {
+            "id": str(row.get("id")),
+            "text": row.get("question") or row.get("text"),
+            "options": [
+                {"key": "A", "label": row.get("option_a")},
+                {"key": "B", "label": row.get("option_b")},
+                {"key": "C", "label": row.get("option_c")},
+                {"key": "D", "label": row.get("option_d")},
+            ],
+            "answer": row.get("correct_answer") or row.get("answer"),
+            "explanation": row.get("explanation"),
+        }
 
     def _attempt_percent(self, user_id, table, id_field, total_ids, local_rows, minimum_score=70):
         expected = {item for item in total_ids if item}

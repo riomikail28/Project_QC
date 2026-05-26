@@ -27,7 +27,7 @@
                 <li><a href="#section-alerts" class="sidebar-item admin-nav-link" data-target="alerts" data-section="alerts"><i data-lucide="bell-ring"></i><span>Alerts</span></a></li>
                 <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Reports</span></a></li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
-                <li><a href="/learning/" class="sidebar-item"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
+                <li><a href="#section-learning" class="sidebar-item admin-nav-link" data-target="learning" data-section="learning"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
                 <li><a href="#section-facility" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
                 <li><a href="#section-sku" class="sidebar-item admin-nav-link admin-sub-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
                 <li><a href="#section-approval" class="sidebar-item admin-nav-link admin-sub-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
@@ -209,6 +209,38 @@
                                     </tr>
                                 </thead>
                                 <tbody id="table-staff"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: Learning ITDV Management -->
+                <section id="section-learning" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Admin Learning Management</h3>
+                                <p class="admin-muted">Kelola modul, mini quiz, simulation case, quiz utama, dan pantau progress sertifikat ITDV.</p>
+                            </div>
+                            <button class="btn-primary" id="learning-add-btn" onclick="adminApp.openLearningModal()"><i data-lucide="plus"></i> Tambah</button>
+                        </div>
+                        <div class="admin-tabs learning-tabs" role="tablist" aria-label="Learning ITDV tabs">
+                            <button class="admin-tab active" data-learning-tab="modules" onclick="adminApp.switchLearningTab('modules')">Modules</button>
+                            <button class="admin-tab" data-learning-tab="mini-quiz" onclick="adminApp.switchLearningTab('mini-quiz')">Mini Quiz</button>
+                            <button class="admin-tab" data-learning-tab="simulation" onclick="adminApp.switchLearningTab('simulation')">Simulation</button>
+                            <button class="admin-tab" data-learning-tab="quiz" onclick="adminApp.switchLearningTab('quiz')">Quiz</button>
+                            <button class="admin-tab" data-learning-tab="progress" onclick="adminApp.switchLearningTab('progress')">Certificates/Progress</button>
+                        </div>
+                        <div class="learning-toolbar">
+                            <select id="learning-module-filter" onchange="adminApp.loadLearningMiniQuiz()">
+                                <option value="">Pilih module untuk mini quiz</option>
+                            </select>
+                            <button class="btn-secondary" onclick="adminApp.loadLearning()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="enterprise-table">
+                                <thead id="learning-table-head"></thead>
+                                <tbody id="learning-table-body"></tbody>
                             </table>
                         </div>
                     </div>

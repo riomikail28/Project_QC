@@ -9,6 +9,8 @@ const adminApp = {
     crudMode: null,
     crudId: null,
     crudContext: {},
+    learningTab: 'modules',
+    learningModules: [],
 
     init() {
         this.checkAuth();
@@ -180,6 +182,7 @@ const adminApp = {
             case 'alerts': this.loadOverview(); break;
             case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
+            case 'learning': this.loadLearning(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadQCReports(); break;
             case 'daily-reports': this.loadDailyReports(); break;
@@ -614,6 +617,60 @@ const adminApp = {
                 await this.loadSku();
             }
 
+            if (this.crudMode === 'addLearningModule' || this.crudMode === 'editLearningModule') {
+                const payload = {
+                    title: document.getElementById('learn-title').value.trim(),
+                    slug: document.getElementById('learn-slug').value.trim(),
+                    description: document.getElementById('learn-description').value.trim(),
+                    learning_material: document.getElementById('learn-material').value.trim(),
+                    case_study: document.getElementById('learn-case').value.trim(),
+                    competencies: document.getElementById('learn-competencies').value,
+                    estimated_time: Number(document.getElementById('learn-time').value || 0),
+                    difficulty: document.getElementById('learn-difficulty').value.trim(),
+                    order_number: Number(document.getElementById('learn-order').value || 0),
+                    published: document.getElementById('learn-published').value === 'true',
+                };
+                if (this.crudMode === 'addLearningModule') await API.post('/admin/learning/modules', payload);
+                else await API.patch(`/admin/learning/modules/${this.crudId}`, payload);
+                await this.loadLearning();
+            }
+
+            if (this.crudMode === 'addLearningMiniQuiz' || this.crudMode === 'editLearningMiniQuiz') {
+                const payload = this.learningQuestionPayload(false);
+                if (this.crudMode === 'addLearningMiniQuiz') await API.post(`/admin/learning/modules/${payload.module_slug}/mini-quiz`, payload);
+                else await API.patch(`/admin/learning/mini-quiz/${this.crudId}`, payload);
+                await this.loadLearningMiniQuiz();
+            }
+
+            if (this.crudMode === 'addLearningQuiz' || this.crudMode === 'editLearningQuiz') {
+                const payload = this.learningQuestionPayload(true);
+                if (this.crudMode === 'addLearningQuiz') await API.post('/admin/learning/quizzes', payload);
+                else await API.patch(`/admin/learning/quizzes/${this.crudId}`, payload);
+                await this.loadLearningQuizzes();
+            }
+
+            if (this.crudMode === 'addLearningSimulation' || this.crudMode === 'editLearningSimulation') {
+                const payload = {
+                    title: document.getElementById('learn-sim-title').value.trim(),
+                    scenario: document.getElementById('learn-sim-scenario').value.trim(),
+                    target_temp: this.numberOrNull('learn-sim-target'),
+                    actual_temp: this.numberOrNull('learn-sim-actual'),
+                    risk: document.getElementById('learn-sim-risk').value.trim(),
+                    option_a: document.getElementById('learn-sim-a').value.trim(),
+                    option_b: document.getElementById('learn-sim-b').value.trim(),
+                    option_c: document.getElementById('learn-sim-c').value.trim(),
+                    correct_answer: document.getElementById('learn-sim-correct').value,
+                    ideal_action: document.getElementById('learn-sim-ideal').value.trim(),
+                    haccp_reason: document.getElementById('learn-sim-haccp').value.trim(),
+                    corrective_action: document.getElementById('learn-sim-corrective').value.trim(),
+                    documentation_required: document.getElementById('learn-sim-doc').value.trim(),
+                    published: document.getElementById('learn-sim-published').value === 'true',
+                };
+                if (this.crudMode === 'addLearningSimulation') await API.post('/admin/learning/simulations', payload);
+                else await API.patch(`/admin/learning/simulations/${this.crudId}`, payload);
+                await this.loadLearningSimulations();
+            }
+
             this.closeCrudModal();
         } catch (error) {
             alert(`Gagal menyimpan data: ${error.message}`);
@@ -685,6 +742,239 @@ const adminApp = {
         if (!confirm('Hapus SKU produk ini?')) return;
         await API.delete(`/v1/admin/products/${id}`);
         await this.loadSku();
+    },
+
+    async deleteLearningItem(type, id) {
+        if (!confirm('Arsipkan item Learning ITDV ini? Data progress user tetap aman.')) return;
+        await API.delete(`/admin/learning/${type}/${id}`);
+        await this.loadLearning();
+    },
+
+    async loadLearning() {
+        this.updateLearningChrome();
+        await this.loadLearningModules();
+        if (this.learningTab === 'modules') return this.renderLearningModules();
+        if (this.learningTab === 'mini-quiz') return this.loadLearningMiniQuiz();
+        if (this.learningTab === 'simulation') return this.loadLearningSimulations();
+        if (this.learningTab === 'quiz') return this.loadLearningQuizzes();
+        return this.loadLearningProgress();
+    },
+
+    async loadLearningModules() {
+        const res = await API.get('/admin/learning/modules');
+        this.learningModules = res.data || [];
+        const select = document.getElementById('learning-module-filter');
+        if (select) {
+            const current = select.value;
+            select.innerHTML = '<option value="">Pilih module untuk mini quiz</option>' + this.learningModules.map(item => (
+                `<option value="${this.escapeAttr(item.slug)}">${this.escapeHtml(item.title || item.slug)}</option>`
+            )).join('');
+            if (current) select.value = current;
+        }
+        return this.learningModules;
+    },
+
+    switchLearningTab(tab) {
+        this.learningTab = tab;
+        document.querySelectorAll('[data-learning-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.learningTab === tab));
+        this.updateLearningChrome();
+        this.loadLearning();
+    },
+
+    updateLearningChrome() {
+        document.querySelectorAll('[data-learning-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.learningTab === this.learningTab));
+        const filter = document.getElementById('learning-module-filter');
+        if (filter) filter.style.display = this.learningTab === 'mini-quiz' ? 'inline-flex' : 'none';
+        const addBtn = document.getElementById('learning-add-btn');
+        if (addBtn) addBtn.style.display = this.learningTab === 'progress' ? 'none' : 'inline-flex';
+    },
+
+    renderLearningModules() {
+        this.setLearningHead(['Title', 'Slug', 'Difficulty', 'Time', 'Order', 'Status', 'Action']);
+        const tbody = document.getElementById('learning-table-body');
+        if (!this.learningModules.length) {
+            tbody.innerHTML = `<tr><td colspan="7">${this.emptyState('Belum ada module ITDV', 'Tambahkan module untuk Learning Center.')}</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = this.learningModules.map(item => `
+            <tr>
+                <td><strong>${this.escapeHtml(item.title || '-')}</strong><div class="admin-muted">${this.escapeHtml(item.description || item.summary || '-')}</div></td>
+                <td>${this.escapeHtml(item.slug || '-')}</td>
+                <td>${this.escapeHtml(item.difficulty || '-')}</td>
+                <td>${item.estimated_time ?? item.duration_minutes ?? 0} menit</td>
+                <td>${item.order_number ?? item.sort_order ?? 0}</td>
+                <td><span class="status-badge status-${item.published === false || item.archived ? 'pending' : 'pass'}">${item.archived ? 'ARCHIVED' : item.published === false ? 'DRAFT' : 'PUBLISHED'}</span></td>
+                <td><span class="row-actions">
+                    <button class="btn-secondary btn-sm" onclick='adminApp.openLearningModuleModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-danger btn-sm" onclick="adminApp.deleteLearningItem('modules', '${this.escapeAttr(item.slug)}')"><i data-lucide="trash-2"></i> Hapus</button>
+                </span></td>
+            </tr>
+        `).join('');
+        this.refreshIcons();
+    },
+
+    async loadLearningMiniQuiz() {
+        const moduleSlug = document.getElementById('learning-module-filter')?.value || this.learningModules[0]?.slug || '';
+        if (moduleSlug && document.getElementById('learning-module-filter')) document.getElementById('learning-module-filter').value = moduleSlug;
+        this.setLearningHead(['Question', 'Module', 'Answer', 'Explanation', 'Action']);
+        const tbody = document.getElementById('learning-table-body');
+        if (!moduleSlug) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih module terlebih dahulu.</td></tr>';
+            return;
+        }
+        const res = await API.get(`/admin/learning/modules/${moduleSlug}/mini-quiz`);
+        const rows = res.data || [];
+        tbody.innerHTML = rows.length ? rows.map(item => `
+            <tr>
+                <td><strong>${this.escapeHtml(item.question)}</strong><div class="admin-muted">A. ${this.escapeHtml(item.option_a)} | B. ${this.escapeHtml(item.option_b)} | C. ${this.escapeHtml(item.option_c)} | D. ${this.escapeHtml(item.option_d)}</div></td>
+                <td>${this.escapeHtml(item.module_slug || moduleSlug)}</td>
+                <td>${this.escapeHtml(item.correct_answer || '-')}</td>
+                <td>${this.escapeHtml(item.explanation || '-')}</td>
+                <td><span class="row-actions">
+                    <button class="btn-secondary btn-sm" onclick='adminApp.openLearningMiniQuizModal(${this.safeJson(item)}, "${this.escapeAttr(moduleSlug)}")'><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-danger btn-sm" onclick="adminApp.deleteLearningItem('mini-quiz', '${this.escapeAttr(item.id)}')"><i data-lucide="trash-2"></i> Hapus</button>
+                </span></td>
+            </tr>
+        `).join('') : '<tr><td colspan="5" style="text-align:center;">Belum ada mini quiz.</td></tr>';
+        this.refreshIcons();
+    },
+
+    async loadLearningSimulations() {
+        this.setLearningHead(['Title', 'Scenario', 'Target/Actual', 'Answer', 'Status', 'Action']);
+        const rows = (await API.get('/admin/learning/simulations')).data || [];
+        document.getElementById('learning-table-body').innerHTML = rows.length ? rows.map(item => `
+            <tr>
+                <td><strong>${this.escapeHtml(item.title || '-')}</strong><div class="admin-muted">${this.escapeHtml(item.risk || '-')}</div></td>
+                <td>${this.escapeHtml(item.scenario || '-')}</td>
+                <td>${item.target_c ?? '-'} / ${item.actual_c ?? '-'}</td>
+                <td>${this.escapeHtml((item.best_actions || [])[0] || '-')}</td>
+                <td><span class="status-badge status-${item.published === false || item.archived ? 'pending' : 'pass'}">${item.archived ? 'ARCHIVED' : item.published === false ? 'DRAFT' : 'PUBLISHED'}</span></td>
+                <td><span class="row-actions">
+                    <button class="btn-secondary btn-sm" onclick='adminApp.openLearningSimulationModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-danger btn-sm" onclick="adminApp.deleteLearningItem('simulations', '${this.escapeAttr(item.id)}')"><i data-lucide="trash-2"></i> Hapus</button>
+                </span></td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" style="text-align:center;">Belum ada simulation case.</td></tr>';
+        this.refreshIcons();
+    },
+
+    async loadLearningQuizzes() {
+        this.setLearningHead(['Question', 'Related Module', 'Answer', 'Explanation', 'Action']);
+        const rows = (await API.get('/admin/learning/quizzes')).data || [];
+        document.getElementById('learning-table-body').innerHTML = rows.length ? rows.map(item => `
+            <tr>
+                <td><strong>${this.escapeHtml(item.question || '-')}</strong><div class="admin-muted">A. ${this.escapeHtml(item.option_a)} | B. ${this.escapeHtml(item.option_b)} | C. ${this.escapeHtml(item.option_c)} | D. ${this.escapeHtml(item.option_d)}</div></td>
+                <td>${this.escapeHtml(item.related_module_slug || '-')}</td>
+                <td>${this.escapeHtml(item.correct_answer || '-')}</td>
+                <td>${this.escapeHtml(item.explanation || '-')}</td>
+                <td><span class="row-actions">
+                    <button class="btn-secondary btn-sm" onclick='adminApp.openLearningQuizModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                    <button class="btn-danger btn-sm" onclick="adminApp.deleteLearningItem('quizzes', '${this.escapeAttr(item.id)}')"><i data-lucide="trash-2"></i> Hapus</button>
+                </span></td>
+            </tr>
+        `).join('') : '<tr><td colspan="5" style="text-align:center;">Belum ada quiz question.</td></tr>';
+        this.refreshIcons();
+    },
+
+    async loadLearningProgress() {
+        this.setLearningHead(['User', 'Learning Progress', 'Simulation Score', 'Quiz Score', 'Certificate', 'Issued At']);
+        const rows = (await API.get('/admin/learning/progress')).data || [];
+        document.getElementById('learning-table-body').innerHTML = rows.length ? rows.map(item => `
+            <tr>
+                <td><strong>${this.escapeHtml(item.user_id || '-')}</strong></td>
+                <td>${this.escapeHtml(item.learning_progress || '-')}</td>
+                <td>${item.simulation_score ?? '-'}</td>
+                <td>${item.quiz_score ?? '-'}</td>
+                <td>${this.escapeHtml(item.certificate_status || 'not issued')}</td>
+                <td>${item.issued_at ? new Date(item.issued_at).toLocaleString('id-ID') : '-'}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" style="text-align:center;">Belum ada progress/certificate.</td></tr>';
+    },
+
+    setLearningHead(columns) {
+        document.getElementById('learning-table-head').innerHTML = `<tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>`;
+    },
+
+    openLearningModal() {
+        if (this.learningTab === 'modules') return this.openLearningModuleModal();
+        if (this.learningTab === 'mini-quiz') return this.openLearningMiniQuizModal(null, document.getElementById('learning-module-filter')?.value);
+        if (this.learningTab === 'simulation') return this.openLearningSimulationModal();
+        if (this.learningTab === 'quiz') return this.openLearningQuizModal();
+    },
+
+    openLearningModuleModal(item = null) {
+        const row = item || {};
+        this.openCrudModal(row.slug ? 'Edit Learning Module' : 'Tambah Learning Module', row.slug ? 'editLearningModule' : 'addLearningModule', `
+            <label>Title<input id="learn-title" value="${this.escapeAttr(row.title || '')}" required></label>
+            <label>Slug<input id="learn-slug" value="${this.escapeAttr(row.slug || '')}" placeholder="auto dari title"></label>
+            <label>Description<textarea id="learn-description" rows="3">${this.escapeHtml(row.description || row.summary || '')}</textarea></label>
+            <label>Learning Material<textarea id="learn-material" rows="4">${this.escapeHtml(row.learning_material || '')}</textarea></label>
+            <label>Case Study<textarea id="learn-case" rows="3">${this.escapeHtml(row.case_study || '')}</textarea></label>
+            <label>Competencies<textarea id="learn-competencies" rows="3" placeholder="Satu kompetensi per baris">${this.escapeHtml((row.competencies || row.objectives || []).join('\n'))}</textarea></label>
+            <label>Estimated Time<input id="learn-time" type="number" value="${row.estimated_time ?? row.duration_minutes ?? 0}"></label>
+            <label>Difficulty<input id="learn-difficulty" value="${this.escapeAttr(row.difficulty || '')}"></label>
+            <label>Order Number<input id="learn-order" type="number" value="${row.order_number ?? row.sort_order ?? 0}"></label>
+            <label>Status<select id="learn-published"><option value="true" ${row.published === false ? '' : 'selected'}>Published</option><option value="false" ${row.published === false ? 'selected' : ''}>Draft</option></select></label>
+        `, { id: row.slug });
+    },
+
+    openLearningMiniQuizModal(item = null, moduleSlug = '') {
+        this.openQuestionModal('Mini Quiz', item, 'LearningMiniQuiz', { moduleSlug });
+    },
+
+    openLearningQuizModal(item = null) {
+        this.openQuestionModal('Quiz Question', item, 'LearningQuiz');
+    },
+
+    openQuestionModal(title, item = null, modeSuffix, context = {}) {
+        const row = item || {};
+        const moduleOptions = this.learningModules.map(module => `<option value="${this.escapeAttr(module.slug)}" ${(row.related_module_slug || row.module_slug || context.moduleSlug) === module.slug ? 'selected' : ''}>${this.escapeHtml(module.title || module.slug)}</option>`).join('');
+        this.openCrudModal(row.id ? `Edit ${title}` : `Tambah ${title}`, row.id ? `edit${modeSuffix}` : `add${modeSuffix}`, `
+            <label>Module<select id="learn-question-module">${moduleOptions}</select></label>
+            <label>Question<textarea id="learn-question" rows="3" required>${this.escapeHtml(row.question || '')}</textarea></label>
+            <label>Option A<input id="learn-option-a" value="${this.escapeAttr(row.option_a || '')}" required></label>
+            <label>Option B<input id="learn-option-b" value="${this.escapeAttr(row.option_b || '')}" required></label>
+            <label>Option C<input id="learn-option-c" value="${this.escapeAttr(row.option_c || '')}" required></label>
+            <label>Option D<input id="learn-option-d" value="${this.escapeAttr(row.option_d || '')}" required></label>
+            <label>Correct Answer<select id="learn-correct"><option>A</option><option ${row.correct_answer === 'B' ? 'selected' : ''}>B</option><option ${row.correct_answer === 'C' ? 'selected' : ''}>C</option><option ${row.correct_answer === 'D' ? 'selected' : ''}>D</option></select></label>
+            <label>Explanation<textarea id="learn-explanation" rows="3">${this.escapeHtml(row.explanation || '')}</textarea></label>
+        `, { id: row.id, ...context });
+    },
+
+    openLearningSimulationModal(item = null) {
+        const row = item || {};
+        const option = key => (row.options || []).find(item => item.key === key)?.label || '';
+        const answer = (row.best_actions || [])[0] || 'A';
+        this.openCrudModal(row.id ? 'Edit Simulation Case' : 'Tambah Simulation Case', row.id ? 'editLearningSimulation' : 'addLearningSimulation', `
+            <label>Title<input id="learn-sim-title" value="${this.escapeAttr(row.title || '')}" required></label>
+            <label>Scenario<textarea id="learn-sim-scenario" rows="4" required>${this.escapeHtml(row.scenario || '')}</textarea></label>
+            <label>Target Temp<input id="learn-sim-target" type="number" step="0.1" value="${row.target_c ?? ''}"></label>
+            <label>Actual Temp<input id="learn-sim-actual" type="number" step="0.1" value="${row.actual_c ?? ''}"></label>
+            <label>Risk<input id="learn-sim-risk" value="${this.escapeAttr(row.risk || '')}"></label>
+            <label>Option A<input id="learn-sim-a" value="${this.escapeAttr(option('A'))}" required></label>
+            <label>Option B<input id="learn-sim-b" value="${this.escapeAttr(option('B'))}" required></label>
+            <label>Option C<input id="learn-sim-c" value="${this.escapeAttr(option('C'))}" required></label>
+            <label>Correct Answer<select id="learn-sim-correct"><option>A</option><option ${answer === 'B' ? 'selected' : ''}>B</option><option ${answer === 'C' ? 'selected' : ''}>C</option></select></label>
+            <label>Ideal Action<textarea id="learn-sim-ideal" rows="2">${this.escapeHtml(row.ideal_action || '')}</textarea></label>
+            <label>HACCP Reason<textarea id="learn-sim-haccp" rows="2">${this.escapeHtml(row.haccp_reason || '')}</textarea></label>
+            <label>Corrective Action<textarea id="learn-sim-corrective" rows="2">${this.escapeHtml(row.corrective_action || '')}</textarea></label>
+            <label>Documentation Required<textarea id="learn-sim-doc" rows="2">${this.escapeHtml(row.documentation_required || '')}</textarea></label>
+            <label>Status<select id="learn-sim-published"><option value="true" ${row.published === false ? '' : 'selected'}>Published</option><option value="false" ${row.published === false ? 'selected' : ''}>Draft</option></select></label>
+        `, { id: row.id });
+    },
+
+    learningQuestionPayload(related = false) {
+        const payload = {
+            question: document.getElementById('learn-question').value.trim(),
+            option_a: document.getElementById('learn-option-a').value.trim(),
+            option_b: document.getElementById('learn-option-b').value.trim(),
+            option_c: document.getElementById('learn-option-c').value.trim(),
+            option_d: document.getElementById('learn-option-d').value.trim(),
+            correct_answer: document.getElementById('learn-correct').value,
+            explanation: document.getElementById('learn-explanation').value.trim(),
+        };
+        payload[related ? 'related_module_slug' : 'module_slug'] = document.getElementById('learn-question-module').value;
+        return payload;
     },
 
     async loadQCReports() {

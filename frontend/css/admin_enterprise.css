@@ -491,6 +491,45 @@ select {
   margin-bottom: 18px;
 }
 
+.admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0 12px;
+}
+
+.admin-tab {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-color);
+    color: var(--text-secondary);
+    padding: 9px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-tab.active {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, .12);
+    color: var(--primary-color);
+}
+
+.learning-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.learning-toolbar select {
+    min-height: 38px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0 10px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
 .admin-muted {
   margin: 5px 0 0;
   color: var(--text-secondary);
