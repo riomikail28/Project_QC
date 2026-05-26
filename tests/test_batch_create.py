@@ -131,7 +131,8 @@ def test_create_batch_generates_batch_code_when_empty(client, staff_headers):
         response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
 
     assert response.status_code == 201
-    assert response.get_json()["batch"]["batch_code"].startswith("BATCH-")
+    assert response.get_json()["batch"]["batch_code"].startswith("SKU1-")
+    assert response.get_json()["batch"]["batch_sequence"] == 1
 
 
 def test_create_batch_without_batch_code_generates_unique_codes(client, staff_headers):
@@ -139,15 +140,83 @@ def test_create_batch_without_batch_code_generates_unique_codes(client, staff_he
     with patch("backend.services.batch_service.get_client", return_value=db), patch(
         "backend.api.batch_routes.write_audit"
     ):
-        first = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
-        second = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
+        first = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"})
+        second = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"})
 
     assert first.status_code == 201
     assert second.status_code == 201
     codes = [row["batch_code"] for row in db.inserted_batches]
     assert len(codes) == 2
     assert len(set(codes)) == 2
-    assert all(code.startswith("BATCH-") for code in codes)
+    assert codes == ["SKU1-20260527-001", "SKU1-20260527-002"]
+
+
+def test_create_batch_generates_product_date_sequence_code(client, staff_headers):
+    db = BatchDb()
+    db.rows["production_batches"] = [{
+        "id": "batch-existing",
+        "product_id": "general-product-1",
+        "product_name": "Soup",
+        "production_date": "2026-05-27",
+        "batch_sequence": 5,
+        "batch_code": "SKU1-20260527-005",
+    }]
+    with patch("backend.services.batch_service.get_client", return_value=db), patch(
+        "backend.api.batch_routes.write_audit"
+    ):
+        response = client.post(
+            "/api/batch/create",
+            headers=staff_headers,
+            json={
+                "product_id": "SKU-1",
+                "production_date": "2026-05-27",
+                "quantity": 120,
+                "production_shift": "Pagi",
+                "cook_name": "Sari",
+            },
+        )
+
+    batch = response.get_json()["batch"]
+    assert response.status_code == 201
+    assert batch["batch_code"] == "SKU1-20260527-006"
+    assert batch["batch_sequence"] == 6
+    assert batch["quantity"] == 120
+    assert batch["production_shift"] == "Pagi"
+    assert batch["cook_name"] == "Sari"
+
+
+def test_next_batch_code_preview_returns_next_sequence(client, staff_headers):
+    db = BatchDb()
+    db.rows["production_batches"] = [{
+        "id": "batch-existing",
+        "product_id": "product-1",
+        "product_name": "Soup",
+        "production_date": "2026-05-27",
+        "batch_sequence": 2,
+        "batch_code": "SKU1-20260527-002",
+    }]
+    with patch("backend.services.batch_service.get_client", return_value=db):
+        response = client.get(
+            "/api/batch/next-code?product_id=SKU-1&production_date=2026-05-27",
+            headers=staff_headers,
+        )
+
+    body = response.get_json()["data"]
+    assert response.status_code == 200
+    assert body["batch_code"] == "SKU1-20260527-003"
+    assert body["batch_sequence"] == 3
+
+
+def test_new_batch_ui_shows_cooking_sequence_fields():
+    from pathlib import Path
+
+    html = Path("frontend/staff/new_batch.html").read_text(encoding="utf-8")
+    assert "Pemasakan ke" in html
+    assert "quantity" in html
+    assert "productionShift" in html
+    assert "cookName" in html
+    assert "Batch code otomatis" in html
+    assert "/batch/next-code" in html
 
 
 def test_create_batch_duplicate_manual_batch_code_returns_friendly_error(client, staff_headers):

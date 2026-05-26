@@ -26,11 +26,15 @@ class LoginRequest:
 @dataclass
 class BatchCreateRequest:
     batch_code: str | None = None
+    batch_sequence: int | None = None
     product_id: str | None = None
     product_name: str | None = None
     production_date: str | None = None
     expired_date: str | None = None
     shift: str | None = None
+    production_shift: str | None = None
+    cook_name: str | None = None
+    quantity: float | None = None
     operator_id: str | None = None
     qc_officer_id: str | None = None
     ph_value: float | None = None
@@ -130,11 +134,18 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
     if model is BatchCreateRequest:
         return BatchCreateRequest(
             batch_code=_optional_str(data, "batch_code", 80),
+            batch_sequence=(
+                int(_number(data, "batch_sequence", False, 1, 9999))
+                if data.get("batch_sequence") not in (None, "") else None
+            ),
             product_id=_optional_str(data, "product_id", 120),
             product_name=_optional_str(data, "product_name", 160),
             production_date=_optional_str(data, "production_date", 20),
             expired_date=_optional_str(data, "expired_date", 20),
             shift=_optional_str(data, "shift", 40),
+            production_shift=_optional_str(data, "production_shift", 40),
+            cook_name=_optional_str(data, "cook_name", 160),
+            quantity=_number(data, "quantity", False, 0, 1000000),
             operator_id=_optional_str(data, "operator_id", 80),
             qc_officer_id=_optional_str(data, "qc_officer_id", 80),
             ph_value=_number(data, "ph_value", False, 0, 14),

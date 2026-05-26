@@ -679,8 +679,10 @@ const Inspection = {
             button.className = 'batch-choice';
             button.innerHTML = `
                 <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
-                <small>Tahap terakhir: ${this.stageLabel(batch.last_stage)}</small>
-                <small>Status terakhir: ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</small>
+                <small>Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')}</small>
+                <small>Jam produksi: ${this.escapeHtml(this.formatDateTime(batch.production_time || batch.created_at))}</small>
+                <small>Cook: ${this.escapeHtml(batch.cook_name || '-')} · Qty: ${this.escapeHtml(batch.quantity || '-')}</small>
+                <small>Status QC: ${this.escapeHtml(String(batch.last_status || batch.final_qc_status || batch.status || '-').toUpperCase())}</small>
                 <span>Lanjutkan Batch Ini</span>
             `;
             button.addEventListener('click', () => {
@@ -824,7 +826,8 @@ const Inspection = {
         list.innerHTML = batches.slice(0, 3).map(batch => `
             <article class="context-row">
                 <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
-                <span>${this.stageLabel(batch.last_stage)} - ${this.escapeHtml(String(batch.last_status || '-').toUpperCase())}</span>
+                <span>Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')} - ${this.escapeHtml(String(batch.last_status || batch.status || '-').toUpperCase())}</span>
+                <span>${this.escapeHtml(batch.cook_name || '-')} · Qty ${this.escapeHtml(batch.quantity || '-')}</span>
             </article>
         `).join('');
     },

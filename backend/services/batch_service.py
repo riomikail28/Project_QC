@@ -7,6 +7,7 @@ Handles batch creation, status determination, and QC scoring.
 
 import logging
 import secrets
+import re
 from datetime import date, datetime, timezone
 from uuid import UUID
 from backend.database.supabase_client import direct_db_query, get_client, get_last_db_error
@@ -27,6 +28,13 @@ def generate_batch_code() -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     suffix = secrets.token_hex(2).upper()
     return f"BATCH-{timestamp}-{suffix}"
+
+
+def generate_product_batch_code(sku: str, production_date: str, batch_sequence: int) -> str:
+    """Generate a cooking-order batch code: SKU-YYYYMMDD-001."""
+    clean_sku = re.sub(r"[^A-Za-z0-9]+", "", str(sku or "BATCH")).upper()[:24] or "BATCH"
+    clean_date = str(production_date or date.today().isoformat()).replace("-", "")[:8]
+    return f"{clean_sku}-{clean_date}-{int(batch_sequence):03d}"
 
 
 def is_duplicate_batch_code_error(exc: Exception) -> bool:
@@ -91,7 +99,7 @@ def get_batches(limit: int = 50) -> list:
             sb.table("production_batches")
             .select(
                 "id, batch_code, production_date, shift, status, "
-                "final_qc_status, report_url, created_at, "
+                "final_qc_status, report_url, batch_sequence, cook_name, quantity, production_shift, created_at, "
                 "products(*)"
             )
             .order("created_at", desc=True)
@@ -135,7 +143,8 @@ def get_batch_detail(batch_id: str) -> dict:
 
 
 def create_batch(
-    batch_code: str,
+    batch_code: str = None,
+    batch_sequence: int | None = None,
     product_id: str = None,
     product_name: str = None,
     production_date: str = None,
@@ -143,6 +152,9 @@ def create_batch(
     shift: str = None,
     operator_id: str = None,
     qc_officer_id: str = None,
+    cook_name: str = None,
+    quantity: float | None = None,
+    production_shift: str = None,
     photo_url: str = None,
     storage_path: str = None,
     ph_value: float | None = None,
@@ -159,12 +171,13 @@ def create_batch(
 
     resolved_product_id = product_id
     resolved_product_name = product_name
+    requested_product_ref = product_id
     product_row = None
     if sb and product_id and _looks_like_uuid(product_id):
         try:
             product_res = (
                 sb.table("products")
-                .select("id, product_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
+                .select("id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
                 .eq("id", product_id)
                 .limit(1)
                 .execute()
@@ -179,7 +192,7 @@ def create_batch(
             try:
                 product_res = (
                     sb.table("products")
-                    .select("id, product_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
+                    .select("id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
                     .eq(code_column, product_id)
                     .limit(1)
                     .execute()
@@ -194,21 +207,37 @@ def create_batch(
     if resolved_product_id and not _looks_like_uuid(resolved_product_id):
         resolved_product_name = resolved_product_name or resolved_product_id
         resolved_product_id = None
+    code_product_row = product_row
     if not resolved_product_id:
         default_product = _ensure_default_product(sb)
         product_row = default_product
         resolved_product_id = default_product.get("id") if default_product else None
         resolved_product_name = resolved_product_name or (default_product or {}).get("product_name") or "General QC Product"
 
+    production_date = production_date or date.today().isoformat()
+    sku_for_code = _sku_for_batch_code(code_product_row or product_row, requested_product_ref, resolved_product_name)
+    batch_sequence = batch_sequence or _next_batch_sequence(
+        sb,
+        product_id=resolved_product_id,
+        product_name=resolved_product_name,
+        production_date=production_date,
+        sku=sku_for_code,
+    )
+    batch_code = batch_code or generate_product_batch_code(sku_for_code, production_date, batch_sequence)
+
     parameter_status = _parameter_statuses(product_row or {}, ph_value, brix_value, tds_value)
     payload = {
         "product_id": resolved_product_id,
         "product_name": resolved_product_name,
         "batch_code": batch_code,
-        "production_date": production_date or date.today().isoformat(),
+        "batch_sequence": batch_sequence,
+        "production_date": production_date,
         "expired_date": expired_date,
         "status": "in_progress",
         "created_by": operator_id,
+        "cook_name": cook_name,
+        "quantity": quantity,
+        "production_shift": production_shift or shift,
         "ph_value": ph_value,
         "brix_value": brix_value,
         "tds_value": tds_value,
@@ -224,6 +253,8 @@ def create_batch(
     payload = {key: value for key, value in payload.items() if value not in (None, "")}
     if shift:
         payload["shift"] = shift
+    if production_shift:
+        payload["shift"] = production_shift
     if operator_id:
         payload["operator_id"] = operator_id
     if qc_officer_id:
@@ -248,6 +279,88 @@ def create_batch(
         raise
 
     return {"error": "Database offline or no data returned", "db_detail": get_last_db_error()}
+
+
+def preview_next_batch_code(product_id: str = None, production_date: str = None, product_name: str = None) -> dict:
+    sb = get_client()
+    production_date = production_date or date.today().isoformat()
+    product_row = _resolve_product_for_batch(sb, product_id)
+    resolved_product_id = (product_row or {}).get("id") if product_row else None
+    resolved_product_name = product_name or (product_row or {}).get("product_name") or product_id
+    sku = _sku_for_batch_code(product_row, product_id, resolved_product_name)
+    sequence = _next_batch_sequence(
+        sb,
+        product_id=resolved_product_id,
+        product_name=resolved_product_name,
+        production_date=production_date,
+        sku=sku,
+    )
+    return {
+        "batch_code": generate_product_batch_code(sku, production_date, sequence),
+        "batch_sequence": sequence,
+        "production_date": production_date,
+        "sku": sku,
+    }
+
+
+def _resolve_product_for_batch(sb, product_id):
+    if not sb or not product_id:
+        return None
+    columns = ["id"] if _looks_like_uuid(product_id) else ["product_code", "sku_code"]
+    for column in columns:
+        try:
+            res = (
+                sb.table("products")
+                .select("id, product_code, sku_code, product_name")
+                .eq(column, product_id)
+                .limit(1)
+                .execute()
+            )
+            if res.data:
+                return res.data[0]
+        except Exception as exc:
+            logger.warning("Could not resolve product for batch preview via %s: %s", column, exc)
+    return None
+
+
+def _sku_for_batch_code(product_row, requested_product_ref, product_name):
+    return (
+        (product_row or {}).get("product_code")
+        or (product_row or {}).get("sku_code")
+        or requested_product_ref
+        or product_name
+        or "BATCH"
+    )
+
+
+def _next_batch_sequence(sb, product_id=None, product_name=None, production_date=None, sku=None):
+    if not sb:
+        return 1
+    rows = []
+    try:
+        query = sb.table("production_batches").select("batch_sequence, batch_code")
+        if product_id:
+            query = query.eq("product_id", product_id)
+        elif product_name:
+            query = query.eq("product_name", product_name)
+        if production_date:
+            query = query.eq("production_date", production_date)
+        rows = query.limit(1000).execute().data or []
+    except Exception as exc:
+        logger.warning("Could not compute next batch sequence: %s", exc)
+    max_sequence = 0
+    prefix = re.sub(r"[^A-Za-z0-9]+", "", str(sku or "BATCH")).upper()[:24]
+    for row in rows:
+        try:
+            max_sequence = max(max_sequence, int(row.get("batch_sequence") or 0))
+            continue
+        except (TypeError, ValueError):
+            pass
+        code = str(row.get("batch_code") or "")
+        match = re.match(rf"^{re.escape(prefix)}-\d{{8}}-(\d+)$", code)
+        if match:
+            max_sequence = max(max_sequence, int(match.group(1)))
+    return max_sequence + 1
 
 
 def _ensure_default_product(sb=None) -> dict | None:

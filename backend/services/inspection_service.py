@@ -514,7 +514,14 @@ class InspectionService:
             "id": row.get("id"),
             "batch_code": row.get("batch_code") or "-",
             "product_name": product.get("product_name") or row.get("product_name") or "Unknown product",
+            "batch_sequence": row.get("batch_sequence"),
+            "cook_name": row.get("cook_name"),
+            "quantity": row.get("quantity"),
+            "production_shift": row.get("production_shift") or row.get("shift"),
+            "production_date": row.get("production_date"),
+            "production_time": row.get("production_time") or row.get("created_at"),
             "status": self._norm_status(row.get("final_qc_status") or row.get("status")) or "pending",
+            "final_qc_status": self._norm_status(row.get("final_qc_status")),
             "created_at": row.get("created_at"),
         }
 

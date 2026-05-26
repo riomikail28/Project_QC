@@ -17,6 +17,7 @@ from backend.services.batch_service import (
     get_batch_detail,
     create_batch,
     generate_batch_code,
+    preview_next_batch_code,
     get_daily_summary,
     is_duplicate_batch_code_error,
 )
@@ -83,6 +84,15 @@ def list_batches():
     return jsonify(batches)
 
 
+@batch_bp.route("/api/batch/next-code", methods=["GET"])
+@require_auth
+def next_batch_code():
+    product_id = request.args.get("product_id") or request.args.get("sku") or ""
+    production_date = request.args.get("production_date") or None
+    product_name = request.args.get("product_name") or None
+    return jsonify({"success": True, "data": preview_next_batch_code(product_id, production_date, product_name)})
+
+
 # ---------------------------------------------------------------------------
 # GET /api/batch/<batch_id> — Get batch detail with CCP logs
 # ---------------------------------------------------------------------------
@@ -128,7 +138,7 @@ def create_new_batch():
 
     product_id = data.product_id
     manual_batch_code = bool(data.batch_code)
-    batch_code = data.batch_code or generate_batch_code()
+    batch_code = data.batch_code
 
     try:
         uploaded = None
@@ -147,9 +157,13 @@ def create_new_batch():
                         product_id=product_id,
                         product_name=data.product_name,
                         batch_code=batch_code,
+                        batch_sequence=data.batch_sequence,
                         production_date=data.production_date,
                         expired_date=data.expired_date,
-                        shift=data.shift,
+                        shift=data.shift or data.production_shift,
+                        production_shift=data.production_shift or data.shift,
+                        cook_name=data.cook_name,
+                        quantity=data.quantity,
                         operator_id=data.operator_id,
                         qc_officer_id=data.qc_officer_id,
                         photo_url=photo_url,

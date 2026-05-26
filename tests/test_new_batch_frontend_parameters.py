@@ -30,9 +30,10 @@ def test_new_batch_frontend_uses_inline_error_not_alert():
 def test_new_batch_batch_code_is_optional_with_auto_helper():
     html = (ROOT / "frontend" / "staff" / "new_batch.html").read_text(encoding="utf-8")
 
-    assert 'placeholder="Kosongkan untuk kode otomatis"' in html
-    assert "Kode batch akan dibuat otomatis jika dikosongkan." in html
-    assert "if (batchCode) payload.batch_code = batchCode;" in html
+    assert 'placeholder="Batch code otomatis"' in html
+    assert "Format otomatis: SKU-YYYYMMDD-urutan pemasakan." in html
+    assert "/batch/next-code" in html
+    assert "payload.batch_code" not in html
 
 
 def test_staff_pages_include_quick_action_menu():
