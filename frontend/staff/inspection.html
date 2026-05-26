@@ -72,6 +72,19 @@
                     <button class="btn-secondary batch-new-btn" id="createNewBatchBtn" type="button">Buat Batch Baru</button>
                 </div>
 
+                <section class="qc-concurrency-panel" id="qcConcurrencyPanel" hidden aria-live="polite">
+                    <div class="qc-concurrency-header">
+                        <span class="qc-history-badge" id="qcConcurrencyBadge">🔵 Selesai</span>
+                        <strong id="qcConcurrencyTitle">QC terakhir</strong>
+                    </div>
+                    <div class="qc-concurrency-grid" id="qcConcurrencyMeta"></div>
+                    <div class="qc-concurrency-photo" id="qcConcurrencyPhoto" hidden></div>
+                    <div class="qc-concurrency-actions">
+                        <button class="btn-secondary" id="qcDetailBtn" type="button">Lihat Detail</button>
+                        <button class="btn-secondary" id="qcRecheckBtn" type="button">Tambah Re-check</button>
+                    </div>
+                </section>
+
                 <!-- ═══ STEP 3: Jenis Pengecekan (appears after product selected) ═══ -->
                 <div class="simple-field" id="stageField" hidden>
                     <label>Jenis Pengecekan</label>

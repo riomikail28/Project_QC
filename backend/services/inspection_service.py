@@ -22,8 +22,11 @@ class InspectionService:
     def _ok(self, data, message="OK"):
         return {"success": True, "data": data, "message": message}
 
-    def _fail(self, message):
-        return {"success": False, "data": None, "message": message}
+    def _fail(self, message, status_code=None):
+        result = {"success": False, "data": None, "message": message}
+        if status_code:
+            result["status_code"] = status_code
+        return result
 
     def _fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
         try:
@@ -149,13 +152,15 @@ class InspectionService:
         logs = self._fetch("production_batch_logs", order_by="recorded_at", limit=limit)
         return self._ok([self._log_view(row) for row in logs])
 
-    def submit_qc(self, payload, files=None, actor_id=None):
+    def submit_qc(self, payload, files=None, actor_id=None, actor_role=None):
         files = files or {}
         staff_id = payload.get("staff_id") or actor_id
+        is_admin = str(actor_role or "").lower() == "admin"
         barcode = str(payload.get("barcode") or payload.get("sku_code") or "").strip()
         sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
         batch_code = str(payload.get("batch_code") or "").strip()
+        parent_inspection = str(payload.get("parent_inspection") or payload.get("parent_inspection_id") or "").strip() or None
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
         if not sku_code:
@@ -191,8 +196,19 @@ class InspectionService:
             batch_code = self._generated_batch_code()
         batch_id = batch_id or self._ensure_batch(batch_code, product_id, product_name, staff_id)
 
+        active_lock = self._active_inspection_for_batch(batch_id, batch_code)
+        if active_lock and not is_admin:
+            locker = active_lock.get("staff_name") or active_lock.get("inspector_name") or active_lock.get("staff_id") or "staff lain"
+            return self._fail(f"Sedang diperiksa oleh {locker}", status_code=409)
+
+        inspection_round = 1
+        if parent_inspection:
+            parent = self._inspection_by_id(parent_inspection)
+            inspection_round = int((parent or {}).get("inspection_round") or 1) + 1
+
         uploaded_files = []
         try:
+            completed_at = datetime.now(timezone.utc).isoformat()
             uploads = {
                 "generic": self._preuploaded(payload.get("photo_url"), payload.get("storage_path")),
                 "cooking": self._preuploaded(payload.get("cooking_photo_url"), payload.get("cooking_storage_path")),
@@ -243,6 +259,10 @@ class InspectionService:
                 "ccp_stage": qc_stage,
                 "temperature": temperature or None,
                 "notes": payload.get("notes") or None,
+                "inspection_round": inspection_round,
+                "parent_inspection": parent_inspection,
+                "is_active": False,
+                "completed_at": completed_at,
                 "inspection_result": {
                     "sku_code": sku_code,
                     "barcode": barcode or sku_code,
@@ -251,6 +271,8 @@ class InspectionService:
                     "temperature": temperature,
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
+                    "inspection_round": inspection_round,
+                    "parent_inspection": parent_inspection,
                 },
                 "photo_url": photo_url,
                 "storage_path": storage_path,
@@ -332,6 +354,8 @@ class InspectionService:
                 "batch_id": batch_id,
                 "batch_code": batch_code,
                 "qc_stage": qc_stage,
+                "inspection_round": inspection_round,
+                "parent_inspection": parent_inspection,
                 "approval_status": "pending",
                 "photo_url": report_payload.get("photo_url"),
                 **(report or report_payload),
@@ -424,6 +448,30 @@ class InspectionService:
         rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=filters) if filters else []
         if not rows and batch_code:
             rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=[("eq", "batch_code", batch_code)])
+        return rows[0] if rows else None
+
+    def _active_inspection_for_batch(self, batch_id, batch_code):
+        rows = []
+        if batch_id:
+            rows = self._fetch(
+                "qc_reports",
+                order_by="created_at",
+                limit=1,
+                filters=[("eq", "batch_id", batch_id), ("eq", "is_active", True)],
+            )
+        if not rows and batch_code:
+            rows = self._fetch(
+                "qc_reports",
+                order_by="created_at",
+                limit=1,
+                filters=[("eq", "batch_code", batch_code), ("eq", "is_active", True)],
+            )
+        return rows[0] if rows else None
+
+    def _inspection_by_id(self, inspection_id):
+        if not inspection_id:
+            return None
+        rows = self._fetch("qc_reports", limit=1, filters=[("eq", "id", inspection_id)])
         return rows[0] if rows else None
 
     def _update_batch_status(self, batch_id, batch_code, current_report):

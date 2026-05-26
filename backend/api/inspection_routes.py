@@ -101,5 +101,10 @@ def submit_qc():
         "barcode_photo": request.files.getlist("barcode_photo"),
         "label_photo": request.files.getlist("label_photo"),
     }
-    result = _service().submit_qc(payload, files=files, actor_id=actor.get("id") or actor.get("sub"))
-    return _json(result, 200 if result.get("success") else 400)
+    result = _service().submit_qc(
+        payload,
+        files=files,
+        actor_id=actor.get("id") or actor.get("sub"),
+        actor_role=actor.get("role"),
+    )
+    return _json(result, 200 if result.get("success") else result.get("status_code", 400))

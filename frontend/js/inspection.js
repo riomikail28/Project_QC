@@ -15,6 +15,9 @@ const Inspection = {
     selectedProduct: null,
     manualMode: false,
     forceNewBatch: false,
+    activeInspection: null,
+    lastInspection: null,
+    recheckParentInspection: null,
 
     async init() {
         await this.loadProducts();
@@ -25,6 +28,7 @@ const Inspection = {
         this.bindStage();
         this.bindSkuLookup();
         this.bindBatchNew();
+        this.bindQcHistoryActions();
         this.bindCompletionState();
         this.bindPhotoValidation();
         this.bindSubmit();
@@ -201,9 +205,39 @@ const Inspection = {
         button.addEventListener('click', () => {
             this.selectedBatch = null;
             this.forceNewBatch = true;
+            this.activeInspection = null;
+            this.lastInspection = null;
+            this.recheckParentInspection = null;
             document.querySelectorAll('.batch-choice').forEach(item => item.classList.remove('active'));
             button.textContent = 'Batch baru akan dibuat';
+            this.renderQcConcurrency(null, null);
             this.updateSummary();
+            this.updateSubmitState();
+        });
+    },
+
+    bindQcHistoryActions() {
+        document.getElementById('qcDetailBtn')?.addEventListener('click', () => {
+            const item = this.activeInspection || this.lastInspection;
+            if (!item) return;
+            const detail = [
+                `Batch: ${item.batch_code || item.batch || '-'}`,
+                `Jenis: ${this.stageLabel(item.qc_stage || item.qc_type)}`,
+                `Status: ${String(item.status || '-').toUpperCase()}`,
+                `Staff: ${item.staff || '-'}`,
+                `Waktu: ${this.formatDateTime(item.completed_at || item.created_at || item.start_time)}`,
+                item.temperature ? `Suhu: ${item.temperature}` : null,
+                item.notes ? `Catatan: ${item.notes}` : null,
+            ].filter(Boolean).join('\n');
+            window.alert(detail);
+        });
+        document.getElementById('qcRecheckBtn')?.addEventListener('click', () => {
+            if (!this.lastInspection?.id) return;
+            this.recheckParentInspection = this.lastInspection.id;
+            this.activeInspection = null;
+            this.message('Mode re-check aktif. Submit berikutnya akan menjadi ronde lanjutan.', false);
+            this.updateSummary();
+            this.updateSubmitState();
         });
     },
 
@@ -345,6 +379,7 @@ const Inspection = {
         if (this.selectedBatch?.id) formData.append('batch_id', this.selectedBatch.id);
         if (this.selectedBatch?.batch_code) formData.append('batch_code', this.selectedBatch.batch_code);
         if (this.forceNewBatch) formData.append('force_new_batch', '1');
+        if (this.recheckParentInspection) formData.append('parent_inspection', this.recheckParentInspection);
         formData.append('staff_id', user.id || user.user_id || user.sub || '');
         formData.append('staff_name', user.full_name || user.name || user.username || '');
         if (cookingPhoto) formData.append('cooking_photo', cookingPhoto);
@@ -380,6 +415,9 @@ const Inspection = {
             this.selectedStatus = null;
             this.manualMode = false;
             this.forceNewBatch = false;
+            this.activeInspection = null;
+            this.lastInspection = null;
+            this.recheckParentInspection = null;
             // Reset stage option buttons
             document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
             document.querySelectorAll('.qc-status-option').forEach(item => item.classList.remove('active'));
@@ -387,6 +425,7 @@ const Inspection = {
             if (manualWrap) manualWrap.hidden = true;
             this.updateSelectedProductCard();
             this.renderActiveBatches([]);
+            this.renderQcConcurrency(null, null);
             this.clearProductList();
             const helpEl = document.getElementById('productSearchHelp');
             if (helpEl) {
@@ -418,7 +457,8 @@ const Inspection = {
         const hasStage = Boolean(this.selectedStage);
         const hasStatus = Boolean(this.selectedStatus);
         const hasStageData = this.selectedStage !== 'cooking_check' || Boolean(temperature);
-        button.disabled = !(hasProduct && hasStage && hasStatus && hasStageData);
+        const isLocked = Boolean(this.activeInspection);
+        button.disabled = isLocked || !(hasProduct && hasStage && hasStatus && hasStageData);
         this.updateStepState();
         this.updateSummary();
     },
@@ -455,7 +495,10 @@ const Inspection = {
         this.setText('summaryProduct', `${productName} (${sku})`);
         this.setText('summaryBatch', this.selectedBatch?.batch_code || (this.forceNewBatch ? 'Batch baru' : 'Batch baru otomatis'));
         this.setText('summaryStage', this.selectedStage ? this.stageLabel(this.selectedStage) : '-');
-        this.setText('summaryStatus', this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
+        const statusText = this.recheckParentInspection && this.selectedStatus
+            ? `${this.selectedStatus.toUpperCase()} (Re-check)`
+            : (this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
+        this.setText('summaryStatus', statusText);
         this.setText('summaryEvidence', photos ? `${photos} foto terlampir` : 'Belum ada foto');
     },
 
@@ -480,6 +523,7 @@ const Inspection = {
         if (!sku) {
             if (productEl) productEl.textContent = 'Isi SKU untuk mencari batch.';
             this.renderActiveBatches([]);
+            this.renderQcConcurrency(null, null);
             this.renderContextBatches([]);
             return;
         }
@@ -541,6 +585,9 @@ const Inspection = {
         this.manualMode = false;
         this.selectedBatch = null;
         this.forceNewBatch = false;
+        this.activeInspection = null;
+        this.lastInspection = null;
+        this.recheckParentInspection = null;
         const manualWrap = document.getElementById('manualSkuWrap');
         const search = document.getElementById('productSearch');
         const manualInput = document.getElementById('qcSku');
@@ -594,6 +641,7 @@ const Inspection = {
             document.querySelectorAll('.qc-status-option').forEach(item => item.classList.remove('active'));
             this.updateSelectedProductCard();
             this.renderActiveBatches([]);
+            this.renderQcConcurrency(null, null);
             this.clearProductList();
             const helpEl = document.getElementById('productSearchHelp');
             if (helpEl) {
@@ -638,13 +686,95 @@ const Inspection = {
             button.addEventListener('click', () => {
                 this.selectedBatch = batch;
                 this.forceNewBatch = false;
+                this.recheckParentInspection = null;
                 document.querySelectorAll('.batch-choice').forEach(item => item.classList.toggle('active', item === button));
                 const newBtn = document.getElementById('createNewBatchBtn');
                 if (newBtn) newBtn.textContent = 'Buat Batch Baru';
+                this.loadQcConcurrency(batch);
                 this.updateSummary();
+                this.updateSubmitState();
             });
             list.appendChild(button);
         });
+    },
+
+    async loadQcConcurrency(batch) {
+        const key = batch?.id || batch?.batch_code;
+        if (!key) {
+            this.renderQcConcurrency(null, null);
+            return;
+        }
+        try {
+            const [activeResponse, historyResponse] = await Promise.all([
+                API.get(`/qc/active?batch=${encodeURIComponent(key)}`),
+                API.get(`/qc/history/${encodeURIComponent(key)}`)
+            ]);
+            const active = activeResponse?.data?.active || historyResponse?.data?.active || null;
+            const latest = historyResponse?.data?.latest || null;
+            this.activeInspection = active;
+            this.lastInspection = latest;
+            this.renderQcConcurrency(active, latest);
+        } catch (error) {
+            this.activeInspection = null;
+            this.lastInspection = null;
+            this.renderQcConcurrency(null, null);
+        } finally {
+            this.updateSubmitState();
+        }
+    },
+
+    renderQcConcurrency(active, latest) {
+        const panel = document.getElementById('qcConcurrencyPanel');
+        const badge = document.getElementById('qcConcurrencyBadge');
+        const title = document.getElementById('qcConcurrencyTitle');
+        const meta = document.getElementById('qcConcurrencyMeta');
+        const photo = document.getElementById('qcConcurrencyPhoto');
+        const detailBtn = document.getElementById('qcDetailBtn');
+        const recheckBtn = document.getElementById('qcRecheckBtn');
+        if (!panel || !badge || !title || !meta) return;
+        const item = active || latest;
+        panel.hidden = !item;
+        if (!item) {
+            meta.innerHTML = '';
+            if (photo) {
+                photo.hidden = true;
+                photo.innerHTML = '';
+            }
+            if (detailBtn) detailBtn.disabled = true;
+            if (recheckBtn) recheckBtn.disabled = true;
+            return;
+        }
+        const isHold = String(item.status || '').toLowerCase() === 'hold';
+        const isRecheck = Number(item.inspection_round || 1) > 1 || Boolean(item.parent_inspection);
+        badge.textContent = active ? '🟢 Sedang diperiksa' : (isHold ? '🔴 HOLD' : (isRecheck ? '🟠 Re-check' : '🔵 Selesai'));
+        title.textContent = active
+            ? `Sedang diperiksa oleh ${item.staff || '-'}`
+            : 'QC terakhir';
+        const rows = active ? [
+            ['Staff', item.staff],
+            ['Mulai', this.formatDateTime(item.start_time || item.created_at)],
+            ['Jenis QC', this.stageLabel(item.qc_stage || item.qc_type)],
+            ['Batch', item.batch_code || item.batch],
+        ] : [
+            ['Suhu', item.temperature || '-'],
+            ['Status', String(item.status || '-').toUpperCase()],
+            ['Staff', item.staff],
+            ['Waktu', this.formatDateTime(item.completed_at || item.created_at)],
+        ];
+        meta.innerHTML = rows.map(([label, value]) => `
+            <div>
+                <span>${this.escapeHtml(label)}</span>
+                <strong>${this.escapeHtml(value || '-')}</strong>
+            </div>
+        `).join('');
+        if (photo) {
+            photo.hidden = !(!active && item.photo_url);
+            photo.innerHTML = (!active && item.photo_url)
+                ? `<img src="${this.escapeHtml(item.photo_url)}" alt="Foto QC terakhir">`
+                : '';
+        }
+        if (detailBtn) detailBtn.disabled = false;
+        if (recheckBtn) recheckBtn.disabled = Boolean(active || !latest?.id);
     },
 
     /* ═══════════════════════════════════════════════
@@ -734,6 +864,19 @@ const Inspection = {
         if (value === 'cooking_check') return 'Cek Masakan';
         if (value === 'final_check') return 'Cek Label Akhir';
         return this.escapeHtml(value || '-');
+    },
+
+    formatDateTime(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     },
 
     escapeHtml(value) {

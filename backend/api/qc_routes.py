@@ -22,6 +22,69 @@ logger = logging.getLogger("qc.routes.qc")
 qc_bp = Blueprint("qc_bp", __name__)
 
 
+def _qc_report_view(row):
+    if not row:
+        return None
+    staff = row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "-"
+    batch = row.get("batch_code") or row.get("batch_id") or "-"
+    status = row.get("status") or row.get("final_qc_status") or "-"
+    qc_type = row.get("qc_stage") or row.get("ccp_stage") or "-"
+    started_at = row.get("started_at") or row.get("created_at")
+    completed_at = row.get("completed_at") or row.get("updated_at") or row.get("created_at")
+    return {
+        "id": row.get("id"),
+        "batch_id": row.get("batch_id"),
+        "batch_code": row.get("batch_code"),
+        "batch": batch,
+        "product_name": row.get("product_name"),
+        "staff": staff,
+        "staff_id": row.get("staff_id"),
+        "start_time": started_at,
+        "started_at": started_at,
+        "qc_type": qc_type,
+        "qc_stage": qc_type,
+        "temperature": row.get("temperature"),
+        "status": status,
+        "photo_url": row.get("photo_url")
+        or row.get("product_photo_url")
+        or row.get("cooking_photo_url")
+        or row.get("barcode_photo_url")
+        or row.get("temperature_photo_url"),
+        "created_at": row.get("created_at"),
+        "completed_at": completed_at,
+        "notes": row.get("notes"),
+        "inspection_round": row.get("inspection_round") or 1,
+        "parent_inspection": row.get("parent_inspection"),
+        "is_active": bool(row.get("is_active")),
+    }
+
+
+def _fetch_qc_reports(filters, limit=20):
+    sb = get_client()
+    if not sb:
+        return []
+    query = sb.table("qc_reports").select("*")
+    for field, value in filters:
+        query = query.eq(field, value)
+    return query.order("created_at", desc=True).limit(limit).execute().data or []
+
+
+def _reports_for_batch(batch):
+    rows = _fetch_qc_reports([("batch_id", batch)], limit=50)
+    if not rows:
+        rows = _fetch_qc_reports([("batch_code", batch)], limit=50)
+    return rows
+
+
+def _active_for_batch(batch):
+    if batch:
+        rows = _fetch_qc_reports([("batch_id", batch), ("is_active", True)], limit=1)
+        if not rows:
+            rows = _fetch_qc_reports([("batch_code", batch), ("is_active", True)], limit=1)
+        return rows[0] if rows else None
+    return (_fetch_qc_reports([("is_active", True)], limit=20) or [None])[0]
+
+
 # ---------------------------------------------------------------------------
 # GET /api/qc/dashboard — Main QC decision dashboard
 # ---------------------------------------------------------------------------
@@ -136,6 +199,42 @@ def dashboard():
         logger.error("Dashboard data error: %s", e)
 
     return jsonify(response)
+
+
+@qc_bp.route("/api/qc/active", methods=["GET"])
+@require_auth
+def active_qc():
+    """Return active QC lock for a batch or the latest active QC."""
+    try:
+        batch = (request.args.get("batch") or request.args.get("batch_id") or request.args.get("batch_code") or "").strip()
+        active = _active_for_batch(batch)
+        return jsonify({"success": True, "data": {"active": _qc_report_view(active)}})
+    except Exception as exc:
+        logger.warning("Active QC lookup failed: %s", exc)
+        return jsonify({"success": False, "message": "Gagal memuat QC aktif"}), 500
+
+
+@qc_bp.route("/api/qc/history/<batch>", methods=["GET"])
+@require_auth
+def qc_history(batch):
+    """Return QC inspection history for a batch id or batch code."""
+    try:
+        rows = _reports_for_batch(batch)
+        history = [_qc_report_view(row) for row in rows]
+        active = next((item for item in history if item.get("is_active")), None)
+        completed = [item for item in history if not item.get("is_active")]
+        return jsonify({
+            "success": True,
+            "data": {
+                "batch": batch,
+                "active": active,
+                "latest": completed[0] if completed else (history[0] if history else None),
+                "history": history,
+            },
+        })
+    except Exception as exc:
+        logger.warning("QC history lookup failed for %s: %s", batch, exc)
+        return jsonify({"success": False, "message": "Gagal memuat riwayat QC"}), 500
 
 
 @qc_bp.route("/api/alerts", methods=["GET"])
