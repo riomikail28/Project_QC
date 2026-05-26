@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from backend.database.supabase_client import direct_db_query, get_last_db_error
 from backend.services.alert_service import generate_temperature_alert, save_alert_to_db
 from backend.services.audit_service import write_audit
+from backend.services.google_apps_script_service import send_monitoring_log
 from backend.services.qc_engine import validate_temperature
 from backend.services.storage_service import delete_photo, upload_file_storage
 
@@ -180,6 +181,18 @@ class MonitoringService:
                         log_id=log_data["id"],
                         device_id=device_id,
                     )
+
+            send_monitoring_log({
+                "date": monitoring_date or recorded_at[:10],
+                "slot_time": slot_time,
+                "room": room_name,
+                "device": (device_info or {}).get("name") or device_id,
+                "temperature": float(temperature),
+                "status": qc_status or status.upper(),
+                "staff_name": staff_id,
+                "submitted_at": submitted_at or recorded_at,
+                "notes": reason,
+            })
 
             return {
                 "success": True,

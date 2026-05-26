@@ -131,8 +131,30 @@ Gunakan `.env.example` sebagai template. Variable utama:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_STORAGE_BUCKET`
 - `MAX_UPLOAD_BYTES`
+- `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` optional, untuk export monitoring suhu dan QC inspection ke Google Sheets melalui Google Apps Script Web App. Biarkan kosong jika tidak digunakan.
 
 Jangan commit file `.env`, service role key, refresh token, atau credential production.
+
+## Optional Google Sheets Export
+
+Backend dapat mengirim data monitoring suhu dan QC inspection ke Google Apps Script Web App setelah submit utama berhasil. Integrasi ini opsional: jika `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` kosong, aplikasi tetap berjalan normal.
+
+Cara setup:
+
+1. Buat Google Sheet baru untuk menerima laporan.
+2. Buka `Extensions > Apps Script`.
+3. Buat script Web App dengan fungsi `doPost(e)` yang membaca `JSON.parse(e.postData.contents)`, lalu append data ke sheet sesuai `type` (`monitoring_log` atau `qc_report`).
+4. Deploy melalui `Deploy > New deployment > Web app`.
+5. Set akses sesuai kebutuhan, misalnya `Anyone with the link` untuk webhook sederhana.
+6. Copy URL Web App dan isi env:
+
+```env
+GOOGLE_APPS_SCRIPT_WEBHOOK_URL=https://script.google.com/macros/s/your-deployment-id/exec
+```
+
+Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, dan `notes`. Payload QC berisi `batch_id`, `product_name`, `status`, `temperature`, `photo_url`, `staff_name`, `created_at`, dan `notes`.
+
+Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 
 ## Demo Data
 

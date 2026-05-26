@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from backend.database.supabase_client import direct_db_query, get_client
 from backend.services.audit_service import write_audit
+from backend.services.google_apps_script_service import send_qc_report
 from backend.services.storage_service import delete_photo, upload_file_storage
 
 logger = logging.getLogger("qc.services.inspection")
@@ -315,6 +316,17 @@ class InspectionService:
                     )
             except Exception:
                 pass
+            created_at = (report or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
+            send_qc_report({
+                "batch_id": batch_id or batch_code,
+                "product_name": product_name,
+                "status": qc_status,
+                "temperature": temperature,
+                "photo_url": report_payload.get("photo_url"),
+                "staff_name": payload.get("staff_name") or payload.get("inspector_name") or staff_id,
+                "created_at": created_at,
+                "notes": payload.get("notes"),
+            })
             return self._ok({
                 "report_id": report_id,
                 "batch_id": batch_id,

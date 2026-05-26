@@ -23,10 +23,14 @@ def test_new_day_creates_four_monitoring_slots():
 
 def test_submit_slot_0700_succeeds_and_progress_becomes_one_of_four(client, staff_headers):
     db = ScheduleDb()
+    frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
     with patch("backend.api.facility_routes.get_client", return_value=db), patch(
         "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"):
+    ), patch("backend.api.facility_routes.write_audit"), patch(
+        "backend.api.facility_routes.MonitoringScheduleService",
+        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    ):
         response = client.post(
             "/api/facility/monitoring/submit",
             headers=staff_headers,
@@ -41,11 +45,65 @@ def test_submit_slot_0700_succeeds_and_progress_becomes_one_of_four(client, staf
     assert response.status_code == 200
     body = response.get_json()
     assert body["success"] is True
-    assert db.inserted["facility_logs"]["monitoring_date"]
+    assert db.inserted["facility_logs"]["monitoring_date"] == "2026-05-27"
     assert str(db.inserted["facility_logs"]["slot_time"]).startswith("07:00")
-    assert db.inserted["facility_logs"]["schedule_status"] in {"completed", "late"}
+    assert db.inserted["facility_logs"]["schedule_status"] == "late"
     assert body["schedule"]["completed_count"] == 1
     assert body["schedule"]["total_slots"] == 4
+
+
+def test_submit_slot_0700_before_0700_returns_409(client, staff_headers):
+    db = ScheduleDb()
+    frozen_now = datetime(2026, 5, 27, 6, 45, tzinfo=JAKARTA)
+
+    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
+        "backend.api.facility_routes.MonitoringScheduleService",
+        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    ):
+        response = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={
+                "room_id": ROOM_ID,
+                "device_id": DEVICE_ID,
+                "temperature": "4.2",
+                "slot_time": "07:00",
+            },
+        )
+
+    body = response.get_json()
+    assert response.status_code == 409
+    assert body["success"] is False
+    assert body["message"] == "Slot 07:00 belum waktunya."
+    assert "facility_logs" not in db.inserted
+
+
+def test_submit_slot_0700_after_0700_succeeds(client, staff_headers):
+    db = ScheduleDb()
+    frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
+
+    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
+        "backend.services.monitoring_service.upload_file_storage"
+    ), patch("backend.api.facility_routes.write_audit"), patch(
+        "backend.api.facility_routes.MonitoringScheduleService",
+        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    ):
+        response = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={
+                "room_id": ROOM_ID,
+                "device_id": DEVICE_ID,
+                "temperature": "4.2",
+                "slot_time": "07:00",
+            },
+        )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert db.inserted["facility_logs"]["monitoring_date"] == "2026-05-27"
+    assert db.inserted["facility_logs"]["slot_time"] == "07:00"
 
 
 def test_four_completed_slots_show_finished_message():
