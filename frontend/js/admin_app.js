@@ -282,6 +282,62 @@ const adminApp = {
         return `Test export gagal: status ${status} - ${responseText}`;
     },
 
+    async exportGoogleSheetsDateRange() {
+        await this.exportGoogleSheetsData('monitoring', true);
+        await this.exportGoogleSheetsData('qc', true);
+    },
+
+    async exportGoogleSheetsData(type, useDateRange = false) {
+        const result = document.getElementById('googleSheetsExportResult');
+        const buttons = [
+            document.getElementById('googleSheetsExportMonitoringBtn'),
+            document.getElementById('googleSheetsExportQcBtn'),
+            document.getElementById('googleSheetsExportRangeBtn'),
+        ].filter(Boolean);
+        const payload = {};
+        if (useDateRange) {
+            const start = document.getElementById('googleSheetsStartDate')?.value;
+            const end = document.getElementById('googleSheetsEndDate')?.value;
+            if (start) payload.start_date = start;
+            if (end) payload.end_date = end;
+        }
+        const label = type === 'monitoring' ? 'monitoring' : 'QC report';
+        try {
+            buttons.forEach(button => { button.disabled = true; });
+            if (result) {
+                result.className = 'google-sheets-test-result';
+                result.textContent = `Mengirim data ${label} lama ke Google Sheets...`;
+            }
+            const response = await API.post(`/admin/google-sheets/export/${type}`, payload);
+            this.renderGoogleSheetsExportSummary(response, label);
+            await this.refreshGoogleSheetsStatus();
+        } catch (error) {
+            if (result) {
+                result.className = 'google-sheets-test-result error';
+                result.textContent = `Export ${label} gagal: ${error.message || 'server tidak merespons'}`;
+            }
+        } finally {
+            buttons.forEach(button => { button.disabled = false; });
+            this.refreshIcons();
+        }
+    },
+
+    renderGoogleSheetsExportSummary(summary, label) {
+        const result = document.getElementById('googleSheetsExportResult');
+        if (!result) return;
+        const exported = summary?.exported || 0;
+        const failed = summary?.failed || 0;
+        const skipped = summary?.skipped || 0;
+        const errorSample = (summary?.errors || []).map(item => `${item.source_type || '-'}:${item.source_id || '-'} ${item.message || ''}`).join(' | ');
+        if (failed) {
+            result.className = 'google-sheets-test-result error';
+            result.textContent = `Export ${label} partial: ${exported} berhasil, ${failed} gagal, ${skipped} dilewati. ${errorSample}`;
+            return;
+        }
+        result.className = 'google-sheets-test-result success';
+        result.textContent = `${exported} data ${label} berhasil dikirim ke Google Sheets.${skipped ? ` ${skipped} dilewati.` : ''}`;
+    },
+
     // --- Data Loaders ---
 
     reportQuery() {

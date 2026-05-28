@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.database.supabase_client import get_client
 from backend.qc.product_catalog import CENTRAL_KITCHEN_PRODUCTS
+from backend.services.google_apps_script_service import send_monitoring_log, send_qc_report
 
 logger = logging.getLogger("qc.services.admin")
 
@@ -334,6 +335,110 @@ class AdminService:
                 "staff_display_name": item.get("staff_display_name"),
             })
         return self._empty(data)
+
+    def export_google_sheets_monitoring(self, start_date=None, end_date=None, limit=5000):
+        rows = self.get_temperature_report(limit=limit).get("data", [])
+        rows = self._filter_rows_by_date(rows, start_date, end_date, "created_at")
+        summary = self._export_summary("monitoring")
+        for row in rows:
+            payload = self._google_sheets_monitoring_payload(row)
+            if not payload.get("source_id"):
+                summary["skipped"] += 1
+                continue
+            if send_monitoring_log(payload):
+                summary["exported"] += 1
+            else:
+                self._record_export_failure(summary, payload)
+        return self._finalize_export_summary(summary)
+
+    def export_google_sheets_qc(self, start_date=None, end_date=None, limit=5000):
+        reports = self.get_inspection_report(limit=limit).get("data", [])
+        findings = self.get_findings_report(limit=limit).get("data", [])
+        rows = self._filter_rows_by_date(reports + findings, start_date, end_date, "created_at")
+        summary = self._export_summary("qc")
+        for row in rows:
+            payload = self._google_sheets_qc_payload(row)
+            if not payload.get("source_id"):
+                summary["skipped"] += 1
+                continue
+            if send_qc_report(payload):
+                summary["exported"] += 1
+            else:
+                self._record_export_failure(summary, payload)
+        return self._finalize_export_summary(summary)
+
+    def _export_summary(self, export_type):
+        return {
+            "success": True,
+            "status": "success",
+            "export_type": export_type,
+            "exported": 0,
+            "failed": 0,
+            "skipped": 0,
+            "errors": [],
+        }
+
+    def _record_export_failure(self, summary, payload):
+        summary["failed"] += 1
+        if len(summary["errors"]) < 5:
+            summary["errors"].append({
+                "source_type": payload.get("source_type"),
+                "source_id": payload.get("source_id"),
+                "message": "Google Apps Script webhook failed",
+            })
+
+    def _finalize_export_summary(self, summary):
+        if summary["failed"] and summary["exported"]:
+            summary["success"] = False
+            summary["status"] = "partial"
+        elif summary["failed"]:
+            summary["success"] = False
+            summary["status"] = "failed"
+        return summary
+
+    def _filter_rows_by_date(self, rows, start_date=None, end_date=None, date_field="created_at"):
+        if not start_date and not end_date:
+            return rows
+        filtered = []
+        for row in rows:
+            row_date = str(row.get(date_field) or row.get("submitted_at") or "")[:10]
+            if start_date and row_date < start_date:
+                continue
+            if end_date and row_date > end_date:
+                continue
+            filtered.append(row)
+        return filtered
+
+    def _google_sheets_monitoring_payload(self, row):
+        submitted_at = row.get("created_at") or row.get("submitted_at")
+        return {
+            "date": row.get("date") or row.get("monitoring_date") or str(submitted_at or "")[:10],
+            "slot_time": row.get("slot_time") or "",
+            "room": row.get("room") or row.get("room_name") or "",
+            "device": row.get("device") or row.get("device_name") or row.get("device_id") or "",
+            "temperature": row.get("temperature"),
+            "status": row.get("status"),
+            "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or "",
+            "submitted_at": submitted_at,
+            "notes": row.get("notes") or "",
+            "source_type": "monitoring_log",
+            "source_id": row.get("id"),
+        }
+
+    def _google_sheets_qc_payload(self, row):
+        return {
+            "batch_id": row.get("batch_id") or row.get("id"),
+            "batch_code": row.get("batch_code") or row.get("barcode") or row.get("batch_id") or "",
+            "product_name": row.get("product_name") or "",
+            "status": row.get("status") or row.get("approval_status") or "",
+            "temperature": row.get("temperature"),
+            "photo_url": row.get("photo_url") or row.get("product_photo_url") or row.get("temperature_photo_url"),
+            "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
+            "created_at": row.get("created_at"),
+            "notes": row.get("notes") or row.get("reason") or "",
+            "source_type": row.get("report_type") or "qc_report",
+            "source_id": row.get("id"),
+        }
 
     def get_inspection_report(self, limit=100, status_filter=None, date=None, staff_id=None):
         filters = self._date_filters("created_at", date)

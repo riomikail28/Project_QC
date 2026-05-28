@@ -280,6 +280,26 @@
 
                         <div class="google-sheets-test-result" id="googleSheetsTestResult" role="status" aria-live="polite"></div>
 
+                        <div class="admin-filter-bar google-sheets-export-controls" aria-label="Re-export Google Sheets">
+                            <label>Start Date
+                                <input type="date" id="googleSheetsStartDate">
+                            </label>
+                            <label>End Date
+                                <input type="date" id="googleSheetsEndDate">
+                            </label>
+                            <button class="btn-secondary" id="googleSheetsExportMonitoringBtn" type="button" onclick="adminApp.exportGoogleSheetsData('monitoring', false)">
+                                <i data-lucide="thermometer"></i> Export All Monitoring
+                            </button>
+                            <button class="btn-secondary" id="googleSheetsExportQcBtn" type="button" onclick="adminApp.exportGoogleSheetsData('qc', false)">
+                                <i data-lucide="clipboard-check"></i> Export All QC Reports
+                            </button>
+                            <button class="btn-primary" id="googleSheetsExportRangeBtn" type="button" onclick="adminApp.exportGoogleSheetsDateRange()">
+                                <i data-lucide="calendar-range"></i> Export by Date Range
+                            </button>
+                        </div>
+
+                        <div class="google-sheets-test-result" id="googleSheetsExportResult" role="status" aria-live="polite"></div>
+
                         <div class="google-sheets-info-grid" aria-label="Google Sheets export info">
                             <article><i data-lucide="thermometer"></i><strong>Monitoring Logs</strong></article>
                             <article><i data-lucide="clipboard-check"></i><strong>QC Reports</strong></article>

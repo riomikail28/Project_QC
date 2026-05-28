@@ -183,6 +183,30 @@ def google_sheets_test_route():
     }), 200 if ok else (400 if config_error else 502)
 
 
+def _google_sheets_export_payload():
+    data = request.get_json(silent=True) or {}
+    return {
+        "start_date": data.get("start_date") or None,
+        "end_date": data.get("end_date") or None,
+    }
+
+
+@admin_bp.route("/google-sheets/export/monitoring", methods=["POST"])
+@require_role("admin")
+def google_sheets_export_monitoring_route():
+    args = _google_sheets_export_payload()
+    summary = get_admin_service().export_google_sheets_monitoring(**args)
+    return jsonify(summary), 200
+
+
+@admin_bp.route("/google-sheets/export/qc", methods=["POST"])
+@require_role("admin")
+def google_sheets_export_qc_route():
+    args = _google_sheets_export_payload()
+    summary = get_admin_service().export_google_sheets_qc(**args)
+    return jsonify(summary), 200
+
+
 @admin_legacy_bp.route("/google-sheets/status", methods=["GET"])
 @require_role("admin")
 def legacy_google_sheets_status_route():
@@ -193,6 +217,18 @@ def legacy_google_sheets_status_route():
 @require_role("admin")
 def legacy_google_sheets_test_route():
     return google_sheets_test_route()
+
+
+@admin_legacy_bp.route("/google-sheets/export/monitoring", methods=["POST"])
+@require_role("admin")
+def legacy_google_sheets_export_monitoring_route():
+    return google_sheets_export_monitoring_route()
+
+
+@admin_legacy_bp.route("/google-sheets/export/qc", methods=["POST"])
+@require_role("admin")
+def legacy_google_sheets_export_qc_route():
+    return google_sheets_export_qc_route()
 
 
 def _report_args(default_limit=100):

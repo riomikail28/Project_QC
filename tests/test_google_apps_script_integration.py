@@ -5,6 +5,7 @@ import httpx
 from backend.services.google_apps_script_service import google_sheets_status, send_monitoring_log, send_qc_report
 from tests.test_inspection_submit import InsertDb
 from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
+from tests.conftest import FakeSupabase
 
 
 def test_google_apps_script_skips_when_env_empty(monkeypatch):
@@ -282,3 +283,106 @@ def test_google_apps_script_webhook_payloads_are_flat_with_type(monkeypatch):
     assert qc_payload["type"] == "qc_report"
     assert qc_payload["batch_code"] == "SAL-20260527-001"
     assert "payload" not in qc_payload
+
+
+def test_admin_export_monitoring_without_date_exports_all(client, admin_headers):
+    db = FakeSupabase({
+        "facility_logs": [
+            {"id": "log-1", "zone": "Chiller", "device_id": "dev-1", "temperature_c": 3.2, "is_normal": True, "staff_name": "Siti", "recorded_at": "2026-05-01T07:05:00Z"},
+            {"id": "log-2", "zone": "Freezer", "device_id": "dev-2", "temperature_c": -18, "is_normal": True, "staff_name": "Budi", "recorded_at": "2026-05-02T07:05:00Z"},
+        ]
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db), patch(
+        "backend.services.admin_service.send_monitoring_log", return_value=True
+    ) as send:
+        response = client.post("/api/admin/google-sheets/export/monitoring", headers=admin_headers, json={})
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["exported"] == 2
+    assert body["failed"] == 0
+    assert send.call_count == 2
+    payload = send.call_args_list[0].args[0]
+    assert payload["source_type"] == "monitoring_log"
+    assert payload["source_id"] == "log-1"
+
+
+def test_admin_export_monitoring_with_date_range_filters_rows(client, admin_headers):
+    db = FakeSupabase({
+        "facility_logs": [
+            {"id": "log-old", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-04-30T07:05:00Z"},
+            {"id": "log-in", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-10T07:05:00Z"},
+        ]
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db), patch(
+        "backend.services.admin_service.send_monitoring_log", return_value=True
+    ) as send:
+        response = client.post(
+            "/api/admin/google-sheets/export/monitoring",
+            headers=admin_headers,
+            json={"start_date": "2026-05-01", "end_date": "2026-05-28"},
+        )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["exported"] == 1
+    send.assert_called_once()
+    assert send.call_args.args[0]["source_id"] == "log-in"
+
+
+def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
+    db = FakeSupabase({
+        "qc_reports": [{
+            "id": "qc-1",
+            "batch_id": "batch-1",
+            "batch_code": "SAL-20260501-001",
+            "product_name": "Salad",
+            "status": "pass",
+            "temperature": 75,
+            "staff_name": "Rio",
+            "created_at": "2026-05-01T08:00:00Z",
+        }],
+        "qc_findings": [],
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db), patch(
+        "backend.services.admin_service.send_qc_report", return_value=True
+    ) as send:
+        response = client.post("/api/admin/google-sheets/export/qc", headers=admin_headers, json={})
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["exported"] == 1
+    send.assert_called_once()
+    payload = send.call_args.args[0]
+    assert payload["source_type"] == "qc_report"
+    assert payload["source_id"] == "qc-1"
+    assert payload["batch_code"] == "SAL-20260501-001"
+
+
+def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):
+    db = FakeSupabase({
+        "facility_logs": [
+            {"id": "log-1", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-05-01T07:05:00Z"},
+            {"id": "log-2", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-01T08:05:00Z"},
+        ]
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db), patch(
+        "backend.services.admin_service.send_monitoring_log", side_effect=[True, False]
+    ):
+        response = client.post("/api/admin/google-sheets/export/monitoring", headers=admin_headers, json={})
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is False
+    assert body["status"] == "partial"
+    assert body["exported"] == 1
+    assert body["failed"] == 1
+    assert body["errors"][0]["source_id"] == "log-2"
+
+
+def test_staff_cannot_access_google_sheets_reexport(client, staff_headers):
+    response = client.post("/api/admin/google-sheets/export/monitoring", headers=staff_headers, json={})
+
+    assert response.status_code == 403

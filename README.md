@@ -152,7 +152,19 @@ Cara setup:
 GOOGLE_APPS_SCRIPT_WEBHOOK_URL=https://script.google.com/macros/s/your-deployment-id/exec
 ```
 
-Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, dan `notes`. Payload QC berisi `batch_id`, `product_name`, `status`, `temperature`, `photo_url`, `staff_name`, `created_at`, dan `notes`.
+Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `batch_id`, `batch_code`, `product_name`, `status`, `temperature`, `photo_url`, `staff_name`, `created_at`, `notes`, `source_type`, dan `source_id`.
+
+Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
+
+- `Export All Monitoring` mengirim ulang data `facility_logs` / `temperature_logs`.
+- `Export All QC Reports` mengirim ulang data `qc_reports` / `qc_findings`.
+- `Export by Date Range` menggunakan filter `Start Date` dan `End Date`.
+
+Untuk Apps Script, tambahkan kolom audit export agar duplikat mudah dicek:
+
+- `Source Type`
+- `Source ID`
+- `Submitted At`
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 

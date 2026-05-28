@@ -23,8 +23,15 @@ def test_admin_google_sheets_section_and_button_url():
     assert SHEET_URL in html
     assert 'target="_blank"' in html
     assert "Test Export" in html
+    assert "Export All Monitoring" in html
+    assert "Export All QC Reports" in html
+    assert "Export by Date Range" in html
+    assert 'id="googleSheetsStartDate"' in html
+    assert 'id="googleSheetsEndDate"' in html
     assert "/admin/google-sheets/test" in js
     assert "/admin/google-sheets/status" in js
+    assert "/admin/google-sheets/export/${type}" in js
+    assert "exportGoogleSheetsData" in js
     assert "googleSheetsErrorDetail" in js
     assert "Webhook URL belum valid. Gunakan Web App URL yang berakhiran /exec." in js
     assert "Test export gagal: status ${status} - ${responseText}" in js
