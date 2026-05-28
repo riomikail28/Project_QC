@@ -222,11 +222,12 @@ const adminApp = {
         const result = document.getElementById('googleSheetsTestResult');
         if (result && statusData.last_export_status) {
             result.className = `google-sheets-test-result ${statusData.last_export_status === 'success' ? 'success' : 'error'}`;
-            result.textContent = [
-                `Last status: ${statusData.last_export_status}`,
-                statusData.last_payload_type ? `type=${statusData.last_payload_type}` : null,
-                statusData.last_export_error ? `error=${statusData.last_export_error}` : null,
-            ].filter(Boolean).join(' | ');
+            result.textContent = statusData.last_export_status === 'success'
+                ? [
+                    'Last status: success',
+                    statusData.last_payload_type ? `type=${statusData.last_payload_type}` : null,
+                ].filter(Boolean).join(' | ')
+                : this.googleSheetsErrorDetail(statusData);
         }
     },
 
@@ -252,10 +253,11 @@ const adminApp = {
             }
         } catch (error) {
             const statusResponse = await API.get('/admin/google-sheets/status').catch(() => null);
-            this.renderGoogleSheetsStatus(statusResponse?.data || { last_export_status: 'error', last_export_error: error.message });
+            const detail = error.data?.data || statusResponse?.data || { last_export_status: 'error', last_export_error: error.message };
+            this.renderGoogleSheetsStatus(detail);
             if (result) {
                 result.className = 'google-sheets-test-result error';
-                result.textContent = `Test export gagal: ${error.message || 'server tidak merespons'}`;
+                result.textContent = this.googleSheetsErrorDetail(detail, error.message);
             }
         } finally {
             if (button) {
@@ -264,6 +266,20 @@ const adminApp = {
                 this.refreshIcons();
             }
         }
+    },
+
+    googleSheetsErrorDetail(statusData = {}, fallback = '') {
+        if (!statusData.webhook_configured || statusData.webhook_url_ends_with_exec === false || statusData.webhook_valid === false) {
+            return 'Webhook URL belum valid. Gunakan Web App URL yang berakhiran /exec.';
+        }
+        const status = statusData.last_http_status || statusData.http_status || 'timeout';
+        const responseText = statusData.last_response_text
+            || statusData.response_text
+            || statusData.last_export_error
+            || statusData.last_exception_message
+            || fallback
+            || 'server tidak merespons';
+        return `Test export gagal: status ${status} - ${responseText}`;
     },
 
     // --- Data Loaders ---
@@ -1445,21 +1461,13 @@ const adminApp = {
 
         res.forEach(log => {
             const tr = document.createElement('tr');
-            const actorName = log.staff_display_name
-                || log.actor_display_name
-                || log.staff_accounts?.full_name
-                || log.staff_accounts?.username
-                || log.staff_name
-                || log.username
-                || log.actor_name
-                || 'System';
-            const actorId = log.actor_id || log.staff_id || log.created_by || '';
+            const actor = this.formatActorDisplay(log);
             const entityLabel = this.auditEntityLabel(log.entity_type);
             const technicalId = log.entity_id || log.related_id || log.id || '-';
             tr.innerHTML = `
                 <td data-label="Waktu">${this.dateTime(log.created_at)}</td>
-                <td data-label="User"><strong>${this.escapeHtml(actorName)}</strong>${actorId && String(actorId) !== String(actorName) ? `<div class="admin-muted">ID: ${this.escapeHtml(actorId)}</div>` : ''}</td>
-                <td data-label="Role">${this.escapeHtml(log.role || log.actor_role || log.staff_accounts?.role || '-')}</td>
+                <td data-label="User"><strong>${this.escapeHtml(actor.name)}</strong>${actor.detail ? `<div class="admin-muted">${this.escapeHtml(actor.detail)}</div>` : ''}</td>
+                <td data-label="Role">${this.escapeHtml(actor.role)}</td>
                 <td data-label="Action"><span class="audit-action-label">${this.auditActionLabel(log.action)}</span></td>
                 <td data-label="Entity">${entityLabel}<div class="admin-muted">ID: ${this.escapeHtml(technicalId)}</div></td>
                 <td data-label="Detail">${this.escapeHtml(log.detail || log.message || log.notes || log.metadata?.message || '-')}</td>
@@ -1467,6 +1475,42 @@ const adminApp = {
             `;
             tbody.appendChild(tr);
         });
+    },
+
+    formatActorDisplay(log = {}) {
+        const actorId = log.actor_id || log.staff_id || log.created_by || '';
+        const candidate = log.actor_display_name
+            || log.staff_display_name
+            || log.staff_accounts?.full_name
+            || log.staff_accounts?.name
+            || log.staff_accounts?.username
+            || log.actor_email
+            || log.staff_accounts?.email
+            || log.actor_name
+            || '';
+        const candidateText = String(candidate || '').trim();
+        const isIdLabel = actorId && candidateText && candidateText === String(actorId);
+        const name = candidateText && !isIdLabel && !this.isUuidLike(candidateText)
+            ? candidateText
+            : 'Unknown User';
+        const email = log.actor_email || log.staff_accounts?.email || '';
+        const detail = email && email !== name
+            ? email
+            : (actorId ? `ID: ${this.compactId(actorId)}` : '');
+        return {
+            name,
+            detail,
+            role: log.actor_role || log.role || log.staff_accounts?.role || 'staff',
+        };
+    },
+
+    isUuidLike(value) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+    },
+
+    compactId(value) {
+        const text = String(value || '');
+        return text.length > 12 ? `${text.slice(0, 8)}...` : text;
     },
 
     auditActionLabel(action) {

@@ -172,11 +172,15 @@ def google_sheets_status_route():
 def google_sheets_test_route():
     ok = send_test_payload()
     status = google_sheets_status()
+    config_error = not status.get("webhook_valid")
+    detail = status.get("last_export_error") or status.get("last_exception_message") or "Google Sheets test export failed"
+    message = "Google Sheets test export sent" if ok else detail
     return jsonify({
         "success": ok,
         "data": status,
-        "message": "Google Sheets test export sent" if ok else "Google Sheets test export failed",
-    }), 200 if ok else 502
+        "message": message,
+        "error": None if ok else detail,
+    }), 200 if ok else (400 if config_error else 502)
 
 
 @admin_legacy_bp.route("/google-sheets/status", methods=["GET"])

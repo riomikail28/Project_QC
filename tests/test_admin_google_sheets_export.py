@@ -25,6 +25,9 @@ def test_admin_google_sheets_section_and_button_url():
     assert "Test Export" in html
     assert "/admin/google-sheets/test" in js
     assert "/admin/google-sheets/status" in js
+    assert "googleSheetsErrorDetail" in js
+    assert "Webhook URL belum valid. Gunakan Web App URL yang berakhiran /exec." in js
+    assert "Test export gagal: status ${status} - ${responseText}" in js
     assert "iframe" not in html.lower()
     assert "loadGoogleSheetsExport" in js
 

@@ -48,4 +48,15 @@ def test_admin_reports_use_staff_display_name_as_primary_label():
     assert "row.staff_display_name" in js
     assert "row.staff_name || row.staff_id || '-'" not in js
     assert "row.staff_name || row.inspector_name || row.staff_id || '-'" not in js
-    assert "const actorName = log.staff_display_name" in js
+    assert "formatActorDisplay(log" in js
+
+
+def test_audit_trail_formats_actor_without_uuid_primary_label():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert "formatActorDisplay(log" in js
+    assert "log.actor_display_name" in js
+    assert "Unknown User" in js
+    assert "compactId(actorId)" in js
+    assert "const actorName = log.staff_display_name" not in js
+    assert '<strong>${this.escapeHtml(actor.name)}</strong>' in js

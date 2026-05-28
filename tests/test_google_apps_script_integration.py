@@ -46,9 +46,28 @@ def test_google_sheets_status_records_webhook_failure(client, admin_headers, mon
     status = client.get("/api/admin/google-sheets/status", headers=admin_headers).get_json()["data"]
     assert status["webhook_configured"] is True
     assert status["last_export_status"] == "error"
+    assert status["last_http_status"] == 500
+    assert status["last_response_text"] == "apps script exploded"
+    assert status["last_exception_message"]
     assert "status_code=500" in status["last_export_error"]
     assert "apps script exploded" in status["last_export_error"]
     assert status["last_payload_type"] == "test"
+
+
+def test_admin_google_sheets_test_rejects_invalid_webhook_url(client, admin_headers, monkeypatch):
+    monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/dev")
+
+    with patch("backend.services.google_apps_script_service.httpx.post") as post:
+        response = client.post("/api/admin/google-sheets/test", headers=admin_headers, json={})
+
+    body = response.get_json()
+    assert response.status_code == 400
+    assert body["success"] is False
+    assert "berakhiran /exec" in body["message"]
+    assert body["data"]["webhook_configured"] is True
+    assert body["data"]["webhook_url_ends_with_exec"] is False
+    assert body["data"]["webhook_valid"] is False
+    post.assert_not_called()
 
 
 def test_monitoring_submit_still_succeeds_when_google_apps_script_fails(client, staff_headers, monkeypatch):

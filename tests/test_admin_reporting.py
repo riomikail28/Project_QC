@@ -135,6 +135,62 @@ def test_admin_audit_trail_returns_human_actor_display_name(client, admin_header
     assert body[0]["actor_display_name"] == "Admin QC"
 
 
+def test_admin_audit_trail_resolves_actor_from_user_profile(client, admin_headers):
+    staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
+    db = FakeSupabase({
+        "audit_logs": [{
+            "id": "audit-1",
+            "actor_id": staff_uuid,
+            "action": "CREATE_BATCH",
+            "entity_type": "production_batch",
+            "entity_id": "batch-1",
+            "created_at": "2026-05-16T01:00:00Z",
+        }],
+        "staff_accounts": [{
+            "id": staff_uuid,
+            "username": "rio.qc",
+            "role": "admin",
+        }],
+        "users": [{
+            "id": "user-1",
+            "staff_account_id": staff_uuid,
+            "full_name": "Rio Mikail",
+            "email": "rio.qc@company.id",
+            "role": "admin",
+        }],
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db):
+        response = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body[0]["actor_id"] == staff_uuid
+    assert body[0]["actor_display_name"] == "Rio Mikail"
+    assert body[0]["actor_email"] == "rio.qc@company.id"
+    assert body[0]["actor_role"] == "admin"
+
+
+def test_admin_audit_trail_without_profile_keeps_id_but_role_falls_back(client, admin_headers):
+    staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
+    db = FakeSupabase({
+        "audit_logs": [{
+            "id": "audit-1",
+            "actor_id": staff_uuid,
+            "action": "DELETE",
+            "entity_type": "facility_log",
+            "created_at": "2026-05-16T01:00:00Z",
+        }],
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db):
+        response = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body[0]["actor_id"] == staff_uuid
+    assert body[0]["actor_display_name"] == staff_uuid
+    assert body[0]["actor_role"] == "staff"
+
+
 class ApprovalQuery:
     def __init__(self, table, db):
         self.table = table

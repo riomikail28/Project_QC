@@ -277,7 +277,7 @@ class AdminService:
                 filters.append(("eq", "action", action))
             if user:
                 filters.append(("eq", "actor_id", user))
-            rows = self._fetch("audit_logs", select="*, staff_accounts(username,full_name,role)", order_by="created_at", limit=limit, filters=filters)
+            rows = self._fetch("audit_logs", select="*", order_by="created_at", limit=limit, filters=filters)
             if not rows:
                 rows = self._audit_from_staff_submissions(limit)
                 if date:
@@ -286,7 +286,8 @@ class AdminService:
                     rows = [row for row in rows if row.get("action") == action]
                 if user:
                     rows = [row for row in rows if user in {row.get("actor_id"), row.get("staff_id")}]
-            return self._empty([self._normalize_audit_row(row) for row in rows[:limit]])
+            actor_profiles = self._actor_profiles(rows[:limit])
+            return self._empty([self._normalize_audit_row(row, actor_profiles) for row in rows[:limit]])
         except Exception as exc:
             logger.error("Audit trail failed: %s", exc)
             return {"success": False, "detail": str(exc)}
@@ -785,16 +786,49 @@ class AdminService:
             })
         return result
 
-    def _normalize_audit_row(self, row):
-        item = self._with_staff_display(row, ("actor_id", "staff_id", "created_by", "operator_id", "qc_officer_id"))
+    def _actor_profiles(self, rows):
+        actor_ids = {
+            row.get("actor_id") or row.get("staff_id") or row.get("created_by") or row.get("operator_id") or row.get("qc_officer_id")
+            for row in rows or []
+        }
+        actor_ids = {actor_id for actor_id in actor_ids if actor_id}
+        profiles = {}
+        for actor_id in actor_ids:
+            account = (self._fetch("staff_accounts", limit=1, filters=[("eq", "id", actor_id)]) or [None])[0] or {}
+            user = {}
+            users = self._fetch("users", limit=1, filters=[("eq", "staff_account_id", actor_id)])
+            if not users:
+                users = self._fetch("users", limit=1, filters=[("eq", "id", actor_id)])
+            if users:
+                user = users[0] or {}
+            profile = {
+                "full_name": user.get("full_name") or account.get("full_name"),
+                "name": user.get("name") or account.get("name"),
+                "username": account.get("username") or user.get("username"),
+                "email": user.get("email") or account.get("email"),
+                "role": user.get("role") or account.get("role"),
+            }
+            profiles[actor_id] = {key: value for key, value in profile.items() if value}
+        return profiles
+
+    def _normalize_audit_row(self, row, actor_profiles=None):
+        item = dict(row or {})
         actor_id = item.get("actor_id") or item.get("staff_id") or item.get("created_by")
+        profile = (actor_profiles or {}).get(actor_id, {})
+        if profile:
+            item["staff_accounts"] = {
+                **(item.get("staff_accounts") if isinstance(item.get("staff_accounts"), dict) else {}),
+                **profile,
+            }
+        item = self._with_staff_display(item, ("actor_id", "staff_id", "created_by", "operator_id", "qc_officer_id"))
         if actor_id:
             item["actor_id"] = actor_id
-        item["actor_display_name"] = item.get("staff_display_name") or actor_id or "System"
+        item["actor_display_name"] = item.get("staff_display_name") or actor_id or "Unknown User"
         item["staff_display_name"] = item["actor_display_name"]
-        nested_role = (item.get("staff_accounts") or {}).get("role") if isinstance(item.get("staff_accounts"), dict) else None
-        if nested_role and not item.get("role"):
-            item["role"] = nested_role
+        nested = item.get("staff_accounts") if isinstance(item.get("staff_accounts"), dict) else {}
+        item["actor_role"] = item.get("actor_role") or item.get("role") or nested.get("role") or "staff"
+        item["role"] = item.get("role") or item["actor_role"]
+        item["actor_email"] = item.get("actor_email") or item.get("email") or nested.get("email")
         return item
 
     def _traceability_from_staff_submissions(self, limit):
