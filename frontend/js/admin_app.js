@@ -319,7 +319,7 @@ const adminApp = {
                     row.device || '-',
                     row.temperature != null ? `${row.temperature} C` : '-',
                     this.statusBadge(row.status),
-                    row.staff_name || row.staff_id || '-',
+                    this.staffCell(row),
                     row.notes || '-',
                 ],
             },
@@ -334,13 +334,13 @@ const adminApp = {
                     this.checkTypeLabel(row.qc_stage || row.ccp_stage),
                     row.temperature || '-',
                     this.statusBadge(row.status),
-                    row.staff_name || row.inspector_name || row.staff_id || '-',
+                    this.staffCell(row),
                     this.renderEvidenceCell(row),
                 ],
             },
             batch: {
                 endpoint: '/reports/batches',
-                columns: ['Tanggal', 'Produk', 'Batch Code', 'Pemasakan Ke', 'Qty', 'Cook', 'Shift', 'Status'],
+                columns: ['Tanggal', 'Produk', 'Batch Code', 'Pemasakan Ke', 'Qty', 'Cook', 'Shift', 'Status', 'Staff'],
                 render: row => [
                     row.production_date || this.dateOnly(row.created_at),
                     row.product_name || '-',
@@ -350,6 +350,7 @@ const adminApp = {
                     row.cook_name || '-',
                     row.production_shift || row.shift || '-',
                     this.statusBadge(row.status),
+                    this.staffCell(row, 'created_by'),
                 ],
             },
             alert: {
@@ -362,7 +363,7 @@ const adminApp = {
                     row.temperature ?? row.temperature_c ?? '-',
                     this.statusBadge(row.status || row.severity || 'warning'),
                     row.message || row.notes || row.corrective_action || '-',
-                    row.staff_name || row.staff_id || '-',
+                    this.staffCell(row),
                 ],
             },
         }[this.reportTab || 'monitoring'];
@@ -1268,7 +1269,7 @@ const adminApp = {
         return Array.from(map.values()).map(group => {
             const statuses = new Set(group.reports.map(row => String(row.status || '').toLowerCase()));
             group.overall_status = statuses.has('fail') ? 'fail' : statuses.has('hold') ? 'hold' : statuses.has('pass') ? 'pass' : 'pending';
-            group.staff_names = [...new Set(group.reports.map(row => row.staff_name || row.inspector_name || row.staff_id).filter(Boolean))].join(', ');
+            group.staff_names = [...new Set(group.reports.map(row => row.staff_display_name || row.staff_name || row.inspector_name || row.staff_id).filter(Boolean))].join(', ');
             return group;
         });
     },
@@ -1365,6 +1366,28 @@ const adminApp = {
         return `<span class="status-badge status-${this.escapeAttr(status)}">${this.escapeHtml(status.toUpperCase())}</span>`;
     },
 
+    staffCell(row, idField = 'staff_id') {
+        const display = row.staff_display_name
+            || row.full_name
+            || row.name
+            || row.username
+            || row.email
+            || row.staff_name
+            || row.inspector_name
+            || row.actor_display_name
+            || row[idField]
+            || row.staff_id
+            || '-';
+        const staffId = row[idField] || row.staff_id || row.actor_id || row.created_by || '';
+        const email = row.email && row.email !== display
+            ? `<div class="admin-muted">${this.escapeHtml(row.email)}</div>`
+            : '';
+        const idLine = staffId && String(staffId) !== String(display)
+            ? `<div class="admin-muted">ID: ${this.escapeHtml(staffId)}</div>`
+            : '';
+        return `<strong>${this.escapeHtml(display)}</strong>${email || idLine}`;
+    },
+
     checkTypeLabel(value) {
         if (value === 'cooking_check') return 'Cek Masakan';
         if (value === 'final_check') return 'Cek Label Akhir';
@@ -1422,13 +1445,21 @@ const adminApp = {
 
         res.forEach(log => {
             const tr = document.createElement('tr');
-            const actorName = log.staff_accounts?.username || log.staff_name || log.username || log.actor_name || 'System';
+            const actorName = log.staff_display_name
+                || log.actor_display_name
+                || log.staff_accounts?.full_name
+                || log.staff_accounts?.username
+                || log.staff_name
+                || log.username
+                || log.actor_name
+                || 'System';
+            const actorId = log.actor_id || log.staff_id || log.created_by || '';
             const entityLabel = this.auditEntityLabel(log.entity_type);
             const technicalId = log.entity_id || log.related_id || log.id || '-';
             tr.innerHTML = `
                 <td data-label="Waktu">${this.dateTime(log.created_at)}</td>
-                <td data-label="User">${this.escapeHtml(actorName)}</td>
-                <td data-label="Role">${this.escapeHtml(log.role || log.actor_role || '-')}</td>
+                <td data-label="User"><strong>${this.escapeHtml(actorName)}</strong>${actorId && String(actorId) !== String(actorName) ? `<div class="admin-muted">ID: ${this.escapeHtml(actorId)}</div>` : ''}</td>
+                <td data-label="Role">${this.escapeHtml(log.role || log.actor_role || log.staff_accounts?.role || '-')}</td>
                 <td data-label="Action"><span class="audit-action-label">${this.auditActionLabel(log.action)}</span></td>
                 <td data-label="Entity">${entityLabel}<div class="admin-muted">ID: ${this.escapeHtml(technicalId)}</div></td>
                 <td data-label="Detail">${this.escapeHtml(log.detail || log.message || log.notes || log.metadata?.message || '-')}</td>
@@ -1484,7 +1515,7 @@ const adminApp = {
                 <td data-label="Barcode"><strong>${row.barcode_value || '-'}</strong></td>
                 <td data-label="Batch">${row.batch_code || row.batch_id || '-'}</td>
                 <td data-label="Product">${row.product_name || row.product_id || '-'}</td>
-                <td data-label="Staff">${row.staff_name || row.staff_id || '-'}</td>
+                <td data-label="Staff">${this.staffCell(row)}</td>
                 <td data-label="Created">${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
             `;
             tbody.appendChild(tr);
@@ -1508,7 +1539,7 @@ const adminApp = {
             tr.innerHTML = `
                 <td data-label="Batch"><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
                 <td data-label="Status"><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
-                <td data-label="Inspector">${row.inspector_name || row.staff_id || '-'}</td>
+                <td data-label="Inspector">${this.staffCell(row)}</td>
                 <td data-label="Evidence">${evidence ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
                 <td data-label="Action">
                     <div>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</div>

@@ -242,19 +242,8 @@ def report_qc():
 @admin_bp.route("/reports/alerts", methods=["GET"])
 @require_role("admin")
 def report_alerts():
-    service = get_admin_service()
-    rows = service._fetch("facility_alerts", order_by="created_at", limit=min(max(int(request.args.get("limit", 100)), 1), 500))
-    data = [{
-        "id": row.get("id"),
-        "created_at": row.get("created_at"),
-        "room": row.get("zone") or row.get("room") or row.get("room_name"),
-        "device": row.get("device_name") or row.get("device_id"),
-        "temperature": row.get("temperature") or row.get("temperature_c"),
-        "status": row.get("status") or row.get("severity") or "warning",
-        "message": row.get("message") or row.get("title") or row.get("corrective_action"),
-        "staff_id": row.get("staff_id"),
-    } for row in rows]
-    return _enveloped({"success": True, "data": data})
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_alert_report(limit=limit))
 
 
 @admin_bp.route("/reports/inspection", methods=["GET"])

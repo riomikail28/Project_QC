@@ -39,3 +39,13 @@ def test_audit_trail_section_exists_with_human_readable_labels():
     assert "CREATE_BATCH: 'Buat Batch'" in js
     assert "UPDATE: 'Update Data'" in js
     assert "DELETE: 'Hapus Data'" in js
+
+
+def test_admin_reports_use_staff_display_name_as_primary_label():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert "staffCell(row" in js
+    assert "row.staff_display_name" in js
+    assert "row.staff_name || row.staff_id || '-'" not in js
+    assert "row.staff_name || row.inspector_name || row.staff_id || '-'" not in js
+    assert "const actorName = log.staff_display_name" in js

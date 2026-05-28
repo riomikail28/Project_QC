@@ -20,6 +20,56 @@ class AdminService:
     def _fail(self, message):
         return {"success": False, "data": None, "message": message, "detail": message}
 
+    def _first_non_empty(self, *values):
+        for value in values:
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text:
+                return value
+        return None
+
+    def _staff_identity(self, row, id_fields=("staff_id", "actor_id", "created_by", "operator_id", "uploaded_by", "requested_by")):
+        row = row or {}
+        nested_sources = (
+            row.get("staff_accounts"),
+            row.get("users"),
+            row.get("profile"),
+            row.get("staff_profile"),
+            row.get("staff"),
+        )
+        nested_values = []
+        for source in nested_sources:
+            if isinstance(source, dict):
+                nested_values.extend([
+                    source.get("full_name"),
+                    source.get("name"),
+                    source.get("username"),
+                    source.get("email"),
+                ])
+        direct_values = [
+            row.get("staff_display_name"),
+            row.get("actor_display_name"),
+            row.get("full_name"),
+            row.get("name"),
+            row.get("username"),
+            row.get("email"),
+            row.get("staff_name"),
+            row.get("inspector_name"),
+            row.get("actor_name"),
+        ]
+        staff_id = self._first_non_empty(*(row.get(field) for field in id_fields))
+        display_name = self._first_non_empty(*(nested_values + direct_values), staff_id)
+        return display_name, staff_id
+
+    def _with_staff_display(self, row, id_fields=("staff_id", "actor_id", "created_by", "operator_id", "uploaded_by", "requested_by")):
+        item = dict(row or {})
+        display_name, staff_id = self._staff_identity(item, id_fields)
+        if staff_id and not item.get("staff_id") and "staff_id" in id_fields:
+            item["staff_id"] = staff_id
+        item["staff_display_name"] = display_name
+        return item
+
     def _count(self, table: str, filters: list[tuple[str, str, object]] | None = None) -> int:
         if not self.sb:
             return 0
@@ -139,11 +189,11 @@ class AdminService:
             return {"success": False, "detail": str(exc)}
 
     def _normalize_qc_report(self, row):
-        item = dict(row or {})
+        item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
         item.setdefault("report_type", "qc_report")
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
         item["qc_stage"] = item.get("qc_stage") or item.get("ccp_stage")
-        item["staff_name"] = item.get("staff_name") or item.get("inspector_name") or item.get("staff_id")
+        item["staff_name"] = item.get("staff_name") or item.get("inspector_name") or item.get("staff_display_name")
         item["product_code"] = item.get("product_code") or item.get("sku_code") or item.get("barcode")
         item["photo_url"] = (
             item.get("photo_url")
@@ -162,13 +212,13 @@ class AdminService:
         return item
 
     def _normalize_qc_finding(self, row):
-        item = dict(row or {})
+        item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
         item["report_type"] = "qc_finding"
         item["status"] = item.get("status") or "finding"
         item["approval_status"] = item.get("approval_status") or "pending"
         item["display_title"] = item.get("reason") or "QC Finding"
         item["product_name"] = item.get("product_name") or "QC Finding"
-        item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_id")
+        item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_display_name")
         self.normalize_evidence_url(item)
         return item
 
@@ -227,7 +277,7 @@ class AdminService:
                 filters.append(("eq", "action", action))
             if user:
                 filters.append(("eq", "actor_id", user))
-            rows = self._fetch("audit_logs", select="*, staff_accounts(username)", order_by="created_at", limit=limit, filters=filters)
+            rows = self._fetch("audit_logs", select="*, staff_accounts(username,full_name,role)", order_by="created_at", limit=limit, filters=filters)
             if not rows:
                 rows = self._audit_from_staff_submissions(limit)
                 if date:
@@ -236,7 +286,7 @@ class AdminService:
                     rows = [row for row in rows if row.get("action") == action]
                 if user:
                     rows = [row for row in rows if user in {row.get("actor_id"), row.get("staff_id")}]
-            return self._empty(rows[:limit])
+            return self._empty([self._normalize_audit_row(row) for row in rows[:limit]])
         except Exception as exc:
             logger.error("Audit trail failed: %s", exc)
             return {"success": False, "detail": str(exc)}
@@ -264,6 +314,24 @@ class AdminService:
         data = [self._temperature_report_row(row) for row in rows]
         if status_filter:
             data = [row for row in data if str(row.get("status", "")).lower() == status_filter.lower()]
+        return self._empty(data)
+
+    def get_alert_report(self, limit=100):
+        rows = self._fetch("facility_alerts", order_by="created_at", limit=limit)
+        data = []
+        for row in rows:
+            item = self._with_staff_display(row, ("staff_id", "created_by", "resolved_by"))
+            data.append({
+                "id": item.get("id"),
+                "created_at": item.get("created_at"),
+                "room": item.get("zone") or item.get("room") or item.get("room_name"),
+                "device": item.get("device_name") or item.get("device_id"),
+                "temperature": item.get("temperature") or item.get("temperature_c"),
+                "status": item.get("status") or item.get("severity") or "warning",
+                "message": item.get("message") or item.get("title") or item.get("corrective_action"),
+                "staff_id": item.get("staff_id") or item.get("created_by") or item.get("resolved_by"),
+                "staff_display_name": item.get("staff_display_name"),
+            })
         return self._empty(data)
 
     def get_inspection_report(self, limit=100, status_filter=None, date=None, staff_id=None):
@@ -415,7 +483,7 @@ class AdminService:
     def _daily_temperature_row(self, row):
         return {
             "type": "temperature",
-            "staff": row.get("staff_name") or row.get("staff_id") or "-",
+            "staff": row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": row.get("room"),
             "device": row.get("device"),
             "sku": "",
@@ -431,7 +499,7 @@ class AdminService:
     def _daily_inspection_row(self, row):
         return {
             "type": "inspection",
-            "staff": row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "staff": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": "",
             "device": "",
             "sku": row.get("barcode") or row.get("batch_code") or row.get("batch_id"),
@@ -447,7 +515,7 @@ class AdminService:
     def _daily_finding_row(self, row):
         return {
             "type": "finding",
-            "staff": row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "staff": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": "",
             "device": "",
             "sku": row.get("batch_code") or "",
@@ -462,29 +530,35 @@ class AdminService:
 
     def get_batch_report(self, limit=100):
         rows = self._fetch("production_batches", select="*, products(*)", order_by="created_at", limit=limit)
-        return self._empty([{
-            "id": row.get("id"),
-            "batch_code": row.get("batch_code"),
-            "product_name": row.get("product_name") or (row.get("products") or {}).get("product_name"),
-            "batch_sequence": row.get("batch_sequence"),
-            "quantity": row.get("quantity"),
-            "cook_name": row.get("cook_name"),
-            "production_shift": row.get("production_shift") or row.get("shift"),
-            "production_date": row.get("production_date"),
-            "expired_date": row.get("expired_date"),
-            "status": row.get("status") or row.get("final_qc_status") or "pending",
-            "created_by": row.get("created_by") or row.get("operator_id"),
-            "ph_value": row.get("ph_value"),
-            "ph_status": row.get("ph_status") or "not_checked",
-            "brix_value": row.get("brix_value"),
-            "brix_status": row.get("brix_status") or "not_checked",
-            "tds_value": row.get("tds_value"),
-            "tds_status": row.get("tds_status") or "not_checked",
-            "parameter_notes": row.get("parameter_notes"),
-            "parameter_checked_by": row.get("parameter_checked_by"),
-            "parameter_checked_at": row.get("parameter_checked_at"),
-            "created_at": row.get("created_at"),
-        } for row in rows])
+        data = []
+        for row in rows:
+            item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id", "qc_officer_id"))
+            data.append({
+                "id": item.get("id"),
+                "batch_code": item.get("batch_code"),
+                "product_name": item.get("product_name") or (item.get("products") or {}).get("product_name"),
+                "batch_sequence": item.get("batch_sequence"),
+                "quantity": item.get("quantity"),
+                "cook_name": item.get("cook_name"),
+                "production_shift": item.get("production_shift") or item.get("shift"),
+                "production_date": item.get("production_date"),
+                "expired_date": item.get("expired_date"),
+                "status": item.get("status") or item.get("final_qc_status") or "pending",
+                "created_by": item.get("created_by") or item.get("operator_id"),
+                "staff_id": item.get("staff_id") or item.get("created_by") or item.get("operator_id"),
+                "staff_display_name": item.get("staff_display_name"),
+                "ph_value": item.get("ph_value"),
+                "ph_status": item.get("ph_status") or "not_checked",
+                "brix_value": item.get("brix_value"),
+                "brix_status": item.get("brix_status") or "not_checked",
+                "tds_value": item.get("tds_value"),
+                "tds_status": item.get("tds_status") or "not_checked",
+                "parameter_notes": item.get("parameter_notes"),
+                "parameter_checked_by": item.get("parameter_checked_by"),
+                "parameter_checked_at": item.get("parameter_checked_at"),
+                "created_at": item.get("created_at"),
+            })
+        return self._empty(data)
 
     def get_staff_activity_report(self, limit=100):
         rows = self._fetch("staff_activity", order_by="created_at", limit=limit)
@@ -543,14 +617,16 @@ class AdminService:
             return []
 
     def _temperature_report_row(self, row):
+        item = self._with_staff_display(row, ("staff_id", "created_by"))
         room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id")
         device = row.get("device_name") or row.get("device_type") or (row.get("facility_devices") or {}).get("name") or row.get("device_id")
         raw_status = row.get("status")
         normalized_status = str(raw_status).lower() if raw_status else ("pass" if row.get("is_normal", not row.get("is_abnormal", False)) else "fail")
         return self.normalize_evidence_url({
             "id": row.get("id"),
-            "staff_id": row.get("staff_id") or row.get("created_by"),
+            "staff_id": item.get("staff_id") or row.get("created_by"),
             "staff_name": row.get("staff_name"),
+            "staff_display_name": item.get("staff_display_name"),
             "room_id": row.get("room_id"),
             "room": room,
             "device_id": row.get("device_id"),
@@ -693,17 +769,33 @@ class AdminService:
         result = []
         for row in rows:
             actor = row.get("staff_id") or row.get("operator_id") or row.get("created_by") or row.get("qc_officer_id")
+            display_name = row.get("staff_name") or row.get("inspector_name") or actor or "Staff"
             result.append({
                 "id": f"{entity_type}-{row.get('id')}",
                 "action": action,
                 "entity_type": entity_type,
                 "entity_id": row.get("id") or row.get("batch_id") or row.get("batch_code"),
+                "actor_id": actor,
                 "staff_id": actor,
-                "staff_accounts": {"username": row.get("staff_name") or row.get("inspector_name") or actor or "Staff"},
+                "staff_accounts": {"username": display_name},
+                "staff_display_name": display_name,
+                "actor_display_name": display_name,
                 "ip_address": row.get("ip_address") or "-",
                 "created_at": row.get(timestamp_field) or row.get("created_at"),
             })
         return result
+
+    def _normalize_audit_row(self, row):
+        item = self._with_staff_display(row, ("actor_id", "staff_id", "created_by", "operator_id", "qc_officer_id"))
+        actor_id = item.get("actor_id") or item.get("staff_id") or item.get("created_by")
+        if actor_id:
+            item["actor_id"] = actor_id
+        item["actor_display_name"] = item.get("staff_display_name") or actor_id or "System"
+        item["staff_display_name"] = item["actor_display_name"]
+        nested_role = (item.get("staff_accounts") or {}).get("role") if isinstance(item.get("staff_accounts"), dict) else None
+        if nested_role and not item.get("role"):
+            item["role"] = nested_role
+        return item
 
     def _traceability_from_staff_submissions(self, limit):
         rows = []
