@@ -166,6 +166,53 @@ def test_same_device_cannot_submit_same_slot_twice(client, staff_headers):
     assert duplicate.get_json()["message"] == "Unit ini sudah diinput untuk slot 07:00."
 
 
+def test_three_devices_can_submit_active_0700_then_duplicate_and_future_slot_reject(client, staff_headers):
+    db = ScheduleDb(device_count=3)
+    frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
+
+    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
+        "backend.services.monitoring_service.upload_file_storage"
+    ), patch("backend.api.facility_routes.write_audit"), patch(
+        "backend.api.facility_routes.MonitoringScheduleService",
+        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    ):
+        first = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": db.device_ids[0], "temperature": "4.2", "slot_time": "07:00"},
+        )
+        second = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": db.device_ids[1], "temperature": "4.1", "slot_time": "07:00"},
+        )
+        third = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": db.device_ids[2], "temperature": "4.0", "slot_time": "07:00"},
+        )
+        duplicate = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": db.device_ids[0], "temperature": "4.3", "slot_time": "07:00"},
+        )
+        future = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": db.device_ids[0], "temperature": "4.3", "slot_time": "13:00"},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert third.status_code == 200
+    assert third.get_json()["schedule"]["total_completed"] == 3
+    assert third.get_json()["schedule"]["slots"][0]["completed"] is True
+    assert duplicate.status_code == 409
+    assert duplicate.get_json()["message"] == "Unit ini sudah diinput untuk slot 07:00."
+    assert future.status_code == 409
+    assert future.get_json()["message"] == "Slot 13:00 belum waktunya."
+
+
 def test_after_all_devices_submit_0700_active_slot_moves_to_1300():
     db = ScheduleDb(device_count=16)
     db.rows["facility_logs"] = [

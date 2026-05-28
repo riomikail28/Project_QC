@@ -96,16 +96,16 @@ class MonitoringScheduleService:
 
     def resolve_submission(self, slot_time: str | None = None, device_id: str | None = None, room_id: str | None = None, allow_duplicate: bool = False):
         schedule = self.today()["data"]
-        slot = self._normalize_slot(slot_time) or (
-            schedule.get("current_slot") or schedule.get("next_slot") or {}
-        ).get("time")
+        active_slot = schedule.get("current_slot")
+        next_slot = schedule.get("next_slot")
+        slot = self._normalize_slot(slot_time) or (active_slot or next_slot or {}).get("time")
         if slot not in MONITORING_SLOTS:
             return {
                 "success": False,
                 "status": 400,
                 "message": "Slot monitoring tidak valid",
             }
-        if all(item["completed"] for item in schedule["slots"]):
+        if schedule.get("total_required", 0) > 0 and schedule.get("total_completed", 0) >= schedule.get("total_required", 0):
             return {
                 "success": False,
                 "status": 409,
@@ -113,6 +113,21 @@ class MonitoringScheduleService:
                 "schedule": schedule,
             }
         slot_data = next(item for item in schedule["slots"] if item["time"] == slot)
+        if active_slot and slot != active_slot.get("time"):
+            if slot_data["status"] == "upcoming":
+                return {
+                    "success": False,
+                    "status": 409,
+                    "message": f"Slot {slot} belum waktunya.",
+                    "schedule": schedule,
+                }
+            if slot_data["completed"]:
+                return {
+                    "success": False,
+                    "status": 409,
+                    "message": f"Slot {slot} sudah selesai.",
+                    "schedule": schedule,
+                }
         if slot_data["status"] == "upcoming":
             return {
                 "success": False,
@@ -120,18 +135,18 @@ class MonitoringScheduleService:
                 "message": f"Slot {slot} belum waktunya.",
                 "schedule": schedule,
             }
-        if slot_data["completed"]:
-            return {
-                "success": False,
-                "status": 409,
-                "message": f"Slot {slot} sudah selesai.",
-                "schedule": schedule,
-            }
         if not allow_duplicate and self._has_device_log(schedule["date"], slot, device_id, room_id):
             return {
                 "success": False,
                 "status": 409,
                 "message": f"Unit ini sudah diinput untuk slot {slot}.",
+                "schedule": schedule,
+            }
+        if slot_data["completed"]:
+            return {
+                "success": False,
+                "status": 409,
+                "message": f"Slot {slot} sudah selesai.",
                 "schedule": schedule,
             }
         is_late = self.now > self._slot_datetime(slot)
