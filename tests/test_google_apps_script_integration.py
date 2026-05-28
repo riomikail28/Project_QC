@@ -67,17 +67,44 @@ def test_google_apps_script_follows_302_redirect_and_treats_final_success(monkey
         request=httpx.Request("POST", "https://script.googleusercontent.com/macros/echo?user_content_key=abc"),
     )
 
-    with patch("backend.services.google_apps_script_service.httpx.post", side_effect=[first, final]) as post:
+    with patch("backend.services.google_apps_script_service.httpx.post", return_value=first) as post, patch(
+        "backend.services.google_apps_script_service.httpx.get", return_value=final
+    ) as get:
         assert send_qc_report({"status": "pass"}) is True
 
-    assert post.call_count == 2
-    assert post.call_args_list[0].args[0] == "https://script.google.com/macros/s/test/exec"
-    assert post.call_args_list[1].args[0].startswith("https://script.googleusercontent.com/macros/echo")
-    assert post.call_args_list[1].kwargs["json"]["type"] == "qc_report"
+    post.assert_called_once()
+    assert post.call_args.args[0] == "https://script.google.com/macros/s/test/exec"
+    assert post.call_args.kwargs["json"]["type"] == "qc_report"
+    get.assert_called_once()
+    assert get.call_args.args[0].startswith("https://script.googleusercontent.com/macros/echo")
     status = google_sheets_status()
     assert status["last_export_status"] == "success"
     assert status["final_status_code"] == 200
     assert '"success":true' in status["final_response_text"].replace(" ", "")
+
+
+def test_google_apps_script_does_not_post_to_302_redirect_location(monkeypatch):
+    monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/exec")
+    redirect = httpx.Response(
+        302,
+        headers={"Location": "https://script.googleusercontent.com/macros/echo?user_content_key=abc"},
+        request=httpx.Request("POST", "https://script.google.com/macros/s/test/exec"),
+    )
+    success = httpx.Response(
+        200,
+        text="ok",
+        request=httpx.Request("GET", "https://script.googleusercontent.com/macros/echo?user_content_key=abc"),
+    )
+
+    with patch("backend.services.google_apps_script_service.httpx.post", return_value=redirect) as post, patch(
+        "backend.services.google_apps_script_service.httpx.get", return_value=success
+    ) as get:
+        assert send_monitoring_log({"temperature": 4.0}) is True
+
+    post.assert_called_once()
+    assert "script.googleusercontent.com" not in post.call_args.args[0]
+    get.assert_called_once()
+    assert "script.googleusercontent.com" in get.call_args.args[0]
 
 
 def test_admin_google_sheets_test_rejects_invalid_webhook_url(client, admin_headers, monkeypatch):

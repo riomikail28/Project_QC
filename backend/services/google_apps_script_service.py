@@ -14,7 +14,9 @@ logger = logging.getLogger("qc.services.google_apps_script")
 
 WEBHOOK_ENV = "GOOGLE_APPS_SCRIPT_WEBHOOK_URL"
 TIMEOUT_SECONDS = 10.0
-REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+GET_REDIRECT_STATUS_CODES = {301, 302, 303}
+PRESERVE_METHOD_REDIRECT_STATUS_CODES = {307, 308}
+REDIRECT_STATUS_CODES = GET_REDIRECT_STATUS_CODES | PRESERVE_METHOD_REDIRECT_STATUS_CODES
 MAX_REDIRECTS = 3
 _last_export = {
     "last_export_status": None,
@@ -174,21 +176,29 @@ def _record_status(
 def _post_following_redirects(webhook_url: str, envelope: dict[str, Any]) -> httpx.Response:
     current_url = webhook_url
     response = None
+    method = "POST"
     for redirect_count in range(MAX_REDIRECTS + 1):
-        response = httpx.post(current_url, json=envelope, timeout=TIMEOUT_SECONDS, follow_redirects=False)
+        if method == "POST":
+            response = httpx.post(current_url, json=envelope, timeout=TIMEOUT_SECONDS, follow_redirects=False)
+        else:
+            response = httpx.get(current_url, timeout=TIMEOUT_SECONDS, follow_redirects=False)
         if response.status_code not in REDIRECT_STATUS_CODES:
             return response
         location = response.headers.get("Location") or response.headers.get("location")
         if not location:
             return response
         next_url = urljoin(current_url, location)
+        next_method = "POST" if response.status_code in PRESERVE_METHOD_REDIRECT_STATUS_CODES else "GET"
         logger.info(
-            "Google Apps Script webhook redirect followed status=%s from=%s to=%s",
+            "Google Apps Script webhook redirect followed status=%s method=%s next_method=%s from=%s to=%s",
             response.status_code,
+            method,
+            next_method,
             _safe_webhook_target(current_url),
             _safe_webhook_target(next_url),
         )
         current_url = next_url
+        method = next_method
     return response
 
 
