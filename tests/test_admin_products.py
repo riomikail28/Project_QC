@@ -97,7 +97,7 @@ def test_admin_qc_reports_loads_findings_for_reports_hash():
     css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
 
     assert 'data-section="reports"' in html
-    assert "case 'reports': this.loadQCReports(); break;" in js
+    assert "case 'reports': this.loadOperationalReports(); break;" in js
     assert "renderEvidenceCell" in js
     assert "storage_path" in js
     assert "admin-evidence-path" in css

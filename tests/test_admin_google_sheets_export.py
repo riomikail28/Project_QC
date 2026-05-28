@@ -22,6 +22,9 @@ def test_admin_google_sheets_section_and_button_url():
     assert "Data monitoring suhu dan QC report yang dikirim melalui Google Apps Script." in html
     assert SHEET_URL in html
     assert 'target="_blank"' in html
+    assert "Test Export" in html
+    assert "/admin/google-sheets/test" in js
+    assert "/admin/google-sheets/status" in js
     assert "iframe" not in html.lower()
     assert "loadGoogleSheetsExport" in js
 

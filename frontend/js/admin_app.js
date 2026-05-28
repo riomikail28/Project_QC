@@ -11,6 +11,7 @@ const adminApp = {
     crudContext: {},
     learningTab: 'modules',
     learningModules: [],
+    reportTab: 'monitoring',
 
     init() {
         this.checkAuth();
@@ -186,7 +187,7 @@ const adminApp = {
             case 'learning': this.loadLearning(); break;
             case 'google-sheets': this.loadGoogleSheetsExport(); break;
             case 'facility': this.loadFacilityManager(); break;
-            case 'reports': this.loadQCReports(); break;
+            case 'reports': this.loadOperationalReports(); break;
             case 'daily-reports': this.loadDailyReports(); break;
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
@@ -195,17 +196,204 @@ const adminApp = {
     },
 
     loadGoogleSheetsExport() {
-        const connected = Boolean(window.QC_CONFIG?.googleAppsScriptConnected);
+        this.refreshGoogleSheetsStatus();
+    },
+
+    async refreshGoogleSheetsStatus() {
+        let statusData = null;
+        try {
+            const response = await API.get('/admin/google-sheets/status');
+            statusData = response?.data || null;
+        } catch (error) {
+            statusData = { webhook_configured: Boolean(window.QC_CONFIG?.googleAppsScriptConnected), last_export_status: 'error', last_export_error: error.message };
+        }
+        this.renderGoogleSheetsStatus(statusData || {});
+    },
+
+    renderGoogleSheetsStatus(statusData) {
+        const connected = Boolean(statusData.webhook_configured ?? window.QC_CONFIG?.googleAppsScriptConnected);
         const status = document.getElementById('googleAppsScriptStatus');
         if (status) {
             status.textContent = connected ? 'Connected' : 'Not configured';
             status.classList.toggle('connected', connected);
             status.classList.toggle('warning', !connected);
         }
-        this.setText('googleSheetsLastExport', '-');
+        this.setText('googleSheetsLastExport', statusData.last_export_at || '-');
+        const result = document.getElementById('googleSheetsTestResult');
+        if (result && statusData.last_export_status) {
+            result.className = `google-sheets-test-result ${statusData.last_export_status === 'success' ? 'success' : 'error'}`;
+            result.textContent = [
+                `Last status: ${statusData.last_export_status}`,
+                statusData.last_payload_type ? `type=${statusData.last_payload_type}` : null,
+                statusData.last_export_error ? `error=${statusData.last_export_error}` : null,
+            ].filter(Boolean).join(' | ');
+        }
+    },
+
+    async testGoogleSheetsExport() {
+        const result = document.getElementById('googleSheetsTestResult');
+        const button = document.getElementById('googleSheetsTestBtn');
+        const original = button?.innerHTML;
+        try {
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i data-lucide="loader-2"></i> Testing...';
+                this.refreshIcons();
+            }
+            if (result) {
+                result.className = 'google-sheets-test-result';
+                result.textContent = 'Mengirim test export...';
+            }
+            const response = await API.post('/admin/google-sheets/test', {});
+            this.renderGoogleSheetsStatus(response?.data || {});
+            if (result) {
+                result.className = 'google-sheets-test-result success';
+                result.textContent = 'Test export berhasil dikirim ke Google Apps Script.';
+            }
+        } catch (error) {
+            const statusResponse = await API.get('/admin/google-sheets/status').catch(() => null);
+            this.renderGoogleSheetsStatus(statusResponse?.data || { last_export_status: 'error', last_export_error: error.message });
+            if (result) {
+                result.className = 'google-sheets-test-result error';
+                result.textContent = `Test export gagal: ${error.message || 'server tidak merespons'}`;
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = original;
+                this.refreshIcons();
+            }
+        }
     },
 
     // --- Data Loaders ---
+
+    reportQuery() {
+        const params = new URLSearchParams({ limit: '200' });
+        const start = document.getElementById('report-date-start')?.value;
+        const end = document.getElementById('report-date-end')?.value;
+        const status = document.getElementById('report-filter-status')?.value;
+        const staff = document.getElementById('report-filter-staff')?.value?.trim();
+        if (start) params.set('date', start);
+        if (end) params.set('date_to', end);
+        if (status) params.set('status', status);
+        if (staff) params.set('staff', staff);
+        return params;
+    },
+
+    async loadOperationalReports() {
+        await this.loadReportSummary();
+        return this.loadReportTabData();
+    },
+
+    async loadReportSummary() {
+        const res = await this.fetchAdminData(`${this.apiBase}/reports/summary`);
+        const data = res?.data || res || {};
+        this.setText('report-total-monitoring', data.total_monitoring_today || 0);
+        this.setText('report-total-qc', data.total_qc_today || 0);
+        this.setText('report-total-pass', data.pass || 0);
+        this.setText('report-total-hold', data.hold_warning || 0);
+        this.setText('report-total-fail', data.fail || 0);
+        this.setText('report-total-alerts', data.temperature_alerts || 0);
+        this.setText('report-total-pending', data.pending_approval || 0);
+    },
+
+    switchReportTab(tab) {
+        this.reportTab = tab;
+        document.querySelectorAll('[data-report-tab]').forEach(item => item.classList.toggle('active', item.dataset.reportTab === tab));
+        this.loadReportTabData();
+    },
+
+    async loadReportTabData() {
+        const head = document.getElementById('reports-table-head');
+        const body = document.getElementById('reports-table-body');
+        if (!head || !body) return;
+        const config = {
+            monitoring: {
+                endpoint: '/reports/monitoring',
+                columns: ['Waktu', 'Slot', 'Ruangan', 'Device', 'Suhu', 'Status', 'Staff', 'Catatan'],
+                render: row => [
+                    this.dateTime(row.created_at),
+                    row.slot_time || '-',
+                    row.room || '-',
+                    row.device || '-',
+                    row.temperature != null ? `${row.temperature} C` : '-',
+                    this.statusBadge(row.status),
+                    row.staff_name || row.staff_id || '-',
+                    row.notes || '-',
+                ],
+            },
+            qc: {
+                endpoint: '/reports/qc',
+                columns: ['Waktu', 'Produk', 'Batch Code', 'Pemasakan Ke', 'Jenis Cek', 'Suhu Masak', 'Status QC', 'Staff', 'Evidence'],
+                render: row => [
+                    this.dateTime(row.created_at),
+                    row.product_name || '-',
+                    row.batch_code || row.batch_id || '-',
+                    row.inspection_round || row.batch_sequence || '-',
+                    this.checkTypeLabel(row.qc_stage || row.ccp_stage),
+                    row.temperature || '-',
+                    this.statusBadge(row.status),
+                    row.staff_name || row.inspector_name || row.staff_id || '-',
+                    this.renderEvidenceCell(row),
+                ],
+            },
+            batch: {
+                endpoint: '/reports/batches',
+                columns: ['Tanggal', 'Produk', 'Batch Code', 'Pemasakan Ke', 'Qty', 'Cook', 'Shift', 'Status'],
+                render: row => [
+                    row.production_date || this.dateOnly(row.created_at),
+                    row.product_name || '-',
+                    row.batch_code || '-',
+                    row.batch_sequence || '-',
+                    row.quantity || '-',
+                    row.cook_name || '-',
+                    row.production_shift || row.shift || '-',
+                    this.statusBadge(row.status),
+                ],
+            },
+            alert: {
+                endpoint: '/reports/alerts',
+                columns: ['Waktu', 'Ruangan', 'Device', 'Suhu', 'Status', 'Detail', 'Staff'],
+                render: row => [
+                    this.dateTime(row.created_at || row.recorded_at),
+                    row.room || row.zone || '-',
+                    row.device || row.device_name || '-',
+                    row.temperature ?? row.temperature_c ?? '-',
+                    this.statusBadge(row.status || row.severity || 'warning'),
+                    row.message || row.notes || row.corrective_action || '-',
+                    row.staff_name || row.staff_id || '-',
+                ],
+            },
+        }[this.reportTab || 'monitoring'];
+        head.innerHTML = config.columns.map(col => `<th>${col}</th>`).join('');
+        body.innerHTML = `<tr><td colspan="${config.columns.length}" style="text-align:center;">Loading report...</td></tr>`;
+        const params = this.reportQuery();
+        const res = await this.fetchAdminData(`${this.apiBase}${config.endpoint}?${params.toString()}`);
+        let rows = res?.data || [];
+        rows = this.filterOperationalRows(rows);
+        if (!rows.length) {
+            body.innerHTML = `<tr><td colspan="${config.columns.length}" style="text-align:center;">Belum ada data laporan.</td></tr>`;
+            return;
+        }
+        body.innerHTML = rows.map(row => `<tr>${config.render(row).map((value, index) => `<td data-label="${config.columns[index]}">${value}</td>`).join('')}</tr>`).join('');
+        this.refreshIcons();
+    },
+
+    filterOperationalRows(rows) {
+        const product = document.getElementById('report-filter-product')?.value?.trim().toLowerCase();
+        const room = document.getElementById('report-filter-room')?.value?.trim().toLowerCase();
+        return (rows || []).filter(row => {
+            const productText = `${row.product_name || ''} ${row.batch_code || ''}`.toLowerCase();
+            const roomText = `${row.room || row.zone || ''} ${row.device || row.device_name || ''}`.toLowerCase();
+            return (!product || productText.includes(product)) && (!room || roomText.includes(room));
+        });
+    },
+
+    exportOperationalReportCsv() {
+        const params = this.reportQuery();
+        window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
+    },
 
     async loadOverview() {
         const [res, trendEnvelope, statusEnvelope] = await Promise.all([
@@ -1160,6 +1348,29 @@ const adminApp = {
         if (el) el.textContent = value;
     },
 
+    dateTime(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleString('id-ID');
+    },
+
+    dateOnly(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleDateString('id-ID');
+    },
+
+    statusBadge(value) {
+        const status = String(value || 'pending').toLowerCase();
+        return `<span class="status-badge status-${this.escapeAttr(status)}">${this.escapeHtml(status.toUpperCase())}</span>`;
+    },
+
+    checkTypeLabel(value) {
+        if (value === 'cooking_check') return 'Cek Masakan';
+        if (value === 'final_check') return 'Cek Label Akhir';
+        return this.escapeHtml(value || '-');
+    },
+
     renderEvidenceCell(row) {
         const evidence = row.cooking_photo_url || row.barcode_photo_url || row.label_photo_url || row.product_photo_url || row.temperature_photo_url || row.photo_url || '';
         const evidenceUrls = evidence.split(';').filter(Boolean);
@@ -1198,28 +1409,61 @@ const adminApp = {
 
     async loadAuditTrail() {
         const tbody = document.getElementById('table-audit-trail');
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading audit logs...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading audit logs...</td></tr>';
         
         const res = await this.fetchAdminData(`${this.apiBase}/audit-trail?limit=50`);
         if (!res) return;
 
         tbody.innerHTML = '';
         if (res.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada log aktivitas.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada log aktivitas.</td></tr>';
             return;
         }
 
         res.forEach(log => {
             const tr = document.createElement('tr');
+            const actorName = log.staff_accounts?.username || log.staff_name || log.username || log.actor_name || 'System';
+            const entityLabel = this.auditEntityLabel(log.entity_type);
+            const technicalId = log.entity_id || log.related_id || log.id || '-';
             tr.innerHTML = `
-                <td data-label="Waktu">${new Date(log.created_at).toLocaleString('id-ID')}</td>
-                <td data-label="Actor">${log.staff_accounts?.username || 'System'}</td>
-                <td data-label="Action"><span style="font-family:monospace; background:var(--bg-color); padding:2px 4px; border-radius:4px;">${log.action.toUpperCase()}</span></td>
-                <td data-label="Entity">${log.entity_type} (${log.entity_id || '-'})</td>
-                <td data-label="IP" style="font-size:0.8rem; color:var(--text-secondary);">${log.ip_address || '-'}</td>
+                <td data-label="Waktu">${this.dateTime(log.created_at)}</td>
+                <td data-label="User">${this.escapeHtml(actorName)}</td>
+                <td data-label="Role">${this.escapeHtml(log.role || log.actor_role || '-')}</td>
+                <td data-label="Action"><span class="audit-action-label">${this.auditActionLabel(log.action)}</span></td>
+                <td data-label="Entity">${entityLabel}<div class="admin-muted">ID: ${this.escapeHtml(technicalId)}</div></td>
+                <td data-label="Detail">${this.escapeHtml(log.detail || log.message || log.notes || log.metadata?.message || '-')}</td>
+                <td data-label="IP/User Agent" style="font-size:0.8rem; color:var(--text-secondary);">${this.escapeHtml(log.ip_address || '-')}${log.user_agent ? `<br>${this.escapeHtml(log.user_agent)}` : ''}</td>
             `;
             tbody.appendChild(tr);
         });
+    },
+
+    auditActionLabel(action) {
+        const key = String(action || '').toUpperCase();
+        const labels = {
+            INPUT_TEMPERATURE: 'Input Suhu',
+            SUBMIT_TEMPERATURE: 'Input Suhu',
+            SUBMIT_INSPECTION: 'Submit QC',
+            SUBMIT: 'Submit QC',
+            CREATE_BATCH: 'Buat Batch',
+            UPDATE: 'Update Data',
+            DELETE: 'Hapus Data',
+        };
+        return labels[key] || this.escapeHtml(String(action || '-').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase()));
+    },
+
+    auditEntityLabel(entity) {
+        const key = String(entity || '').toLowerCase();
+        const labels = {
+            facility_log: 'Monitoring Suhu',
+            temperature_log: 'Monitoring Suhu',
+            qc_report: 'QC Report',
+            qc_finding: 'QC Finding',
+            production_batch: 'Batch Produksi',
+            production_batch_log: 'Log Batch Produksi',
+            daily_report: 'Daily Report',
+        };
+        return labels[key] || this.escapeHtml(String(entity || '-').replace(/_/g, ' '));
     },
 
     async loadTraceability() {

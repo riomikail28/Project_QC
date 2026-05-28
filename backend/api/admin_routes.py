@@ -3,6 +3,7 @@ from flask import Blueprint, Response, current_app, g, request, jsonify
 
 from backend.middleware.security_middleware import require_role
 from backend.services.admin_service import AdminService
+from backend.services.google_apps_script_service import google_sheets_status, send_test_payload
 from backend.database.supabase_client import get_client, supabase_error_response
 
 logger = logging.getLogger("qc.routes.admin")
@@ -143,6 +144,8 @@ def _enveloped(res, ok_status=200):
 @admin_bp.before_request
 def require_admin_supabase():
     if request.endpoint and request.endpoint.startswith("admin."):
+        if "google_sheets" in request.endpoint:
+            return None
         _, error = _require_supabase()
         if error:
             return error
@@ -151,9 +154,41 @@ def require_admin_supabase():
 @admin_legacy_bp.before_request
 def require_legacy_admin_supabase():
     if request.endpoint and request.endpoint.startswith("admin_legacy."):
+        if "google_sheets" in request.endpoint:
+            return None
         _, error = _require_supabase()
         if error:
             return error
+
+
+@admin_bp.route("/google-sheets/status", methods=["GET"])
+@require_role("admin")
+def google_sheets_status_route():
+    return jsonify({"success": True, "data": google_sheets_status(), "message": "OK"})
+
+
+@admin_bp.route("/google-sheets/test", methods=["POST"])
+@require_role("admin")
+def google_sheets_test_route():
+    ok = send_test_payload()
+    status = google_sheets_status()
+    return jsonify({
+        "success": ok,
+        "data": status,
+        "message": "Google Sheets test export sent" if ok else "Google Sheets test export failed",
+    }), 200 if ok else 502
+
+
+@admin_legacy_bp.route("/google-sheets/status", methods=["GET"])
+@require_role("admin")
+def legacy_google_sheets_status_route():
+    return google_sheets_status_route()
+
+
+@admin_legacy_bp.route("/google-sheets/test", methods=["POST"])
+@require_role("admin")
+def legacy_google_sheets_test_route():
+    return google_sheets_test_route()
 
 
 def _report_args(default_limit=100):
@@ -169,6 +204,57 @@ def _report_args(default_limit=100):
 @require_role("admin")
 def report_temperature():
     return _enveloped(get_admin_service().get_temperature_report(**_report_args()))
+
+
+@admin_bp.route("/reports/summary", methods=["GET"])
+@require_role("admin")
+def report_summary():
+    service = get_admin_service()
+    today = request.args.get("date") or None
+    temperature = service.get_temperature_report(limit=2000, date=today).get("data", [])
+    inspection = service.get_inspection_report(limit=2000, date=today).get("data", [])
+    overview = service.get_dashboard_overview().get("data", {})
+    statuses = [str(row.get("status") or "").lower() for row in inspection]
+    data = {
+        "total_monitoring_today": len(temperature),
+        "total_qc_today": len(inspection),
+        "pass": sum(1 for status in statuses if status == "pass"),
+        "hold_warning": sum(1 for status in statuses if status in {"hold", "warning", "pending_review"}),
+        "fail": sum(1 for status in statuses if status in {"fail", "failed"}),
+        "temperature_alerts": overview.get("total_open_alerts", 0),
+        "pending_approval": overview.get("total_qc_pending", 0),
+    }
+    return _enveloped({"success": True, "data": data})
+
+
+@admin_bp.route("/reports/monitoring", methods=["GET"])
+@require_role("admin")
+def report_monitoring():
+    return report_temperature()
+
+
+@admin_bp.route("/reports/qc", methods=["GET"])
+@require_role("admin")
+def report_qc():
+    return report_inspection()
+
+
+@admin_bp.route("/reports/alerts", methods=["GET"])
+@require_role("admin")
+def report_alerts():
+    service = get_admin_service()
+    rows = service._fetch("facility_alerts", order_by="created_at", limit=min(max(int(request.args.get("limit", 100)), 1), 500))
+    data = [{
+        "id": row.get("id"),
+        "created_at": row.get("created_at"),
+        "room": row.get("zone") or row.get("room") or row.get("room_name"),
+        "device": row.get("device_name") or row.get("device_id"),
+        "temperature": row.get("temperature") or row.get("temperature_c"),
+        "status": row.get("status") or row.get("severity") or "warning",
+        "message": row.get("message") or row.get("title") or row.get("corrective_action"),
+        "staff_id": row.get("staff_id"),
+    } for row in rows]
+    return _enveloped({"success": True, "data": data})
 
 
 @admin_bp.route("/reports/inspection", methods=["GET"])

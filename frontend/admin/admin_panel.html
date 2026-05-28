@@ -23,9 +23,9 @@
                 <li><a href="#section-overview" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
                 <li><a href="#section-monitoring" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Monitoring</span></a></li>
                 <li><a href="#section-daily-reports" class="sidebar-item admin-nav-link" data-target="daily-reports" data-section="daily-reports"><i data-lucide="factory"></i><span>Batch Production</span></a></li>
-                <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="clipboard-check"></i><span>QC Inspection</span></a></li>
+                <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></a></li>
                 <li><a href="#section-alerts" class="sidebar-item admin-nav-link" data-target="alerts" data-section="alerts"><i data-lucide="bell-ring"></i><span>Alerts</span></a></li>
-                <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Reports</span></a></li>
+                <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Audit Trail</span></a></li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
                 <li><a href="#section-learning" class="sidebar-item admin-nav-link" data-target="learning" data-section="learning"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
                 <li><a href="#section-google-sheets" class="sidebar-item admin-nav-link" data-target="google-sheets" data-section="google-sheets"><i data-lucide="sheet"></i><span>Google Sheets</span></a></li>
@@ -258,6 +258,9 @@
                             <a class="btn-primary" id="googleSheetsOpenBtn" href="https://docs.google.com/spreadsheets/d/1C5OVfOEYQuLRWXoyiUtKYybxb6MztDfK5mSroJlUYTI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
                                 <i data-lucide="external-link"></i> Buka Google Sheets
                             </a>
+                            <button class="btn-secondary" id="googleSheetsTestBtn" type="button" onclick="adminApp.testGoogleSheetsExport()">
+                                <i data-lucide="send"></i> Test Export
+                            </button>
                         </div>
 
                         <div class="metric-grid google-sheets-status-grid">
@@ -274,6 +277,8 @@
                                 <div class="integration-status muted" id="googleSheetsLastExport">-</div>
                             </div>
                         </div>
+
+                        <div class="google-sheets-test-result" id="googleSheetsTestResult" role="status" aria-live="polite"></div>
 
                         <div class="google-sheets-info-grid" aria-label="Google Sheets export info">
                             <article><i data-lucide="thermometer"></i><strong>Monitoring Logs</strong></article>
@@ -297,34 +302,54 @@
                     </div>
                 </section>
 
-                <!-- SECTION: QC Reports -->
+                <!-- SECTION: Operational Reports -->
                 <section id="section-reports" class="dashboard-section">
-                    <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                            <h3 class="card-title" style="margin:0;">Laporan QC Batch</h3>
-                            <select id="filter-qc-status" onchange="adminApp.loadQCReports()" style="padding: 5px; border-radius: 4px; border: 1px solid var(--border-color);">
-                                <option value="">Semua Status</option>
-                                <option value="pass">Pass</option>
-                                <option value="warning">Warning</option>
-                                <option value="fail">Fail</option>
-                                <option value="pending">Pending</option>
-                            </select>
+                    <div class="card reports-dashboard-card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Reports</h3>
+                                <p class="admin-muted">Laporan operasional monitoring suhu, QC inspection, batch, dan alert.</p>
+                            </div>
+                            <div class="report-actions">
+                                <button class="btn-secondary" onclick="adminApp.exportOperationalReportCsv()"><i data-lucide="download"></i> Export CSV</button>
+                                <a class="btn-secondary" href="https://docs.google.com/spreadsheets/d/1C5OVfOEYQuLRWXoyiUtKYybxb6MztDfK5mSroJlUYTI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer"><i data-lucide="external-link"></i> Buka Google Sheets</a>
+                                <button class="btn-secondary" onclick="window.print()"><i data-lucide="printer"></i> Print/PDF</button>
+                            </div>
                         </div>
-                        <div style="overflow-x: auto;">
-                            <table class="enterprise-table">
+
+                        <div class="metric-grid reports-summary-grid">
+                            <div class="metric-card"><div class="metric-header"><span>Total Monitoring Hari Ini</span></div><div class="metric-value" id="report-total-monitoring">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Total QC Check Hari Ini</span></div><div class="metric-value" id="report-total-qc">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>PASS</span></div><div class="metric-value" id="report-total-pass">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>HOLD/WARNING</span></div><div class="metric-value" id="report-total-hold">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>FAIL</span></div><div class="metric-value" id="report-total-fail">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Alert Suhu</span></div><div class="metric-value" id="report-total-alerts">0</div></div>
+                            <div class="metric-card"><div class="metric-header"><span>Pending Approval</span></div><div class="metric-value" id="report-total-pending">0</div></div>
+                        </div>
+
+                        <div class="report-filter-bar">
+                            <label>Tanggal mulai<input id="report-date-start" type="date"></label>
+                            <label>Tanggal akhir<input id="report-date-end" type="date"></label>
+                            <label>Produk<input id="report-filter-product" placeholder="Produk"></label>
+                            <label>Ruangan<input id="report-filter-room" placeholder="Ruangan"></label>
+                            <label>Status QC<select id="report-filter-status"><option value="">Semua</option><option value="pass">PASS</option><option value="hold">HOLD</option><option value="warning">WARNING</option><option value="fail">FAIL</option></select></label>
+                            <label>Staff<input id="report-filter-staff" placeholder="Staff"></label>
+                            <button class="btn-primary" onclick="adminApp.loadOperationalReports()"><i data-lucide="filter"></i> Terapkan</button>
+                        </div>
+
+                        <div class="admin-tabs report-tabs" role="tablist" aria-label="Reports tabs">
+                            <button class="admin-tab active" data-report-tab="monitoring" onclick="adminApp.switchReportTab('monitoring')">Monitoring Report</button>
+                            <button class="admin-tab" data-report-tab="qc" onclick="adminApp.switchReportTab('qc')">QC Inspection Report</button>
+                            <button class="admin-tab" data-report-tab="batch" onclick="adminApp.switchReportTab('batch')">Batch Report</button>
+                            <button class="admin-tab" data-report-tab="alert" onclick="adminApp.switchReportTab('alert')">Alert Report</button>
+                        </div>
+
+                        <div class="reports-table-wrap">
+                            <table class="enterprise-table" id="reports-table">
                                 <thead>
-                                    <tr>
-                                        <th>Tanggal</th>
-                                        <th>Batch Code</th>
-                                        <th>Produk</th>
-                                        <th>Operator</th>
-                                        <th>Status QC</th>
-                                        <th>Foto Evidence</th>
-                                    </tr>
+                                    <tr id="reports-table-head"></tr>
                                 </thead>
-                                <tbody id="table-qc-reports">
-                                    <!-- Filled via JS -->
-                                </tbody>
+                                <tbody id="reports-table-body"></tbody>
                             </table>
                         </div>
                     </div>
@@ -427,16 +452,24 @@
                 <!-- SECTION: Audit Trail -->
                 <section id="section-audit" class="dashboard-section">
                     <div class="card">
-                        <h3 class="card-title">Audit Trail & System Logs</h3>
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Audit Trail / System Logs</h3>
+                                <p class="admin-muted">Log teknis sistem untuk audit dan troubleshooting.</p>
+                            </div>
+                            <button class="btn-secondary" onclick="adminApp.loadAuditTrail()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
                         <div style="overflow-x: auto;">
                             <table class="enterprise-table">
                                 <thead>
                                     <tr>
                                         <th>Waktu</th>
-                                        <th>Actor (User)</th>
+                                        <th>User</th>
+                                        <th>Role</th>
                                         <th>Action</th>
                                         <th>Entity</th>
-                                        <th>IP / User-Agent</th>
+                                        <th>Detail</th>
+                                        <th>IP/User Agent</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-audit-trail">

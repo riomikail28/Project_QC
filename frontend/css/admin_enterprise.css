@@ -540,6 +540,59 @@ select {
   font-size: .86rem;
 }
 
+.reports-dashboard-card {
+  display: grid;
+  gap: 18px;
+}
+
+.report-actions,
+.report-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.report-filter-bar {
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .82);
+}
+
+.report-filter-bar label {
+  display: grid;
+  gap: 6px;
+  min-width: 145px;
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.report-filter-bar input,
+.report-filter-bar select {
+  min-height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.reports-table-wrap {
+  overflow-x: auto;
+}
+
+.audit-action-label {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(219, 234, 254, .88);
+  color: var(--primary-color);
+  font-size: .8rem;
+  font-weight: 800;
+}
+
 .google-sheets-export-card {
   display: grid;
   gap: 18px;
@@ -586,6 +639,29 @@ select {
   width: 20px;
   height: 20px;
   color: var(--primary-color);
+}
+
+.google-sheets-test-result {
+  min-height: 42px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .82);
+  color: var(--text-secondary);
+  font-size: .9rem;
+  overflow-wrap: anywhere;
+}
+
+.google-sheets-test-result.success {
+  border-color: rgba(16, 185, 129, .28);
+  background: rgba(240, 253, 244, .9);
+  color: var(--success-color);
+}
+
+.google-sheets-test-result.error {
+  border-color: rgba(239, 68, 68, .28);
+  background: rgba(254, 242, 242, .9);
+  color: var(--danger-color);
 }
 
 .admin-form-grid {

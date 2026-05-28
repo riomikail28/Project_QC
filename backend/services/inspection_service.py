@@ -341,6 +341,7 @@ class InspectionService:
             created_at = (report or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
             send_qc_report({
                 "batch_id": batch_id or batch_code,
+                "batch_code": batch_code,
                 "product_name": product_name,
                 "status": qc_status,
                 "temperature": temperature,

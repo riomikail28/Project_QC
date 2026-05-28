@@ -156,6 +156,16 @@ Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, 
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 
+Troubleshooting jika data tidak masuk Google Sheet:
+
+1. Pastikan `GOOGLE_APPS_SCRIPT_WEBHOOK_URL` sudah dipasang di environment Vercel/hosting, bukan hanya di `.env` lokal.
+2. Redeploy aplikasi setelah environment variable ditambahkan atau diubah.
+3. Di Apps Script, deploy sebagai `Web app`.
+4. Set `Execute as` ke `Me`.
+5. Set `Who has access` ke `Anyone` agar webhook backend bisa mengirim request.
+6. Cek `Executions` log di Apps Script untuk melihat error parsing payload atau permission.
+7. Dari Admin Dashboard, buka menu `Google Sheets`, lalu gunakan tombol `Test Export` untuk melihat status, response error, dan waktu export terakhir.
+
 ## Install PWA
 
 QC Enterprise dapat dipasang sebagai PWA dari browser modern.
