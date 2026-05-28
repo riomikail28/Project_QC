@@ -14,6 +14,7 @@ logger = logging.getLogger("qc.services.admin")
 class AdminService:
     def __init__(self, sb_client=None):
         self.sb = sb_client or get_client()
+        self._staff_profile_cache = {}
 
     def _empty(self, data):
         return {"success": True, "data": data, "message": "OK"}
@@ -29,6 +30,17 @@ class AdminService:
             if text:
                 return value
         return None
+
+    def _is_uuid_like(self, value):
+        text = str(value or "").strip().lower()
+        if len(text) != 36:
+            return False
+        parts = text.split("-")
+        return (
+            len(parts) == 5
+            and [len(part) for part in parts] == [8, 4, 4, 4, 12]
+            and all(all(char in "0123456789abcdef" for char in part) for part in parts)
+        )
 
     def _staff_identity(self, row, id_fields=("staff_id", "actor_id", "created_by", "operator_id", "uploaded_by", "requested_by")):
         row = row or {}
@@ -60,16 +72,56 @@ class AdminService:
             row.get("actor_name"),
         ]
         staff_id = self._first_non_empty(*(row.get(field) for field in id_fields))
-        display_name = self._first_non_empty(*(nested_values + direct_values), staff_id)
-        return display_name, staff_id
+        profile = self._staff_profile(staff_id)
+        display_name = self._first_non_empty(
+            profile.get("full_name"),
+            profile.get("name"),
+            profile.get("username"),
+            profile.get("email"),
+            *(nested_values + direct_values),
+        )
+        if self._is_uuid_like(display_name):
+            display_name = None
+        return display_name or "Unknown User", staff_id
 
     def _with_staff_display(self, row, id_fields=("staff_id", "actor_id", "created_by", "operator_id", "uploaded_by", "requested_by")):
         item = dict(row or {})
         display_name, staff_id = self._staff_identity(item, id_fields)
+        profile = self._staff_profile(staff_id)
         if staff_id and not item.get("staff_id") and "staff_id" in id_fields:
             item["staff_id"] = staff_id
         item["staff_display_name"] = display_name
+        if self._is_uuid_like(item.get("staff_name")):
+            item["staff_name"] = display_name
+        if self._is_uuid_like(item.get("inspector_name")):
+            item["inspector_name"] = display_name
+        if self._is_uuid_like(item.get("actor_name")):
+            item["actor_name"] = display_name
+        nested = item.get("staff_accounts") if isinstance(item.get("staff_accounts"), dict) else {}
+        item["staff_role"] = item.get("staff_role") or item.get("role") or profile.get("role") or nested.get("role")
+        item["staff_role"] = item.get("staff_role") or "staff"
+        item["staff_email"] = item.get("staff_email") or item.get("email") or profile.get("email") or nested.get("email")
         return item
+
+    def _staff_profile(self, staff_id):
+        if not staff_id:
+            return {}
+        if staff_id in self._staff_profile_cache:
+            return self._staff_profile_cache[staff_id]
+        account = (self._fetch("staff_accounts", limit=1, filters=[("eq", "id", staff_id)]) or [None])[0] or {}
+        users = self._fetch("users", limit=1, filters=[("eq", "staff_account_id", staff_id)])
+        if not users:
+            users = self._fetch("users", limit=1, filters=[("eq", "id", staff_id)])
+        user = (users or [None])[0] or {}
+        profile = {
+            "full_name": user.get("full_name") or account.get("full_name"),
+            "name": user.get("name") or account.get("name"),
+            "username": account.get("username") or user.get("username"),
+            "email": user.get("email") or account.get("email"),
+            "role": user.get("role") or account.get("role"),
+        }
+        self._staff_profile_cache[staff_id] = {key: value for key, value in profile.items() if value}
+        return self._staff_profile_cache[staff_id]
 
     def _count(self, table: str, filters: list[tuple[str, str, object]] | None = None) -> int:
         if not self.sb:
@@ -195,6 +247,8 @@ class AdminService:
         item.setdefault("display_title", item.get("batch_code") or item.get("batch_id") or "QC Report")
         item["qc_stage"] = item.get("qc_stage") or item.get("ccp_stage")
         item["staff_name"] = item.get("staff_name") or item.get("inspector_name") or item.get("staff_display_name")
+        if self._is_uuid_like(item.get("staff_name")):
+            item["staff_name"] = item.get("staff_display_name")
         item["product_code"] = item.get("product_code") or item.get("sku_code") or item.get("barcode")
         item["photo_url"] = (
             item.get("photo_url")
@@ -220,6 +274,8 @@ class AdminService:
         item["display_title"] = item.get("reason") or "QC Finding"
         item["product_name"] = item.get("product_name") or "QC Finding"
         item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_display_name")
+        if self._is_uuid_like(item.get("inspector_name")):
+            item["inspector_name"] = item.get("staff_display_name")
         self.normalize_evidence_url(item)
         return item
 
@@ -244,6 +300,7 @@ class AdminService:
                         if needle in str(row.get("barcode_value") or "").lower()
                         or needle in str(row.get("batch_code") or row.get("batch_id") or "").lower()
                     ]
+            rows = [self._with_staff_display(row, ("staff_id", "uploaded_by", "created_by", "operator_id")) for row in rows]
             return self._empty(rows[:limit])
         except Exception as exc:
             logger.error("Traceability failed: %s", exc)
@@ -333,6 +390,8 @@ class AdminService:
                 "message": item.get("message") or item.get("title") or item.get("corrective_action"),
                 "staff_id": item.get("staff_id") or item.get("created_by") or item.get("resolved_by"),
                 "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
             })
         return self._empty(data)
 
@@ -653,6 +712,8 @@ class AdminService:
                 "created_by": item.get("created_by") or item.get("operator_id"),
                 "staff_id": item.get("staff_id") or item.get("created_by") or item.get("operator_id"),
                 "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
                 "ph_value": item.get("ph_value"),
                 "ph_status": item.get("ph_status") or "not_checked",
                 "brix_value": item.get("brix_value"),
@@ -728,11 +789,16 @@ class AdminService:
         device = row.get("device_name") or row.get("device_type") or (row.get("facility_devices") or {}).get("name") or row.get("device_id")
         raw_status = row.get("status")
         normalized_status = str(raw_status).lower() if raw_status else ("pass" if row.get("is_normal", not row.get("is_abnormal", False)) else "fail")
+        staff_name = row.get("staff_name")
+        if self._is_uuid_like(staff_name):
+            staff_name = item.get("staff_display_name")
         return self.normalize_evidence_url({
             "id": row.get("id"),
             "staff_id": item.get("staff_id") or row.get("created_by"),
-            "staff_name": row.get("staff_name"),
+            "staff_name": staff_name,
             "staff_display_name": item.get("staff_display_name"),
+            "staff_role": item.get("staff_role"),
+            "staff_email": item.get("staff_email"),
             "room_id": row.get("room_id"),
             "room": room,
             "device_id": row.get("device_id"),
@@ -803,13 +869,15 @@ class AdminService:
         return bool(row.get("reason") or row.get("photo_url") or row.get("storage_path"))
 
     def _approval_from_qc_report(self, row):
-        item = dict(row or {})
+        item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
         item.setdefault("approval_id", item.get("id"))
         item.setdefault("source", "qc_report")
         item.setdefault("approval_status", item.get("approval_status") or "pending")
         item.setdefault("status", item.get("status") or "pending")
         item.setdefault("qc_stage", item.get("ccp_stage"))
-        item.setdefault("inspector_name", item.get("inspector_name") or item.get("staff_name") or item.get("staff_id") or item.get("operator_id"))
+        item.setdefault("inspector_name", item.get("inspector_name") or item.get("staff_name") or item.get("staff_display_name"))
+        if self._is_uuid_like(item.get("inspector_name")):
+            item["inspector_name"] = item.get("staff_display_name")
         item.setdefault("product_photo_url", item.get("product_photo_url") or item.get("photo_url"))
         return item
 
@@ -828,22 +896,27 @@ class AdminService:
                 report["status"] = report.get("status") or item.get("status") or "pending"
                 report["created_at"] = item.get("created_at") or report.get("created_at")
                 return report
+        item = self._with_staff_display(item, ("staff_id", "requested_by", "created_by", "approved_by"))
         item.setdefault("approval_id", item.get("id"))
         item.setdefault("source", related_type or "approval")
         item.setdefault("approval_status", item.get("status") or "pending")
+        item.setdefault("inspector_name", item.get("staff_display_name"))
         return item
 
     def _approval_from_finding(self, row):
-        item = dict(row or {})
+        item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
         item["source"] = "qc_finding"
         item["batch_code"] = item.get("batch_code") or item.get("finding_type") or "QC Finding"
         item["status"] = item.get("status") or "finding"
         item["approval_status"] = item.get("approval_status") or "pending"
-        item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_id")
+        item["inspector_name"] = item.get("inspector_name") or item.get("staff_name") or item.get("staff_display_name")
+        if self._is_uuid_like(item.get("inspector_name")):
+            item["inspector_name"] = item.get("staff_display_name")
         item["product_photo_url"] = item.get("photo_url")
         return item
 
     def _approval_from_temperature(self, row):
+        item = self._with_staff_display(row, ("staff_id", "created_by"))
         room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id") or "Temperature"
         device = row.get("device_type") or row.get("device_name") or (row.get("facility_devices") or {}).get("name") or row.get("device_id") or "Log"
         return {
@@ -853,8 +926,11 @@ class AdminService:
             "batch_id": row.get("room_id") or row.get("device_id"),
             "status": "warning" if self._temperature_needs_review(row) else "pending",
             "approval_status": "pending",
-            "staff_id": row.get("staff_id") or row.get("created_by"),
-            "inspector_name": row.get("staff_name") or row.get("staff_id") or row.get("created_by"),
+            "staff_id": item.get("staff_id") or row.get("created_by"),
+            "staff_display_name": item.get("staff_display_name"),
+            "staff_role": item.get("staff_role"),
+            "staff_email": item.get("staff_email"),
+            "inspector_name": row.get("staff_name") or item.get("staff_display_name"),
             "product_photo_url": row.get("photo_url"),
             "storage_path": row.get("storage_path"),
             "created_at": row.get("recorded_at") or row.get("created_at"),
@@ -948,6 +1024,7 @@ class AdminService:
     def _traceability_from_reports(self, limit, batches):
         result = []
         for row in self._fetch("qc_reports", order_by="created_at", limit=limit):
+            item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
             batch = batches.get(row.get("batch_id"), {})
             product = batch.get("products") or {}
             result.append({
@@ -956,8 +1033,11 @@ class AdminService:
                 "batch_id": row.get("batch_id"),
                 "product_name": row.get("product_name") or product.get("product_name") or batch.get("product_name"),
                 "product_id": row.get("product_id") or batch.get("product_id"),
-                "staff_name": row.get("inspector_name") or row.get("staff_name") or row.get("staff_id"),
-                "staff_id": row.get("staff_id"),
+                "staff_name": row.get("inspector_name") or row.get("staff_name") or item.get("staff_display_name"),
+                "staff_id": item.get("staff_id"),
+                "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
                 "photo_url": row.get("product_photo_url") or row.get("temperature_photo_url") or row.get("barcode_photo_url") or row.get("photo_url"),
                 "storage_path": row.get("storage_path") or row.get("product_storage_path") or row.get("temperature_storage_path") or row.get("barcode_storage_path"),
                 "created_at": row.get("created_at"),
@@ -970,6 +1050,7 @@ class AdminService:
             logs = self._fetch("temperature_logs", order_by="recorded_at", limit=limit)
         result = []
         for row in logs:
+            item = self._with_staff_display(row, ("staff_id", "created_by"))
             room = row.get("zone") or row.get("room_name") or (row.get("facility_rooms") or {}).get("name") or row.get("room_id") or "Room"
             device = row.get("device_type") or row.get("device_name") or (row.get("facility_devices") or {}).get("name") or row.get("device_id") or "Unit"
             result.append({
@@ -977,8 +1058,11 @@ class AdminService:
                 "batch_code": row.get("batch_code") or row.get("batch_id") or "-",
                 "batch_id": row.get("batch_id") or row.get("device_id"),
                 "product_name": f"{room} - {device}",
-                "staff_name": row.get("staff_name") or row.get("staff_id") or row.get("created_by"),
-                "staff_id": row.get("staff_id") or row.get("created_by"),
+                "staff_name": row.get("staff_name") or item.get("staff_display_name"),
+                "staff_id": item.get("staff_id") or row.get("created_by"),
+                "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
                 "photo_url": row.get("photo_url"),
                 "storage_path": row.get("storage_path"),
                 "created_at": row.get("recorded_at") or row.get("created_at"),
@@ -988,13 +1072,17 @@ class AdminService:
     def _traceability_from_findings(self, limit):
         result = []
         for row in self._fetch("qc_findings", order_by="created_at", limit=limit):
+            item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id"))
             result.append({
                 "barcode_value": row.get("finding_type") or "QC Finding",
                 "batch_code": row.get("batch_code") or row.get("source") or "QC Finding",
                 "batch_id": row.get("batch_id") or row.get("id"),
                 "product_name": row.get("product_name") or row.get("reason") or "QC Finding",
-                "staff_name": row.get("staff_name") or row.get("staff_id"),
-                "staff_id": row.get("staff_id"),
+                "staff_name": row.get("staff_name") or item.get("staff_display_name"),
+                "staff_id": item.get("staff_id"),
+                "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
                 "photo_url": row.get("photo_url"),
                 "storage_path": row.get("storage_path"),
                 "created_at": row.get("created_at"),
@@ -1004,6 +1092,7 @@ class AdminService:
     def _traceability_from_batch_logs(self, limit, batches):
         result = []
         for row in self._fetch("production_batch_logs", order_by="recorded_at", limit=limit):
+            item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id", "qc_officer_id"))
             batch = batches.get(row.get("batch_id"), {})
             product = batch.get("products") or {}
             result.append({
@@ -1011,8 +1100,11 @@ class AdminService:
                 "batch_code": batch.get("batch_code") or row.get("batch_id"),
                 "batch_id": row.get("batch_id"),
                 "product_name": product.get("product_name") or batch.get("product_name") or row.get("stage"),
-                "staff_name": row.get("staff_name") or row.get("staff_id"),
-                "staff_id": row.get("staff_id"),
+                "staff_name": row.get("staff_name") or item.get("staff_display_name"),
+                "staff_id": item.get("staff_id"),
+                "staff_display_name": item.get("staff_display_name"),
+                "staff_role": item.get("staff_role"),
+                "staff_email": item.get("staff_email"),
                 "photo_url": row.get("photo_url"),
                 "storage_path": row.get("storage_path"),
                 "created_at": row.get("recorded_at") or row.get("created_at"),

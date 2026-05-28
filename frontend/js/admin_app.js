@@ -1341,7 +1341,7 @@ const adminApp = {
         return Array.from(map.values()).map(group => {
             const statuses = new Set(group.reports.map(row => String(row.status || '').toLowerCase()));
             group.overall_status = statuses.has('fail') ? 'fail' : statuses.has('hold') ? 'hold' : statuses.has('pass') ? 'pass' : 'pending';
-            group.staff_names = [...new Set(group.reports.map(row => row.staff_display_name || row.staff_name || row.inspector_name || row.staff_id).filter(Boolean))].join(', ');
+            group.staff_names = [...new Set(group.reports.map(row => this.formatStaffDisplay(row).name).filter(Boolean))].join(', ');
             return group;
         });
     },
@@ -1439,25 +1439,36 @@ const adminApp = {
     },
 
     staffCell(row, idField = 'staff_id') {
-        const display = row.staff_display_name
+        const staff = this.formatStaffDisplay(row, idField);
+        return `<strong>${this.escapeHtml(staff.name)}</strong>${staff.detail ? `<div class="admin-muted">${this.escapeHtml(staff.detail)}</div>` : ''}`;
+    },
+
+    formatStaffDisplay(row = {}, idField = 'staff_id') {
+        const staffId = row[idField] || row.staff_id || row.actor_id || row.created_by || row.operator_id || row.uploaded_by || '';
+        const candidate = row.staff_display_name
             || row.full_name
             || row.name
             || row.username
             || row.email
+            || row.staff_email
             || row.staff_name
             || row.inspector_name
             || row.actor_display_name
-            || row[idField]
-            || row.staff_id
-            || '-';
-        const staffId = row[idField] || row.staff_id || row.actor_id || row.created_by || '';
-        const email = row.email && row.email !== display
-            ? `<div class="admin-muted">${this.escapeHtml(row.email)}</div>`
-            : '';
-        const idLine = staffId && String(staffId) !== String(display)
-            ? `<div class="admin-muted">ID: ${this.escapeHtml(staffId)}</div>`
-            : '';
-        return `<strong>${this.escapeHtml(display)}</strong>${email || idLine}`;
+            || '';
+        const candidateText = String(candidate || '').trim();
+        const isIdLabel = staffId && candidateText && candidateText === String(staffId);
+        const name = candidateText && !isIdLabel && !this.isUuidLike(candidateText)
+            ? candidateText
+            : 'Unknown User';
+        const email = row.staff_email || row.email || '';
+        const detail = email && email !== name
+            ? email
+            : (staffId ? `ID: ${this.compactId(staffId)}` : '');
+        return {
+            name,
+            detail,
+            role: row.staff_role || row.role || 'staff',
+        };
     },
 
     checkTypeLabel(value) {
@@ -1476,7 +1487,7 @@ const adminApp = {
             url: evidence,
             file_name: row.file_name || row.storage_path || '',
             created_at: row.created_at || row.recorded_at || '',
-            staff: row.staff_name || row.uploaded_by || row.staff_id || '',
+            staff: this.formatStaffDisplay(row).name,
         };
         const previewButton = `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(meta)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`;
 

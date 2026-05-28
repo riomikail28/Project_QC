@@ -109,7 +109,8 @@ def test_admin_alert_report_staff_display_name_falls_back_to_uuid(client, admin_
 
     body = response.get_json()
     assert response.status_code == 200
-    assert body["data"][0]["staff_display_name"] == staff_uuid
+    assert body["data"][0]["staff_display_name"] == "Unknown User"
+    assert body["data"][0]["staff_id"] == staff_uuid
 
 
 def test_admin_audit_trail_returns_human_actor_display_name(client, admin_headers):
@@ -187,8 +188,40 @@ def test_admin_audit_trail_without_profile_keeps_id_but_role_falls_back(client, 
     body = response.get_json()
     assert response.status_code == 200
     assert body[0]["actor_id"] == staff_uuid
-    assert body[0]["actor_display_name"] == staff_uuid
+    assert body[0]["actor_display_name"] == "Unknown User"
     assert body[0]["actor_role"] == "staff"
+
+
+def test_admin_monitoring_report_resolves_staff_profile_from_users(client, admin_headers):
+    staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
+    db = FakeSupabase({
+        "facility_logs": [{
+            "id": "log-1",
+            "staff_id": staff_uuid,
+            "temperature_c": 3.2,
+            "is_normal": True,
+            "recorded_at": "2026-05-16T01:00:00Z",
+        }],
+        "staff_accounts": [{
+            "id": staff_uuid,
+            "username": "rio.qc",
+            "role": "staff",
+        }],
+        "users": [{
+            "staff_account_id": staff_uuid,
+            "full_name": "Rio Mikail",
+            "email": "rio.qc@company.id",
+            "role": "staff",
+        }],
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db):
+        response = client.get("/api/v1/admin/reports/monitoring", headers=admin_headers)
+
+    row = response.get_json()["data"][0]
+    assert row["staff_id"] == staff_uuid
+    assert row["staff_display_name"] == "Rio Mikail"
+    assert row["staff_email"] == "rio.qc@company.id"
+    assert row["staff_role"] == "staff"
 
 
 class ApprovalQuery:

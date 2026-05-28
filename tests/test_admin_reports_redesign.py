@@ -45,9 +45,11 @@ def test_admin_reports_use_staff_display_name_as_primary_label():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
 
     assert "staffCell(row" in js
+    assert "formatStaffDisplay(row" in js
     assert "row.staff_display_name" in js
     assert "row.staff_name || row.staff_id || '-'" not in js
     assert "row.staff_name || row.inspector_name || row.staff_id || '-'" not in js
+    assert "|| row[idField]" not in js
     assert "formatActorDisplay(log" in js
 
 
