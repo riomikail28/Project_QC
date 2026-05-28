@@ -540,6 +540,54 @@ select {
   font-size: .86rem;
 }
 
+.google-sheets-export-card {
+  display: grid;
+  gap: 18px;
+}
+
+.integration-status {
+  margin-top: 10px;
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.integration-status.connected {
+  color: var(--success-color);
+}
+
+.integration-status.warning {
+  color: var(--warning-color);
+}
+
+.integration-status.muted {
+  color: var(--text-secondary);
+}
+
+.google-sheets-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.google-sheets-info-grid article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .82);
+  color: var(--text-primary);
+}
+
+.google-sheets-info-grid svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary-color);
+}
+
 .admin-form-grid {
   display: grid;
   gap: 14px;
@@ -896,6 +944,10 @@ textarea {
   .device-list-admin li {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .google-sheets-info-grid {
+    grid-template-columns: 1fr;
   }
 
   .row-actions {

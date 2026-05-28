@@ -190,6 +190,7 @@ def create_app() -> Flask:
             "supabaseAnonKey": os.getenv("SUPABASE_ANON_KEY", "").strip(),
             "supabaseStorageBucket": os.getenv("SUPABASE_STORAGE_BUCKET", "qc-evidence").strip() or "qc-evidence",
             "maxUploadBytes": int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))),
+            "googleAppsScriptConnected": bool(os.getenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "").strip()),
         }
         body = (
             "window.QC_CONFIG = Object.freeze("

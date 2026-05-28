@@ -28,6 +28,7 @@
                 <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Reports</span></a></li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
                 <li><a href="#section-learning" class="sidebar-item admin-nav-link" data-target="learning" data-section="learning"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
+                <li><a href="#section-google-sheets" class="sidebar-item admin-nav-link" data-target="google-sheets" data-section="google-sheets"><i data-lucide="sheet"></i><span>Google Sheets</span></a></li>
                 <li><a href="#section-facility" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
                 <li><a href="#section-sku" class="sidebar-item admin-nav-link admin-sub-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
                 <li><a href="#section-approval" class="sidebar-item admin-nav-link admin-sub-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
@@ -246,6 +247,42 @@
                     </div>
                 </section>
 
+                <!-- SECTION: Google Sheets Export -->
+                <section id="section-google-sheets" class="dashboard-section">
+                    <div class="card google-sheets-export-card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Google Sheets Export</h3>
+                                <p class="admin-muted">Data monitoring suhu dan QC report yang dikirim melalui Google Apps Script.</p>
+                            </div>
+                            <a class="btn-primary" id="googleSheetsOpenBtn" href="https://docs.google.com/spreadsheets/d/1C5OVfOEYQuLRWXoyiUtKYybxb6MztDfK5mSroJlUYTI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
+                                <i data-lucide="external-link"></i> Buka Google Sheets
+                            </a>
+                        </div>
+
+                        <div class="metric-grid google-sheets-status-grid">
+                            <div class="metric-card">
+                                <div class="metric-header"><span>Google Apps Script</span><i data-lucide="plug" class="metric-icon" style="color: var(--primary-color)"></i></div>
+                                <div class="integration-status" id="googleAppsScriptStatus">Checking...</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-header"><span>Google Sheet</span><i data-lucide="table-2" class="metric-icon" style="color: var(--success-color)"></i></div>
+                                <div class="integration-status connected">Available</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-header"><span>Last Export</span><i data-lucide="clock-3" class="metric-icon" style="color: var(--warning-color)"></i></div>
+                                <div class="integration-status muted" id="googleSheetsLastExport">-</div>
+                            </div>
+                        </div>
+
+                        <div class="google-sheets-info-grid" aria-label="Google Sheets export info">
+                            <article><i data-lucide="thermometer"></i><strong>Monitoring Logs</strong></article>
+                            <article><i data-lucide="clipboard-check"></i><strong>QC Reports</strong></article>
+                            <article><i data-lucide="send"></i><strong>Export via Google Apps Script</strong></article>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- SECTION: Facility Management -->
                 <section id="section-facility" class="dashboard-section">
                     <div class="card">
@@ -449,6 +486,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="../js/config.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/profile-menu.js"></script>

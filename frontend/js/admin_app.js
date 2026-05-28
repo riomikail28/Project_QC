@@ -184,6 +184,7 @@ const adminApp = {
             case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
             case 'learning': this.loadLearning(); break;
+            case 'google-sheets': this.loadGoogleSheetsExport(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadQCReports(); break;
             case 'daily-reports': this.loadDailyReports(); break;
@@ -191,6 +192,17 @@ const adminApp = {
             case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
         }
+    },
+
+    loadGoogleSheetsExport() {
+        const connected = Boolean(window.QC_CONFIG?.googleAppsScriptConnected);
+        const status = document.getElementById('googleAppsScriptStatus');
+        if (status) {
+            status.textContent = connected ? 'Connected' : 'Not configured';
+            status.classList.toggle('connected', connected);
+            status.classList.toggle('warning', !connected);
+        }
+        this.setText('googleSheetsLastExport', '-');
     },
 
     // --- Data Loaders ---

@@ -15,6 +15,7 @@ def test_frontend_config_exposes_only_public_supabase_values(client, monkeypatch
     monkeypatch.setenv("SUPABASE_ANON_KEY", "public-anon-key")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "must-not-leak")
     monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", "qc-evidence")
+    monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/private/exec")
 
     response = client.get("/js/config.js")
     body = response.get_data(as_text=True)
@@ -25,6 +26,8 @@ def test_frontend_config_exposes_only_public_supabase_values(client, monkeypatch
     assert "public-anon-key" in body
     assert "qc-evidence" in body
     assert "must-not-leak" not in body
+    assert "script.google.com" not in body
+    assert '"googleAppsScriptConnected":true' in body
     assert "service_role" not in body.lower()
 
 
