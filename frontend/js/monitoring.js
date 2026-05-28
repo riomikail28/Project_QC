@@ -112,10 +112,12 @@ function renderDevices(devices, options = {}) {
         return;
     }
 
-    deviceList.innerHTML = devices.map(device => `
+    deviceList.innerHTML = devices.map(device => {
+        const scheduleStatus = deviceScheduleStatus(device.id);
+        return `
         <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
             <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
-            <div class="status-badge ${device.recorded_at ? "success" : "muted"} device-status">${device.recorded_at ? '<span class="online-dot"></span>Aktif' : 'Belum ada data'}</div>
+            <div class="status-badge ${scheduleStatus.className} device-status">${scheduleStatus.label}</div>
             <div class="device-name">${device.display_name || device.name}</div>
             <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
             <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
@@ -123,7 +125,8 @@ function renderDevices(devices, options = {}) {
             <div class="sparkline"></div>
             <div class="health-bar"><span></span></div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function openLogModal(deviceId) {
@@ -135,6 +138,11 @@ function openLogModal(deviceId) {
     const room = facilityStructure.find(item => (item.devices || []).some(device => device.id === deviceId));
     const device = (room?.devices || []).find(item => item.id === deviceId);
     if (!device) return;
+    const deviceStatus = deviceScheduleStatus(deviceId);
+    if (deviceStatus.status === "completed") {
+        showMonitoringToast(`Unit ini sudah diinput untuk slot ${activeSlot.time}.`, true);
+        return;
+    }
     if (!isUuid(room.id) || !isUuid(device.id) || !isUuid(device.room_id || room.id)) {
         showMonitoringToast("Data ruangan/unit belum sinkron. Refresh halaman.", true);
         return;
@@ -354,14 +362,14 @@ function renderTodaySchedule() {
     }
 
     const completed = todaySchedule.completed_count || 0;
-    const total = todaySchedule.total_slots || 4;
+    const total = todaySchedule.total_required || todaySchedule.total_slots || 4;
     message.textContent = todaySchedule.message || todaySchedule.progress_text || `${completed}/${total} monitoring selesai hari ini.`;
     count.textContent = `${completed}/${total}`;
     bar.style.width = `${Math.max(0, Math.min(100, Math.round((completed / total) * 100)))}%`;
     grid.innerHTML = (todaySchedule.slots || []).map(slot => `
         <article class="schedule-slot ${slot.status}">
             <strong>${slot.time}</strong>
-            <span>${slot.label}</span>
+            <span>${slot.completed_count || 0}/${slot.total_devices || todaySchedule.total_devices || 0} unit selesai</span>
             ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
         </article>
     `).join("");
@@ -382,6 +390,21 @@ function scheduleUnavailableMessage() {
     const next = todaySchedule.next_slot;
     if (next && next.status === "upcoming") return `Slot ${next.time} belum waktunya.`;
     return "Belum ada slot monitoring yang menunggu input.";
+}
+
+function deviceScheduleStatus(deviceId) {
+    const activeSlot = activeMonitoringSlot();
+    const status = todaySchedule?.device_statuses?.[deviceId]?.active_status;
+    if (!activeSlot || !status) {
+        return { status: "idle", label: "Belum ada slot aktif", className: "muted" };
+    }
+    if (status.status === "completed") {
+        return { status: "completed", label: "Selesai", className: "success" };
+    }
+    if (status.status === "missed") {
+        return { status: "missed", label: "Terlewat", className: "warning" };
+    }
+    return { status: "pending", label: "Belum input", className: "muted" };
 }
 
 function showMonitoringToast(message, isError = false) {

@@ -51,7 +51,11 @@ def monitoring_schedule_today():
 @facility_bp.route("/api/facility/monitoring/submit", methods=["POST"])
 @require_auth
 def monitoring_schedule_submit():
-    data = validate_model(TemperatureLogRequest, request_payload())
+    payload = request_payload()
+    allow_duplicate = str(payload.pop("recheck", payload.pop("override", ""))).lower() in {"1", "true", "yes"}
+    actor = getattr(g, "current_user", {}) or {}
+    allow_duplicate = allow_duplicate or str(actor.get("role", "")).lower() == "admin"
+    data = validate_model(TemperatureLogRequest, payload)
     if not is_uuid(data.room_id):
         return jsonify({
             "success": False,
@@ -72,7 +76,12 @@ def monitoring_schedule_submit():
         body, status = supabase_error_response()
         return jsonify(body), status
 
-    resolved = MonitoringScheduleService(sb).resolve_submission(data.slot_time)
+    resolved = MonitoringScheduleService(sb).resolve_submission(
+        data.slot_time,
+        device_id=data.device_id,
+        room_id=data.room_id,
+        allow_duplicate=allow_duplicate,
+    )
     if not resolved.get("success"):
         return jsonify({
             "success": False,
