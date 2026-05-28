@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Any
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -14,6 +14,8 @@ logger = logging.getLogger("qc.services.google_apps_script")
 
 WEBHOOK_ENV = "GOOGLE_APPS_SCRIPT_WEBHOOK_URL"
 TIMEOUT_SECONDS = 10.0
+REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+MAX_REDIRECTS = 3
 _last_export = {
     "last_export_status": None,
     "last_export_error": None,
@@ -22,6 +24,8 @@ _last_export = {
     "last_http_status": None,
     "last_response_text": None,
     "last_exception_message": None,
+    "final_status_code": None,
+    "final_response_text": None,
 }
 
 
@@ -85,14 +89,22 @@ def _send(report_type: str, payload: dict[str, Any]) -> bool:
         **(payload or {}),
     }
     try:
-        response = httpx.post(webhook_url, json=envelope, timeout=TIMEOUT_SECONDS)
+        response = _post_following_redirects(webhook_url, envelope)
         response.raise_for_status()
+        if not _is_success_response(response):
+            raise httpx.HTTPStatusError(
+                f"Google Apps Script did not confirm success: {response.text[:200]}",
+                request=response.request,
+                response=response,
+            )
         _record_status(
             report_type,
             "success",
             None,
             http_status=response.status_code,
             response_text=_trim_response_text(response.text),
+            final_status_code=response.status_code,
+            final_response_text=_trim_response_text(response.text),
         )
         return True
     except Exception as exc:
@@ -116,13 +128,17 @@ def _format_error(exc: Exception) -> tuple[str, dict[str, Any]]:
         "http_status": None,
         "response_text": None,
         "exception_message": None,
+        "final_status_code": None,
+        "final_response_text": None,
     }
     if response is not None:
         status_code = getattr(response, "status_code", None)
         detail["http_status"] = status_code
+        detail["final_status_code"] = status_code
         parts.append(f"status_code={status_code}")
         text = _trim_response_text(getattr(response, "text", ""))
         detail["response_text"] = text
+        detail["final_response_text"] = text
         if text:
             parts.append(f"response_text={text}")
     message = str(exc)
@@ -139,6 +155,8 @@ def _record_status(
     http_status: int | None = None,
     response_text: str | None = None,
     exception_message: str | None = None,
+    final_status_code: int | None = None,
+    final_response_text: str | None = None,
 ):
     _last_export.update({
         "last_export_status": status,
@@ -148,7 +166,50 @@ def _record_status(
         "last_http_status": http_status,
         "last_response_text": response_text,
         "last_exception_message": exception_message,
+        "final_status_code": final_status_code if final_status_code is not None else http_status,
+        "final_response_text": final_response_text if final_response_text is not None else response_text,
     })
+
+
+def _post_following_redirects(webhook_url: str, envelope: dict[str, Any]) -> httpx.Response:
+    current_url = webhook_url
+    response = None
+    for redirect_count in range(MAX_REDIRECTS + 1):
+        response = httpx.post(current_url, json=envelope, timeout=TIMEOUT_SECONDS, follow_redirects=False)
+        if response.status_code not in REDIRECT_STATUS_CODES:
+            return response
+        location = response.headers.get("Location") or response.headers.get("location")
+        if not location:
+            return response
+        next_url = urljoin(current_url, location)
+        logger.info(
+            "Google Apps Script webhook redirect followed status=%s from=%s to=%s",
+            response.status_code,
+            _safe_webhook_target(current_url),
+            _safe_webhook_target(next_url),
+        )
+        current_url = next_url
+    return response
+
+
+def _is_success_response(response: httpx.Response) -> bool:
+    if response.status_code != 200:
+        return False
+    text = (response.text or "").strip()
+    try:
+        data = response.json()
+        if isinstance(data, dict) and data.get("success") is False:
+            return False
+        if isinstance(data, dict) and data.get("success") is True:
+            return True
+    except ValueError:
+        pass
+    normalized = text.lower().replace(" ", "")
+    if '"success":true' in normalized or "success:true" in normalized:
+        return True
+    if '"success":false' in normalized or "success:false" in normalized:
+        return False
+    return True
 
 
 def _url_ends_with_exec(webhook_url: str) -> bool:

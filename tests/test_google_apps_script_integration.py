@@ -54,6 +54,32 @@ def test_google_sheets_status_records_webhook_failure(client, admin_headers, mon
     assert status["last_payload_type"] == "test"
 
 
+def test_google_apps_script_follows_302_redirect_and_treats_final_success(monkeypatch):
+    monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/exec")
+    first = httpx.Response(
+        302,
+        headers={"Location": "https://script.googleusercontent.com/macros/echo?user_content_key=abc"},
+        request=httpx.Request("POST", "https://script.google.com/macros/s/test/exec"),
+    )
+    final = httpx.Response(
+        200,
+        json={"success": True},
+        request=httpx.Request("POST", "https://script.googleusercontent.com/macros/echo?user_content_key=abc"),
+    )
+
+    with patch("backend.services.google_apps_script_service.httpx.post", side_effect=[first, final]) as post:
+        assert send_qc_report({"status": "pass"}) is True
+
+    assert post.call_count == 2
+    assert post.call_args_list[0].args[0] == "https://script.google.com/macros/s/test/exec"
+    assert post.call_args_list[1].args[0].startswith("https://script.googleusercontent.com/macros/echo")
+    assert post.call_args_list[1].kwargs["json"]["type"] == "qc_report"
+    status = google_sheets_status()
+    assert status["last_export_status"] == "success"
+    assert status["final_status_code"] == 200
+    assert '"success":true' in status["final_response_text"].replace(" ", "")
+
+
 def test_admin_google_sheets_test_rejects_invalid_webhook_url(client, admin_headers, monkeypatch):
     monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/dev")
 
