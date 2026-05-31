@@ -192,6 +192,28 @@ def test_qc_batch_action_opens_modal_and_close_hides_it():
     assert "sheet.classList.remove('open', 'active')" in js
 
 
+def test_qc_check_operational_date_contract():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "qcOperationalDate" in html
+    assert "Tanggal QC:" in js
+    assert "timeZone: 'Asia/Jakarta'" in js
+    assert "operational_date" in js
+    assert "?date=" in js
+    assert "todayBatches" in js
+
+
+def test_qc_check_clears_stale_selected_batch_when_date_changes():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "resetStaleOperationalState" in js
+    assert "qc_operational_date" in js
+    assert "qc_selected_batch" in js
+    assert "sessionStorage.removeItem" in js
+    assert "location.search" not in js
+
+
 def test_qc_check_manual_sku_only_fallback():
     """Manual SKU input should not be visible from the start."""
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")

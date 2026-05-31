@@ -9,6 +9,7 @@ Supabase tables: production_batches, production_batch_logs, products
 
 from flask import Blueprint, g, request, jsonify
 import logging
+from datetime import datetime, timedelta, timezone
 
 from backend.services.batch_service import (
     determine_batch_status,
@@ -30,6 +31,10 @@ from backend.services.request_validation import BatchCreateRequest, request_payl
 logger = logging.getLogger("qc.routes.batch")
 
 batch_bp = Blueprint("batch_bp", __name__)
+
+
+def _jakarta_today():
+    return datetime.now(timezone(timedelta(hours=7))).date().isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +103,9 @@ def next_batch_code():
 def batches_by_product(product_id):
     """Return production batches grouped for a selected product/SKU card."""
     sb = get_client()
+    operational_date = request.args.get("date") or _jakarta_today()
     if not sb:
-        return jsonify({"success": True, "data": {"product": None, "batches": []}})
+        return jsonify({"success": True, "data": {"date": operational_date, "product": None, "batches": []}})
     try:
         product_rows = (
             sb.table("products")
@@ -127,6 +133,7 @@ def batches_by_product(product_id):
             sb.table("production_batches")
             .select("*")
             .eq("product_id", product.get("id") or product_id)
+            .eq("production_date", operational_date)
             .order("created_at", desc=True)
             .limit(100)
             .execute()
@@ -138,6 +145,7 @@ def batches_by_product(product_id):
                 sb.table("production_batches")
                 .select("*")
                 .eq("product_code", product_code)
+                .eq("production_date", operational_date)
                 .order("created_at", desc=True)
                 .limit(100)
                 .execute()
@@ -170,7 +178,7 @@ def batches_by_product(product_id):
                 "inspection_round": last_qc.get("inspection_round") or 0,
             })
 
-        return jsonify({"success": True, "data": {"product": product, "batches": batches}})
+        return jsonify({"success": True, "data": {"date": operational_date, "product": product, "batches": batches}})
     except Exception as exc:
         logger.error("Failed to fetch batches by product: %s", exc)
         return jsonify({"success": False, "message": "Gagal memuat batch produk"}), 500

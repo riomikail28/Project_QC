@@ -72,6 +72,7 @@ class FlowDb:
                 "batch_code": "QC-20260517-001",
                 "product_id": "product-1",
                 "product_name": "Chicken Katsu",
+                "production_date": "2026-05-17",
                 "status": "in_progress",
                 "created_at": "2026-05-17T03:00:00Z",
             }],
@@ -101,7 +102,7 @@ def test_submit_cooking_check_with_sku_temperature_status_succeeds(client, staff
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"sku_code": "SKU-CK", "qc_stage": "cooking_check", "temperature": "82", "qc_status": "pass", "staff_id": "staff-a"},
+            data={"sku_code": "SKU-CK", "qc_stage": "cooking_check", "temperature": "82", "qc_status": "pass", "staff_id": "staff-a", "operational_date": "2026-05-17"},
         )
 
     body = response.get_json()
@@ -134,7 +135,7 @@ def test_submit_final_check_without_temperature_succeeds(client, staff_headers):
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "qc_stage": "final_check", "qc_status": "pass"},
+            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "batch_code": "QC-20260517-001", "qc_stage": "final_check", "qc_status": "pass", "operational_date": "2026-05-17"},
         )
 
     report = db.inserted["qc_reports"][0]
@@ -157,6 +158,7 @@ def test_submit_final_check_with_barcode_and_label_photos_succeeds(client, staff
                 "batch_id": "batch-1",
                 "qc_stage": "final_check",
                 "qc_status": "pass",
+                "operational_date": "2026-05-17",
                 "barcode_photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 12), "barcode.jpg"),
                 "label_photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 12), "label.jpg"),
             },
@@ -176,12 +178,12 @@ def test_staff_b_can_submit_final_check_on_same_batch_without_overwriting_cookin
         first = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "qc_stage": "cooking_check", "temperature": "82", "qc_status": "pass", "staff_id": "staff-a"},
+            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "qc_stage": "cooking_check", "temperature": "82", "qc_status": "pass", "staff_id": "staff-a", "operational_date": "2026-05-17"},
         )
         second = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
-            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "qc_stage": "final_check", "qc_status": "pass", "staff_id": "staff-b"},
+            data={"sku_code": "SKU-CK", "batch_id": "batch-1", "qc_stage": "final_check", "qc_status": "pass", "staff_id": "staff-b", "operational_date": "2026-05-17"},
         )
 
     assert first.status_code == 200
@@ -236,7 +238,7 @@ def test_batch_by_product_endpoint_returns_batches_with_qc_status(client, staff_
         "created_at": "2026-05-17T04:00:00Z",
     }]
     with patch("backend.api.batch_routes.get_client", return_value=db):
-        response = client.get("/api/batch/by-product/product-1", headers=staff_headers)
+        response = client.get("/api/batch/by-product/product-1?date=2026-05-17", headers=staff_headers)
 
     body = response.get_json()["data"]
     assert response.status_code == 200
@@ -244,6 +246,46 @@ def test_batch_by_product_endpoint_returns_batches_with_qc_status(client, staff_
     assert body["batches"][0]["batch_code"] == "QC-20260517-001"
     assert body["batches"][0]["qc_status"] == "pass"
     assert body["batches"][0]["last_qc"]["id"] == "report-1"
+
+
+def test_batch_by_product_filters_by_operational_date(client, staff_headers):
+    db = FlowDb()
+    db.fixtures["production_batches"].append({
+        "id": "batch-old",
+        "batch_code": "QC-20260516-001",
+        "product_id": "product-1",
+        "product_name": "Chicken Katsu",
+        "production_date": "2026-05-16",
+        "status": "in_progress",
+        "created_at": "2026-05-16T03:00:00Z",
+    })
+    with patch("backend.api.batch_routes.get_client", return_value=db):
+        response = client.get("/api/batch/by-product/product-1?date=2026-05-17", headers=staff_headers)
+
+    codes = {row["batch_code"] for row in response.get_json()["data"]["batches"]}
+    assert "QC-20260517-001" in codes
+    assert "QC-20260516-001" not in codes
+
+
+def test_submit_qc_rejects_batch_from_different_operational_date(client, staff_headers):
+    db = FlowDb()
+    with patch("backend.services.inspection_service.get_client", return_value=db):
+        response = client.post(
+            "/api/inspection/submit",
+            headers=staff_headers,
+            data={
+                "sku_code": "SKU-CK",
+                "batch_id": "batch-1",
+                "batch_code": "QC-20260517-001",
+                "qc_stage": "final_check",
+                "qc_status": "pass",
+                "staff_id": "staff-1",
+                "operational_date": "2026-05-18",
+            },
+        )
+
+    assert response.status_code == 409
+    assert "Batch ini berasal dari tanggal berbeda" in response.get_json()["message"]
 
 
 def test_empty_sku_returns_validation_error(client, staff_headers):

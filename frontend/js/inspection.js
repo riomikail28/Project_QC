@@ -20,8 +20,12 @@ const Inspection = {
     activeInspection: null,
     lastInspection: null,
     recheckParentInspection: null,
+    operationalDate: null,
 
     async init() {
+        this.operationalDate = this.jakartaDateString();
+        this.resetStaleOperationalState();
+        this.renderOperationalDate();
         await this.loadProducts();
         this.bindSkuWorkspace();
         this.bindProductSearch();
@@ -417,6 +421,7 @@ const Inspection = {
         if (tds) formData.append('tds_value', tds);
         if (this.selectedBatch?.id) formData.append('batch_id', this.selectedBatch.id);
         if (this.selectedBatch?.batch_code) formData.append('batch_code', this.selectedBatch.batch_code);
+        formData.append('operational_date', this.operationalDate || this.jakartaDateString());
         if (this.forceNewBatch) formData.append('force_new_batch', '1');
         if (this.recheckParentInspection) formData.append('parent_inspection', this.recheckParentInspection);
         formData.append('staff_id', user.id || user.user_id || user.sub || '');
@@ -626,15 +631,15 @@ const Inspection = {
         this.skuBatchMap[productKey] = { loading: true, batches: [] };
         this.renderSkuCards();
         try {
-            const response = await API.get(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}`);
+            const response = await API.get(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
             this.skuBatchMap[productKey] = {
                 loading: false,
                 product: response?.data?.product || product,
-                batches: response?.data?.batches || [],
+                batches: this.todayBatches(response?.data?.batches || []),
             };
         } catch (error) {
             const fallback = await this.fetchBatchesBySku(product.product_code || product.sku_code || product.barcode);
-            this.skuBatchMap[productKey] = { loading: false, product, batches: fallback };
+            this.skuBatchMap[productKey] = { loading: false, product, batches: this.todayBatches(fallback) };
         }
         this.renderSkuCards();
     },
@@ -711,7 +716,7 @@ const Inspection = {
 
     batchListTemplate(productKey, batches) {
         if (!batches.length) {
-            return '<p class="simple-qc-message">Belum ada batch pemasakan untuk SKU ini.</p>';
+            return '<p class="simple-qc-message">Belum ada batch produk ini untuk hari ini. Buat batch terlebih dahulu.</p>';
         }
         return batches.map((batch, index) => {
             const status = this.normalizeStatus(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || 'pending');
@@ -759,6 +764,44 @@ const Inspection = {
 
     productKey(product) {
         return String(product?.id || product?.product_code || product?.sku_code || product?.barcode || '').trim();
+    },
+
+    todayBatches(batches) {
+        const date = this.operationalDate || this.jakartaDateString();
+        return (batches || []).filter(batch => !batch.production_date || String(batch.production_date).slice(0, 10) === date);
+    },
+
+    resetStaleOperationalState() {
+        const today = this.operationalDate || this.jakartaDateString();
+        const key = 'qc_operational_date';
+        const previous = localStorage.getItem(key);
+        if (previous && previous !== today) {
+            [
+                'qc_selected_batch',
+                'qc_selected_sku',
+                'qc_recent_submissions',
+                'productSearch',
+                'qcSku',
+                'qcTemp',
+                'qcPh',
+                'qcBrix',
+                'qcTds',
+                'qcNotes',
+            ].forEach(item => {
+                localStorage.removeItem(item);
+                sessionStorage.removeItem(item);
+            });
+            this.selectedBatch = null;
+            this.selectedProduct = null;
+        }
+        localStorage.setItem(key, today);
+    },
+
+    renderOperationalDate() {
+        const el = document.getElementById('qcOperationalDate');
+        if (!el) return;
+        const date = new Date(`${this.operationalDate || this.jakartaDateString()}T00:00:00+07:00`);
+        el.textContent = `Tanggal QC: ${date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`;
     },
 
     findCardProduct(productKey) {
@@ -1172,6 +1215,15 @@ const Inspection = {
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return String(value);
         return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    jakartaDateString() {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).format(new Date());
     },
 
     stageLabel(value) {

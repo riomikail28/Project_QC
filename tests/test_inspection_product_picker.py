@@ -50,6 +50,7 @@ def test_submit_qc_with_product_id_uses_database_product_values(client, staff_he
                 "qc_stage": "final_check",
                 "qc_status": "pass",
                 "staff_id": "staff-1",
+                "operational_date": "2026-05-17",
             },
         )
 

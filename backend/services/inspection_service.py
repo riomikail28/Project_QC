@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from backend.database.supabase_client import direct_db_query, get_client
@@ -27,6 +27,9 @@ class InspectionService:
         if status_code:
             result["status_code"] = status_code
         return result
+
+    def _jakarta_today(self):
+        return datetime.now(timezone(timedelta(hours=7))).date().isoformat()
 
     def _fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
         try:
@@ -160,6 +163,7 @@ class InspectionService:
         sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
         batch_code = str(payload.get("batch_code") or "").strip()
+        operational_date = str(payload.get("operational_date") or payload.get("production_date") or self._jakarta_today()).strip()
         parent_inspection = str(payload.get("parent_inspection") or payload.get("parent_inspection_id") or "").strip() or None
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
@@ -195,6 +199,10 @@ class InspectionService:
         if not batch_code:
             batch_code = self._generated_batch_code()
         batch_id = batch_id or self._ensure_batch(batch_code, product_id, product_name, staff_id)
+        batch_row = self._batch_by_id_or_code(batch_id, batch_code)
+        batch_date = str((batch_row or {}).get("production_date") or "")[:10]
+        if batch_row and batch_date and batch_date != operational_date:
+            return self._fail("Batch ini berasal dari tanggal berbeda. Pilih batch hari ini atau buat batch baru.", status_code=409)
 
         active_lock = self._active_inspection_for_batch(batch_id, batch_code)
         if active_lock and not is_admin:
@@ -403,11 +411,23 @@ class InspectionService:
             "batch_code": batch_code,
             "product_id": product_id or None,
             "product_name": product_name,
+            "production_date": self._jakarta_today(),
             "status": "pending",
             "created_by": staff_id,
         }
         batch = self._insert("production_batches", {k: v for k, v in payload.items() if v is not None}, required=False)
         return batch.get("id") if isinstance(batch, dict) else None
+
+    def _batch_by_id_or_code(self, batch_id, batch_code):
+        if batch_id:
+            rows = self._fetch("production_batches", limit=1, filters=[("eq", "id", batch_id)])
+            if rows:
+                return rows[0]
+        if batch_code:
+            rows = self._fetch("production_batches", limit=1, filters=[("eq", "batch_code", batch_code)])
+            if rows:
+                return rows[0]
+        return None
 
     def _normalize_stage(self, value):
         raw = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")

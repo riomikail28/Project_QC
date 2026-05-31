@@ -985,6 +985,13 @@
   line-height: 1.5;
 }
 
+.qc-operational-date {
+  margin: 8px 0 0;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .empty-icon {
   display: grid;
   width: 58px;
