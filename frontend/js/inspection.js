@@ -43,7 +43,7 @@ const Inspection = {
         this.updateSubmitState();
         this.updateProgressiveFields();
         this.loadRecentSubmissions();
-        this.renderSkuCards();
+        await this.loadTodaySkuCards();
     },
 
     bindSkuWorkspace() {
@@ -640,6 +640,39 @@ const Inspection = {
         } catch (error) {
             const fallback = await this.fetchBatchesBySku(product.product_code || product.sku_code || product.barcode);
             this.skuBatchMap[productKey] = { loading: false, product, batches: this.todayBatches(fallback) };
+        }
+        this.renderSkuCards();
+    },
+
+    async loadTodaySkuCards() {
+        try {
+            const response = await API.get(`/batch/today?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
+            const products = response?.data?.products || [];
+            this.skuCards = [];
+            this.skuBatchMap = {};
+            products.forEach(group => {
+                const product = {
+                    id: group.product_id || group.sku,
+                    product_code: group.sku,
+                    sku_code: group.sku,
+                    product_name: group.product_name,
+                    category: group.category,
+                };
+                const key = this.productKey(product);
+                if (!this.skuCards.some(item => this.productKey(item) === key)) {
+                    this.skuCards.push(product);
+                }
+                this.skuBatchMap[key] = {
+                    loading: false,
+                    product,
+                    batches: this.todayBatches(group.batches || []),
+                    status_summary: group.status_summary || null,
+                };
+            });
+        } catch (error) {
+            this.skuCards = [];
+            this.skuBatchMap = {};
+            this.message('Gagal memuat batch hari ini. Tambahkan SKU manual jika perlu.', true);
         }
         this.renderSkuCards();
     },

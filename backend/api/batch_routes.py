@@ -187,6 +187,79 @@ def batches_by_product(product_id):
 # ---------------------------------------------------------------------------
 # GET /api/batch/<batch_id> — Get batch detail with CCP logs
 # ---------------------------------------------------------------------------
+@batch_bp.route("/api/batch/today", methods=["GET"])
+@require_auth
+def today_batches():
+    """Return production batches for the selected operational date grouped by product."""
+    sb = get_client()
+    operational_date = request.args.get("date") or _jakarta_today()
+    if not sb:
+        return jsonify({"success": True, "data": {"date": operational_date, "products": []}})
+    try:
+        batch_rows = (
+            sb.table("production_batches")
+            .select("*")
+            .eq("production_date", operational_date)
+            .order("created_at", desc=True)
+            .limit(500)
+            .execute()
+            .data
+            or []
+        )
+        reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(1000).execute().data or []
+        report_map = {}
+        for report in reports:
+            for key in (report.get("batch_id"), report.get("batch_code")):
+                if key and key not in report_map:
+                    report_map[key] = report
+
+        grouped = {}
+        for row in batch_rows:
+            product_id = row.get("product_id") or row.get("product_code") or row.get("sku_code") or row.get("batch_code")
+            sku = row.get("product_code") or row.get("sku_code") or row.get("barcode") or row.get("batch_code") or product_id
+            key = str(product_id or sku)
+            group = grouped.setdefault(key, {
+                "product_id": product_id,
+                "sku": sku,
+                "product_name": row.get("product_name") or "Produk",
+                "category": row.get("category") or row.get("product_category"),
+                "batch_count": 0,
+                "status_summary": {"pending": 0, "pass": 0, "hold": 0, "fail": 0},
+                "batches": [],
+            })
+            last_qc = report_map.get(row.get("id")) or report_map.get(row.get("batch_code")) or {}
+            qc_status = last_qc.get("status") or row.get("final_qc_status") or row.get("status") or "pending"
+            normalized = str(qc_status or "pending").lower()
+            if normalized in {"passed", "completed"}:
+                normalized = "pass"
+            elif normalized == "failed":
+                normalized = "fail"
+            elif normalized == "on_hold":
+                normalized = "hold"
+            elif normalized not in {"pass", "hold", "fail"}:
+                normalized = "pending"
+            group["batch_count"] += 1
+            group["status_summary"][normalized] += 1
+            group["batches"].append({
+                "id": row.get("id"),
+                "batch_code": row.get("batch_code"),
+                "batch_sequence": row.get("batch_sequence"),
+                "cook_name": row.get("cook_name"),
+                "quantity": row.get("quantity"),
+                "production_shift": row.get("production_shift") or row.get("shift"),
+                "production_date": row.get("production_date"),
+                "production_time": row.get("production_time") or row.get("created_at"),
+                "qc_status": qc_status,
+                "last_qc": last_qc or None,
+                "inspection_round": last_qc.get("inspection_round") or 0,
+            })
+
+        return jsonify({"success": True, "data": {"date": operational_date, "products": list(grouped.values())}})
+    except Exception as exc:
+        logger.error("Failed to fetch today's batches: %s", exc)
+        return jsonify({"success": False, "message": "Gagal memuat batch hari ini"}), 500
+
+
 @batch_bp.route("/api/batch/<batch_id>", methods=["GET"])
 @require_auth
 def get_batch(batch_id):

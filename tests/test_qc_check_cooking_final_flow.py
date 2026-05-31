@@ -267,6 +267,48 @@ def test_batch_by_product_filters_by_operational_date(client, staff_headers):
     assert "QC-20260516-001" not in codes
 
 
+def test_batch_today_endpoint_returns_grouped_products(client, staff_headers):
+    db = FlowDb()
+    db.fixtures["production_batches"].append({
+        "id": "batch-2",
+        "batch_code": "QC-20260517-002",
+        "product_id": "product-1",
+        "product_name": "Chicken Katsu",
+        "product_code": "SKU-CK",
+        "production_date": "2026-05-17",
+        "batch_sequence": 2,
+        "status": "in_progress",
+        "created_at": "2026-05-17T05:00:00Z",
+    })
+    db.fixtures["production_batches"].append({
+        "id": "batch-old",
+        "batch_code": "QC-20260516-001",
+        "product_id": "product-1",
+        "product_name": "Chicken Katsu",
+        "product_code": "SKU-CK",
+        "production_date": "2026-05-16",
+        "batch_sequence": 1,
+        "status": "in_progress",
+        "created_at": "2026-05-16T05:00:00Z",
+    })
+    db.fixtures["qc_reports"] = [{
+        "id": "report-1",
+        "batch_id": "batch-2",
+        "status": "pass",
+        "created_at": "2026-05-17T06:00:00Z",
+    }]
+    with patch("backend.api.batch_routes.get_client", return_value=db):
+        response = client.get("/api/batch/today?date=2026-05-17", headers=staff_headers)
+
+    data = response.get_json()["data"]
+    assert response.status_code == 200
+    assert data["date"] == "2026-05-17"
+    assert len(data["products"]) == 1
+    assert data["products"][0]["batch_count"] == 2
+    assert data["products"][0]["status_summary"]["pass"] == 1
+    assert {batch["batch_code"] for batch in data["products"][0]["batches"]} == {"QC-20260517-001", "QC-20260517-002"}
+
+
 def test_submit_qc_rejects_batch_from_different_operational_date(client, staff_headers):
     db = FlowDb()
     with patch("backend.services.inspection_service.get_client", return_value=db):

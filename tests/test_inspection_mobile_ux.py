@@ -202,6 +202,8 @@ def test_qc_check_operational_date_contract():
     assert "operational_date" in js
     assert "?date=" in js
     assert "todayBatches" in js
+    assert "loadTodaySkuCards" in js
+    assert "/batch/today?date=" in js
 
 
 def test_qc_check_clears_stale_selected_batch_when_date_changes():
@@ -212,6 +214,29 @@ def test_qc_check_clears_stale_selected_batch_when_date_changes():
     assert "qc_selected_batch" in js
     assert "sessionStorage.removeItem" in js
     assert "location.search" not in js
+
+
+def test_qc_check_auto_renders_today_sku_cards_before_manual_add():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "await this.loadTodaySkuCards()" in js
+    assert "response?.data?.products" in js
+    assert "this.skuCards.push(product)" in js
+    assert "this.skuBatchMap[key]" in js
+
+
+def test_qc_check_empty_state_only_when_no_today_products():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "skuEmptyState" in html
+    assert "empty.hidden = Boolean(this.skuCards.length)" in js
+
+
+def test_qc_check_manual_add_sku_dedupes_existing_card():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "!this.skuCards.some(item => this.productKey(item) === productKey)" in js
 
 
 def test_qc_check_manual_sku_only_fallback():
