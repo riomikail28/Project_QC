@@ -243,13 +243,29 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
-    assert "nextBatchSheet" in html
+    assert 'class="qc-form-sheet next-batch-sheet"' in html
+    assert "qc-form-head" in html
+    assert "qc-form-body" in html
+    assert "qc-form-footer" in html
     assert "Simpan Pemasakan" in html
     assert "data-next-batch" in js
     assert "+ Tambah Pemasakan Berikutnya" in js
     assert "+ Buat Pemasakan ke-1" in js
     assert "saveNextBatch" in js
     assert "API.post('/batch/next'" in js
+
+
+def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "quantity," in js
+    assert "const quantity = Number(document.getElementById('nextQuantity')?.value)" in js
+    assert "ph: this.optionalNumberFromInput('nextPh')" in js
+    assert "brix: this.optionalNumberFromInput('nextBrix')" in js
+    assert "tds: this.optionalNumberFromInput('nextTds')" in js
+    assert "if (raw == null || String(raw).trim() === '') return null" in js
+    assert "Gagal menyimpan pemasakan: ${error.message" in js
+    assert "await this.addSkuCard(product)" in js
 
 
 def test_qc_check_legacy_selected_product_section_removed():

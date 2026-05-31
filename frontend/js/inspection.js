@@ -1141,6 +1141,11 @@ const Inspection = {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+        const message = document.getElementById('nextBatchMessage');
+        if (message) {
+            message.textContent = '';
+            message.classList.remove('error');
+        }
         this.renderNextBatchSummary();
         const sheet = document.getElementById('nextBatchSheet');
         const backdrop = document.getElementById('nextBatchBackdrop');
@@ -1172,6 +1177,7 @@ const Inspection = {
             backdrop.hidden = true;
         }
         document.body.classList.remove('qc-sheet-open', 'modal-open');
+        this.resetNextBatchForm();
     },
 
     renderNextBatchSummary() {
@@ -1179,10 +1185,36 @@ const Inspection = {
         const product = this.nextBatchProduct || {};
         if (!summary) return;
         summary.innerHTML = `
-            <div><span>Produk</span><strong>${this.escapeHtml(product.product_name || '-')}</strong><small>${this.escapeHtml(product.product_code || product.sku_code || product.id || '-')}</small></div>
-            <div><span>Tanggal</span><strong>${this.escapeHtml(this.operationalDate)}</strong><small>readonly</small></div>
-            <div><span>Pemasakan</span><strong>ke-${this.escapeHtml(this.nextBatchSequence)}</strong><small>${this.escapeHtml(this.nextBatchCode || '-')}</small></div>
+            <div><span>Produk</span><strong>${this.escapeHtml(product.product_name || '-')}</strong><small>readonly</small></div>
+            <div><span>SKU</span><strong>${this.escapeHtml(product.product_code || product.sku_code || product.id || '-')}</strong><small>readonly</small></div>
+            <div><span>Tanggal QC</span><strong>${this.escapeHtml(this.operationalDate)}</strong><small>readonly</small></div>
+            <div><span>Pemasakan</span><strong>ke-${this.escapeHtml(this.nextBatchSequence)}</strong><small>readonly</small></div>
+            <div><span>Batch code</span><strong>${this.escapeHtml(this.nextBatchCode || 'Otomatis')}</strong><small>otomatis</small></div>
         `;
+    },
+
+    resetNextBatchForm() {
+        ['nextCookName', 'nextQuantity', 'nextPh', 'nextBrix', 'nextTds', 'nextNotes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const shift = document.getElementById('nextShift');
+        if (shift) shift.value = 'Pagi';
+        const message = document.getElementById('nextBatchMessage');
+        if (message) {
+            message.textContent = '';
+            message.classList.remove('error');
+        }
+    },
+
+    optionalNumberFromInput(id) {
+        const raw = document.getElementById(id)?.value;
+        if (raw == null || String(raw).trim() === '') return null;
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed)) {
+            throw new Error(`${id.replace('next', '')} harus angka`);
+        }
+        return parsed;
     },
 
     async saveNextBatch() {
@@ -1190,30 +1222,41 @@ const Inspection = {
         if (!product) return;
         const button = document.getElementById('saveNextBatchBtn');
         const original = button?.textContent || 'Simpan Pemasakan';
+        const msg = document.getElementById('nextBatchMessage');
         try {
+            const cookName = document.getElementById('nextCookName')?.value?.trim() || '';
+            const quantity = Number(document.getElementById('nextQuantity')?.value);
+            const productionShift = document.getElementById('nextShift')?.value || '';
+            if (!cookName) throw new Error('cook_name wajib diisi');
+            if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('quantity harus angka lebih dari 0');
+            if (!productionShift) throw new Error('production_shift wajib diisi');
             if (button) {
                 button.disabled = true;
                 button.textContent = 'Menyimpan...';
             }
+            if (msg) {
+                msg.textContent = '';
+                msg.classList.remove('error');
+            }
             const response = await API.post('/batch/next', {
                 product_id: product.id || product.product_code || product.sku_code,
                 product_name: product.product_name,
+                sku: product.product_code || product.sku_code || product.barcode || null,
                 production_date: this.operationalDate,
-                cook_name: document.getElementById('nextCookName')?.value?.trim(),
-                quantity: document.getElementById('nextQuantity')?.value,
-                production_shift: document.getElementById('nextShift')?.value,
-                ph: document.getElementById('nextPh')?.value,
-                brix: document.getElementById('nextBrix')?.value,
-                tds: document.getElementById('nextTds')?.value,
+                cook_name: cookName,
+                quantity,
+                production_shift: productionShift,
+                ph: this.optionalNumberFromInput('nextPh'),
+                brix: this.optionalNumberFromInput('nextBrix'),
+                tds: this.optionalNumberFromInput('nextTds'),
                 notes: document.getElementById('nextNotes')?.value?.trim(),
             });
             if (!response.success) throw new Error(response.message || 'Gagal menyimpan pemasakan');
             await this.addSkuCard(product);
             this.closeNextBatchSheet();
         } catch (error) {
-            const msg = document.getElementById('nextBatchMessage');
             if (msg) {
-                msg.textContent = error.message || 'Gagal menyimpan pemasakan';
+                msg.textContent = `Gagal menyimpan pemasakan: ${error.message || 'Request tidak valid'}`;
                 msg.classList.add('error');
             }
         } finally {

@@ -109,9 +109,39 @@ def create_next_batch():
     data = request.get_json(silent=True) or {}
     product_id = data.get("product_id")
     production_date = data.get("production_date") or _jakarta_today()
+    cook_name = (data.get("cook_name") or "").strip()
+    production_shift = (data.get("production_shift") or data.get("shift") or "").strip()
     if not product_id:
         return jsonify({"success": False, "message": "product_id wajib diisi"}), 400
+    if not cook_name:
+        return jsonify({"success": False, "message": "cook_name wajib diisi"}), 400
+    if not production_shift:
+        return jsonify({"success": False, "message": "production_shift wajib diisi"}), 400
     try:
+        quantity = float(data.get("quantity"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "quantity harus angka"}), 400
+    if quantity <= 0:
+        return jsonify({"success": False, "message": "quantity harus lebih dari 0"}), 400
+
+    def optional_number(field, minimum=None, maximum=None):
+        value = data.get(field)
+        if value in (None, ""):
+            return None
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{field} harus angka")
+        if minimum is not None and parsed < minimum:
+            raise ValueError(f"{field} tidak boleh kurang dari {minimum}")
+        if maximum is not None and parsed > maximum:
+            raise ValueError(f"{field} tidak boleh lebih dari {maximum}")
+        return parsed
+
+    try:
+        ph_value = optional_number("ph", 0, 14) if "ph" in data else optional_number("ph_value", 0, 14)
+        brix_value = optional_number("brix", 0, 100) if "brix" in data else optional_number("brix_value", 0, 100)
+        tds_value = optional_number("tds", 0, 1000000) if "tds" in data else optional_number("tds_value", 0, 1000000)
         product_rows = sb.table("products").select("*").eq("id", product_id).limit(1).execute().data or []
         if not product_rows:
             product_rows = sb.table("products").select("*").eq("product_code", product_id).limit(1).execute().data or []
@@ -131,18 +161,16 @@ def create_next_batch():
         payload = {
             "product_id": product.get("id") or product_id,
             "product_name": product.get("product_name") or data.get("product_name"),
-            "product_code": sku,
-            "sku_code": sku,
             "production_date": production_date,
             "batch_sequence": next_sequence,
             "batch_code": batch_code,
-            "cook_name": data.get("cook_name"),
-            "quantity": data.get("quantity"),
-            "production_shift": data.get("production_shift") or data.get("shift"),
-            "shift": data.get("production_shift") or data.get("shift"),
-            "ph_value": data.get("ph") or data.get("ph_value"),
-            "brix_value": data.get("brix") or data.get("brix_value"),
-            "tds_value": data.get("tds") or data.get("tds_value"),
+            "cook_name": cook_name,
+            "quantity": quantity,
+            "production_shift": production_shift,
+            "shift": production_shift,
+            "ph_value": ph_value,
+            "brix_value": brix_value,
+            "tds_value": tds_value,
             "parameter_notes": data.get("notes"),
             "status": "in_progress",
             "final_qc_status": "pending",
@@ -151,9 +179,11 @@ def create_next_batch():
         row = (sb.table("production_batches").insert({k: v for k, v in payload.items() if v not in (None, "")}).execute().data or [payload])[0]
         write_audit("create_next_batch", "production_batch", str(row.get("id") or batch_code), after=row)
         return jsonify({"success": True, "data": row, "batch": row, "message": "Pemasakan berhasil disimpan"}), 201
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
     except Exception as exc:
         logger.error("Failed to create next batch: %s", exc)
-        return jsonify({"success": False, "message": "Gagal menyimpan pemasakan"}), 500
+        return jsonify({"success": False, "message": f"Gagal menyimpan pemasakan: {str(exc)}"}), 500
 
 
 @batch_bp.route("/api/batch/by-product/<product_id>", methods=["GET"])

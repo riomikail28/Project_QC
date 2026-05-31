@@ -353,6 +353,27 @@ def test_create_next_batch_endpoint_creates_next_sequence(client, staff_headers)
     assert body["data"]["batch_sequence"] == 2
     assert body["data"]["batch_code"] == "SKUCK-20260517-002"
     assert body["data"]["cook_name"] == "Andi"
+    assert body["data"]["quantity"] == 50.0
+
+
+def test_create_next_batch_endpoint_returns_specific_validation_error(client, staff_headers):
+    db = FlowDb()
+    with patch("backend.api.batch_routes.get_client", return_value=db), patch("backend.api.batch_routes.write_audit"):
+        response = client.post(
+            "/api/batch/next",
+            headers=staff_headers,
+            json={
+                "product_id": "product-1",
+                "production_date": "2026-05-17",
+                "cook_name": "Andi",
+                "quantity": "abc",
+                "production_shift": "Pagi",
+            },
+        )
+
+    body = response.get_json()
+    assert response.status_code == 400
+    assert body["message"] == "quantity harus angka"
 
 
 def test_submit_qc_rejects_batch_from_different_operational_date(client, staff_headers):
