@@ -173,7 +173,6 @@ def create_next_batch():
             "tds_value": tds_value,
             "parameter_notes": data.get("notes"),
             "status": "in_progress",
-            "final_qc_status": "PENDING_REVIEW",
             "created_by": (getattr(g, "current_user", {}) or {}).get("id"),
         }
         row = (sb.table("production_batches").insert({k: v for k, v in payload.items() if v not in (None, "")}).execute().data or [payload])[0]

@@ -354,9 +354,8 @@ def test_create_next_batch_endpoint_creates_next_sequence(client, staff_headers)
     assert body["data"]["batch_code"] == "SKUCK-20260517-002"
     assert body["data"]["cook_name"] == "Andi"
     assert body["data"]["quantity"] == 50.0
-    assert body["data"]["final_qc_status"] == "PENDING_REVIEW"
-    assert body["data"].get("qc_status") != "pending"
-    assert body["data"].get("final_qc_status") != "pending"
+    assert "qc_status" not in body["data"]
+    assert "final_qc_status" not in body["data"]
 
 
 def test_create_next_batch_endpoint_returns_specific_validation_error(client, staff_headers):
