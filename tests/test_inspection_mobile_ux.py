@@ -109,6 +109,52 @@ def test_qc_check_mobile_fab_and_bottom_nav_remain():
     assert "data-quick-actions" in html
 
 
+def test_qc_modal_has_scrollable_body_and_sticky_footer():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert "qc-form-body" in html
+    assert "qc-form-footer" in html
+    assert "overflow-y: auto" in css
+    assert "overflow-x: hidden" in css
+    assert "position: sticky" in css
+    assert "bottom: 0" in css
+
+
+def test_qc_modal_close_cancel_and_escape_contract():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "qcSheetCloseBtn" in html
+    assert "qcCancelBtn" in html
+    assert "Cancel" in html
+    assert "event.key === 'Escape'" in js
+    assert "closeQcSheet" in js
+
+
+def test_qc_modal_ph_brix_tds_responsive_and_no_horizontal_overflow():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert "qcPh" in html
+    assert "qcBrix" in html
+    assert "qcTds" in html
+    assert ".qc-optional-grid" in css
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
+    assert "grid-template-columns: 1fr" in css
+    assert "overflow-x: hidden" in css
+
+
+def test_qc_modal_existing_submit_button_still_exists():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert 'id="submitQcBtn"' in html
+    assert "Simpan QC" in html
+    assert "bindSubmit" in js
+    assert "submitQc(button)" in js
+
+
 def test_qc_check_manual_sku_only_fallback():
     """Manual SKU input should not be visible from the start."""
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")

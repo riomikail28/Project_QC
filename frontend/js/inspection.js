@@ -45,7 +45,13 @@ const Inspection = {
     bindSkuWorkspace() {
         document.getElementById('addSkuBtn')?.addEventListener('click', () => this.openSkuSearch());
         document.getElementById('qcSheetCloseBtn')?.addEventListener('click', () => this.closeQcSheet());
+        document.getElementById('qcCancelBtn')?.addEventListener('click', () => this.closeQcSheet());
         document.getElementById('qcFormBackdrop')?.addEventListener('click', () => this.closeQcSheet());
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !document.getElementById('qcFormSheet')?.hidden) {
+                this.closeQcSheet();
+            }
+        });
     },
 
     openSkuSearch() {

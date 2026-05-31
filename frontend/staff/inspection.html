@@ -85,6 +85,7 @@
                 <button class="sheet-close-btn" id="qcSheetCloseBtn" type="button" aria-label="Tutup form"><i class="fas fa-xmark"></i></button>
             </div>
 
+            <div class="qc-form-body">
             <section class="qc-batch-summary" id="qcBatchSummary"></section>
 
             <section class="qc-concurrency-panel" id="qcConcurrencyPanel" hidden aria-live="polite">
@@ -183,8 +184,12 @@
                     <div><dt>Evidence</dt><dd id="summaryEvidence">Belum ada foto</dd></div>
                 </dl>
             </section>
-            <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Submit</button>
             <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
+            </div>
+            <footer class="qc-form-footer">
+                <button class="btn-secondary qc-cancel-btn" id="qcCancelBtn" type="button">Cancel</button>
+                <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Simpan QC</button>
+            </footer>
         </section>
     </main>
 
