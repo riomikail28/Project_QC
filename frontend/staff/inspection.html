@@ -32,169 +32,159 @@
     </header>
 
     <main class="app-shell page-grid simple-qc-page inspection-page">
-        <section class="qc-layout qc-layout-single">
-            <div class="panel-card form-stack simple-qc-card">
-                <div class="section-header">
-                    <div>
-                        <h1 class="simple-qc-title">QC Check</h1>
-                        <p class="simple-qc-subtitle">Pilih produk, lalu simpan hasil pengecekan.</p>
-                        <div class="field-qc-stepper" aria-label="Progress QC Check">
-                            <div class="field-qc-step active" data-step="product"><span>1</span><strong>Produk</strong></div>
-                            <div class="field-qc-step" data-step="stage"><span>2</span><strong>Jenis</strong></div>
-                            <div class="field-qc-step" data-step="result"><span>3</span><strong>Hasil</strong></div>
-                            <div class="field-qc-step" data-step="submit"><span>4</span><strong>Simpan</strong></div>
-                        </div>
-                    </div>
+        <section class="sku-qc-workspace">
+            <header class="sku-qc-header">
+                <div>
+                    <h1 class="simple-qc-title">QC Check</h1>
+                    <p class="simple-qc-subtitle">Pilih atau tambahkan SKU untuk mulai pengecekan.</p>
                 </div>
+                <button class="btn-primary add-sku-btn" id="addSkuBtn" type="button"><i class="fas fa-plus"></i> Tambah Produk / SKU</button>
+            </header>
 
-                <!-- ═══ STEP 1: Product Picker ═══ -->
+            <section class="sku-search-panel" id="skuSearchPanel" hidden>
                 <div class="simple-field" id="productPickerField">
-                    <label for="productSearch">Pilih Produk / SKU</label>
-                    <input class="input-field input-large" id="productSearch" placeholder="Cari SKU atau nama produk" autocomplete="off">
+                    <label for="productSearch">Cari Produk / SKU</label>
+                    <input class="input-field input-large" id="productSearch" placeholder="Ketik SKU atau nama produk" autocomplete="off">
                     <p class="simple-qc-message product-search-help" id="productSearchHelp">Ketik minimal 2 huruf untuk mencari produk.</p>
                     <div class="product-picker-list" id="productPickerList"></div>
                     <div id="manualSkuWrap" hidden>
                         <input class="input-field" id="qcSku" placeholder="Masukkan SKU manual" autocomplete="off">
                     </div>
                 </div>
+            </section>
 
-                <!-- Selected product card -->
-                <div class="selected-product-card" id="selectedProductCard" hidden></div>
+            <section class="sku-empty-state" id="skuEmptyState">
+                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
+                <h2>Belum ada SKU dipilih</h2>
+                <p>Tambahkan produk untuk melihat batch pemasakan, status QC, dan riwayat re-check.</p>
+                <button class="btn-primary" type="button" onclick="Inspection.openSkuSearch()"><i class="fas fa-plus"></i> Tambah Produk / SKU</button>
+            </section>
 
-                <!-- Product validation message -->
-                <p class="simple-qc-message" id="productDetected">Pilih produk terlebih dahulu.</p>
+            <section class="sku-card-grid" id="skuCardGrid" aria-live="polite"></section>
 
-                <!-- ═══ STEP 2: Batch (appears after product selected) ═══ -->
-                <div class="simple-field" id="activeBatchPanel" hidden>
-                    <label>Batch aktif</label>
-                    <div id="activeBatchList" class="batch-choice-list"></div>
-                    <p class="simple-qc-message" id="activeBatchEmpty" hidden>Belum ada batch aktif. Batch baru akan dibuat saat submit.</p>
-                    <button class="btn-secondary batch-new-btn" id="createNewBatchBtn" type="button">Buat Batch Baru</button>
+            <p class="simple-qc-message" id="productDetected"></p>
+            <div id="selectedProductCard" hidden></div>
+            <div id="activeBatchPanel" hidden>
+                <div id="activeBatchList"></div>
+                <p id="activeBatchEmpty" hidden></p>
+                <button id="createNewBatchBtn" type="button" hidden>Buat Batch Baru</button>
+            </div>
+            <div id="contextBatchCount" hidden></div>
+            <div id="contextBatchList" hidden></div>
+            <div id="recentQcList" hidden></div>
+        </section>
+
+        <div class="qc-sheet-backdrop" id="qcFormBackdrop" hidden></div>
+        <section class="qc-form-sheet" id="qcFormSheet" hidden aria-modal="true" aria-labelledby="qcFormTitle">
+            <div class="qc-form-handle"></div>
+            <div class="qc-form-head">
+                <div>
+                    <h2 id="qcFormTitle">QC Check Batch</h2>
+                    <p id="qcFormSubtitle">Lengkapi hasil pengecekan batch.</p>
                 </div>
+                <button class="sheet-close-btn" id="qcSheetCloseBtn" type="button" aria-label="Tutup form"><i class="fas fa-xmark"></i></button>
+            </div>
 
-                <section class="qc-concurrency-panel" id="qcConcurrencyPanel" hidden aria-live="polite">
-                    <div class="qc-concurrency-header">
-                        <span class="qc-history-badge" id="qcConcurrencyBadge">🔵 Selesai</span>
-                        <strong id="qcConcurrencyTitle">QC terakhir</strong>
-                    </div>
-                    <div class="qc-concurrency-grid" id="qcConcurrencyMeta"></div>
-                    <div class="qc-concurrency-photo" id="qcConcurrencyPhoto" hidden></div>
-                    <div class="qc-concurrency-actions">
-                        <button class="btn-secondary" id="qcDetailBtn" type="button">Lihat Detail</button>
-                        <button class="btn-secondary" id="qcRecheckBtn" type="button">Tambah Re-check</button>
-                    </div>
-                </section>
+            <section class="qc-batch-summary" id="qcBatchSummary"></section>
 
-                <!-- ═══ STEP 3: Jenis Pengecekan (appears after product selected) ═══ -->
-                <div class="simple-field" id="stageField" hidden>
-                    <label>Jenis Pengecekan</label>
-                    <div class="qc-stage-selector" role="radiogroup" aria-label="Jenis Pengecekan">
-                        <button class="qc-stage-option" type="button" data-stage="cooking_check">
-                            <strong>Cek Masakan</strong>
-                        </button>
-                        <button class="qc-stage-option" type="button" data-stage="final_check">
-                            <strong>Cek Label Akhir</strong>
-                        </button>
-                    </div>
+            <section class="qc-concurrency-panel" id="qcConcurrencyPanel" hidden aria-live="polite">
+                <div class="qc-concurrency-header">
+                    <span class="qc-history-badge" id="qcConcurrencyBadge">🔵 Selesai</span>
+                    <strong id="qcConcurrencyTitle">QC terakhir</strong>
                 </div>
+                <div class="qc-concurrency-grid" id="qcConcurrencyMeta"></div>
+                <div class="qc-concurrency-photo" id="qcConcurrencyPhoto" hidden></div>
+                <div class="qc-concurrency-actions">
+                    <button class="btn-secondary" id="qcDetailBtn" type="button">Lihat Detail</button>
+                    <button class="btn-secondary" id="qcRecheckBtn" type="button">Tambah Re-check</button>
+                </div>
+            </section>
 
-                <!-- ═══ STEP 4: Fields per stage (appears after stage selected) ═══ -->
-                <div class="simple-field" id="cookingFields" hidden>
-                    <label for="qcTemp">Suhu masak</label>
-                    <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
-                    <div class="upload-card-compact" id="cookingUploadCard">
-                        <div class="upload-card-header" onclick="document.getElementById('cookingPhoto').click()">
-                            <div class="upload-card-info">
-                                <i class="fas fa-camera"></i>
-                                <span>Foto Masakan / Termometer</span>
-                            </div>
-                            <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
+            <div class="simple-field" id="stageField" hidden>
+                <label>Jenis Pengecekan</label>
+                <div class="qc-stage-selector" role="radiogroup" aria-label="Jenis Pengecekan">
+                    <button class="qc-stage-option" type="button" data-stage="cooking_check"><strong>Cek Masakan</strong></button>
+                    <button class="qc-stage-option" type="button" data-stage="final_check"><strong>Cek Label Akhir</strong></button>
+                </div>
+            </div>
+
+            <div class="simple-field" id="cookingFields" hidden>
+                <label for="qcTemp">Suhu masak</label>
+                <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
+                <div class="qc-optional-grid">
+                    <label>pH optional <input class="input-field" id="qcPh" type="number" step="0.01" placeholder="pH"></label>
+                    <label>Brix optional <input class="input-field" id="qcBrix" type="number" step="0.1" placeholder="Brix"></label>
+                    <label>TDS optional <input class="input-field" id="qcTds" type="number" step="1" placeholder="TDS"></label>
+                </div>
+                <div class="upload-card-compact" id="cookingUploadCard">
+                    <div class="upload-card-header" onclick="document.getElementById('cookingPhoto').click()">
+                        <div class="upload-card-info">
+                            <i class="fas fa-camera"></i>
+                            <span>Foto Masakan / Termometer</span>
                         </div>
-                        <div class="photo-preview" id="cookingPhotoPreview" hidden></div>
-                        <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+                        <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                     </div>
+                    <div class="photo-preview" id="cookingPhotoPreview" hidden></div>
+                    <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                 </div>
+            </div>
 
-                <div class="simple-field" id="finalFields" hidden>
-                    <div class="upload-card-compact" id="barcodeUploadCard">
-                        <div class="upload-card-header" onclick="document.getElementById('barcodePhoto').click()">
-                            <div class="upload-card-info">
-                                <i class="fas fa-barcode"></i>
-                                <span>Foto Barcode</span>
-                            </div>
-                            <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
+            <div class="simple-field" id="finalFields" hidden>
+                <div class="upload-card-compact" id="barcodeUploadCard">
+                    <div class="upload-card-header" onclick="document.getElementById('barcodePhoto').click()">
+                        <div class="upload-card-info">
+                            <i class="fas fa-barcode"></i>
+                            <span>Foto Barcode</span>
                         </div>
-                        <div class="photo-preview" id="barcodePhotoPreview" hidden></div>
-                        <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+                        <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                     </div>
-                    <div class="upload-card-compact" id="labelUploadCard">
-                        <div class="upload-card-header" onclick="document.getElementById('labelPhoto').click()">
-                            <div class="upload-card-info">
-                                <i class="fas fa-tag"></i>
-                                <span>Foto Label Cetak</span>
-                            </div>
-                            <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
+                    <div class="photo-preview" id="barcodePhotoPreview" hidden></div>
+                    <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+                </div>
+                <div class="upload-card-compact" id="labelUploadCard">
+                    <div class="upload-card-header" onclick="document.getElementById('labelPhoto').click()">
+                        <div class="upload-card-info">
+                            <i class="fas fa-tag"></i>
+                            <span>Foto Label Cetak</span>
                         </div>
-                        <div class="photo-preview" id="labelPhotoPreview" hidden></div>
-                        <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+                        <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                     </div>
+                    <div class="photo-preview" id="labelPhotoPreview" hidden></div>
+                    <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                 </div>
+            </div>
 
-                <!-- ═══ STEP 5: Status QC (appears after stage selected) ═══ -->
-                <div class="simple-field" id="statusField" hidden>
-                    <label>Status QC</label>
-                    <div class="qc-status-selector" role="radiogroup" aria-label="Status QC">
-                        <button class="qc-status-option" type="button" data-status="pass">PASS</button>
-                        <button class="qc-status-option" type="button" data-status="hold">HOLD</button>
-                        <button class="qc-status-option" type="button" data-status="fail">FAIL</button>
-                    </div>
+            <div class="simple-field" id="statusField" hidden>
+                <label>Status QC</label>
+                <div class="qc-status-selector" role="radiogroup" aria-label="Status QC">
+                    <button class="qc-status-option" type="button" data-status="pass">PASS</button>
+                    <button class="qc-status-option" type="button" data-status="hold">HOLD</button>
+                    <button class="qc-status-option" type="button" data-status="fail">FAIL</button>
                 </div>
+            </div>
 
-                <!-- ═══ STEP 6: Catatan opsional (collapsible) ═══ -->
-                <div class="simple-field optional-notes" id="notesField" hidden>
-                    <button class="notes-toggle" id="notesToggle" type="button">+ Tambah Catatan</button>
-                    <div id="notesWrap" hidden>
+            <div class="simple-field optional-notes" id="notesField" hidden>
+                <button class="notes-toggle" id="notesToggle" type="button">+ Tambah Catatan</button>
+                <div id="notesWrap" hidden>
                     <label for="qcNotes">Catatan</label>
                     <textarea class="input-field simple-notes" id="qcNotes" rows="3" placeholder="Tulis catatan jika ada"></textarea>
-                    </div>
                 </div>
-
-                <!-- ═══ STEP 7: Submit ═══ -->
-                <section class="qc-submit-summary" id="qcSubmitSummary" hidden aria-live="polite">
-                    <div>
-                        <span>Summary sebelum submit</span>
-                        <strong id="summaryProduct">Produk belum dipilih</strong>
-                    </div>
-                    <dl>
-                        <div><dt>Batch</dt><dd id="summaryBatch">Batch baru</dd></div>
-                        <div><dt>Jenis</dt><dd id="summaryStage">-</dd></div>
-                        <div><dt>Status</dt><dd id="summaryStatus">-</dd></div>
-                        <div><dt>Evidence</dt><dd id="summaryEvidence">Belum ada foto</dd></div>
-                    </dl>
-                </section>
-                <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Simpan QC</button>
-                <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
             </div>
-            <aside class="panel-card qc-field-context" aria-label="Konteks QC lapangan">
-                <div class="context-card active-batch-context">
-                    <div>
-                        <span>Batch aktif</span>
-                        <strong id="contextBatchCount">Belum ada produk</strong>
-                    </div>
-                    <div id="contextBatchList" class="context-list">
-                        Pilih produk untuk melihat batch aktif.
-                    </div>
+
+            <section class="qc-submit-summary" id="qcSubmitSummary" hidden aria-live="polite">
+                <div>
+                    <span>Summary sebelum submit</span>
+                    <strong id="summaryProduct">Produk belum dipilih</strong>
                 </div>
-                <div class="context-card">
-                    <div>
-                        <span>Riwayat QC terbaru</span>
-                        <strong>Perangkat ini</strong>
-                    </div>
-                    <div id="recentQcList" class="context-list">
-                        Belum ada riwayat QC dari perangkat ini.
-                    </div>
-                </div>
-            </aside>
+                <dl>
+                    <div><dt>Batch</dt><dd id="summaryBatch">Batch baru</dd></div>
+                    <div><dt>Jenis</dt><dd id="summaryStage">-</dd></div>
+                    <div><dt>Status</dt><dd id="summaryStatus">-</dd></div>
+                    <div><dt>Evidence</dt><dd id="summaryEvidence">Belum ada foto</dd></div>
+                </dl>
+            </section>
+            <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Submit</button>
+            <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
         </section>
     </main>
 
@@ -233,7 +223,7 @@
                 window.location.replace('/admin/admin_panel.html');
                 return;
             }
-            ['productSearch','qcSku','qcTemp','qcNotes'].forEach(id => {
+            ['productSearch','qcSku','qcTemp','qcNotes','qcPh','qcBrix','qcTds'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 const saved = localStorage.getItem(id);

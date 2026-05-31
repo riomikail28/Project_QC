@@ -313,6 +313,13 @@ def report_daily():
     return _enveloped(get_admin_service().get_daily_staff_report(**args))
 
 
+@admin_bp.route("/daily-reports", methods=["GET"])
+@require_role("admin")
+def daily_reports():
+    args = _report_args(default_limit=500)
+    return _enveloped(get_admin_service().get_daily_staff_report(**args))
+
+
 @admin_bp.route("/export/daily-report", methods=["GET"])
 @require_role("admin")
 def export_daily_report():
@@ -366,6 +373,12 @@ def legacy_report_evidence():
 @require_role("admin")
 def legacy_report_daily():
     return report_daily()
+
+
+@admin_legacy_bp.route("/daily-reports", methods=["GET"])
+@require_role("admin")
+def legacy_daily_reports():
+    return daily_reports()
 
 
 @admin_legacy_bp.route("/export/daily-report", methods=["GET"])

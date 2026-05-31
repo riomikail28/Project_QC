@@ -12,6 +12,7 @@ const adminApp = {
     learningTab: 'modules',
     learningModules: [],
     reportTab: 'monitoring',
+    dailyReportRows: [],
 
     init() {
         this.checkAuth();
@@ -1362,11 +1363,11 @@ const adminApp = {
 
     setupDailyReportDefaults() {
         const input = document.getElementById('daily-report-date');
-        if (input && !input.value) input.value = new Date().toISOString().slice(0, 10);
+        if (input && !input.value) input.value = this.jakartaDateString();
     },
 
     dailyReportQuery() {
-        const date = document.getElementById('daily-report-date')?.value || new Date().toISOString().slice(0, 10);
+        const date = document.getElementById('daily-report-date')?.value || this.jakartaDateString();
         const staff = document.getElementById('daily-report-staff')?.value?.trim();
         const status = document.getElementById('daily-report-status')?.value;
         const params = new URLSearchParams({ date });
@@ -1378,32 +1379,37 @@ const adminApp = {
     async loadDailyReports() {
         const tbody = document.getElementById('table-daily-reports');
         if (!tbody) return;
+        this.dailyReportRows = [];
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading daily reports...</td></tr>';
         const params = this.dailyReportQuery();
-        const res = await this.fetchAdminData(`${this.apiBase}/reports/daily?${params.toString()}`);
+        const res = await this.fetchAdminData(`${this.apiBase}/daily-reports?${params.toString()}`);
         const data = res?.data || {};
         const summary = data.summary || {};
-        this.setText('daily-total-temperature', summary.temperature || 0);
-        this.setText('daily-total-inspection', summary.inspection || 0);
+        this.setText('daily-total-temperature', summary.temperature_logs || 0);
+        this.setText('daily-total-inspection', summary.inspections ?? summary.inspection_reports ?? 0);
         this.setText('daily-total-findings', summary.findings || 0);
         this.setText('daily-total-evidence', summary.evidence || 0);
         const rows = data.rows || [];
+        this.dailyReportRows = rows;
         if (!rows.length) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No findings submitted today / belum ada laporan staff pada tanggal ini.</td></tr>';
             return;
         }
         tbody.innerHTML = rows.map(row => {
-            const location = row.type === 'temperature'
+            const type = row.type || '-';
+            const location = row.location_or_sku || (String(type).toLowerCase().includes('temperature')
                 ? `${row.room || '-'} / ${row.device || '-'}`
-                : (row.sku || row.product || '-');
+                : (row.sku || row.product || '-'));
+            const status = String(row.status || 'WARNING').toUpperCase();
+            const statusClass = this.dailyStatusClass(status);
             return `
                 <tr class="daily-report-row">
-                    <td data-label="Time">${row.created_at ? new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                    <td data-label="Staff">${this.escapeHtml(row.staff || '-')}</td>
-                    <td data-label="Type">${this.escapeHtml(row.type || '-')}</td>
+                    <td data-label="Time">${this.escapeHtml(row.time || (row.created_at ? new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'))}</td>
+                    <td data-label="Staff">${this.escapeHtml(row.staff_display_name || row.staff || '-')}</td>
+                    <td data-label="Type">${this.escapeHtml(type)}</td>
                     <td data-label="Location/SKU">${this.escapeHtml(location)}</td>
-                    <td data-label="Status"><span class="status-badge status-${this.escapeAttr(row.status || 'pending')}">${this.escapeHtml(row.status || 'pending').toUpperCase()}</span></td>
-                    <td data-label="Photo">${row.photo_url ? `<button class="btn-primary btn-sm" onclick='adminApp.previewImage(${this.safeJson(row.photo_url)})'><i data-lucide="image"></i> Preview</button>` : '-'}</td>
+                    <td data-label="Status"><span class="status-badge status-${this.escapeAttr(statusClass)}">${this.escapeHtml(status)}</span></td>
+                    <td data-label="Photo">${row.photo_url ? `<button class="btn-primary btn-sm" onclick='adminApp.previewImage(${this.safeJson(row.photo_url)})'><i data-lucide="image"></i> Lihat Foto</button>` : '-'}</td>
                     <td data-label="Notes">${this.escapeHtml(row.notes || '-')}</td>
                 </tr>
             `;
@@ -1412,8 +1418,46 @@ const adminApp = {
     },
 
     exportDailyCsv() {
-        const params = this.dailyReportQuery();
-        window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
+        const rows = this.dailyReportRows || [];
+        const headers = ['Time', 'Staff', 'Type', 'Location/SKU', 'Status', 'Photo', 'Notes'];
+        const csvRows = [
+            headers,
+            ...rows.map(row => [
+                row.time || '',
+                row.staff_display_name || row.staff || '',
+                row.type || '',
+                row.location_or_sku || row.sku || row.product || '',
+                row.status || '',
+                row.photo_url || '',
+                row.notes || '',
+            ]),
+        ];
+        const csv = csvRows.map(cols => cols.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `qc_daily_report_${document.getElementById('daily-report-date')?.value || this.jakartaDateString()}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+    },
+
+    jakartaDateString() {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).format(new Date());
+    },
+
+    dailyStatusClass(status) {
+        const normalized = String(status || '').toLowerCase();
+        if (normalized === 'pass') return 'pass';
+        if (normalized === 'fail') return 'fail';
+        if (normalized === 'hold' || normalized === 'warning') return 'warning';
+        return normalized || 'warning';
     },
 
     setText(id, value) {

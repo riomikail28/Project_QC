@@ -357,6 +357,20 @@ class AdminService:
         end = (datetime.fromisoformat(date_value) + timedelta(days=1)).date().isoformat() + "T00:00:00Z"
         return [("gte", field, start), ("lte", field, end)]
 
+    def _jakarta_today(self):
+        return datetime.now(timezone(timedelta(hours=7))).date().isoformat()
+
+    def _jakarta_date_filters(self, field, date_value):
+        if not date_value:
+            return []
+        jakarta = timezone(timedelta(hours=7))
+        start_local = datetime.fromisoformat(date_value).replace(tzinfo=jakarta)
+        end_local = start_local + timedelta(days=1)
+        return [
+            ("gte", field, start_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")),
+            ("lte", field, end_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")),
+        ]
+
     def get_temperature_report(self, limit=100, date=None, staff_id=None, status_filter=None):
         filters = self._date_filters("recorded_at", date)
         if staff_id:
@@ -581,11 +595,21 @@ class AdminService:
         return f"{base}/storage/v1/object/public/{bucket}/{first_path.lstrip('/')}"
 
     def get_daily_staff_report(self, date=None, staff_id=None, status_filter=None, limit=500):
-        date = date or datetime.now(timezone.utc).date().isoformat()
-        temperature = self.get_temperature_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
-        inspection = self.get_inspection_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
-        findings = self.get_findings_report(limit=limit, date=date, staff_id=staff_id, status_filter=status_filter).get("data", [])
-        evidence = self.get_evidence_report(limit=limit, date=date, staff_id=staff_id).get("data", [])
+        date = date or self._jakarta_today()
+        temperature = self._daily_temperature_rows(date, limit)
+        inspection = self._daily_qc_rows(date, limit)
+        findings = self._daily_finding_rows(date, limit)
+
+        if staff_id:
+            temperature = [row for row in temperature if self._matches_staff_filter(row, staff_id)]
+            inspection = [row for row in inspection if self._matches_staff_filter(row, staff_id)]
+            findings = [row for row in findings if self._matches_staff_filter(row, staff_id)]
+
+        if status_filter:
+            temperature = [row for row in temperature if self._matches_status_filter(row, status_filter)]
+            inspection = [row for row in inspection if self._matches_status_filter(row, status_filter)]
+            findings = [row for row in findings if self._matches_status_filter(row, status_filter)]
+
         approval_filters = self._date_filters("created_at", date)
         if staff_id:
             approval_filters.append(("eq", "requested_by", staff_id))
@@ -595,13 +619,15 @@ class AdminService:
         rows.extend(self._daily_inspection_row(row) for row in inspection)
         rows.extend(self._daily_finding_row(row) for row in findings)
         rows = sorted(rows, key=lambda row: row.get("created_at") or "", reverse=True)
+        evidence_count = sum(1 for row in rows if self._row_has_evidence(row))
         return self._empty({
             "date": date,
             "summary": {
                 "temperature_logs": len(temperature),
+                "inspections": len(inspection),
                 "inspection_reports": len(inspection),
                 "findings": len(findings),
-                "evidence": len(evidence),
+                "evidence": evidence_count,
                 "approvals_pending": len([row for row in approvals if str(row.get("status") or "").lower() == "pending"])
                 or len([row for row in inspection if str(row.get("approval_status") or "").lower() == "pending"]),
                 "approvals_approved": len([row for row in approvals if str(row.get("status") or "").lower() == "approved"])
@@ -614,7 +640,7 @@ class AdminService:
             "temperature": temperature,
             "inspection": inspection,
             "findings": findings,
-            "evidence": evidence,
+            "evidence": [row for row in rows if self._row_has_evidence(row)],
             "rows": rows[:limit],
         })
 
@@ -646,52 +672,213 @@ class AdminService:
         return output.getvalue()
 
     def _daily_temperature_row(self, row):
+        created_at = row.get("created_at")
+        status = self._daily_status(row.get("status"))
+        location = self._first_non_empty(row.get("location_or_sku"), row.get("room"), row.get("room_id"), "-")
+        if row.get("device"):
+            location = f"{location} - {row.get('device')}" if location and location != "-" else row.get("device")
         return {
-            "type": "temperature",
+            "time": self._daily_time(created_at),
+            "staff_display_name": row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "type": "Temperature Log",
+            "location_or_sku": location,
             "staff": row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": row.get("room"),
             "device": row.get("device"),
             "sku": "",
             "product": "",
             "temperature": row.get("temperature"),
-            "status": row.get("status"),
+            "status": status,
             "approval_status": "",
             "notes": row.get("notes"),
-            "photo_url": row.get("photo_url"),
-            "created_at": row.get("created_at"),
+            "photo_url": row.get("photo_url") or row.get("evidence_url"),
+            "created_at": created_at,
         }
 
     def _daily_inspection_row(self, row):
+        created_at = row.get("created_at")
+        status = self._daily_status(row.get("status") or row.get("inspection_status"))
+        location = row.get("location_or_sku") or row.get("barcode") or row.get("batch_code") or row.get("batch_id") or row.get("product_name") or "-"
         return {
-            "type": "inspection",
+            "time": self._daily_time(created_at),
+            "staff_display_name": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "type": "Inspection",
+            "location_or_sku": location,
             "staff": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": "",
             "device": "",
             "sku": row.get("barcode") or row.get("batch_code") or row.get("batch_id"),
             "product": row.get("product_name"),
             "temperature": row.get("temperature"),
-            "status": row.get("status"),
+            "status": status,
             "approval_status": row.get("approval_status"),
             "notes": row.get("notes") or row.get("qc_stage") or row.get("ccp_stage"),
-            "photo_url": row.get("photo_url") or row.get("product_photo_url"),
-            "created_at": row.get("created_at"),
+            "photo_url": row.get("photo_url") or row.get("evidence_url") or row.get("product_photo_url"),
+            "created_at": created_at,
         }
 
     def _daily_finding_row(self, row):
+        created_at = row.get("created_at")
+        status = self._daily_status(row.get("status") or row.get("approval_status") or row.get("severity") or "WARNING")
+        location = row.get("location_or_sku") or row.get("batch_code") or row.get("product_name") or "QC Finding"
         return {
-            "type": "finding",
+            "time": self._daily_time(created_at),
+            "staff_display_name": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
+            "type": "Finding",
+            "location_or_sku": location,
             "staff": row.get("staff_display_name") or row.get("inspector_name") or row.get("staff_name") or row.get("staff_id") or "-",
             "room": "",
             "device": "",
             "sku": row.get("batch_code") or "",
             "product": row.get("product_name") or "QC Finding",
             "temperature": "",
-            "status": row.get("status") or row.get("approval_status") or "finding",
+            "status": status,
             "approval_status": row.get("approval_status"),
-            "notes": row.get("reason"),
-            "photo_url": row.get("photo_url"),
-            "created_at": row.get("created_at"),
+            "notes": row.get("reason") or row.get("description") or row.get("notes"),
+            "photo_url": row.get("photo_url") or row.get("evidence_url"),
+            "created_at": created_at,
         }
+
+    def _daily_temperature_rows(self, date, limit):
+        rows = self._fetch_daily_candidates(
+            "facility_logs",
+            date,
+            limit,
+            timestamp_fields=("recorded_at", "submitted_at", "created_at"),
+            date_fields=("monitoring_date",),
+            order_by="recorded_at",
+        )
+        if not rows:
+            rows = self._fetch_daily_candidates(
+                "temperature_logs",
+                date,
+                limit,
+                timestamp_fields=("recorded_at", "submitted_at", "created_at"),
+                date_fields=("monitoring_date",),
+                order_by="recorded_at",
+            )
+        return [self._temperature_report_row(row) for row in rows[:limit]]
+
+    def _daily_qc_rows(self, date, limit):
+        rows = self._fetch_daily_candidates(
+            "qc_reports",
+            date,
+            limit,
+            timestamp_fields=("created_at", "completed_at", "submitted_at"),
+            date_fields=("inspection_date",),
+            order_by="created_at",
+        )
+        return [self._normalize_qc_report(row) for row in rows[:limit]]
+
+    def _daily_finding_rows(self, date, limit):
+        rows = self._fetch_daily_candidates(
+            "qc_findings",
+            date,
+            limit,
+            timestamp_fields=("created_at", "completed_at", "submitted_at"),
+            date_fields=("finding_date",),
+            order_by="created_at",
+        )
+        return [self._normalize_qc_finding(row) for row in rows[:limit]]
+
+    def _fetch_daily_candidates(self, table, date, limit, timestamp_fields, date_fields=(), order_by=None):
+        merged = []
+        seen = set()
+        for field in timestamp_fields:
+            for row in self._fetch(table, order_by=order_by or field, limit=limit, filters=self._jakarta_date_filters(field, date)):
+                key = row.get("id") or (table, field, len(merged), str(row))
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(row)
+        for field in date_fields:
+            for row in self._fetch(table, order_by=order_by, limit=limit, filters=[("eq", field, date)]):
+                key = row.get("id") or (table, field, len(merged), str(row))
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(row)
+        if not merged:
+            rows = self._fetch(table, order_by=order_by, limit=limit)
+            merged = [row for row in rows if self._row_matches_date(row, date)]
+        return merged[:limit]
+
+    def _row_matches_date(self, row, date):
+        for field in ("monitoring_date", "inspection_date", "finding_date", "production_date"):
+            if str(row.get(field) or "")[:10] == date:
+                return True
+        for field in ("recorded_at", "submitted_at", "completed_at", "created_at", "updated_at"):
+            if self._row_jakarta_date(row.get(field)) == date:
+                return True
+        return False
+
+    def _row_jakarta_date(self, value):
+        if not value:
+            return ""
+        text = str(value)
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return parsed.astimezone(timezone(timedelta(hours=7))).date().isoformat()
+        except Exception:
+            return text[:10]
+
+    def _matches_staff_filter(self, row, staff_filter):
+        needle = str(staff_filter or "").strip().lower()
+        if not needle:
+            return True
+        values = [
+            row.get("staff_id"),
+            row.get("created_by"),
+            row.get("operator_id"),
+            row.get("inspector_id"),
+            row.get("uploaded_by"),
+            row.get("staff_display_name"),
+            row.get("staff_name"),
+            row.get("inspector_name"),
+            row.get("full_name"),
+            row.get("name"),
+            row.get("username"),
+            row.get("email"),
+            row.get("staff_email"),
+        ]
+        return any(needle in str(value or "").lower() for value in values)
+
+    def _matches_status_filter(self, row, status_filter):
+        needle = str(status_filter or "").strip().upper()
+        if not needle:
+            return True
+        return self._daily_status(row.get("status") or row.get("inspection_status") or row.get("approval_status") or row.get("severity")) == needle
+
+    def _daily_status(self, value):
+        status = str(value or "").strip().upper()
+        aliases = {
+            "PASSED": "PASS",
+            "NORMAL": "PASS",
+            "OK": "PASS",
+            "FAILED": "FAIL",
+            "FINDING": "WARNING",
+            "PENDING": "WARNING",
+        }
+        return aliases.get(status, status or "WARNING")
+
+    def _daily_time(self, value):
+        if not value:
+            return "-"
+        text = str(value)
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return parsed.astimezone(timezone(timedelta(hours=7))).strftime("%H:%M")
+        except Exception:
+            return text[11:16] if len(text) >= 16 else "-"
+
+    def _row_has_evidence(self, row):
+        return bool(
+            row.get("photo_url")
+            or row.get("evidence_url")
+            or row.get("public_url")
+            or row.get("storage_path")
+            or row.get("product_photo_url")
+            or row.get("temperature_photo_url")
+            or row.get("barcode_photo_url")
+        )
 
     def get_batch_report(self, limit=100):
         rows = self._fetch("production_batches", select="*, products(*)", order_by="created_at", limit=limit)

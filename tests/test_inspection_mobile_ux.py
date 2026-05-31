@@ -74,15 +74,39 @@ def test_qc_check_field_mobile_ux_has_step_summary_and_context():
     css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
-    assert "field-qc-stepper" in html
+    assert "Tambah Produk / SKU" in html
+    assert "skuCardGrid" in html
+    assert "sku-card-grid" in css
     assert "qcSubmitSummary" in html
-    assert "contextBatchList" in html
-    assert "recentQcList" in html
+    assert "qcFormSheet" in html
     assert "updateSummary" in js
-    assert "renderContextBatches" in js
+    assert "renderSkuCards" in js
     assert "rememberRecentSubmission" in js
     assert ".qc-status-option" in css
     assert "min-height: 76px" in css
+
+
+def test_qc_check_sku_card_workflow_contract():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "Pilih atau tambahkan SKU untuk mulai pengecekan." in html
+    assert "skuEmptyState" in html
+    assert "openSkuSearch" in js
+    assert "addSkuCard" in js
+    assert "batchListTemplate" in js
+    assert "data-qc-batch" in js
+    assert "Tambah Re-check" in js
+    assert "Lihat Hasil" in js
+    assert "openQcForm" in js
+
+
+def test_qc_check_mobile_fab_and_bottom_nav_remain():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+
+    assert "fab-container" in html
+    assert "bottom-nav" in html
+    assert "data-quick-actions" in html
 
 
 def test_qc_check_manual_sku_only_fallback():

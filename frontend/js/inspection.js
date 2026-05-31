@@ -13,6 +13,8 @@ const Inspection = {
     selectedBatch: null,
     products: [],
     selectedProduct: null,
+    skuCards: [],
+    skuBatchMap: {},
     manualMode: false,
     forceNewBatch: false,
     activeInspection: null,
@@ -21,6 +23,7 @@ const Inspection = {
 
     async init() {
         await this.loadProducts();
+        this.bindSkuWorkspace();
         this.bindProductSearch();
         this.bindManualSku();
         this.bindNotesToggle();
@@ -36,6 +39,30 @@ const Inspection = {
         this.updateSubmitState();
         this.updateProgressiveFields();
         this.loadRecentSubmissions();
+        this.renderSkuCards();
+    },
+
+    bindSkuWorkspace() {
+        document.getElementById('addSkuBtn')?.addEventListener('click', () => this.openSkuSearch());
+        document.getElementById('qcSheetCloseBtn')?.addEventListener('click', () => this.closeQcSheet());
+        document.getElementById('qcFormBackdrop')?.addEventListener('click', () => this.closeQcSheet());
+    },
+
+    openSkuSearch() {
+        const panel = document.getElementById('skuSearchPanel');
+        if (panel) panel.hidden = false;
+        const helpEl = document.getElementById('productSearchHelp');
+        if (helpEl) {
+            helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+            helpEl.hidden = false;
+        }
+        document.getElementById('productSearch')?.focus();
+    },
+
+    closeSkuSearch() {
+        const panel = document.getElementById('skuSearchPanel');
+        if (panel) panel.hidden = true;
+        this.clearProductList();
     },
 
     /* ═══════════════════════════════════════════════
@@ -340,6 +367,9 @@ const Inspection = {
         const sku = this.selectedProduct?.product_code || manualSku;
         const notes = document.getElementById('qcNotes')?.value?.trim();
         const temperature = document.getElementById('qcTemp')?.value;
+        const ph = document.getElementById('qcPh')?.value;
+        const brix = document.getElementById('qcBrix')?.value;
+        const tds = document.getElementById('qcTds')?.value;
         const cookingPhoto = (document.getElementById('cookingPhoto')?.files || [])[0];
         const barcodePhoto = (document.getElementById('barcodePhoto')?.files || [])[0];
         const labelPhoto = (document.getElementById('labelPhoto')?.files || [])[0];
@@ -376,6 +406,9 @@ const Inspection = {
         formData.append('qc_status', this.selectedStatus);
         formData.append('notes', notes || '');
         if (this.selectedStage === 'cooking_check') formData.append('temperature', temperature || '');
+        if (ph) formData.append('ph_value', ph);
+        if (brix) formData.append('brix_value', brix);
+        if (tds) formData.append('tds_value', tds);
         if (this.selectedBatch?.id) formData.append('batch_id', this.selectedBatch.id);
         if (this.selectedBatch?.batch_code) formData.append('batch_code', this.selectedBatch.batch_code);
         if (this.forceNewBatch) formData.append('force_new_batch', '1');
@@ -399,7 +432,8 @@ const Inspection = {
                 status: this.selectedStatus,
                 created_at: new Date().toISOString()
             });
-            ['productSearch', 'qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
+            const submittedProduct = this.selectedProduct;
+            ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
                 localStorage.removeItem(id);
                 const el = document.getElementById(id);
                 if (el) el.value = '';
@@ -437,6 +471,8 @@ const Inspection = {
             this.updateSummary();
             this.message('QC berhasil disimpan', false);
             this.loadRecentSubmissions();
+            this.closeQcSheet();
+            if (submittedProduct) await this.addSkuCard(submittedProduct);
         } catch (error) {
             this.message(`Gagal menyimpan QC: ${error.message || 'server tidak merespons'}`, true);
         } finally {
@@ -576,11 +612,163 @@ const Inspection = {
         if (list) list.innerHTML = '';
     },
 
+    async addSkuCard(product) {
+        const productKey = this.productKey(product);
+        if (!this.skuCards.some(item => this.productKey(item) === productKey)) {
+            this.skuCards.unshift(product);
+        }
+        this.skuBatchMap[productKey] = { loading: true, batches: [] };
+        this.renderSkuCards();
+        try {
+            const response = await API.get(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}`);
+            this.skuBatchMap[productKey] = {
+                loading: false,
+                product: response?.data?.product || product,
+                batches: response?.data?.batches || [],
+            };
+        } catch (error) {
+            const fallback = await this.fetchBatchesBySku(product.product_code || product.sku_code || product.barcode);
+            this.skuBatchMap[productKey] = { loading: false, product, batches: fallback };
+        }
+        this.renderSkuCards();
+    },
+
+    async fetchBatchesBySku(sku) {
+        if (!sku) return [];
+        try {
+            const response = await API.get(`/inspection/batches/active?sku=${encodeURIComponent(sku)}`);
+            return response?.data?.active_batches || [];
+        } catch (error) {
+            return [];
+        }
+    },
+
+    renderSkuCards() {
+        const grid = document.getElementById('skuCardGrid');
+        const empty = document.getElementById('skuEmptyState');
+        if (!grid) return;
+        if (empty) empty.hidden = Boolean(this.skuCards.length);
+        if (!this.skuCards.length) {
+            grid.innerHTML = '';
+            return;
+        }
+        grid.innerHTML = this.skuCards.map(product => this.skuCardTemplate(product)).join('');
+        grid.querySelectorAll('[data-qc-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.qcBatch);
+                this.openQcForm(product, batch, { recheck: false });
+            });
+        });
+        grid.querySelectorAll('[data-recheck-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.recheckBatch);
+                this.openQcForm(product, batch, { recheck: true });
+            });
+        });
+        grid.querySelectorAll('[data-detail-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.detailBatch);
+                this.showBatchDetail(batch);
+            });
+        });
+    },
+
+    skuCardTemplate(product) {
+        const key = this.productKey(product);
+        const data = this.skuBatchMap[key] || { loading: false, batches: [] };
+        const batches = data.batches || [];
+        const summary = this.batchStatusSummary(batches);
+        return `
+            <article class="sku-card" data-product-key="${this.escapeHtml(key)}">
+                <div class="sku-card-head">
+                    <div>
+                        <span class="sku-code">${this.escapeHtml(product.product_code || product.sku_code || product.barcode || '-')}</span>
+                        <h2>${this.escapeHtml(product.product_name || '-')}</h2>
+                        <p>${this.escapeHtml(product.category || product.product_category || 'Kategori belum diisi')}</p>
+                    </div>
+                    <strong>${batches.length} batch</strong>
+                </div>
+                <div class="sku-status-strip">
+                    ${this.statusChip('Pending', summary.pending)}
+                    ${this.statusChip('PASS', summary.pass)}
+                    ${this.statusChip('HOLD', summary.hold)}
+                    ${this.statusChip('FAIL', summary.fail)}
+                </div>
+                <div class="sku-batch-list">
+                    ${data.loading ? '<p class="simple-qc-message">Memuat batch...</p>' : this.batchListTemplate(key, batches)}
+                </div>
+            </article>
+        `;
+    },
+
+    batchListTemplate(productKey, batches) {
+        if (!batches.length) {
+            return '<p class="simple-qc-message">Belum ada batch pemasakan untuk SKU ini.</p>';
+        }
+        return batches.map((batch, index) => {
+            const status = this.normalizeStatus(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || 'pending');
+            const hasQc = ['pass', 'hold', 'fail'].includes(status);
+            return `
+                <article class="batch-card">
+                    <div class="batch-card-main">
+                        <div>
+                            <strong>Batch #${index + 1}</strong>
+                            <span>${this.escapeHtml(batch.batch_code || '-')}</span>
+                        </div>
+                        <span class="status-badge status-${this.statusClass(status)}">${this.escapeHtml(status.toUpperCase())}</span>
+                    </div>
+                    <dl class="batch-meta">
+                        <div><dt>Pemasakan</dt><dd>ke-${this.escapeHtml(batch.batch_sequence || index + 1)}</dd></div>
+                        <div><dt>Cook</dt><dd>${this.escapeHtml(batch.cook_name || '-')}</dd></div>
+                        <div><dt>Qty</dt><dd>${this.escapeHtml(batch.quantity || '-')}</dd></div>
+                        <div><dt>Jam</dt><dd>${this.escapeHtml(this.batchTime(batch))}</dd></div>
+                    </dl>
+                    <div class="batch-actions">
+                        ${hasQc
+                            ? `<button class="btn-secondary" type="button" data-detail-batch="${this.escapeHtml(batch.id || batch.batch_code)}" data-product-key="${this.escapeHtml(productKey)}">Lihat Hasil</button>
+                               <button class="btn-primary" type="button" data-recheck-batch="${this.escapeHtml(batch.id || batch.batch_code)}" data-product-key="${this.escapeHtml(productKey)}">Tambah Re-check</button>`
+                            : `<button class="btn-primary" type="button" data-qc-batch="${this.escapeHtml(batch.id || batch.batch_code)}" data-product-key="${this.escapeHtml(productKey)}">QC Check</button>`}
+                    </div>
+                </article>
+            `;
+        }).join('');
+    },
+
+    statusChip(label, count) {
+        return `<span class="sku-status-chip status-${this.statusClass(label)}"><strong>${count}</strong>${this.escapeHtml(label)}</span>`;
+    },
+
+    batchStatusSummary(batches) {
+        return batches.reduce((summary, batch) => {
+            const status = this.normalizeStatus(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || 'pending');
+            if (status === 'pass') summary.pass += 1;
+            else if (status === 'hold') summary.hold += 1;
+            else if (status === 'fail') summary.fail += 1;
+            else summary.pending += 1;
+            return summary;
+        }, { pending: 0, pass: 0, hold: 0, fail: 0 });
+    },
+
+    productKey(product) {
+        return String(product?.id || product?.product_code || product?.sku_code || product?.barcode || '').trim();
+    },
+
+    findCardProduct(productKey) {
+        return this.skuCards.find(product => this.productKey(product) === productKey) || null;
+    },
+
+    findCardBatch(productKey, batchKey) {
+        const batches = this.skuBatchMap[productKey]?.batches || [];
+        return batches.find(batch => String(batch.id || batch.batch_code) === String(batchKey)) || null;
+    },
+
     /* ═══════════════════════════════════════════════
        Select Product
        ═══════════════════════════════════════════════ */
 
-    selectProduct(product) {
+    async selectProduct(product) {
         this.selectedProduct = product;
         this.manualMode = false;
         this.selectedBatch = null;
@@ -599,11 +787,10 @@ const Inspection = {
         const helpEl = document.getElementById('productSearchHelp');
         if (helpEl) helpEl.hidden = true;
         const productMsg = document.getElementById('productDetected');
+        if (productMsg) productMsg.textContent = 'Memuat batch produk...';
+        await this.addSkuCard(product);
+        this.closeSkuSearch();
         if (productMsg) productMsg.textContent = '';
-        this.lookupActiveBatches(product.product_code);
-        this.updateProgressiveFields();
-        this.updateSubmitState();
-        this.updateSummary();
     },
 
     /* ═══════════════════════════════════════════════
@@ -779,6 +966,83 @@ const Inspection = {
         if (recheckBtn) recheckBtn.disabled = Boolean(active || !latest?.id);
     },
 
+    openQcForm(product, batch, options = {}) {
+        if (!product || !batch) return;
+        this.selectedProduct = product;
+        this.selectedBatch = batch;
+        this.forceNewBatch = false;
+        this.activeInspection = null;
+        this.lastInspection = batch.last_qc || null;
+        this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
+        this.selectedStage = null;
+        this.selectedStatus = null;
+        ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = '';
+            this.clearPhotoPreview(id);
+        });
+        document.querySelectorAll('.qc-stage-option, .qc-status-option').forEach(item => item.classList.remove('active'));
+        this.renderBatchSummary(product, batch);
+        this.renderQcConcurrency(null, batch.last_qc || null);
+        const sheet = document.getElementById('qcFormSheet');
+        const backdrop = document.getElementById('qcFormBackdrop');
+        if (sheet) sheet.hidden = false;
+        if (backdrop) backdrop.hidden = false;
+        document.body.classList.add('qc-sheet-open');
+        this.updateProgressiveFields();
+        this.updateSubmitState();
+    },
+
+    closeQcSheet() {
+        const sheet = document.getElementById('qcFormSheet');
+        const backdrop = document.getElementById('qcFormBackdrop');
+        if (sheet) sheet.hidden = true;
+        if (backdrop) backdrop.hidden = true;
+        document.body.classList.remove('qc-sheet-open');
+    },
+
+    renderBatchSummary(product, batch) {
+        const summary = document.getElementById('qcBatchSummary');
+        if (!summary) return;
+        summary.innerHTML = `
+            <div>
+                <span>Produk</span>
+                <strong>${this.escapeHtml(product.product_name || '-')}</strong>
+                <small>${this.escapeHtml(product.product_code || product.sku_code || product.barcode || '-')}</small>
+            </div>
+            <div>
+                <span>Batch code</span>
+                <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
+                <small>Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')}</small>
+            </div>
+            <div>
+                <span>Cook</span>
+                <strong>${this.escapeHtml(batch.cook_name || '-')}</strong>
+                <small>Qty ${this.escapeHtml(batch.quantity || '-')}</small>
+            </div>
+        `;
+    },
+
+    showBatchDetail(batch) {
+        if (!batch) return;
+        const latest = batch.last_qc || {};
+        const detail = [
+            `Batch: ${batch.batch_code || '-'}`,
+            `Pemasakan ke: ${batch.batch_sequence || '-'}`,
+            `Cook: ${batch.cook_name || '-'}`,
+            `Qty: ${batch.quantity || '-'}`,
+            `Status QC: ${String(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || '-').toUpperCase()}`,
+            latest.qc_stage ? `Jenis: ${this.stageLabel(latest.qc_stage)}` : null,
+            latest.inspection_round ? `Round: ${latest.inspection_round}` : null,
+            latest.notes ? `Catatan: ${latest.notes}` : null,
+        ].filter(Boolean).join('\n');
+        window.alert(detail);
+    },
+
     /* ═══════════════════════════════════════════════
        Render: Photo Preview
        ═══════════════════════════════════════════════ */
@@ -861,6 +1125,31 @@ const Inspection = {
     hasProductContext() {
         const manualSku = document.getElementById('qcSku')?.value?.trim();
         return Boolean(this.selectedProduct || (this.manualMode && manualSku));
+    },
+
+    normalizeStatus(value) {
+        const status = String(value || '').toLowerCase();
+        if (['pass', 'passed', 'completed'].includes(status)) return 'pass';
+        if (['hold', 'on_hold'].includes(status)) return 'hold';
+        if (['warning', 'pending', 'in_progress', 'open', ''].includes(status)) return 'pending';
+        if (['fail', 'failed'].includes(status)) return 'fail';
+        return status || 'pending';
+    },
+
+    statusClass(value) {
+        const status = this.normalizeStatus(value);
+        if (status === 'pass') return 'pass';
+        if (status === 'fail') return 'fail';
+        if (status === 'hold') return 'hold';
+        return 'pending';
+    },
+
+    batchTime(batch) {
+        const value = batch?.production_time || batch?.created_at || batch?.production_date;
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     },
 
     stageLabel(value) {

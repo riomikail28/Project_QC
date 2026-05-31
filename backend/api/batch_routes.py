@@ -93,6 +93,89 @@ def next_batch_code():
     return jsonify({"success": True, "data": preview_next_batch_code(product_id, production_date, product_name)})
 
 
+@batch_bp.route("/api/batch/by-product/<product_id>", methods=["GET"])
+@require_auth
+def batches_by_product(product_id):
+    """Return production batches grouped for a selected product/SKU card."""
+    sb = get_client()
+    if not sb:
+        return jsonify({"success": True, "data": {"product": None, "batches": []}})
+    try:
+        product_rows = (
+            sb.table("products")
+            .select("*")
+            .eq("id", product_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if not product_rows:
+            product_rows = (
+                sb.table("products")
+                .select("*")
+                .eq("product_code", product_id)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+        product = product_rows[0] if product_rows else {"id": product_id, "product_code": product_id}
+        product_code = product.get("product_code") or product.get("sku_code") or product_id
+
+        batch_rows = (
+            sb.table("production_batches")
+            .select("*")
+            .eq("product_id", product.get("id") or product_id)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+            .data
+            or []
+        )
+        if not batch_rows and product_code:
+            batch_rows = (
+                sb.table("production_batches")
+                .select("*")
+                .eq("product_code", product_code)
+                .order("created_at", desc=True)
+                .limit(100)
+                .execute()
+                .data
+                or []
+            )
+
+        reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(500).execute().data or []
+        report_map = {}
+        for report in reports:
+            keys = [report.get("batch_id"), report.get("batch_code")]
+            for key in keys:
+                if key and key not in report_map:
+                    report_map[key] = report
+
+        batches = []
+        for row in batch_rows:
+            last_qc = report_map.get(row.get("id")) or report_map.get(row.get("batch_code")) or {}
+            qc_status = last_qc.get("status") or row.get("final_qc_status") or row.get("status") or "pending"
+            batches.append({
+                "id": row.get("id"),
+                "batch_code": row.get("batch_code"),
+                "batch_sequence": row.get("batch_sequence"),
+                "cook_name": row.get("cook_name"),
+                "quantity": row.get("quantity"),
+                "production_shift": row.get("production_shift") or row.get("shift"),
+                "production_time": row.get("production_time") or row.get("created_at"),
+                "qc_status": qc_status,
+                "last_qc": last_qc or None,
+                "inspection_round": last_qc.get("inspection_round") or 0,
+            })
+
+        return jsonify({"success": True, "data": {"product": product, "batches": batches}})
+    except Exception as exc:
+        logger.error("Failed to fetch batches by product: %s", exc)
+        return jsonify({"success": False, "message": "Gagal memuat batch produk"}), 500
+
+
 # ---------------------------------------------------------------------------
 # GET /api/batch/<batch_id> — Get batch detail with CCP logs
 # ---------------------------------------------------------------------------

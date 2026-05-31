@@ -219,6 +219,33 @@ def test_active_batch_endpoint_returns_active_batches_by_sku(client, staff_heade
     assert batches[0]["last_stage"] == "cooking_check"
 
 
+def test_batch_by_product_endpoint_returns_batches_with_qc_status(client, staff_headers):
+    db = FlowDb()
+    db.fixtures["production_batches"][0].update({
+        "batch_sequence": 1,
+        "cook_name": "Rio",
+        "quantity": 20,
+        "production_shift": "Pagi",
+    })
+    db.fixtures["qc_reports"] = [{
+        "id": "report-1",
+        "batch_id": "batch-1",
+        "batch_code": "QC-20260517-001",
+        "status": "pass",
+        "inspection_round": 1,
+        "created_at": "2026-05-17T04:00:00Z",
+    }]
+    with patch("backend.api.batch_routes.get_client", return_value=db):
+        response = client.get("/api/batch/by-product/product-1", headers=staff_headers)
+
+    body = response.get_json()["data"]
+    assert response.status_code == 200
+    assert body["product"]["product_code"] == "SKU-CK"
+    assert body["batches"][0]["batch_code"] == "QC-20260517-001"
+    assert body["batches"][0]["qc_status"] == "pass"
+    assert body["batches"][0]["last_qc"]["id"] == "report-1"
+
+
 def test_empty_sku_returns_validation_error(client, staff_headers):
     with patch("backend.services.inspection_service.get_client", return_value=FlowDb()):
         response = client.post("/api/inspection/submit", headers=staff_headers, data={"qc_stage": "final_check", "qc_status": "pass"})
