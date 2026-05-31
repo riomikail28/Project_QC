@@ -1256,7 +1256,10 @@ const Inspection = {
             this.closeNextBatchSheet();
         } catch (error) {
             if (msg) {
-                msg.textContent = `Gagal menyimpan pemasakan: ${error.message || 'Request tidak valid'}`;
+                const detail = error.message || 'Request tidak valid';
+                msg.textContent = detail.toLowerCase().startsWith('gagal menyimpan pemasakan')
+                    ? detail
+                    : `Gagal menyimpan pemasakan: ${detail}`;
                 msg.classList.add('error');
             }
         } finally {

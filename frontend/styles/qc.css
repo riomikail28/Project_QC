@@ -1331,6 +1331,19 @@
   overflow-wrap: anywhere;
 }
 
+.next-batch-sheet {
+  max-height: 88vh;
+}
+
+.next-batch-summary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.next-batch-summary div {
+  background: rgba(239, 246, 255, .9);
+}
+
 .qc-optional-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1381,6 +1394,10 @@ body.modal-open {
   .sku-status-strip,
   .batch-meta,
   .qc-batch-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .next-batch-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

@@ -264,8 +264,31 @@ def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
     assert "brix: this.optionalNumberFromInput('nextBrix')" in js
     assert "tds: this.optionalNumberFromInput('nextTds')" in js
     assert "if (raw == null || String(raw).trim() === '') return null" in js
-    assert "Gagal menyimpan pemasakan: ${error.message" in js
+    assert "`Gagal menyimpan pemasakan: ${detail}`" in js
     assert "await this.addSkuCard(product)" in js
+    assert "qc_status" not in js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
+
+
+def test_qc_check_next_batch_error_message_is_not_double_prefixed():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "startsWith('gagal menyimpan pemasakan')" in js
+
+
+def test_qc_check_next_batch_modal_has_required_summary_cards():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert 'class="qc-batch-summary next-batch-summary"' in html
+    assert "Produk</span>" in js
+    assert "SKU</span>" in js
+    assert "Tanggal QC</span>" in js
+    assert "Pemasakan</span>" in js
+    assert "Batch code</span>" in js
+    assert ".next-batch-summary" in css
+    assert ".qc-form-head" in css
+    assert ".qc-form-footer" in css
 
 
 def test_qc_check_legacy_selected_product_section_removed():
