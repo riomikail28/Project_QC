@@ -1181,6 +1181,11 @@
   background: rgba(15, 23, 42, .55);
 }
 
+.qc-sheet-backdrop[hidden],
+.qc-form-sheet[hidden] {
+  display: none !important;
+}
+
 .qc-form-sheet {
   position: fixed;
   left: 50%;
@@ -1332,6 +1337,10 @@
 }
 
 body.qc-sheet-open {
+  overflow: hidden;
+}
+
+body.modal-open {
   overflow: hidden;
 }
 

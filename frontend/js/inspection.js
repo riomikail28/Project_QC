@@ -996,9 +996,17 @@ const Inspection = {
         this.renderQcConcurrency(null, batch.last_qc || null);
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
-        if (sheet) sheet.hidden = false;
-        if (backdrop) backdrop.hidden = false;
-        document.body.classList.add('qc-sheet-open');
+        if (sheet) {
+            sheet.hidden = false;
+            sheet.setAttribute('aria-hidden', 'false');
+            sheet.classList.add('open', 'active');
+        }
+        if (backdrop) {
+            backdrop.hidden = false;
+            backdrop.setAttribute('aria-hidden', 'false');
+            backdrop.classList.add('open', 'active');
+        }
+        document.body.classList.add('qc-sheet-open', 'modal-open');
         this.updateProgressiveFields();
         this.updateSubmitState();
     },
@@ -1006,9 +1014,17 @@ const Inspection = {
     closeQcSheet() {
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
-        if (sheet) sheet.hidden = true;
-        if (backdrop) backdrop.hidden = true;
-        document.body.classList.remove('qc-sheet-open');
+        if (sheet) {
+            sheet.classList.remove('open', 'active');
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.hidden = true;
+        }
+        if (backdrop) {
+            backdrop.classList.remove('open', 'active');
+            backdrop.setAttribute('aria-hidden', 'true');
+            backdrop.hidden = true;
+        }
+        document.body.classList.remove('qc-sheet-open', 'modal-open');
     },
 
     renderBatchSummary(product, batch) {

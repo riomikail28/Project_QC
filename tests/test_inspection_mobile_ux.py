@@ -155,6 +155,43 @@ def test_qc_modal_existing_submit_button_still_exists():
     assert "submitQc(button)" in js
 
 
+def test_qc_modal_hidden_by_default_and_not_active_initially():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert 'id="qcFormSheet" hidden aria-hidden="true"' in html
+    assert 'id="qcFormBackdrop" hidden aria-hidden="true"' in html
+    assert 'qc-form-sheet open' not in html
+    assert 'qc-form-sheet active' not in html
+    assert 'qc-sheet-backdrop open' not in html
+    assert ".qc-form-sheet[hidden]" in css
+    assert "display: none !important" in css
+
+
+def test_qc_modal_has_no_query_param_auto_open():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "openQcModal" not in js
+    assert "openBatchModal" not in js
+    assert "URLSearchParams" not in js
+    assert "location.search" not in js
+    assert "batch_id" in js
+
+
+def test_qc_batch_action_opens_modal_and_close_hides_it():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "data-qc-batch" in js
+    assert "data-recheck-batch" in js
+    assert "this.openQcForm(product, batch" in js
+    assert "sheet.hidden = false" in js
+    assert "sheet.setAttribute('aria-hidden', 'false')" in js
+    assert "sheet.classList.add('open', 'active')" in js
+    assert "sheet.hidden = true" in js
+    assert "sheet.setAttribute('aria-hidden', 'true')" in js
+    assert "sheet.classList.remove('open', 'active')" in js
+
+
 def test_qc_check_manual_sku_only_fallback():
     """Manual SKU input should not be visible from the start."""
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
