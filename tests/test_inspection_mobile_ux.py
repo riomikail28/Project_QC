@@ -239,6 +239,34 @@ def test_qc_check_manual_add_sku_dedupes_existing_card():
     assert "!this.skuCards.some(item => this.productKey(item) === productKey)" in js
 
 
+def test_qc_check_next_batch_action_is_inside_sku_card():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "nextBatchSheet" in html
+    assert "Simpan Pemasakan" in html
+    assert "data-next-batch" in js
+    assert "+ Tambah Pemasakan Berikutnya" in js
+    assert "+ Buat Pemasakan ke-1" in js
+    assert "saveNextBatch" in js
+    assert "API.post('/batch/next'" in js
+
+
+def test_qc_check_legacy_selected_product_section_removed():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+
+    assert "Produk dipilih" not in html
+    assert "selected-product-card" not in html
+
+
+def test_qc_check_batch_one_and_two_render_in_single_sku_template():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "Batch #${index + 1}" in js
+    assert "batchListTemplate(key, batches)" in js
+    assert "skuCardTemplate(product)" in js
+
+
 def test_qc_check_manual_sku_only_fallback():
     """Manual SKU input should not be visible from the start."""
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")

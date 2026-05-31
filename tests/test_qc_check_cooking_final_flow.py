@@ -73,6 +73,7 @@ class FlowDb:
                 "product_id": "product-1",
                 "product_name": "Chicken Katsu",
                 "production_date": "2026-05-17",
+                "batch_sequence": 1,
                 "status": "in_progress",
                 "created_at": "2026-05-17T03:00:00Z",
             }],
@@ -280,6 +281,7 @@ def test_batch_today_endpoint_returns_grouped_products(client, staff_headers):
         "status": "in_progress",
         "created_at": "2026-05-17T05:00:00Z",
     })
+    db.fixtures["products"][0]["product_code"] = "SKU-CK"
     db.fixtures["production_batches"].append({
         "id": "batch-old",
         "batch_code": "QC-20260516-001",
@@ -307,6 +309,50 @@ def test_batch_today_endpoint_returns_grouped_products(client, staff_headers):
     assert data["products"][0]["batch_count"] == 2
     assert data["products"][0]["status_summary"]["pass"] == 1
     assert {batch["batch_code"] for batch in data["products"][0]["batches"]} == {"QC-20260517-001", "QC-20260517-002"}
+
+
+def test_batch_today_groups_by_product_id_not_batch_code(client, staff_headers):
+    db = FlowDb()
+    db.fixtures["production_batches"][0].pop("product_code", None)
+    db.fixtures["production_batches"].append({
+        "id": "batch-2",
+        "batch_code": "GENERALQC-20260517-002",
+        "product_id": "product-1",
+        "product_name": "Chicken Katsu",
+        "production_date": "2026-05-17",
+        "batch_sequence": 2,
+        "status": "in_progress",
+        "created_at": "2026-05-17T05:00:00Z",
+    })
+    with patch("backend.api.batch_routes.get_client", return_value=db):
+        response = client.get("/api/batch/today?date=2026-05-17", headers=staff_headers)
+
+    products = response.get_json()["data"]["products"]
+    assert len(products) == 1
+    assert products[0]["product_id"] == "product-1"
+    assert products[0]["batch_count"] == 2
+
+
+def test_create_next_batch_endpoint_creates_next_sequence(client, staff_headers):
+    db = FlowDb()
+    with patch("backend.api.batch_routes.get_client", return_value=db), patch("backend.api.batch_routes.write_audit"):
+        response = client.post(
+            "/api/batch/next",
+            headers=staff_headers,
+            json={
+                "product_id": "product-1",
+                "production_date": "2026-05-17",
+                "cook_name": "Andi",
+                "quantity": 50,
+                "production_shift": "Pagi",
+            },
+        )
+
+    body = response.get_json()
+    assert response.status_code == 201
+    assert body["data"]["batch_sequence"] == 2
+    assert body["data"]["batch_code"] == "SKUCK-20260517-002"
+    assert body["data"]["cook_name"] == "Andi"
 
 
 def test_submit_qc_rejects_batch_from_different_operational_date(client, staff_headers):

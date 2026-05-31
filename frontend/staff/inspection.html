@@ -192,6 +192,51 @@
                 <button class="btn-primary simple-submit" id="submitQcBtn" type="button" disabled><i class="fas fa-paper-plane"></i>Simpan QC</button>
             </footer>
         </section>
+
+        <div class="qc-sheet-backdrop" id="nextBatchBackdrop" hidden aria-hidden="true"></div>
+        <section class="qc-form-sheet next-batch-sheet" id="nextBatchSheet" hidden aria-hidden="true" aria-modal="true" aria-labelledby="nextBatchTitle">
+            <div class="qc-form-handle"></div>
+            <div class="qc-form-head">
+                <div>
+                    <h2 id="nextBatchTitle">Tambah Pemasakan</h2>
+                    <p id="nextBatchSubtitle">Buat batch berikutnya untuk tanggal QC hari ini.</p>
+                </div>
+                <button class="sheet-close-btn" id="nextBatchCloseBtn" type="button" aria-label="Tutup form"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="qc-form-body">
+                <section class="qc-batch-summary" id="nextBatchSummary"></section>
+                <div class="simple-field">
+                    <label for="nextCookName">Cook name</label>
+                    <input class="input-field" id="nextCookName" autocomplete="off">
+                </div>
+                <div class="simple-field">
+                    <label for="nextQuantity">Quantity</label>
+                    <input class="input-field" id="nextQuantity" type="number" step="0.01">
+                </div>
+                <div class="simple-field">
+                    <label for="nextShift">Shift</label>
+                    <select class="input-field" id="nextShift">
+                        <option value="Pagi">Pagi</option>
+                        <option value="Siang">Siang</option>
+                        <option value="Malam">Malam</option>
+                    </select>
+                </div>
+                <div class="qc-optional-grid">
+                    <label>pH optional <input class="input-field" id="nextPh" type="number" step="0.01"></label>
+                    <label>Brix optional <input class="input-field" id="nextBrix" type="number" step="0.1"></label>
+                    <label>TDS optional <input class="input-field" id="nextTds" type="number" step="1"></label>
+                </div>
+                <div class="simple-field">
+                    <label for="nextNotes">Notes</label>
+                    <textarea class="input-field simple-notes" id="nextNotes" rows="3"></textarea>
+                </div>
+                <p class="simple-qc-message" id="nextBatchMessage" aria-live="polite"></p>
+            </div>
+            <footer class="qc-form-footer">
+                <button class="btn-secondary" id="nextBatchCancelBtn" type="button">Cancel</button>
+                <button class="btn-primary" id="saveNextBatchBtn" type="button">Simpan Pemasakan</button>
+            </footer>
+        </section>
     </main>
 
     <div class="fab-container" data-quick-actions>

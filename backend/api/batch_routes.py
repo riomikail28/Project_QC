@@ -18,6 +18,7 @@ from backend.services.batch_service import (
     get_batch_detail,
     create_batch,
     generate_batch_code,
+    generate_product_batch_code,
     preview_next_batch_code,
     get_daily_summary,
     is_duplicate_batch_code_error,
@@ -96,6 +97,63 @@ def next_batch_code():
     production_date = request.args.get("production_date") or None
     product_name = request.args.get("product_name") or None
     return jsonify({"success": True, "data": preview_next_batch_code(product_id, production_date, product_name)})
+
+
+@batch_bp.route("/api/batch/next", methods=["POST"])
+@require_auth
+def create_next_batch():
+    """Create the next cooking batch for a product/date from QC Check."""
+    sb = get_client()
+    if not sb:
+        return jsonify({"success": False, "message": "Database belum terhubung"}), 503
+    data = request.get_json(silent=True) or {}
+    product_id = data.get("product_id")
+    production_date = data.get("production_date") or _jakarta_today()
+    if not product_id:
+        return jsonify({"success": False, "message": "product_id wajib diisi"}), 400
+    try:
+        product_rows = sb.table("products").select("*").eq("id", product_id).limit(1).execute().data or []
+        if not product_rows:
+            product_rows = sb.table("products").select("*").eq("product_code", product_id).limit(1).execute().data or []
+        product = product_rows[0] if product_rows else {"id": product_id, "product_code": product_id, "product_name": data.get("product_name")}
+        sku = product.get("product_code") or product.get("sku_code") or product_id
+        existing = (
+            sb.table("production_batches")
+            .select("batch_sequence, batch_code")
+            .eq("product_id", product.get("id") or product_id)
+            .eq("production_date", production_date)
+            .execute()
+            .data
+            or []
+        )
+        next_sequence = max([int(row.get("batch_sequence") or 0) for row in existing] or [0]) + 1
+        batch_code = generate_product_batch_code(sku, production_date, next_sequence)
+        payload = {
+            "product_id": product.get("id") or product_id,
+            "product_name": product.get("product_name") or data.get("product_name"),
+            "product_code": sku,
+            "sku_code": sku,
+            "production_date": production_date,
+            "batch_sequence": next_sequence,
+            "batch_code": batch_code,
+            "cook_name": data.get("cook_name"),
+            "quantity": data.get("quantity"),
+            "production_shift": data.get("production_shift") or data.get("shift"),
+            "shift": data.get("production_shift") or data.get("shift"),
+            "ph_value": data.get("ph") or data.get("ph_value"),
+            "brix_value": data.get("brix") or data.get("brix_value"),
+            "tds_value": data.get("tds") or data.get("tds_value"),
+            "parameter_notes": data.get("notes"),
+            "status": "in_progress",
+            "final_qc_status": "pending",
+            "created_by": (getattr(g, "current_user", {}) or {}).get("id"),
+        }
+        row = (sb.table("production_batches").insert({k: v for k, v in payload.items() if v not in (None, "")}).execute().data or [payload])[0]
+        write_audit("create_next_batch", "production_batch", str(row.get("id") or batch_code), after=row)
+        return jsonify({"success": True, "data": row, "batch": row, "message": "Pemasakan berhasil disimpan"}), 201
+    except Exception as exc:
+        logger.error("Failed to create next batch: %s", exc)
+        return jsonify({"success": False, "message": "Gagal menyimpan pemasakan"}), 500
 
 
 @batch_bp.route("/api/batch/by-product/<product_id>", methods=["GET"])
@@ -206,6 +264,8 @@ def today_batches():
             .data
             or []
         )
+        product_rows = sb.table("products").select("*").limit(1000).execute().data or []
+        product_map = {row.get("id"): row for row in product_rows if row.get("id")}
         reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(1000).execute().data or []
         report_map = {}
         for report in reports:
@@ -215,14 +275,15 @@ def today_batches():
 
         grouped = {}
         for row in batch_rows:
-            product_id = row.get("product_id") or row.get("product_code") or row.get("sku_code") or row.get("batch_code")
-            sku = row.get("product_code") or row.get("sku_code") or row.get("barcode") or row.get("batch_code") or product_id
+            product = product_map.get(row.get("product_id")) or {}
+            product_id = row.get("product_id") or product.get("id") or row.get("product_code") or row.get("sku_code")
+            sku = product.get("product_code") or product.get("sku_code") or row.get("product_code") or row.get("sku_code") or row.get("barcode") or product_id
             key = str(product_id or sku)
             group = grouped.setdefault(key, {
                 "product_id": product_id,
                 "sku": sku,
-                "product_name": row.get("product_name") or "Produk",
-                "category": row.get("category") or row.get("product_category"),
+                "product_name": product.get("product_name") or row.get("product_name") or "Produk",
+                "category": product.get("category") or row.get("category") or row.get("product_category"),
                 "batch_count": 0,
                 "status_summary": {"pending": 0, "pass": 0, "hold": 0, "fail": 0},
                 "batches": [],

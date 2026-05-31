@@ -21,6 +21,9 @@ const Inspection = {
     lastInspection: null,
     recheckParentInspection: null,
     operationalDate: null,
+    nextBatchProduct: null,
+    nextBatchSequence: 1,
+    nextBatchCode: null,
 
     async init() {
         this.operationalDate = this.jakartaDateString();
@@ -51,9 +54,16 @@ const Inspection = {
         document.getElementById('qcSheetCloseBtn')?.addEventListener('click', () => this.closeQcSheet());
         document.getElementById('qcCancelBtn')?.addEventListener('click', () => this.closeQcSheet());
         document.getElementById('qcFormBackdrop')?.addEventListener('click', () => this.closeQcSheet());
+        document.getElementById('nextBatchCloseBtn')?.addEventListener('click', () => this.closeNextBatchSheet());
+        document.getElementById('nextBatchCancelBtn')?.addEventListener('click', () => this.closeNextBatchSheet());
+        document.getElementById('nextBatchBackdrop')?.addEventListener('click', () => this.closeNextBatchSheet());
+        document.getElementById('saveNextBatchBtn')?.addEventListener('click', () => this.saveNextBatch());
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && !document.getElementById('qcFormSheet')?.hidden) {
                 this.closeQcSheet();
+            }
+            if (event.key === 'Escape' && !document.getElementById('nextBatchSheet')?.hidden) {
+                this.closeNextBatchSheet();
             }
         });
     },
@@ -717,6 +727,12 @@ const Inspection = {
                 this.showBatchDetail(batch);
             });
         });
+        grid.querySelectorAll('[data-next-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                this.openNextBatchSheet(product);
+            });
+        });
     },
 
     skuCardTemplate(product) {
@@ -743,6 +759,9 @@ const Inspection = {
                 <div class="sku-batch-list">
                     ${data.loading ? '<p class="simple-qc-message">Memuat batch...</p>' : this.batchListTemplate(key, batches)}
                 </div>
+                <button class="btn-secondary sku-next-batch-btn" type="button" data-next-batch="${this.escapeHtml(key)}" data-product-key="${this.escapeHtml(key)}">
+                    ${batches.length ? '+ Tambah Pemasakan Berikutnya' : '+ Buat Pemasakan ke-1'}
+                </button>
             </article>
         `;
     },
@@ -768,6 +787,9 @@ const Inspection = {
                         <div><dt>Cook</dt><dd>${this.escapeHtml(batch.cook_name || '-')}</dd></div>
                         <div><dt>Qty</dt><dd>${this.escapeHtml(batch.quantity || '-')}</dd></div>
                         <div><dt>Jam</dt><dd>${this.escapeHtml(this.batchTime(batch))}</dd></div>
+                        <div><dt>pH</dt><dd>${this.escapeHtml(batch.ph_value || '-')}</dd></div>
+                        <div><dt>Brix</dt><dd>${this.escapeHtml(batch.brix_value || '-')}</dd></div>
+                        <div><dt>TDS</dt><dd>${this.escapeHtml(batch.tds_value || '-')}</dd></div>
                     </dl>
                     <div class="batch-actions">
                         ${hasQc
@@ -1101,6 +1123,105 @@ const Inspection = {
             backdrop.hidden = true;
         }
         document.body.classList.remove('qc-sheet-open', 'modal-open');
+    },
+
+    async openNextBatchSheet(product) {
+        if (!product) return;
+        const key = this.productKey(product);
+        const batches = this.skuBatchMap[key]?.batches || [];
+        this.nextBatchProduct = product;
+        this.nextBatchSequence = Math.max(...batches.map(batch => Number(batch.batch_sequence) || 0), 0) + 1;
+        try {
+            const code = await API.get(`/batch/next-code?product_id=${encodeURIComponent(product.id || product.product_code || key)}&production_date=${encodeURIComponent(this.operationalDate)}&product_name=${encodeURIComponent(product.product_name || '')}`);
+            this.nextBatchCode = code?.data?.batch_code || code?.data?.next_code || code?.batch_code || `${product.product_code || key}-${this.operationalDate.replace(/-/g, '')}-${String(this.nextBatchSequence).padStart(3, '0')}`;
+        } catch (error) {
+            this.nextBatchCode = `${product.product_code || key}-${this.operationalDate.replace(/-/g, '')}-${String(this.nextBatchSequence).padStart(3, '0')}`;
+        }
+        ['nextCookName', 'nextQuantity', 'nextPh', 'nextBrix', 'nextTds', 'nextNotes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this.renderNextBatchSummary();
+        const sheet = document.getElementById('nextBatchSheet');
+        const backdrop = document.getElementById('nextBatchBackdrop');
+        if (sheet) {
+            sheet.hidden = false;
+            sheet.setAttribute('aria-hidden', 'false');
+            sheet.classList.add('open', 'active');
+        }
+        if (backdrop) {
+            backdrop.hidden = false;
+            backdrop.setAttribute('aria-hidden', 'false');
+            backdrop.classList.add('open', 'active');
+        }
+        document.body.classList.add('qc-sheet-open', 'modal-open');
+        document.getElementById('nextCookName')?.focus();
+    },
+
+    closeNextBatchSheet() {
+        const sheet = document.getElementById('nextBatchSheet');
+        const backdrop = document.getElementById('nextBatchBackdrop');
+        if (sheet) {
+            sheet.classList.remove('open', 'active');
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.hidden = true;
+        }
+        if (backdrop) {
+            backdrop.classList.remove('open', 'active');
+            backdrop.setAttribute('aria-hidden', 'true');
+            backdrop.hidden = true;
+        }
+        document.body.classList.remove('qc-sheet-open', 'modal-open');
+    },
+
+    renderNextBatchSummary() {
+        const summary = document.getElementById('nextBatchSummary');
+        const product = this.nextBatchProduct || {};
+        if (!summary) return;
+        summary.innerHTML = `
+            <div><span>Produk</span><strong>${this.escapeHtml(product.product_name || '-')}</strong><small>${this.escapeHtml(product.product_code || product.sku_code || product.id || '-')}</small></div>
+            <div><span>Tanggal</span><strong>${this.escapeHtml(this.operationalDate)}</strong><small>readonly</small></div>
+            <div><span>Pemasakan</span><strong>ke-${this.escapeHtml(this.nextBatchSequence)}</strong><small>${this.escapeHtml(this.nextBatchCode || '-')}</small></div>
+        `;
+    },
+
+    async saveNextBatch() {
+        const product = this.nextBatchProduct;
+        if (!product) return;
+        const button = document.getElementById('saveNextBatchBtn');
+        const original = button?.textContent || 'Simpan Pemasakan';
+        try {
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Menyimpan...';
+            }
+            const response = await API.post('/batch/next', {
+                product_id: product.id || product.product_code || product.sku_code,
+                product_name: product.product_name,
+                production_date: this.operationalDate,
+                cook_name: document.getElementById('nextCookName')?.value?.trim(),
+                quantity: document.getElementById('nextQuantity')?.value,
+                production_shift: document.getElementById('nextShift')?.value,
+                ph: document.getElementById('nextPh')?.value,
+                brix: document.getElementById('nextBrix')?.value,
+                tds: document.getElementById('nextTds')?.value,
+                notes: document.getElementById('nextNotes')?.value?.trim(),
+            });
+            if (!response.success) throw new Error(response.message || 'Gagal menyimpan pemasakan');
+            await this.addSkuCard(product);
+            this.closeNextBatchSheet();
+        } catch (error) {
+            const msg = document.getElementById('nextBatchMessage');
+            if (msg) {
+                msg.textContent = error.message || 'Gagal menyimpan pemasakan';
+                msg.classList.add('error');
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = original;
+            }
+        }
     },
 
     renderBatchSummary(product, batch) {

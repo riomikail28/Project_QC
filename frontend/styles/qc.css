@@ -1161,6 +1161,12 @@
   border-radius: 14px;
 }
 
+.sku-next-batch-btn {
+  min-height: 46px;
+  justify-content: center;
+  border-radius: 16px;
+}
+
 .status-badge,
 .status-pass,
 .status-hold,
