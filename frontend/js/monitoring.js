@@ -267,7 +267,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         const result = await API.upload("/facility/monitoring/submit", formData);
         if (result.success) {
-            showMonitoringToast(result.schedule?.message || "Monitoring suhu berhasil disimpan");
+            showMonitoringToast("Data monitoring berhasil disimpan.");
             closeModal();
             await loadTodaySchedule();
             loadRecentLogs();
