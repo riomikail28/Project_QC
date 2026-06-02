@@ -170,11 +170,11 @@ const adminApp = {
         }
     },
 
-    notify(message) {
+    notify(message, type = 'error') {
         if (typeof window.showToast === 'function') {
-            window.showToast(message, 'error');
+            window.showToast(message, type);
         } else {
-            alert(message);
+            console[type === 'error' ? 'error' : 'log'](message);
         }
     },
 
@@ -1678,16 +1678,45 @@ const adminApp = {
     },
 
     async loadApprovals() {
-        const tbody = document.getElementById('table-approvals');
+        const tbody = this.approvalsTableBody();
+        if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading approvals...</td></tr>';
-        const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
-        if (!res) return;
+        try {
+            const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
+            if (!res) throw new Error('Gagal memuat approvals dari server.');
+            const rows = this.approvalRows(res);
+            this.renderApprovals(rows);
+        } catch (error) {
+            console.error('[Admin] Failed to load approvals:', error);
+            tbody.innerHTML = `<tr><td colspan="5">${this.emptyState('Gagal memuat approvals', this.escapeHtml(error.message || 'server tidak merespons'))}</td></tr>`;
+        }
+    },
+
+    approvalsTableBody() {
+        const tbody = document.getElementById('approvals-table-body') || document.getElementById('table-approvals');
+        if (!tbody) {
+            console.warn('[Admin] Approvals table body not found. Expected #approvals-table-body.');
+        }
+        return tbody;
+    },
+
+    approvalRows(response) {
+        const data = response?.data ?? response;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.approvals)) return data.approvals;
+        if (Array.isArray(data?.rows)) return data.rows;
+        return [];
+    },
+
+    renderApprovals(rows = []) {
+        const tbody = this.approvalsTableBody();
+        if (!tbody) return;
         tbody.innerHTML = '';
-        if (res.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada approval pending.</td></tr>';
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada approval pending.</td></tr>';
             return;
         }
-        res.forEach(row => {
+        rows.forEach(row => {
             const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || row.public_url || '';
             const evidenceUrls = (evidence || '').split(';').filter(u => u);
             const tr = document.createElement('tr');
@@ -1714,9 +1743,13 @@ const adminApp = {
         try {
             await API.post(`${this.apiBase}/approvals/${id}/${approved ? 'approve' : 'reject'}`, { comment });
             await this.loadApprovals();
-            await this.loadQCReports();
+            if (document.getElementById('table-reports')) {
+                await this.loadQCReports().catch(error => console.warn('[Admin] QC reports refresh skipped:', error));
+            }
+            this.notify('Approval berhasil diproses.', 'success');
         } catch (error) {
-            this.notify(`Gagal update approval: ${error.message || 'Coba lagi'}`);
+            const detail = error.status ? `status ${error.status} - ${error.message || 'Coba lagi'}` : (error.message || 'Coba lagi');
+            this.notify(`Gagal update approval: ${detail}`);
         }
     },
 

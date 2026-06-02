@@ -123,6 +123,29 @@ def test_admin_api_urls_do_not_double_api_prefix():
         assert f"${{this.apiBase}}{endpoint}" in admin_js
 
 
+def test_admin_approvals_frontend_selector_and_state_contract():
+    html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert 'id="approvals-table-body"' in html
+    assert "approvalsTableBody()" in js
+    assert "document.getElementById('approvals-table-body') || document.getElementById('table-approvals')" in js
+    assert "console.warn('[Admin] Approvals table body not found" in js
+    assert "Loading approvals..." in js
+    assert "Belum ada approval pending." in js
+    assert "Gagal memuat approvals" in js
+
+
+def test_admin_approval_action_refreshes_and_uses_success_toast():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+
+    assert "async resolveApproval(id, approved)" in js
+    assert "await this.loadApprovals()" in js
+    assert "Approval berhasil diproses." in js
+    assert "this.notify('Approval berhasil diproses.', 'success')" in js
+    assert "status ${error.status}" in js
+
+
 def test_admin_approvals_fallback_includes_staff_submissions(client, admin_headers):
     fake_db = FakeSupabase({
         "approvals": [],
