@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import httpx
 
-from backend.services.google_apps_script_service import google_sheets_status, send_monitoring_log, send_qc_report
+from backend.services.google_apps_script_service import build_qc_finding_payload, google_sheets_status, send_monitoring_log, send_qc_finding, send_qc_report
 from tests.test_qc_check_cooking_final_flow import FlowDb
 from tests.test_inspection_submit import InsertDb
 from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
@@ -15,6 +15,7 @@ def test_google_apps_script_skips_when_env_empty(monkeypatch):
     with patch("backend.services.google_apps_script_service.httpx.post") as post:
         assert send_monitoring_log({"temperature": 4.0}) is False
         assert send_qc_report({"status": "pass"}) is False
+        assert send_qc_finding({"temuan": "Area kotor"}) is False
 
     post.assert_not_called()
     assert google_sheets_status()["webhook_configured"] is False
@@ -445,6 +446,69 @@ def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
     assert payload["notes"] == "ok"
     assert payload["inspection_round"] == 2
     assert payload["is_recheck"] is True
+
+
+def test_qc_finding_payload_targets_qc_temuan_sheet():
+    payload = build_qc_finding_payload({
+        "id": "finding-1",
+        "staff_display_name": "Rio Mikail",
+        "area": "Packing",
+        "reason": "Label salah",
+        "photo_url": "https://example.test/finding.jpg",
+        "status": "warning",
+        "finding_date": "2026-05-01",
+        "created_at": "2026-05-01T09:00:00Z",
+    })
+
+    assert payload == {
+        "timestamp": "2026-05-01T09:00:00Z",
+        "staff": "Rio Mikail",
+        "area": "Packing",
+        "temuan": "Label salah",
+        "photo_url": "https://example.test/finding.jpg",
+        "status": "WARNING",
+        "tanggal": "2026-05-01",
+        "source_type": "qc_finding",
+        "source_id": "finding-1",
+    }
+
+
+def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_headers):
+    db = FakeSupabase({
+        "qc_reports": [],
+        "production_batches": [],
+        "qc_findings": [{
+            "id": "finding-1",
+            "staff_name": "Rio",
+            "area": "Kitchen",
+            "reason": "Area kotor",
+            "photo_url": "https://example.test/finding.jpg",
+            "status": "warning",
+            "created_at": "2026-05-01T08:30:00Z",
+        }],
+    })
+    with patch("backend.services.admin_service.get_client", return_value=db), patch(
+        "backend.services.admin_service.send_qc_report", return_value=True
+    ) as send_report, patch(
+        "backend.services.admin_service.send_qc_finding", return_value=True
+    ) as send_finding:
+        response = client.post("/api/admin/google-sheets/export/qc", headers=admin_headers, json={})
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["exported"] == 1
+    send_report.assert_not_called()
+    send_finding.assert_called_once()
+    payload = send_finding.call_args.args[0]
+    assert payload["source_type"] == "qc_finding"
+    assert payload["source_id"] == "finding-1"
+    assert payload["staff"] == "Rio"
+    assert payload["area"] == "Kitchen"
+    assert payload["temuan"] == "Area kotor"
+    assert payload["photo_url"] == "https://example.test/finding.jpg"
+    assert payload["status"] == "WARNING"
+    assert payload["tanggal"] == "2026-05-01"
 
 
 def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):

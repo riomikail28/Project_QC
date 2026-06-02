@@ -48,6 +48,15 @@ def test_dashboard_qc_finding_uploads_through_backend_submit():
     assert "formData.append('storage_path'" not in html
 
 
+def test_dashboard_renames_photo_quick_action_to_qc_temuan():
+    html = (ROOT / "frontend" / "staff" / "dashboard.html").read_text(encoding="utf-8")
+
+    assert 'data-quick-action="photo" type="button"><span>QC Temuan</span>' in html
+    assert "<h3>QC Temuan</h3>" in html
+    assert "Laporan temuan quality control" in html
+    assert "Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" in html
+
+
 def test_csp_allows_blob_image_previews(client):
     response = client.get("/")
     csp = response.headers["Content-Security-Policy"]

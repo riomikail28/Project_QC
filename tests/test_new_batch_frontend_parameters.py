@@ -42,7 +42,7 @@ def test_staff_pages_include_quick_action_menu():
 
         assert "data-quick-actions" in html
         assert "data-quick-actions-trigger" in html
-        assert "Ambil Foto" in html
+        assert "QC Temuan" in html
         assert "Buat Batch" in html
         assert "QC Check" in html
         assert "Monitoring" in html

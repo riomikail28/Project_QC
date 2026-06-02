@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.database.supabase_client import get_client
 from backend.qc.product_catalog import CENTRAL_KITCHEN_PRODUCTS
-from backend.services.google_apps_script_service import build_qc_report_payload, send_monitoring_log, send_qc_report
+from backend.services.google_apps_script_service import build_qc_finding_payload, build_qc_report_payload, send_monitoring_log, send_qc_finding, send_qc_report
 
 logger = logging.getLogger("qc.services.admin")
 
@@ -436,7 +436,11 @@ class AdminService:
             if not payload.get("source_id"):
                 summary["skipped"] += 1
                 continue
-            if send_qc_report(payload):
+            if payload.get("source_type") == "qc_finding":
+                sent = send_qc_finding(payload)
+            else:
+                sent = send_qc_report(payload)
+            if sent:
                 summary["exported"] += 1
             else:
                 self._record_export_failure(summary, payload)
@@ -501,6 +505,8 @@ class AdminService:
         }
 
     def _google_sheets_qc_payload(self, row):
+        if (row.get("source_type") or row.get("report_type")) == "qc_finding":
+            return build_qc_finding_payload(row)
         return build_qc_report_payload(row)
 
     def _batch_lookup(self, limit=5000):

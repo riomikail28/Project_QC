@@ -41,6 +41,11 @@ def send_qc_report(payload: dict[str, Any]) -> bool:
     return _send("qc_report", payload)
 
 
+def send_qc_finding(payload: dict[str, Any]) -> bool:
+    """Send a standalone QC finding to the QC Temuan sheet."""
+    return _send("qc_finding", payload)
+
+
 def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
     """Build the flat QC report payload expected by the Apps Script sheet."""
     row = row or {}
@@ -71,6 +76,27 @@ def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
         "is_recheck": bool(is_recheck),
         "source_type": row.get("source_type") or row.get("report_type") or "qc_report",
         "source_id": row.get("source_id") or row.get("id") or row.get("report_id"),
+    }
+
+
+def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
+    """Build the flat QC finding payload expected by the QC Temuan sheet."""
+    row = row or {}
+    timestamp = row.get("timestamp") or row.get("created_at") or row.get("submitted_at") or datetime.now(timezone.utc).isoformat()
+    photo_url = _photo_url(row)
+    status = str(row.get("status") or row.get("approval_status") or "WARNING").strip().upper()
+    if status in {"", "FINDING", "FIELD_FINDING"}:
+        status = "WARNING"
+    return {
+        "timestamp": timestamp,
+        "staff": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
+        "area": row.get("area") or row.get("location") or row.get("room_name") or row.get("room") or row.get("zone") or row.get("finding_type") or "",
+        "temuan": row.get("temuan") or row.get("reason") or row.get("notes") or row.get("description") or "",
+        "photo_url": photo_url,
+        "status": status,
+        "tanggal": row.get("tanggal") or row.get("finding_date") or row.get("date") or str(timestamp or "")[:10],
+        "source_type": "qc_finding",
+        "source_id": row.get("source_id") or row.get("id") or row.get("finding_id"),
     }
 
 

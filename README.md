@@ -143,7 +143,7 @@ Cara setup:
 
 1. Buat Google Sheet baru untuk menerima laporan.
 2. Buka `Extensions > Apps Script`.
-3. Buat script Web App dengan fungsi `doPost(e)` yang membaca `JSON.parse(e.postData.contents)`, lalu append data ke sheet sesuai `type` (`monitoring_log` atau `qc_report`).
+3. Buat script Web App dengan fungsi `doPost(e)` yang membaca `JSON.parse(e.postData.contents)`, lalu append data ke sheet sesuai `type` (`monitoring_log`, `qc_report`, atau `qc_finding`).
 4. Deploy melalui `Deploy > New deployment > Web app`.
 5. Set akses sesuai kebutuhan, misalnya `Anyone with the link` untuk webhook sederhana.
 6. Copy URL Web App dan isi env:
@@ -152,7 +152,7 @@ Cara setup:
 GOOGLE_APPS_SCRIPT_WEBHOOK_URL=https://script.google.com/macros/s/your-deployment-id/exec
 ```
 
-Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `timestamp`, `date`, `product_name`, `batch_code`, `batch_sequence`, `cook_name`, `quantity`, `inspection_type`, `temperature`, `ph`, `brix`, `tds`, `status`, `staff_name`, `photo_url`, `notes`, `inspection_round`, `is_recheck`, `source_type`, dan `source_id`.
+Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `timestamp`, `date`, `product_name`, `batch_code`, `batch_sequence`, `cook_name`, `quantity`, `inspection_type`, `temperature`, `ph`, `brix`, `tds`, `status`, `staff_name`, `photo_url`, `notes`, `inspection_round`, `is_recheck`, `source_type`, dan `source_id`. Payload QC Temuan berisi `timestamp`, `staff`, `area`, `temuan`, `photo_url`, `status`, `tanggal`, `source_type`, dan `source_id`.
 
 Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
 
@@ -163,6 +163,10 @@ Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
 Untuk Apps Script, gunakan header tab `QC Reports` berikut agar data QC final lengkap:
 
 `Timestamp`, `Type`, `Date`, `Product`, `Batch Code`, `Batch Sequence`, `Cook`, `Qty`, `Inspection Type`, `Temperature`, `pH`, `Brix`, `TDS`, `Status`, `Staff`, `Photo URL`, `Notes`, `Inspection Round`, `Re-check`, `Source Type`, `Source ID`.
+
+Tambahkan juga tab `QC Temuan` untuk laporan temuan lapangan dengan header:
+
+`Timestamp`, `Staff`, `Area`, `Temuan`, `Foto URL`, `Status`, `Tanggal`.
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 
