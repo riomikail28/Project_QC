@@ -297,6 +297,10 @@ def test_qc_check_final_modal_form_contract_for_every_batch():
 
     assert "QC CHECK" in html
     assert "Batch #${batch.batch_sequence || '-'}" in js
+    assert "SUHU MASAK" in html
+    assert 'id="qcTemp"' in html
+    assert 'placeholder="Contoh: 82.0 C"' in html
+    assert 'step="0.1"' in html
     assert 'id="qcPh"' in html
     assert 'id="qcBrix"' in html
     assert 'id="qcTds"' in html
@@ -306,6 +310,15 @@ def test_qc_check_final_modal_form_contract_for_every_batch():
     assert "this.selectedStage = 'cooking_check'" in js
     assert "this.openQcForm(product, batch, { recheck: false })" in js
     assert "this.openQcForm(product, batch, { recheck: true })" in js
+
+
+def test_qc_check_cooking_temperature_validation_and_payload_contract():
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "Suhu masak wajib diisi untuk Cek Masakan." in js
+    assert "const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature)" in js
+    assert "this.selectedStage === 'cooking_check' && temperatureValue == null" in js
+    assert "formData.append('temperature', String(temperatureValue))" in js
 
 
 def test_qc_check_next_batch_error_message_is_not_double_prefixed():

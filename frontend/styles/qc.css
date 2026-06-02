@@ -483,6 +483,26 @@
   margin: 2px 0 0;
 }
 
+.temperature-input-wrap {
+  position: relative;
+  display: grid;
+}
+
+.temperature-input-wrap .input-field {
+  padding-right: 44px;
+}
+
+.temperature-input-wrap span {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  pointer-events: none;
+}
+
 /* ═══════════════════════════════════════════════
    Desktop Breakpoint
    ═══════════════════════════════════════════════ */

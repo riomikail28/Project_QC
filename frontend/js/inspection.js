@@ -405,6 +405,15 @@ const Inspection = {
             this.message('Pilih status QC terlebih dahulu.', true);
             return;
         }
+        const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
+        if (this.selectedStage === 'cooking_check' && temperatureValue == null) {
+            this.message('Suhu masak wajib diisi untuk Cek Masakan.', true);
+            return;
+        }
+        if (temperatureValue != null && !Number.isFinite(temperatureValue)) {
+            this.message('Suhu masak harus berupa angka.', true);
+            return;
+        }
         try {
             [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
         } catch (err) {
@@ -421,7 +430,7 @@ const Inspection = {
         formData.append('qc_stage', this.selectedStage);
         formData.append('qc_status', this.selectedStatus);
         formData.append('notes', notes || '');
-        if (temperature) formData.append('temperature', temperature);
+        if (temperatureValue != null) formData.append('temperature', String(temperatureValue));
         if (ph) formData.append('ph_value', ph);
         if (brix) formData.append('brix_value', brix);
         if (tds) formData.append('tds_value', tds);
