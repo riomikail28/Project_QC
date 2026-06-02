@@ -10,9 +10,11 @@ def test_qc_check_product_picker_is_compact_search_first():
 
     # Helper text present exactly once in HTML
     assert html.count("Ketik minimal 2 huruf") == 1
-    assert "Ketik minimal 2 huruf untuk mencari produk." in html
-    assert "query.length < 2" in js
-    assert "matches.slice(0, 5)" in js
+    assert "Klik field untuk melihat daftar SKU. Ketik minimal 2 huruf untuk filter." in html
+    assert 'role="combobox"' in html
+    assert "normalized.length >= 2" in js
+    assert "renderProductDropdown" in js
+    assert "products.slice(0, 15)" in js
     assert "this.renderProductOptions(this.products.slice" not in js
 
 
@@ -37,8 +39,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "bottom: 94px" in css
     assert "photo-preview" in html
     assert "renderPhotoPreview" in js
-    assert "+ Tambah Catatan" in html
-    assert "notesWrap" in html
+    assert "Catatan" in html
     assert "capture=\"environment\"" in html
 
 
@@ -49,14 +50,15 @@ def test_qc_check_helper_text_not_duplicated():
 
 
 def test_qc_check_progressive_disclosure_fields_hidden_initially():
-    """Stage, status, and notes fields should be hidden until product is selected."""
+    """QC fields should be hidden until a batch context is selected."""
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
-    assert 'id="stageField" hidden' in html
+    assert 'id="cookingFields" hidden' in html
     assert 'id="statusField" hidden' in html
     assert 'id="notesField" hidden' in html
     assert "updateProgressiveFields" in js
+    assert "if (stageField) stageField.hidden = true" in js
 
 
 def test_qc_check_compact_upload_cards():
@@ -257,16 +259,53 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
 
 def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    save_block = js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
 
     assert "quantity," in js
     assert "const quantity = Number(document.getElementById('nextQuantity')?.value)" in js
-    assert "ph: this.optionalNumberFromInput('nextPh')" in js
-    assert "brix: this.optionalNumberFromInput('nextBrix')" in js
-    assert "tds: this.optionalNumberFromInput('nextTds')" in js
-    assert "if (raw == null || String(raw).trim() === '') return null" in js
     assert "`Gagal menyimpan pemasakan: ${detail}`" in js
     assert "await this.addSkuCard(product)" in js
-    assert "qc_status" not in js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
+    assert "qc_status" not in save_block
+    assert "ph:" not in save_block
+    assert "brix:" not in save_block
+    assert "tds:" not in save_block
+    assert "nextPh" not in html
+    assert "nextBrix" not in html
+    assert "nextTds" not in html
+
+
+def test_qc_check_search_dropdown_radio_list_contract():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert "productPickerList" in html
+    assert "role', 'radio'" in js
+    assert "aria-checked" in js
+    assert "product-radio-dot" in js
+    assert "products.length > 15" in js
+    assert "normalized.length >= 2" in js
+    assert "document.addEventListener('click'" in js
+    assert "event.key === 'Escape' && !document.getElementById('skuSearchPanel')?.hidden" in js
+    assert ".product-radio-dot" in css
+
+
+def test_qc_check_final_modal_form_contract_for_every_batch():
+    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+
+    assert "QC CHECK" in html
+    assert "Batch #${batch.batch_sequence || '-'}" in js
+    assert 'id="qcPh"' in html
+    assert 'id="qcBrix"' in html
+    assert 'id="qcTds"' in html
+    assert "PASS" in html and "HOLD" in html and "FAIL" in html
+    assert "Foto evidence" in html
+    assert 'id="qcNotes"' in html
+    assert "this.selectedStage = 'cooking_check'" in js
+    assert "this.openQcForm(product, batch, { recheck: false })" in js
+    assert "this.openQcForm(product, batch, { recheck: true })" in js
 
 
 def test_qc_check_next_batch_error_message_is_not_double_prefixed():

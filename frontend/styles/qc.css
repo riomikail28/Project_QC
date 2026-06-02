@@ -215,7 +215,36 @@
 .product-picker-option {
   min-height: 56px;
   cursor: pointer;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   transition: border-color .15s ease, background .15s ease;
+}
+
+.product-picker-option[aria-checked="true"] {
+  border-color: rgba(37,99,235,.62);
+  background: rgba(239,246,255,.96);
+}
+
+.product-radio-dot {
+  display: inline-grid !important;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  -webkit-line-clamp: initial !important;
+}
+
+.product-picker-option[aria-checked="true"] .product-radio-dot {
+  border-color: var(--primary);
+}
+
+.product-picker-option[aria-checked="true"] .product-radio-dot::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
 }
 
 .product-picker-option:active {

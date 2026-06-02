@@ -58,7 +58,17 @@ const Inspection = {
         document.getElementById('nextBatchCancelBtn')?.addEventListener('click', () => this.closeNextBatchSheet());
         document.getElementById('nextBatchBackdrop')?.addEventListener('click', () => this.closeNextBatchSheet());
         document.getElementById('saveNextBatchBtn')?.addEventListener('click', () => this.saveNextBatch());
+        document.addEventListener('click', event => {
+            const panel = document.getElementById('skuSearchPanel');
+            const trigger = document.getElementById('addSkuBtn');
+            if (!panel || panel.hidden) return;
+            if (panel.contains(event.target) || trigger?.contains(event.target)) return;
+            this.closeSkuSearch();
+        });
         document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !document.getElementById('skuSearchPanel')?.hidden) {
+                this.closeSkuSearch();
+            }
             if (event.key === 'Escape' && !document.getElementById('qcFormSheet')?.hidden) {
                 this.closeQcSheet();
             }
@@ -73,15 +83,21 @@ const Inspection = {
         if (panel) panel.hidden = false;
         const helpEl = document.getElementById('productSearchHelp');
         if (helpEl) {
-            helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+            helpEl.textContent = 'Klik field untuk melihat daftar SKU. Ketik minimal 2 huruf untuk filter.';
             helpEl.hidden = false;
         }
-        document.getElementById('productSearch')?.focus();
+        const input = document.getElementById('productSearch');
+        if (input) {
+            input.setAttribute('aria-expanded', 'true');
+            input.focus();
+        }
+        this.renderProductDropdown(input?.value || '');
     },
 
     closeSkuSearch() {
         const panel = document.getElementById('skuSearchPanel');
         if (panel) panel.hidden = true;
+        document.getElementById('productSearch')?.setAttribute('aria-expanded', 'false');
         this.clearProductList();
     },
 
@@ -107,6 +123,14 @@ const Inspection = {
         const input = document.getElementById('productSearch');
         if (!input) return;
         let debounce = null;
+        input.addEventListener('focus', () => {
+            this.renderProductDropdown(input.value || '');
+            input.setAttribute('aria-expanded', 'true');
+        });
+        input.addEventListener('click', () => {
+            this.renderProductDropdown(input.value || '');
+            input.setAttribute('aria-expanded', 'true');
+        });
         input.addEventListener('input', () => {
             clearTimeout(debounce);
             debounce = setTimeout(() => {
@@ -114,24 +138,7 @@ const Inspection = {
                 this.updateSelectedProductCard();
                 this.updateProgressiveFields();
                 const query = input.value.trim().toLowerCase();
-                const helpEl = document.getElementById('productSearchHelp');
-                if (query.length < 2) {
-                    this.clearProductList();
-                    if (helpEl) {
-                        helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
-                        helpEl.hidden = false;
-                    }
-                    this.updateSubmitState();
-                    return;
-                }
-                if (helpEl) helpEl.hidden = true;
-                const matches = this.products.filter(item => {
-                    const code = String(item.product_code || '').toLowerCase();
-                    const name = String(item.product_name || '').toLowerCase();
-                    const barcode = String(item.barcode || '').toLowerCase();
-                    return code.includes(query) || name.includes(query) || barcode.includes(query);
-                });
-                this.renderProductOptions(matches.slice(0, 5));
+                this.renderProductDropdown(query);
                 this.updateSubmitState();
             }, 150);
         });
@@ -162,7 +169,7 @@ const Inspection = {
             document.getElementById('qcSku')?.focus();
         } else {
             if (helpEl) {
-                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.textContent = 'Klik field untuk melihat daftar SKU. Ketik minimal 2 huruf untuk filter.';
                 helpEl.hidden = false;
             }
             if (searchInput) searchInput.focus();
@@ -293,7 +300,7 @@ const Inspection = {
        ═══════════════════════════════════════════════ */
 
     bindCompletionState() {
-        ['productSearch', 'qcSku', 'qcTemp', 'qcNotes'].forEach(id => {
+        ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const input = document.getElementById(id);
             if (input) input.addEventListener('input', () => {
                 this.updateSubmitState();
@@ -309,8 +316,8 @@ const Inspection = {
     updateStageFields(hasContext = this.hasProductContext()) {
         const cooking = document.getElementById('cookingFields');
         const final = document.getElementById('finalFields');
-        if (cooking) cooking.hidden = !(hasContext && this.selectedStage === 'cooking_check');
-        if (final) final.hidden = !(hasContext && this.selectedStage === 'final_check');
+        if (cooking) cooking.hidden = !hasContext;
+        if (final) final.hidden = true;
     },
 
     /* ═══════════════════════════════════════════════
@@ -321,7 +328,7 @@ const Inspection = {
         const hasProduct = Boolean(this.selectedProduct);
         const hasContext = this.hasProductContext();
 
-        // Show/hide stage, status, notes, and submit fields
+        // Show/hide QC fields once a batch context is selected.
         const stageField = document.getElementById('stageField');
         const statusField = document.getElementById('statusField');
         const notesField = document.getElementById('notesField');
@@ -333,14 +340,10 @@ const Inspection = {
         if (pickerField) pickerField.hidden = hasProduct;
         if (batchPanel && !hasContext) batchPanel.hidden = true;
 
-        // Stage appears after product is selected
-        if (stageField) stageField.hidden = !hasContext;
-
-        // Stage-specific fields, status, notes appear after stage is selected
-        const hasStage = Boolean(this.selectedStage);
-        if (statusField) statusField.hidden = !(hasContext && hasStage);
-        if (notesField) notesField.hidden = !(hasContext && hasStage);
-        if (submitBtn) submitBtn.style.display = (hasContext && hasStage) ? '' : 'none';
+        if (stageField) stageField.hidden = true;
+        if (statusField) statusField.hidden = !hasContext;
+        if (notesField) notesField.hidden = !hasContext;
+        if (submitBtn) submitBtn.style.display = hasContext ? '' : 'none';
 
         // Update stage fields visibility
         this.updateStageFields(hasContext);
@@ -397,16 +400,9 @@ const Inspection = {
             this.message('Pilih produk terlebih dahulu.', true);
             return;
         }
-        if (!this.selectedStage) {
-            this.message('Pilih jenis pengecekan terlebih dahulu.', true);
-            return;
-        }
+        if (!this.selectedStage) this.selectedStage = 'cooking_check';
         if (!this.selectedStatus) {
             this.message('Pilih status QC terlebih dahulu.', true);
-            return;
-        }
-        if (this.selectedStage === 'cooking_check' && !temperature) {
-            this.message('Suhu masak wajib diisi.', true);
             return;
         }
         try {
@@ -425,7 +421,7 @@ const Inspection = {
         formData.append('qc_stage', this.selectedStage);
         formData.append('qc_status', this.selectedStatus);
         formData.append('notes', notes || '');
-        if (this.selectedStage === 'cooking_check') formData.append('temperature', temperature || '');
+        if (temperature) formData.append('temperature', temperature);
         if (ph) formData.append('ph_value', ph);
         if (brix) formData.append('brix_value', brix);
         if (tds) formData.append('tds_value', tds);
@@ -484,7 +480,7 @@ const Inspection = {
             this.clearProductList();
             const helpEl = document.getElementById('productSearchHelp');
             if (helpEl) {
-                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.textContent = 'Klik field untuk melihat daftar SKU. Ketik minimal 2 huruf untuk filter.';
                 helpEl.hidden = false;
             }
             this.updateProgressiveFields();
@@ -509,13 +505,10 @@ const Inspection = {
     updateSubmitState() {
         const button = document.getElementById('submitQcBtn');
         if (!button) return;
-        const temperature = document.getElementById('qcTemp')?.value;
         const hasProduct = this.hasProductContext();
-        const hasStage = Boolean(this.selectedStage);
         const hasStatus = Boolean(this.selectedStatus);
-        const hasStageData = this.selectedStage !== 'cooking_check' || Boolean(temperature);
         const isLocked = Boolean(this.activeInspection);
-        button.disabled = isLocked || !(hasProduct && hasStage && hasStatus && hasStageData);
+        button.disabled = isLocked || !(hasProduct && hasStatus);
         this.updateStepState();
         this.updateSummary();
     },
@@ -526,10 +519,9 @@ const Inspection = {
 
     updateStepState() {
         const hasProduct = this.hasProductContext();
-        const hasStage = Boolean(this.selectedStage);
         const hasStatus = Boolean(this.selectedStatus);
-        const canSubmit = Boolean(hasProduct && hasStage && hasStatus && !document.getElementById('submitQcBtn')?.disabled);
-        const steps = { product: hasProduct, stage: hasProduct && hasStage, result: hasProduct && hasStage && hasStatus, submit: canSubmit };
+        const canSubmit = Boolean(hasProduct && hasStatus && !document.getElementById('submitQcBtn')?.disabled);
+        const steps = { product: hasProduct, stage: hasProduct, result: hasProduct && hasStatus, submit: canSubmit };
         document.querySelectorAll('.field-qc-step').forEach(step => {
             const isActive = Boolean(steps[step.dataset.step]);
             step.classList.toggle('active', isActive);
@@ -541,8 +533,7 @@ const Inspection = {
         const panel = document.getElementById('qcSubmitSummary');
         if (!panel) return;
         const hasContext = this.hasProductContext();
-        const hasStage = Boolean(this.selectedStage);
-        panel.hidden = !(hasContext && hasStage);
+        panel.hidden = !hasContext;
         if (!hasContext) return;
         const manualSku = document.getElementById('qcSku')?.value?.trim();
         const productName = this.selectedProduct?.product_name || 'Manual SKU';
@@ -551,7 +542,7 @@ const Inspection = {
             .reduce((total, id) => total + (document.getElementById(id)?.files?.length || 0), 0);
         this.setText('summaryProduct', `${productName} (${sku})`);
         this.setText('summaryBatch', this.selectedBatch?.batch_code || (this.forceNewBatch ? 'Batch baru' : 'Batch baru otomatis'));
-        this.setText('summaryStage', this.selectedStage ? this.stageLabel(this.selectedStage) : '-');
+        this.setText('summaryStage', 'QC Check');
         const statusText = this.recheckParentInspection && this.selectedStatus
             ? `${this.selectedStatus.toUpperCase()} (Re-check)`
             : (this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
@@ -603,6 +594,30 @@ const Inspection = {
        Render: Product Options
        ═══════════════════════════════════════════════ */
 
+    renderProductDropdown(query = '') {
+        const normalized = String(query || '').trim().toLowerCase();
+        const helpEl = document.getElementById('productSearchHelp');
+        let products = this.products || [];
+        const shouldFilter = normalized.length >= 2;
+        if (shouldFilter) {
+            products = products.filter(item => {
+                const code = String(item.product_code || item.sku_code || '').toLowerCase();
+                const name = String(item.product_name || '').toLowerCase();
+                const barcode = String(item.barcode || '').toLowerCase();
+                return code.includes(normalized) || name.includes(normalized) || barcode.includes(normalized);
+            });
+        } else if (products.length > 15) {
+            products = products.slice(0, 15);
+        }
+        if (helpEl) {
+            helpEl.hidden = false;
+            helpEl.textContent = this.products.length > 15 && !shouldFilter
+                ? 'Menampilkan 15 SKU pertama. Ketik minimal 2 huruf untuk filter.'
+                : 'Pilih salah satu SKU dari daftar.';
+        }
+        this.renderProductOptions(products);
+    },
+
     renderProductOptions(products) {
         const list = document.getElementById('productPickerList');
         if (!list) return;
@@ -619,9 +634,11 @@ const Inspection = {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'product-picker-option';
+            button.setAttribute('role', 'radio');
+            button.setAttribute('aria-checked', this.productKey(product) === this.productKey(this.selectedProduct) ? 'true' : 'false');
             button.innerHTML = `
-                <strong>${this.escapeHtml(product.product_code || '-')}</strong>
-                <span>${this.escapeHtml(product.product_name || '-')}</span>
+                <span class="product-radio-dot" aria-hidden="true"></span>
+                <span><strong>${this.escapeHtml(product.product_code || product.sku_code || '-')}</strong> - ${this.escapeHtml(product.product_name || '-')}</span>
             `;
             button.addEventListener('click', () => this.selectProduct(product));
             list.appendChild(button);
@@ -936,7 +953,7 @@ const Inspection = {
             this.clearProductList();
             const helpEl = document.getElementById('productSearchHelp');
             if (helpEl) {
-                helpEl.textContent = 'Ketik minimal 2 huruf untuk mencari produk.';
+                helpEl.textContent = 'Klik field untuk melihat daftar SKU. Ketik minimal 2 huruf untuk filter.';
                 helpEl.hidden = false;
             }
             const productMsg = document.getElementById('productDetected');
@@ -1078,7 +1095,7 @@ const Inspection = {
         this.activeInspection = null;
         this.lastInspection = batch.last_qc || null;
         this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
-        this.selectedStage = null;
+        this.selectedStage = 'cooking_check';
         this.selectedStatus = null;
         ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const el = document.getElementById(id);
@@ -1092,6 +1109,8 @@ const Inspection = {
         document.querySelectorAll('.qc-stage-option, .qc-status-option').forEach(item => item.classList.remove('active'));
         this.renderBatchSummary(product, batch);
         this.renderQcConcurrency(null, batch.last_qc || null);
+        this.setText('qcFormTitle', 'QC CHECK');
+        this.setText('qcFormSubtitle', `Batch #${batch.batch_sequence || '-'}`);
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
         if (sheet) {
@@ -1137,7 +1156,7 @@ const Inspection = {
         } catch (error) {
             this.nextBatchCode = `${product.product_code || key}-${this.operationalDate.replace(/-/g, '')}-${String(this.nextBatchSequence).padStart(3, '0')}`;
         }
-        ['nextCookName', 'nextQuantity', 'nextPh', 'nextBrix', 'nextTds', 'nextNotes'].forEach(id => {
+        ['nextCookName', 'nextQuantity', 'nextNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1194,7 +1213,7 @@ const Inspection = {
     },
 
     resetNextBatchForm() {
-        ['nextCookName', 'nextQuantity', 'nextPh', 'nextBrix', 'nextTds', 'nextNotes'].forEach(id => {
+        ['nextCookName', 'nextQuantity', 'nextNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1246,9 +1265,6 @@ const Inspection = {
                 cook_name: cookName,
                 quantity,
                 production_shift: productionShift,
-                ph: this.optionalNumberFromInput('nextPh'),
-                brix: this.optionalNumberFromInput('nextBrix'),
-                tds: this.optionalNumberFromInput('nextTds'),
                 notes: document.getElementById('nextNotes')?.value?.trim(),
             });
             if (!response.success) throw new Error(response.message || 'Gagal menyimpan pemasakan');
@@ -1288,6 +1304,11 @@ const Inspection = {
                 <span>Cook</span>
                 <strong>${this.escapeHtml(batch.cook_name || '-')}</strong>
                 <small>Qty ${this.escapeHtml(batch.quantity || '-')}</small>
+            </div>
+            <div>
+                <span>Jam produksi</span>
+                <strong>${this.escapeHtml(this.batchTime(batch))}</strong>
+                <small>${this.escapeHtml(batch.production_date || this.operationalDate || '-')}</small>
             </div>
         `;
     },

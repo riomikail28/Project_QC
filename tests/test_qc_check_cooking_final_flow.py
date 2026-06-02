@@ -407,13 +407,17 @@ def test_empty_sku_returns_validation_error(client, staff_headers):
     assert "SKU" in response.get_json()["message"]
 
 
-def test_qc_check_frontend_only_shows_cooking_and_final_stages():
+def test_qc_check_frontend_uses_single_batch_qc_form():
     from pathlib import Path
 
     html = Path("frontend/staff/inspection.html").read_text(encoding="utf-8").lower()
     js = Path("frontend/js/inspection.js").read_text(encoding="utf-8").lower()
-    assert "cooking_check" in html
-    assert "final_check" in html
+    assert "qc check" in html
+    assert "qcph" in html
+    assert "qcbrix" in html
+    assert "qctds" in html
+    assert "foto evidence" in html
+    assert "this.selectedstage = 'cooking_check'" in js
     assert "receiving" not in html
     assert "packing" not in html
     assert "preparation" not in html
