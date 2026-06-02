@@ -89,10 +89,9 @@ def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
         status = "WARNING"
     return {
         "timestamp": timestamp,
+        "type": "qc_finding",
         "staff_name": _staff_name(row),
-        "staff_id": row.get("staff_id") or row.get("actor_id") or row.get("created_by"),
-        "area": row.get("area") or row.get("location") or row.get("room_name") or row.get("room") or row.get("zone") or row.get("finding_type") or "",
-        "temuan": row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or "",
+        "finding_description": row.get("finding_description") or row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or "",
         "photo_url": photo_url,
         "status": status,
         "source_type": "qc_finding",

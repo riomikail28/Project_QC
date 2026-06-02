@@ -452,7 +452,6 @@ def test_qc_finding_payload_targets_qc_temuan_sheet():
     payload = build_qc_finding_payload({
         "id": "finding-1",
         "staff_display_name": "Rio Mikail",
-        "area": "Packing",
         "reason": "Label salah",
         "photo_url": "https://example.test/finding.jpg",
         "status": "warning",
@@ -462,10 +461,9 @@ def test_qc_finding_payload_targets_qc_temuan_sheet():
 
     assert payload == {
         "timestamp": "2026-05-01T09:00:00Z",
+        "type": "qc_finding",
         "staff_name": "Rio Mikail",
-        "staff_id": None,
-        "area": "Packing",
-        "temuan": "Label salah",
+        "finding_description": "Label salah",
         "photo_url": "https://example.test/finding.jpg",
         "status": "WARNING",
         "source_type": "qc_finding",
@@ -473,6 +471,8 @@ def test_qc_finding_payload_targets_qc_temuan_sheet():
     }
     assert "date" not in payload
     assert "tanggal" not in payload
+    assert "area" not in payload
+    assert "temuan" not in payload
 
 
 def test_qc_finding_staff_name_fallback_priority():
@@ -490,7 +490,6 @@ def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_head
         "qc_findings": [{
             "id": "finding-1",
             "staff_name": "Rio",
-            "area": "Kitchen",
             "reason": "Area kotor",
             "photo_url": "https://example.test/finding.jpg",
             "status": "warning",
@@ -512,14 +511,16 @@ def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_head
     send_finding.assert_called_once()
     payload = send_finding.call_args.args[0]
     assert payload["source_type"] == "qc_finding"
+    assert payload["type"] == "qc_finding"
     assert payload["source_id"] == "finding-1"
     assert payload["staff_name"] == "Rio"
-    assert payload["area"] == "Kitchen"
-    assert payload["temuan"] == "Area kotor"
+    assert payload["finding_description"] == "Area kotor"
     assert payload["photo_url"] == "https://example.test/finding.jpg"
     assert payload["status"] == "WARNING"
     assert "date" not in payload
     assert "tanggal" not in payload
+    assert "area" not in payload
+    assert "temuan" not in payload
 
 
 def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):

@@ -93,11 +93,14 @@ def test_staff_upload_flows_use_image_compression():
 
 def test_readme_qc_temuan_apps_script_header_has_no_tanggal():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    header = "`Timestamp`, `Type`, `Staff`, `Area`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`."
+    header = "`Timestamp`, `Type`, `Staff`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`."
 
     assert header in readme
     qc_temuan_section = readme.split("Tambahkan juga tab `QC Temuan`", 1)[1].split("Jika Google Apps Script", 1)[0]
     assert "`Tanggal`" not in qc_temuan_section
+    assert "`Area`" not in qc_temuan_section
+    assert "data.area" not in qc_temuan_section
+    assert "data.finding_description" in qc_temuan_section
     assert "data.staff_name" in qc_temuan_section
 
 

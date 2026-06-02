@@ -152,7 +152,7 @@ Cara setup:
 GOOGLE_APPS_SCRIPT_WEBHOOK_URL=https://script.google.com/macros/s/your-deployment-id/exec
 ```
 
-Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `timestamp`, `date`, `product_name`, `batch_code`, `batch_sequence`, `cook_name`, `quantity`, `inspection_type`, `temperature`, `ph`, `brix`, `tds`, `status`, `staff_name`, `photo_url`, `notes`, `inspection_round`, `is_recheck`, `source_type`, dan `source_id`. Payload QC Temuan berisi `timestamp`, `staff_name`, `staff_id`, `area`, `temuan`, `photo_url`, `status`, `source_type`, dan `source_id`.
+Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `timestamp`, `date`, `product_name`, `batch_code`, `batch_sequence`, `cook_name`, `quantity`, `inspection_type`, `temperature`, `ph`, `brix`, `tds`, `status`, `staff_name`, `photo_url`, `notes`, `inspection_round`, `is_recheck`, `source_type`, dan `source_id`. Payload QC Temuan berisi `timestamp`, `type`, `staff_name`, `finding_description`, `photo_url`, `status`, `source_type`, dan `source_id`.
 
 Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
 
@@ -166,11 +166,11 @@ Untuk Apps Script, gunakan header tab `QC Reports` berikut agar data QC final le
 
 Tambahkan juga tab `QC Temuan` untuk laporan temuan lapangan dengan header:
 
-`Timestamp`, `Type`, `Staff`, `Area`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`.
+`Timestamp`, `Type`, `Staff`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`.
 
 Mapping row untuk `qc_finding`:
 
-`new Date()`, `type`, `data.staff_name`, `data.area || data.room || data.location`, `data.finding || data.temuan || data.notes || data.message`, `data.photo_url || data.evidence_url`, `data.status || "OPEN"`, `data.source_type`, `data.source_id`.
+`new Date()`, `type`, `data.staff_name`, `data.finding_description || data.finding || data.temuan || data.notes || data.message`, `data.photo_url || data.evidence_url`, `data.status || "OPEN"`, `data.source_type`, `data.source_id`.
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 
