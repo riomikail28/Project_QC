@@ -725,7 +725,7 @@ const Inspection = {
 
     renderSkuCards() {
         const grid = document.getElementById('skuCardGrid');
-        const empty = document.getElementById('skuEmptyState');
+        const empty = document.getElementById('skuEmptyNote');
         if (!grid) return;
         if (empty) empty.hidden = Boolean(this.skuCards.length);
         if (!this.skuCards.length) {

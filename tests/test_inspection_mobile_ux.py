@@ -93,7 +93,7 @@ def test_qc_check_sku_card_workflow_contract():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
     assert "Pilih atau tambahkan SKU untuk mulai pengecekan." in html
-    assert "skuEmptyState" in html
+    assert "skuEmptyNote" in html
     assert "openSkuSearch" in js
     assert "addSkuCard" in js
     assert "batchListTemplate" in js
@@ -231,7 +231,11 @@ def test_qc_check_empty_state_only_when_no_today_products():
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
-    assert "skuEmptyState" in html
+    assert "Belum ada SKU dipilih" not in html
+    assert "empty-icon" not in html
+    assert html.count("Tambah Produk / SKU") == 1
+    assert "skuEmptyNote" in html
+    assert "Belum ada batch hari ini. Pilih SKU atau buat pemasakan baru." in html
     assert "empty.hidden = Boolean(this.skuCards.length)" in js
 
 

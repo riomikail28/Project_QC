@@ -998,7 +998,6 @@
 }
 
 .sku-search-panel,
-.sku-empty-state,
 .sku-card {
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -1010,28 +1009,9 @@
   padding: 16px;
 }
 
-.sku-empty-state {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  padding: 34px 18px;
-  text-align: center;
-}
-
-.sku-empty-state h2,
-.sku-empty-state p {
+.sku-empty-note {
   margin: 0;
-}
-
-.sku-empty-state h2 {
-  color: var(--text);
-  font-size: 22px;
-}
-
-.sku-empty-state p {
-  max-width: 430px;
   color: var(--muted);
-  line-height: 1.5;
 }
 
 .qc-operational-date {
@@ -1039,17 +1019,6 @@
   color: var(--primary);
   font-size: 13px;
   font-weight: 900;
-}
-
-.empty-icon {
-  display: grid;
-  width: 58px;
-  height: 58px;
-  place-items: center;
-  border-radius: 20px;
-  background: rgba(37, 99, 235, .1);
-  color: var(--primary);
-  font-size: 22px;
 }
 
 .sku-card-grid {
