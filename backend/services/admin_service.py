@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.database.supabase_client import get_client
 from backend.qc.product_catalog import CENTRAL_KITCHEN_PRODUCTS
-from backend.services.google_apps_script_service import send_monitoring_log, send_qc_report
+from backend.services.google_apps_script_service import build_qc_report_payload, send_monitoring_log, send_qc_report
 
 logger = logging.getLogger("qc.services.admin")
 
@@ -427,9 +427,11 @@ class AdminService:
     def export_google_sheets_qc(self, start_date=None, end_date=None, limit=5000):
         reports = self.get_inspection_report(limit=limit).get("data", [])
         findings = self.get_findings_report(limit=limit).get("data", [])
+        batches = self._batch_lookup(limit)
         rows = self._filter_rows_by_date(reports + findings, start_date, end_date, "created_at")
         summary = self._export_summary("qc")
         for row in rows:
+            row = self._with_batch_export_fields(row, batches)
             payload = self._google_sheets_qc_payload(row)
             if not payload.get("source_id"):
                 summary["skipped"] += 1
@@ -499,19 +501,29 @@ class AdminService:
         }
 
     def _google_sheets_qc_payload(self, row):
-        return {
-            "batch_id": row.get("batch_id") or row.get("id"),
-            "batch_code": row.get("batch_code") or row.get("barcode") or row.get("batch_id") or "",
-            "product_name": row.get("product_name") or "",
-            "status": row.get("status") or row.get("approval_status") or "",
-            "temperature": row.get("temperature"),
-            "photo_url": row.get("photo_url") or row.get("product_photo_url") or row.get("temperature_photo_url"),
-            "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
-            "created_at": row.get("created_at"),
-            "notes": row.get("notes") or row.get("reason") or "",
-            "source_type": row.get("report_type") or "qc_report",
-            "source_id": row.get("id"),
-        }
+        return build_qc_report_payload(row)
+
+    def _batch_lookup(self, limit=5000):
+        lookup = {}
+        for row in self._fetch("production_batches", order_by="created_at", limit=limit):
+            for key in (row.get("id"), row.get("batch_code")):
+                if key:
+                    lookup[str(key)] = row
+        return lookup
+
+    def _with_batch_export_fields(self, row, batches):
+        if not row:
+            return row
+        batch = batches.get(str(row.get("batch_id") or "")) or batches.get(str(row.get("batch_code") or "")) or {}
+        if not batch:
+            return row
+        enriched = dict(row)
+        for key in ("batch_sequence", "cook_name", "quantity", "production_shift"):
+            if enriched.get(key) in (None, ""):
+                enriched[key] = batch.get(key)
+        if enriched.get("product_name") in (None, ""):
+            enriched["product_name"] = batch.get("product_name")
+        return enriched
 
     def get_inspection_report(self, limit=100, status_filter=None, date=None, staff_id=None):
         filters = self._date_filters("created_at", date)

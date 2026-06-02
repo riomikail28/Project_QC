@@ -3,6 +3,7 @@ from unittest.mock import patch
 import httpx
 
 from backend.services.google_apps_script_service import google_sheets_status, send_monitoring_log, send_qc_report
+from tests.test_qc_check_cooking_final_flow import FlowDb
 from tests.test_inspection_submit import InsertDb
 from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
 from tests.conftest import FakeSupabase
@@ -228,6 +229,9 @@ def test_qc_google_apps_script_payload_is_correct(client, staff_headers):
                 "qc_stage": "cooking_check",
                 "qc_status": "hold",
                 "temperature": "74.5",
+                "ph_value": "4.27",
+                "brix_value": "10",
+                "tds_value": "150",
                 "photo_url": "https://example.test/photo.jpg",
                 "staff_name": "Siti QC",
                 "notes": "recheck needed",
@@ -237,15 +241,66 @@ def test_qc_google_apps_script_payload_is_correct(client, staff_headers):
     assert response.status_code == 200
     send.assert_called_once()
     payload = send.call_args.args[0]
-    assert payload["batch_id"]
     assert payload["batch_code"]
     assert payload["product_name"] == "Soup Base"
-    assert payload["status"] == "hold"
+    assert payload["inspection_type"] == "Cek Masakan"
+    assert payload["status"] == "HOLD"
     assert payload["temperature"] == "74.5"
+    assert payload["ph"] == "4.27"
+    assert payload["brix"] == "10"
+    assert payload["tds"] == "150"
     assert payload["photo_url"] == "https://example.test/photo.jpg"
     assert payload["staff_name"] == "Siti QC"
-    assert payload["created_at"]
+    assert payload["timestamp"]
+    assert payload["date"]
     assert payload["notes"] == "recheck needed"
+    assert payload["inspection_round"] == 1
+    assert payload["is_recheck"] is False
+    assert payload["source_type"] == "qc_report"
+    assert payload["source_id"] == "qc_reports-1"
+
+
+def test_qc_google_apps_script_payload_marks_recheck_round(client, staff_headers):
+    db = FlowDb()
+    db.fixtures["production_batches"][0].update({"cook_name": "Andi", "quantity": 50})
+    db.fixtures["qc_reports"] = [{
+        "id": "parent-qc",
+        "batch_id": "batch-1",
+        "batch_code": "QC-20260517-001",
+        "qc_stage": "cooking_check",
+        "status": "hold",
+        "inspection_round": 1,
+        "created_at": "2026-05-17T03:00:00Z",
+    }]
+
+    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
+        "backend.services.inspection_service.send_qc_report"
+    ) as send:
+        response = client.post(
+            "/api/inspection/submit",
+            headers=staff_headers,
+            data={
+                "product_id": "product-1",
+                "sku_code": "SKU-CK",
+                "batch_id": "batch-1",
+                "batch_code": "QC-20260517-001",
+                "qc_stage": "cooking_check",
+                "qc_status": "pass",
+                "temperature": "82",
+                "parent_inspection": "parent-qc",
+                "staff_name": "Rio QC",
+                "operational_date": "2026-05-17",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = send.call_args.args[0]
+    assert payload["inspection_round"] == 2
+    assert payload["is_recheck"] is True
+    assert payload["status"] == "PASS"
+    assert payload["batch_sequence"] == 1
+    assert payload["cook_name"] == "Andi"
+    assert payload["quantity"] == 50
 
 
 def test_google_apps_script_webhook_payloads_are_flat_with_type(monkeypatch):
@@ -268,6 +323,7 @@ def test_google_apps_script_webhook_payloads_are_flat_with_type(monkeypatch):
             "batch_id": "batch-1",
             "batch_code": "SAL-20260527-001",
             "product_name": "Salad",
+            "qc_stage": "cooking_check",
             "status": "pass",
             "temperature": 82,
             "staff_name": "Budi",
@@ -338,10 +394,27 @@ def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
             "batch_id": "batch-1",
             "batch_code": "SAL-20260501-001",
             "product_name": "Salad",
+            "qc_stage": "cooking_check",
             "status": "pass",
             "temperature": 75,
+            "ph_value": 4.2,
+            "brix_value": 10,
+            "tds_value": 150,
+            "photo_url": "https://example.test/qc.jpg",
+            "notes": "ok",
+            "inspection_round": 2,
+            "parent_inspection": "qc-0",
             "staff_name": "Rio",
             "created_at": "2026-05-01T08:00:00Z",
+        }],
+        "production_batches": [{
+            "id": "batch-1",
+            "batch_code": "SAL-20260501-001",
+            "batch_sequence": 3,
+            "cook_name": "Andi",
+            "quantity": 50,
+            "product_name": "Salad",
+            "created_at": "2026-05-01T07:00:00Z",
         }],
         "qc_findings": [],
     })
@@ -359,6 +432,19 @@ def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
     assert payload["source_type"] == "qc_report"
     assert payload["source_id"] == "qc-1"
     assert payload["batch_code"] == "SAL-20260501-001"
+    assert payload["batch_sequence"] == 3
+    assert payload["cook_name"] == "Andi"
+    assert payload["quantity"] == 50
+    assert payload["inspection_type"] == "Cek Masakan"
+    assert payload["temperature"] == 75
+    assert payload["ph"] == 4.2
+    assert payload["brix"] == 10
+    assert payload["tds"] == 150
+    assert payload["status"] == "PASS"
+    assert payload["photo_url"] == "https://example.test/qc.jpg"
+    assert payload["notes"] == "ok"
+    assert payload["inspection_round"] == 2
+    assert payload["is_recheck"] is True
 
 
 def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):

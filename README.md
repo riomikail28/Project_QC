@@ -152,7 +152,7 @@ Cara setup:
 GOOGLE_APPS_SCRIPT_WEBHOOK_URL=https://script.google.com/macros/s/your-deployment-id/exec
 ```
 
-Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `batch_id`, `batch_code`, `product_name`, `status`, `temperature`, `photo_url`, `staff_name`, `created_at`, `notes`, `source_type`, dan `source_id`.
+Payload monitoring berisi `date`, `slot_time`, `room`, `device`, `temperature`, `status`, `staff_name`, `submitted_at`, `notes`, `source_type`, dan `source_id`. Payload QC berisi `timestamp`, `date`, `product_name`, `batch_code`, `batch_sequence`, `cook_name`, `quantity`, `inspection_type`, `temperature`, `ph`, `brix`, `tds`, `status`, `staff_name`, `photo_url`, `notes`, `inspection_round`, `is_recheck`, `source_type`, dan `source_id`.
 
 Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
 
@@ -160,11 +160,9 @@ Admin dapat mengirim ulang data lama dari menu `Google Sheets`:
 - `Export All QC Reports` mengirim ulang data `qc_reports` / `qc_findings`.
 - `Export by Date Range` menggunakan filter `Start Date` dan `End Date`.
 
-Untuk Apps Script, tambahkan kolom audit export agar duplikat mudah dicek:
+Untuk Apps Script, gunakan header tab `QC Reports` berikut agar data QC final lengkap:
 
-- `Source Type`
-- `Source ID`
-- `Submitted At`
+`Timestamp`, `Type`, `Date`, `Product`, `Batch Code`, `Batch Sequence`, `Cook`, `Qty`, `Inspection Type`, `Temperature`, `pH`, `Brix`, `TDS`, `Status`, `Staff`, `Photo URL`, `Notes`, `Inspection Round`, `Re-check`, `Source Type`, `Source ID`.
 
 Jika Google Apps Script gagal atau timeout, backend hanya mencatat warning dan tetap mengembalikan sukses untuk submit utama.
 

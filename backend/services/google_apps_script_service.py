@@ -41,6 +41,85 @@ def send_qc_report(payload: dict[str, Any]) -> bool:
     return _send("qc_report", payload)
 
 
+def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
+    """Build the flat QC report payload expected by the Apps Script sheet."""
+    row = row or {}
+    result = row.get("inspection_result") if isinstance(row.get("inspection_result"), dict) else {}
+    timestamp = row.get("timestamp") or row.get("created_at") or row.get("completed_at") or datetime.now(timezone.utc).isoformat()
+    inspection_round = row.get("inspection_round") or result.get("inspection_round") or 1
+    is_recheck = row.get("is_recheck")
+    if is_recheck is None:
+        is_recheck = bool(row.get("parent_inspection") or result.get("parent_inspection") or int(inspection_round or 1) > 1)
+    return {
+        "timestamp": timestamp,
+        "date": row.get("date") or str(timestamp or "")[:10],
+        "product_name": row.get("product_name") or "",
+        "batch_code": row.get("batch_code") or row.get("barcode") or row.get("batch_id") or "",
+        "batch_sequence": row.get("batch_sequence"),
+        "cook_name": row.get("cook_name") or "",
+        "quantity": row.get("quantity"),
+        "inspection_type": row.get("inspection_type") or _inspection_type(row.get("qc_stage") or row.get("ccp_stage") or result.get("qc_stage")),
+        "temperature": row.get("temperature") if row.get("temperature") is not None else result.get("temperature"),
+        "ph": _first_present(row, result, "ph", "ph_value"),
+        "brix": _first_present(row, result, "brix", "brix_value"),
+        "tds": _first_present(row, result, "tds", "tds_value"),
+        "status": _status(row.get("status") or row.get("qc_status") or result.get("qc_status") or row.get("approval_status")),
+        "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
+        "photo_url": _photo_url(row),
+        "notes": row.get("notes") or row.get("reason") or result.get("notes") or "",
+        "inspection_round": inspection_round,
+        "is_recheck": bool(is_recheck),
+        "source_type": row.get("source_type") or row.get("report_type") or "qc_report",
+        "source_id": row.get("source_id") or row.get("id") or row.get("report_id"),
+    }
+
+
+def _first_present(row: dict[str, Any], result: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value not in (None, ""):
+            return value
+        value = result.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _inspection_type(stage: Any) -> str:
+    normalized = str(stage or "").lower()
+    if normalized == "cooking_check":
+        return "Cek Masakan"
+    if normalized == "final_check":
+        return "Cek Label Akhir"
+    return str(stage or "")
+
+
+def _status(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "pass": "PASS",
+        "passed": "PASS",
+        "hold": "HOLD",
+        "warning": "HOLD",
+        "fail": "FAIL",
+        "failed": "FAIL",
+    }
+    return mapping.get(normalized, str(value or "").upper())
+
+
+def _photo_url(row: dict[str, Any]) -> Any:
+    return (
+        row.get("photo_url")
+        or row.get("product_photo_url")
+        or row.get("cooking_photo_url")
+        or row.get("temperature_photo_url")
+        or row.get("barcode_photo_url")
+        or row.get("label_photo_url")
+        or row.get("evidence_url")
+        or row.get("public_url")
+    )
+
+
 def google_sheets_status() -> dict[str, Any]:
     webhook_url = os.getenv(WEBHOOK_ENV, "").strip()
     url_ends_with_exec = _url_ends_with_exec(webhook_url)

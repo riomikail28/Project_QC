@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from backend.database.supabase_client import direct_db_query, get_client
 from backend.services.audit_service import write_audit
-from backend.services.google_apps_script_service import send_qc_report
+from backend.services.google_apps_script_service import build_qc_report_payload, send_qc_report
 from backend.services.storage_service import delete_photo, upload_file_storage
 
 logger = logging.getLogger("qc.services.inspection")
@@ -259,6 +259,7 @@ class InspectionService:
                 "product_id": product_id or None,
                 "product_name": product_name,
                 "staff_id": staff_id,
+                "staff_name": payload.get("staff_name") or payload.get("inspector_name"),
                 "inspector_name": payload.get("staff_name") or payload.get("inspector_name"),
                 "status": qc_status,
                 "approval_status": "pending",
@@ -277,6 +278,9 @@ class InspectionService:
                     "qc_stage": qc_stage,
                     "ccp_stage": qc_stage,
                     "temperature": temperature,
+                    "ph_value": payload.get("ph_value") or payload.get("ph"),
+                    "brix_value": payload.get("brix_value") or payload.get("brix"),
+                    "tds_value": payload.get("tds_value") or payload.get("tds"),
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
                     "inspection_round": inspection_round,
@@ -347,17 +351,20 @@ class InspectionService:
             except Exception:
                 pass
             created_at = (report or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
-            send_qc_report({
-                "batch_id": batch_id or batch_code,
-                "batch_code": batch_code,
-                "product_name": product_name,
-                "status": qc_status,
-                "temperature": temperature,
-                "photo_url": report_payload.get("photo_url"),
-                "staff_name": payload.get("staff_name") or payload.get("inspector_name") or staff_id,
+            send_qc_report(build_qc_report_payload({
+                **report_payload,
+                **(report or {}),
+                "batch_sequence": (batch_row or {}).get("batch_sequence"),
+                "cook_name": (batch_row or {}).get("cook_name"),
+                "quantity": (batch_row or {}).get("quantity"),
+                "production_shift": (batch_row or {}).get("production_shift") or (batch_row or {}).get("shift"),
+                "ph_value": payload.get("ph_value") or payload.get("ph"),
+                "brix_value": payload.get("brix_value") or payload.get("brix"),
+                "tds_value": payload.get("tds_value") or payload.get("tds"),
                 "created_at": created_at,
-                "notes": payload.get("notes"),
-            })
+                "source_type": "qc_report",
+                "source_id": report_id,
+            }))
             return self._ok({
                 "report_id": report_id,
                 "batch_id": batch_id,
