@@ -21,6 +21,7 @@ class QCService:
         photo_file: Optional[Any] = None,
         photo_url: str | None = None,
         storage_path: str | None = None,
+        staff_name: str | None = None,
     ) -> Dict[str, Any]:
         photo_files = photo_file if isinstance(photo_file, list) else ([photo_file] if photo_file else [])
         uploaded_files = []
@@ -96,7 +97,8 @@ class QCService:
 
         try:
             if finding:
-                send_qc_finding(build_qc_finding_payload(finding))
+                sheet_row = {**finding, "staff_name": staff_name or finding.get("staff_name")}
+                send_qc_finding(build_qc_finding_payload(sheet_row))
         except Exception as e:
             logger.warning("Google Sheets QC finding sync skipped: %s", e)
 

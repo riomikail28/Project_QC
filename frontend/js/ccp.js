@@ -6,6 +6,7 @@
 const CCP = {
     batch: null,
     product: null,
+    selectedPhotos: [],
     stageInfo: {
         1: { name: 'Incoming', label: 'Material Incoming', instruction: 'Periksa suhu bahan baku saat diterima.' },
         2: { name: 'Cooking', label: 'Cooking / Processing', instruction: 'Periksa suhu core produk saat dimasak.' },
@@ -58,9 +59,10 @@ const CCP = {
     },
 
     async runOCR(photoFile) {
-        API.validatePhoto(photoFile);
+        const photo = photoFile || this.selectedPhotos[0];
+        API.validatePhoto(photo);
         const formData = new FormData();
-        formData.append('photo', photoFile);
+        formData.append('photo', photo);
         return await API.upload('/ccp/ocr', formData);
     },
 
@@ -80,7 +82,7 @@ const CCP = {
 
     async submit(batchId, stageNum) {
         const info = this.stageInfo[stageNum];
-        const photos = Array.from(document.getElementById('photoInput').files);
+        const photos = this.selectedPhotos.length ? this.selectedPhotos : Array.from(document.getElementById('photoInput').files);
         
         photos.forEach(photo => API.validatePhoto(photo));
 
@@ -100,5 +102,10 @@ const CCP = {
         photos.forEach(photo => formData.append('photo', photo));
 
         return await API.upload('/ccp/submit-stage', formData);
+    },
+
+    async preparePhotos(files) {
+        this.selectedPhotos = await API.preparePhotos(files, { filePrefix: 'qc-ccp' });
+        return this.selectedPhotos;
     }
 };

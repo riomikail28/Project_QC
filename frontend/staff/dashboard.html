@@ -210,6 +210,7 @@
                 <strong>Foto temuan QC</strong>
                 <span id="findingPrompt">Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)</span>
             </button>
+            <small id="findingCompressionStatus" style="display:block; margin-top:8px; color:var(--text-muted);">Foto akan dikompres otomatis sebelum dikirim.</small>
             <div class="finding-reason">
                 <strong>Deskripsi Temuan</strong>
                 <textarea id="findingReason" placeholder="Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
@@ -253,6 +254,7 @@
 
     <script src="../js/config.js"></script>
     <script type="module" src="../js/camera-module.js"></script>
+    <script src="../js/image-compression.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/profile-menu.js"></script>
@@ -349,10 +351,11 @@
             input.click();
         }
 
-        function handleFindingPhoto(event) {
+        async function handleFindingPhoto(event) {
             const files = Array.from(event.target.files || []);
             const file = files[0];
             if (!file) return;
+            const status = document.getElementById('findingCompressionStatus');
             try {
                 files.forEach(item => API.validatePhoto(item));
             } catch (err) {
@@ -361,9 +364,11 @@
                 return;
             }
 
+            if (status) status.textContent = 'Mengompres foto...';
+            const preparedFiles = await API.preparePhotos(files, { filePrefix: 'qc-temuan' });
             if (selectedFindingPhotoUrl) URL.revokeObjectURL(selectedFindingPhotoUrl);
-            selectedFindingPhotos = files;
-            selectedFindingPhotoUrl = URL.createObjectURL(file);
+            selectedFindingPhotos = preparedFiles;
+            selectedFindingPhotoUrl = URL.createObjectURL(preparedFiles[0]);
 
             const icon = document.getElementById('findingPreviewIcon');
             const preview = document.getElementById('findingPhotoPreview');
@@ -375,10 +380,14 @@
             if (preview) preview.style.display = 'block';
             if (img) img.src = selectedFindingPhotoUrl;
             if (badge) {
-                badge.textContent = files.length;
-                badge.style.display = files.length > 1 ? 'inline-flex' : 'none';
+                badge.textContent = preparedFiles.length;
+                badge.style.display = preparedFiles.length > 1 ? 'inline-flex' : 'none';
             }
             if (prompt) prompt.textContent = 'Foto siap dikirim. Klik lagi untuk ganti foto.';
+            if (status) {
+                const totalSize = preparedFiles.reduce((sum, item) => sum + (item.size || 0), 0);
+                status.textContent = `Foto siap dikirim (${ImageCompression.formatBytes(totalSize)}).`;
+            }
         }
 
         async function submitQcFinding() {
@@ -406,10 +415,12 @@
             try {
                 const formData = new FormData();
                 const user = Auth.user() || {};
+                const staffName = user.full_name || user.name || user.username || user.email || 'Unknown Staff';
                 formData.append('reason', reason);
                 formData.append('finding_type', 'field_finding');
                 formData.append('source', 'staff_dashboard');
                 formData.append('staff_id', user.id || user.user_id || user.sub || '');
+                formData.append('staff_name', staffName);
                 selectedFindingPhotos.forEach(file => formData.append('photo', file));
 
                 await API.upload('/qc/findings', formData);
@@ -440,6 +451,7 @@
             const img = document.getElementById('findingImg');
             const badge = document.getElementById('findingPhotoBadge');
             const prompt = document.getElementById('findingPrompt');
+            const status = document.getElementById('findingCompressionStatus');
 
             if (input) input.value = '';
             if (reason) reason.value = '';
@@ -448,6 +460,7 @@
             if (img) img.removeAttribute('src');
             if (badge) badge.style.display = 'none';
             if (prompt) prompt.textContent = 'Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)';
+            if (status) status.textContent = 'Foto akan dikompres otomatis sebelum dikirim.';
         }
 
         async function resolveAlertInDrawer(id) {

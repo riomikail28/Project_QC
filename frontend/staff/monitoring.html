@@ -160,6 +160,7 @@
                             <button type="button" class="remove-photo" onclick="removePhoto()" aria-label="Hapus foto"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
+                    <small id="photo-compression-status" style="display:block; margin-top:8px; color:var(--text-muted);">Foto akan dikompres otomatis sebelum dikirim.</small>
                     <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none">
                 </div>
             </div>
@@ -172,6 +173,7 @@
 
     <script src="../js/config.js"></script>
     <script type="module" src="../js/camera-module.js"></script>
+    <script src="../js/image-compression.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/profile-menu.js"></script>

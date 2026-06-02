@@ -7,7 +7,7 @@ Provides realtime dashboard data and QC decision support.
 Supabase tables: facility_logs, facility_alerts, production_batches
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 import logging
 
 from backend.services.qc_engine import validate_temperature, calculate_health_score, determine_overall_status
@@ -336,7 +336,15 @@ def report_finding():
 
     body = request.get_json(silent=True) or {}
     reason = request.form.get("reason") or body.get("reason")
-    staff_id = request.form.get("staff_id") or body.get("staff_id") or current_actor_id()
+    actor = getattr(g, "current_user", {}) or {}
+    staff_id = actor.get("id") or actor.get("sub") or current_actor_id()
+    staff_name = (
+        actor.get("full_name")
+        or actor.get("name")
+        or actor.get("username")
+        or actor.get("email")
+        or "Unknown Staff"
+    )
     photo_url = request.form.get("photo_url") or body.get("photo_url")
     storage_path = request.form.get("storage_path") or body.get("storage_path")
     photo_files = request.files.getlist("photo")
@@ -385,6 +393,7 @@ def report_finding():
             photo_files,
             photo_url=photo_url,
             storage_path=storage_path,
+            staff_name=staff_name,
         )
         return jsonify(result)
     except Exception as e:

@@ -39,6 +39,14 @@ def test_photo_pages_load_config_before_camera_module():
         assert config_index < camera_index, page.name
 
 
+def test_photo_pages_load_image_compression_before_api():
+    for page in PHOTO_PAGES:
+        html = page.read_text(encoding="utf-8")
+        compression_index = html.index("../js/image-compression.js")
+        api_index = html.index("../js/api.js")
+        assert compression_index < api_index, page.name
+
+
 def test_dashboard_qc_finding_uploads_through_backend_submit():
     html = (ROOT / "frontend" / "staff" / "dashboard.html").read_text(encoding="utf-8")
 
@@ -55,6 +63,42 @@ def test_dashboard_renames_photo_quick_action_to_qc_temuan():
     assert "<h3>QC Temuan</h3>" in html
     assert "Laporan temuan quality control" in html
     assert "Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" in html
+
+
+def test_global_image_compression_helper_available_and_safe_fallback():
+    js = (ROOT / "frontend" / "js" / "image-compression.js").read_text(encoding="utf-8")
+
+    assert "async function compressImage(file, options = {})" in js
+    assert "maxWidth: 1280" in js
+    assert "maxHeight: 1280" in js
+    assert "quality: 0.75" in js
+    assert "skipBelowBytes: 400 * 1024" in js
+    assert "return file;" in js
+    assert "window.compressImage = compressImage" in js
+
+
+def test_staff_upload_flows_use_image_compression():
+    dashboard_html = (ROOT / "frontend" / "staff" / "dashboard.html").read_text(encoding="utf-8")
+    inspection_js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
+    monitoring_js = (ROOT / "frontend" / "js" / "monitoring.js").read_text(encoding="utf-8")
+    ccp_js = (ROOT / "frontend" / "js" / "ccp.js").read_text(encoding="utf-8")
+
+    assert "API.preparePhotos(files, { filePrefix: 'qc-temuan' })" in dashboard_html
+    assert "Foto akan dikompres otomatis sebelum dikirim." in dashboard_html
+    assert "API.preparePhoto(file, { filePrefix: `qc-${id}` })" in inspection_js
+    assert "this.photoFiles" in inspection_js
+    assert "API.preparePhotos(incomingFiles, { filePrefix: \"qc-monitoring\" })" in monitoring_js
+    assert "API.preparePhotos(files, { filePrefix: 'qc-ccp' })" in ccp_js
+
+
+def test_readme_qc_temuan_apps_script_header_has_no_tanggal():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    header = "`Timestamp`, `Type`, `Staff`, `Area`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`."
+
+    assert header in readme
+    qc_temuan_section = readme.split("Tambahkan juga tab `QC Temuan`", 1)[1].split("Jika Google Apps Script", 1)[0]
+    assert "`Tanggal`" not in qc_temuan_section
+    assert "data.staff_name" in qc_temuan_section
 
 
 def test_csp_allows_blob_image_previews(client):

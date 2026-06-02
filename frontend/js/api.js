@@ -141,7 +141,8 @@ const API = {
     async uploadPhotos(files, endpoint = '/storage/upload') {
         const photos = Array.from(files || []);
         photos.forEach(file => this.validatePhoto(file));
-        return Promise.all(photos.map(file => {
+        const prepared = await this.preparePhotos(photos);
+        return Promise.all(prepared.map(file => {
             const formData = new FormData();
             formData.append('photo', file);
             return this.upload(endpoint, formData);
@@ -150,17 +151,18 @@ const API = {
 
     async uploadPhotoToSupabase(file, meta = {}) {
         this.validatePhoto(file);
+        const photo = await this.preparePhoto(file);
         const config = this._supabaseConfig();
-        const storagePath = this._storagePath(file, meta);
+        const storagePath = this._storagePath(photo, meta);
         const response = await fetch(`${config.url}/storage/v1/object/${config.bucket}/${storagePath}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${config.anonKey}`,
                 'apikey': config.anonKey,
-                'Content-Type': file.type,
+                'Content-Type': photo.type,
                 'x-upsert': 'false'
             },
-            body: file
+            body: photo
         });
 
         if (!response.ok) {
@@ -173,6 +175,26 @@ const API = {
             storage_path: storagePath,
             bucket: config.bucket
         };
+    },
+
+    async preparePhoto(file, options = {}) {
+        this.validatePhoto(file);
+        if (window.ImageCompression?.compressImage) {
+            return await window.ImageCompression.compressImage(file, options);
+        }
+        if (typeof window.compressImage === 'function') {
+            return await window.compressImage(file, options);
+        }
+        return file;
+    },
+
+    async preparePhotos(files, options = {}) {
+        const photos = Array.from(files || []);
+        photos.forEach(file => this.validatePhoto(file));
+        if (window.ImageCompression?.compressImages) {
+            return await window.ImageCompression.compressImages(photos, options);
+        }
+        return Promise.all(photos.map(file => this.preparePhoto(file, options)));
     },
 
     _supabaseConfig() {

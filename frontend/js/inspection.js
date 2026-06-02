@@ -24,6 +24,7 @@ const Inspection = {
     nextBatchProduct: null,
     nextBatchSequence: 1,
     nextBatchCode: null,
+    photoFiles: {},
 
     async init() {
         this.operationalDate = this.jakartaDateString();
@@ -357,16 +358,21 @@ const Inspection = {
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
             const input = document.getElementById(id);
             if (!input) return;
-            input.addEventListener('change', event => {
+            input.addEventListener('change', async event => {
                 const file = (event.target.files || [])[0];
                 if (!file) return;
+                this.setPhotoCompressionStatus(id, 'Mengompres foto...');
                 try {
                     API.validatePhoto(file);
-                    this.renderPhotoPreview(id, file);
+                    const prepared = await API.preparePhoto(file, { filePrefix: `qc-${id}` });
+                    this.photoFiles[id] = prepared;
+                    this.renderPhotoPreview(id, prepared);
+                    this.setPhotoCompressionStatus(id, `Foto siap dikirim (${ImageCompression.formatBytes(prepared.size)}).`);
                     this.updateSummary();
                 } catch (err) {
                     this.message(err.message || 'Upload gagal', true);
                     input.value = '';
+                    delete this.photoFiles[id];
                     this.clearPhotoPreview(id);
                     this.updateSummary();
                 }
@@ -393,9 +399,9 @@ const Inspection = {
         const ph = document.getElementById('qcPh')?.value;
         const brix = document.getElementById('qcBrix')?.value;
         const tds = document.getElementById('qcTds')?.value;
-        const cookingPhoto = (document.getElementById('cookingPhoto')?.files || [])[0];
-        const barcodePhoto = (document.getElementById('barcodePhoto')?.files || [])[0];
-        const labelPhoto = (document.getElementById('labelPhoto')?.files || [])[0];
+        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
+        const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
+        const labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
         if (!this.selectedProduct && !manualSku) {
             this.message('Pilih produk terlebih dahulu.', true);
             return;
@@ -467,6 +473,7 @@ const Inspection = {
             ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
                 const input = document.getElementById(id);
                 if (input) input.value = '';
+                delete this.photoFiles[id];
                 this.clearPhotoPreview(id);
             });
             this.selectedBatch = null;
@@ -548,7 +555,7 @@ const Inspection = {
         const productName = this.selectedProduct?.product_name || 'Manual SKU';
         const sku = this.selectedProduct?.product_code || manualSku || '-';
         const photos = ['cookingPhoto', 'barcodePhoto', 'labelPhoto']
-            .reduce((total, id) => total + (document.getElementById(id)?.files?.length || 0), 0);
+            .reduce((total, id) => total + (this.photoFiles[id] ? 1 : (document.getElementById(id)?.files?.length || 0)), 0);
         this.setText('summaryProduct', `${productName} (${sku})`);
         this.setText('summaryBatch', this.selectedBatch?.batch_code || (this.forceNewBatch ? 'Batch baru' : 'Batch baru otomatis'));
         this.setText('summaryStage', 'QC Check');
@@ -1365,7 +1372,13 @@ const Inspection = {
         if (!preview) return;
         preview.hidden = true;
         preview.innerHTML = '';
+        this.setPhotoCompressionStatus(inputId, 'Foto akan dikompres otomatis sebelum dikirim.');
         this.updateSummary();
+    },
+
+    setPhotoCompressionStatus(inputId, message) {
+        const status = document.getElementById(`${inputId}CompressionStatus`);
+        if (status) status.textContent = message;
     },
 
     renderContextBatches(batches) {

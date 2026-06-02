@@ -187,9 +187,11 @@ function triggerPhoto() {
     document.getElementById("photo-input").click();
 }
 
-document.getElementById("photo-input").addEventListener("change", event => {
-    selectedPhotoFiles = Array.from(event.target.files || []);
+document.getElementById("photo-input").addEventListener("change", async event => {
+    const incomingFiles = Array.from(event.target.files || []);
+    selectedPhotoFiles = incomingFiles;
     if (selectedPhotoFiles.length === 0) return;
+    const status = document.getElementById("photo-compression-status");
     try {
         selectedPhotoFiles.forEach(file => API.validatePhoto(file));
     } catch (err) {
@@ -198,6 +200,8 @@ document.getElementById("photo-input").addEventListener("change", event => {
         return;
     }
 
+    if (status) status.textContent = "Mengompres foto...";
+    selectedPhotoFiles = await API.preparePhotos(incomingFiles, { filePrefix: "qc-monitoring" });
     const reader = new FileReader();
     reader.onload = loadEvent => {
         document.getElementById("preview-img").src = loadEvent.target.result;
@@ -212,6 +216,10 @@ document.getElementById("photo-input").addEventListener("change", event => {
         }
     };
     reader.readAsDataURL(selectedPhotoFiles[0]);
+    if (status) {
+        const totalSize = selectedPhotoFiles.reduce((sum, item) => sum + (item.size || 0), 0);
+        status.textContent = `Foto siap dikirim (${ImageCompression.formatBytes(totalSize)}).`;
+    }
 });
 
 function removePhoto() {
@@ -224,6 +232,8 @@ function removePhoto() {
     if (image) image.src = "";
     if (preview) preview.style.display = "none";
     if (badge) badge.style.display = "none";
+    const status = document.getElementById("photo-compression-status");
+    if (status) status.textContent = "Foto akan dikompres otomatis sebelum dikirim.";
 }
 
 document.getElementById("monitoring-form").addEventListener("submit", async event => {

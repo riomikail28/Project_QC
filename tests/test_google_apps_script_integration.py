@@ -462,15 +462,25 @@ def test_qc_finding_payload_targets_qc_temuan_sheet():
 
     assert payload == {
         "timestamp": "2026-05-01T09:00:00Z",
-        "staff": "Rio Mikail",
+        "staff_name": "Rio Mikail",
+        "staff_id": None,
         "area": "Packing",
         "temuan": "Label salah",
         "photo_url": "https://example.test/finding.jpg",
         "status": "WARNING",
-        "tanggal": "2026-05-01",
         "source_type": "qc_finding",
         "source_id": "finding-1",
     }
+    assert "date" not in payload
+    assert "tanggal" not in payload
+
+
+def test_qc_finding_staff_name_fallback_priority():
+    assert build_qc_finding_payload({"full_name": "Full Name"})["staff_name"] == "Full Name"
+    assert build_qc_finding_payload({"name": "Display Name"})["staff_name"] == "Display Name"
+    assert build_qc_finding_payload({"username": "staff-user"})["staff_name"] == "staff-user"
+    assert build_qc_finding_payload({"email": "staff@example.com"})["staff_name"] == "staff@example.com"
+    assert build_qc_finding_payload({})["staff_name"] == "Unknown Staff"
 
 
 def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_headers):
@@ -503,12 +513,13 @@ def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_head
     payload = send_finding.call_args.args[0]
     assert payload["source_type"] == "qc_finding"
     assert payload["source_id"] == "finding-1"
-    assert payload["staff"] == "Rio"
+    assert payload["staff_name"] == "Rio"
     assert payload["area"] == "Kitchen"
     assert payload["temuan"] == "Area kotor"
     assert payload["photo_url"] == "https://example.test/finding.jpg"
     assert payload["status"] == "WARNING"
-    assert payload["tanggal"] == "2026-05-01"
+    assert "date" not in payload
+    assert "tanggal" not in payload
 
 
 def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):

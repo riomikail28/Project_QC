@@ -432,6 +432,13 @@
   color: var(--muted);
 }
 
+.photo-compression-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .photo-preview button,
 .notes-toggle {
   border: 0;

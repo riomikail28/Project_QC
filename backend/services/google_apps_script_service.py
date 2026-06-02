@@ -89,15 +89,27 @@ def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
         status = "WARNING"
     return {
         "timestamp": timestamp,
-        "staff": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
+        "staff_name": _staff_name(row),
+        "staff_id": row.get("staff_id") or row.get("actor_id") or row.get("created_by"),
         "area": row.get("area") or row.get("location") or row.get("room_name") or row.get("room") or row.get("zone") or row.get("finding_type") or "",
-        "temuan": row.get("temuan") or row.get("reason") or row.get("notes") or row.get("description") or "",
+        "temuan": row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or "",
         "photo_url": photo_url,
         "status": status,
-        "tanggal": row.get("tanggal") or row.get("finding_date") or row.get("date") or str(timestamp or "")[:10],
         "source_type": "qc_finding",
         "source_id": row.get("source_id") or row.get("id") or row.get("finding_id"),
     }
+
+
+def _staff_name(row: dict[str, Any]) -> str:
+    return (
+        row.get("staff_display_name")
+        or row.get("staff_name")
+        or row.get("full_name")
+        or row.get("name")
+        or row.get("username")
+        or row.get("email")
+        or "Unknown Staff"
+    )
 
 
 def _first_present(row: dict[str, Any], result: dict[str, Any], *keys: str) -> Any:

@@ -19,12 +19,15 @@ def test_qc_finding_persists_and_records_evidence(client, staff_headers):
 
     with patch("backend.core.di.resolve", return_value=None), patch(
         "backend.api.qc_routes.get_client", return_value=db
-    ), patch("backend.services.storage_service.upload_file_storage", return_value=uploaded):
+    ), patch("backend.services.storage_service.upload_file_storage", return_value=uploaded), patch(
+        "backend.services.qc_service.send_qc_finding", return_value=True
+    ) as send_finding:
         response = client.post(
             "/api/qc/findings",
             headers=staff_headers,
             data={
                 "reason": "Kemasan rusak",
+                "staff_name": "Manual Name",
                 "photo": (BytesIO(b"\xff\xd8\xff\xe0" + b"0" * 12), "finding.jpg"),
             },
             content_type="multipart/form-data",
@@ -35,6 +38,8 @@ def test_qc_finding_persists_and_records_evidence(client, staff_headers):
     assert db.inserted["qc_findings"]["photo_url"].endswith("finding.jpg")
     assert db.inserted["qc_evidence"]["related_type"] == "qc_finding"
     assert db.inserted["qc_evidence"]["storage_path"] == "staff/staff-1/findings/finding.jpg"
+    send_finding.assert_called_once()
+    assert send_finding.call_args.args[0]["staff_name"] == "staff"
 
 
 def test_qc_finding_appears_in_admin_report(client, admin_headers):
