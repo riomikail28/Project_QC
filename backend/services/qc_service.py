@@ -2,6 +2,8 @@
 import logging
 from typing import Any, Dict, Optional
 
+from backend.services.google_apps_script_service import build_qc_finding_payload, send_qc_finding
+
 logger = logging.getLogger("qc.service.qc")
 
 
@@ -91,6 +93,12 @@ class QCService:
                 self.external_sync.send_finding(finding)
         except Exception as e:
             logger.warning("External sync skipped: %s", e)
+
+        try:
+            if finding:
+                send_qc_finding(build_qc_finding_payload(finding))
+        except Exception as e:
+            logger.warning("Google Sheets QC finding sync skipped: %s", e)
 
         data = finding or {"photo_url": photo_url, "storage_path": storage_path}
         return {

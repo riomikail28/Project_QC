@@ -179,7 +179,7 @@
 
     <div class="fab-container" data-quick-actions>
         <div class="quick-action-menu" data-quick-actions-menu hidden>
-            <button class="quick-action-item" data-quick-action="photo" type="button"><span>Ambil Foto</span><span class="quick-action-icon"><i class="fas fa-camera"></i></span></button>
+            <button class="quick-action-item" data-quick-action="photo" type="button"><span>QC Temuan</span><span class="quick-action-icon"><i class="fas fa-camera"></i></span></button>
             <button class="quick-action-item" data-quick-action="batch" type="button"><span>Buat Batch</span><span class="quick-action-icon"><i class="fas fa-plus"></i></span></button>
             <button class="quick-action-item" data-quick-action="qc" type="button"><span>QC Check</span><span class="quick-action-icon"><i class="fas fa-clipboard-check"></i></span></button>
             <button class="quick-action-item" data-quick-action="monitoring" type="button"><span>Monitoring</span><span class="quick-action-icon"><i class="fas fa-temperature-half"></i></span></button>
@@ -194,7 +194,7 @@
                 <div class="alert-icon"><i class="fas fa-camera"></i></div>
                 <div>
                     <h3>QC Temuan</h3>
-                    <p>Foto evidence dan reason temuan</p>
+                    <p>Laporan temuan quality control</p>
                 </div>
             </div>
             <button class="icon-button" onclick="closeQcFinding()" aria-label="Close modal"><i class="fas fa-times"></i></button>
@@ -212,7 +212,7 @@
             </button>
             <div class="finding-reason">
                 <strong>Deskripsi Temuan</strong>
-                <textarea id="findingReason" placeholder="Jelaskan temuan Anda (misal: Ada serangga di area packing, kabel terkelupas, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
+                <textarea id="findingReason" placeholder="Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
             </div>
             <p style="text-align:center; margin-top:12px; font-size:12px; color:var(--text-muted)">Atau buka dashboard inspeksi lengkap:</p>
             <button class="btn-secondary" onclick="window.location.href='inspection.html'" style="width:100%; padding:12px; margin-top:4px;"><i class="fas fa-clipboard-check"></i>Buka QC Check</button>
