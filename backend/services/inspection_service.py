@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -528,13 +529,31 @@ class InspectionService:
             if required:
                 raise RuntimeError("Database belum terhubung")
             return None
-        try:
-            return (self.sb.table(table).insert(payload).execute().data or [payload])[0]
-        except Exception:
-            if required:
-                raise
-            logger.warning("Optional insert skipped for %s", table, exc_info=True)
+        insert_payload = dict(payload)
+        while True:
+            try:
+                return (self.sb.table(table).insert(insert_payload).execute().data or [insert_payload])[0]
+            except Exception as exc:
+                missing_column = self._schema_cache_missing_column(exc)
+                if missing_column and missing_column in insert_payload:
+                    insert_payload = {key: value for key, value in insert_payload.items() if key != missing_column}
+                    logger.warning(
+                        "Retrying %s insert without missing schema-cache column %s",
+                        table,
+                        missing_column,
+                    )
+                    continue
+                if required:
+                    raise
+                logger.warning("Optional insert skipped for %s", table, exc_info=True)
+                return None
+
+    def _schema_cache_missing_column(self, exc):
+        text = str(exc or "")
+        if "PGRST204" not in text and "schema cache" not in text:
             return None
+        match = re.search(r"Could not find the '([^']+)' column", text)
+        return match.group(1) if match else None
 
     def _batch_view(self, row):
         product = row.get("products") or {}

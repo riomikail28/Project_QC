@@ -38,6 +38,23 @@ class InsertDb:
         return InsertQuery(table, self)
 
 
+class MissingColumnInsertQuery(InsertQuery):
+    def execute(self):
+        if self.payload is not None and self.table == "qc_reports" and "staff_name" in self.payload:
+            raise Exception({
+                "code": "PGRST204",
+                "details": None,
+                "hint": None,
+                "message": "Could not find the 'staff_name' column of 'qc_reports' in the schema cache",
+            })
+        return super().execute()
+
+
+class MissingColumnInsertDb(InsertDb):
+    def table(self, table):
+        return MissingColumnInsertQuery(table, self)
+
+
 def test_submit_inspection_without_photo_succeeds(client, staff_headers):
     db = InsertDb()
     with patch("backend.services.inspection_service.get_client", return_value=db):
@@ -51,6 +68,27 @@ def test_submit_inspection_without_photo_succeeds(client, staff_headers):
     assert response.status_code == 200
     assert body["success"] is True
     assert db.inserted["qc_reports"][0]["barcode"] == "MANUAL-001"
+
+
+def test_submit_inspection_retries_when_staff_name_missing_from_schema_cache(client, staff_headers):
+    db = MissingColumnInsertDb()
+    with patch("backend.services.inspection_service.get_client", return_value=db):
+        response = client.post(
+            "/api/inspection/submit",
+            headers=staff_headers,
+            data={
+                "barcode": "MANUAL-001",
+                "qc_stage": "final_check",
+                "qc_status": "pass",
+                "staff_name": "Siti QC",
+            },
+        )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert "staff_name" not in db.inserted["qc_reports"][0]
+    assert db.inserted["qc_reports"][0]["inspector_name"] == "Siti QC"
 
 
 def test_submit_inspection_with_photo_succeeds(client, staff_headers):
