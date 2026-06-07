@@ -373,6 +373,7 @@
                             </div>
                             <div class="report-actions">
                                 <button class="btn-secondary" onclick="adminApp.exportOperationalReportCsv()"><i data-lucide="download"></i> Export CSV</button>
+                                <button class="btn-secondary" onclick="adminApp.exportDailyCsv()"><i data-lucide="download"></i> Export Daily CSV</button>
                                 <a class="btn-secondary" href="https://docs.google.com/spreadsheets/d/1C5OVfOEYQuLRWXoyiUtKYybxb6MztDfK5mSroJlUYTI/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer"><i data-lucide="external-link"></i> Buka Google Sheets</a>
                                 <button class="btn-secondary" onclick="window.print()"><i data-lucide="printer"></i> Print/PDF</button>
                             </div>
@@ -425,43 +426,45 @@
                     <div class="card">
                         <div class="admin-section-toolbar">
                             <div>
-                                <h3 class="card-title" style="margin:0;">Daily Staff Reports</h3>
-                                <p class="admin-muted">Monitoring suhu, inspection, findings, dan evidence per hari.</p>
-                            </div>
-                            <div class="daily-report-actions">
-                                <input id="daily-report-date" type="date">
-                                <input id="daily-report-staff" placeholder="Filter staff">
-                                <select id="daily-report-status">
-                                    <option value="">Semua status</option>
-                                    <option value="PASS">PASS</option>
-                                    <option value="HOLD">HOLD</option>
-                                    <option value="FAIL">FAIL</option>
-                                    <option value="WARNING">WARNING</option>
-                                </select>
-                                <button class="btn-secondary" onclick="adminApp.loadDailyReports()"><i data-lucide="refresh-cw"></i> Reload</button>
-                                <button class="btn-primary" onclick="adminApp.exportDailyCsv()"><i data-lucide="download"></i> Export CSV</button>
+                                <h3 class="card-title" style="margin:0;">Batch Production</h3>
+                                <p class="admin-muted">Monitoring daftar batch/pemasakan harian dan status QC terakhir.</p>
                             </div>
                         </div>
-                        <div class="metric-grid daily-summary-grid">
-                            <div class="metric-card"><div class="metric-header"><span>Temperature Logs</span></div><div class="metric-value" id="daily-total-temperature">0</div></div>
-                            <div class="metric-card"><div class="metric-header"><span>Inspection</span></div><div class="metric-value" id="daily-total-inspection">0</div></div>
-                            <div class="metric-card"><div class="metric-header"><span>Findings</span></div><div class="metric-value" id="daily-total-findings">0</div></div>
-                            <div class="metric-card"><div class="metric-header"><span>Evidence</span></div><div class="metric-value" id="daily-total-evidence">0</div></div>
+                        <div class="report-filter-bar batch-production-filters">
+                            <label>Tanggal<input id="batch-production-date" type="date"></label>
+                            <label>Search<input id="batch-production-search" type="search" placeholder="SKU, batch, cook"></label>
+                            <label>Status<select id="batch-production-status">
+                                <option value="">Semua</option>
+                                <option value="belum qc">Belum QC</option>
+                                <option value="pending approval">Pending Approval</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="pass">PASS</option>
+                                <option value="hold">HOLD</option>
+                                <option value="fail">FAIL</option>
+                            </select></label>
+                            <button class="btn-primary" onclick="adminApp.loadBatchProduction()"><i data-lucide="filter"></i> Terapkan</button>
+                        </div>
+                        <div class="table-toolbar">
+                            <span class="table-meta" id="batch-production-count">0 batch</span>
                         </div>
                         <div class="daily-report-table-wrap">
-                            <table class="enterprise-table daily-report-table">
+                            <table class="enterprise-table batch-production-table">
                                 <thead>
                                     <tr>
-                                        <th>Time</th>
-                                        <th>Staff</th>
-                                        <th>Type</th>
-                                        <th>Location/SKU</th>
-                                        <th>Status</th>
-                                        <th>Photo</th>
-                                        <th>Notes</th>
+                                        <th>Batch Code</th>
+                                        <th>SKU/Product</th>
+                                        <th>Pemasakan ke</th>
+                                        <th>Cook</th>
+                                        <th>Qty</th>
+                                        <th>Jam Produksi</th>
+                                        <th>QC Status</th>
+                                        <th>Approval Status</th>
+                                        <th>Last Inspector</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="table-daily-reports"></tbody>
+                                <tbody id="table-batch-production"></tbody>
                             </table>
                         </div>
                     </div>
@@ -513,11 +516,13 @@
                             <table class="enterprise-table">
                                 <thead>
                                     <tr>
-                                        <th>Batch</th>
-                                        <th>Status</th>
+                                        <th>Batch Code</th>
+                                        <th>Product</th>
+                                        <th>QC Result</th>
                                         <th>Inspector</th>
+                                        <th>Submitted At</th>
                                         <th>Evidence</th>
-                                        <th>Created</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="approvals-table-body"></tbody>
@@ -592,6 +597,30 @@
                     <button type="submit" class="btn-primary"><i data-lucide="save"></i> Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="enterprise-modal" id="approval-review-modal" role="dialog" aria-modal="true" aria-labelledby="approval-review-title">
+        <div class="modal-content approval-review-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="approval-review-title" style="margin:0;">Review QC Approval</h3>
+                    <p class="admin-muted" id="approval-review-subtitle">Validasi hasil QC sebelum keputusan.</p>
+                </div>
+                <button type="button" class="icon-btn modal-close-btn" onclick="adminApp.closeApprovalReview()" aria-label="Close modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="approval-review-body" class="approval-review-body"></div>
+            </div>
+            <div class="modal-footer approval-review-footer">
+                <label class="reject-reason-field">Reject Reason
+                    <textarea id="approval-reject-reason" placeholder="Wajib diisi jika reject"></textarea>
+                </label>
+                <div class="approval-decision-actions">
+                    <button type="button" class="btn-danger" onclick="adminApp.rejectCurrentApproval()"><i data-lucide="x"></i> Reject</button>
+                    <button type="button" class="btn-primary" onclick="adminApp.approveCurrentApproval()"><i data-lucide="check"></i> Approve</button>
+                </div>
+            </div>
         </div>
     </div>
 

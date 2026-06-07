@@ -310,7 +310,7 @@ class AdminService:
         try:
             rows = self._fetch("approvals", order_by="created_at", limit=limit, filters=[("eq", "status", "pending")])
             if rows:
-                return self._empty([self._approval_with_related(row) for row in rows[:limit]])
+                return self._empty([self._approval_summary(row) for row in rows[:limit]])
 
             rows = []
             reports = self._fetch("qc_reports", order_by="created_at", limit=limit)
@@ -323,9 +323,56 @@ class AdminService:
             rows.extend(self._approval_from_temperature(row) for row in temp_logs if self._temperature_needs_review(row))
 
             rows = sorted(rows, key=lambda row: row.get("created_at") or "", reverse=True)
-            return self._empty(rows[:limit])
+            return self._empty([self._approval_summary(row) for row in rows[:limit]])
         except Exception as exc:
             logger.error("Approvals failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
+
+    def get_approval_detail(self, approval_id):
+        try:
+            approval = (self._fetch("approvals", limit=1, filters=[("eq", "id", approval_id)]) or [None])[0]
+            if approval:
+                return self._empty(self._approval_detail_from_row(approval))
+
+            report = (self._fetch("qc_reports", limit=1, filters=[("eq", "id", approval_id)]) or [None])[0]
+            if report:
+                return self._empty(self._approval_detail_from_report(report, {"id": approval_id, "status": report.get("approval_status") or "pending"}))
+
+            related = (self._fetch("approvals", limit=1, filters=[("eq", "related_id", approval_id)]) or [None])[0]
+            if related:
+                return self._empty(self._approval_detail_from_row(related))
+            return self._fail("Approval detail not found")
+        except Exception as exc:
+            logger.error("Approval detail failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
+
+    def get_batch_production(self, date=None, status_filter=None, search=None, limit=200):
+        date = date or self._jakarta_today()
+        try:
+            rows = self._fetch_daily_candidates(
+                "production_batches",
+                date,
+                limit,
+                timestamp_fields=("created_at", "production_time", "started_at"),
+                date_fields=("production_date",),
+                order_by="created_at",
+            )
+            qc_rows = self._fetch("qc_reports", order_by="created_at", limit=max(limit * 3, 200))
+            approval_rows = self._fetch("approvals", order_by="created_at", limit=max(limit * 3, 200))
+            data = [self._batch_production_row(row, qc_rows, approval_rows) for row in rows[:limit]]
+            if search:
+                needle = str(search).strip().lower()
+                data = [
+                    row for row in data
+                    if any(needle in str(row.get(key) or "").lower() for key in ("batch_code", "sku_code", "product_name", "cook_name"))
+                ]
+            if status_filter:
+                normalized = self._normalize_batch_filter(status_filter)
+                if normalized:
+                    data = [row for row in data if normalized in {row.get("qc_status_key"), row.get("approval_status_key"), row.get("batch_status_key")}]
+            return self._empty({"date": date, "rows": data})
+        except Exception as exc:
+            logger.error("Batch production failed: %s", exc)
             return {"success": False, "detail": str(exc)}
 
     def get_audit_trail(self, limit=50, date=None, action=None, user=None):
@@ -932,6 +979,96 @@ class AdminService:
             })
         return self._empty(data)
 
+    def _batch_production_row(self, row, qc_rows, approval_rows):
+        item = self._with_staff_display(row, ("staff_id", "created_by", "operator_id", "qc_officer_id"))
+        batch_id = item.get("id")
+        batch_code = item.get("batch_code")
+        related_qc = [
+            qc for qc in qc_rows or []
+            if self._same_batch(qc, batch_id, batch_code)
+        ]
+        related_qc = sorted(related_qc, key=lambda qc: qc.get("created_at") or qc.get("submitted_at") or "", reverse=True)
+        latest_qc = self._normalize_qc_report(related_qc[0]) if related_qc else {}
+        related_approvals = [
+            approval for approval in approval_rows or []
+            if self._same_batch(approval, batch_id, batch_code)
+            or (latest_qc.get("id") and approval.get("related_id") == latest_qc.get("id"))
+        ]
+        related_approvals = sorted(related_approvals, key=lambda approval: approval.get("created_at") or "", reverse=True)
+        latest_approval = related_approvals[0] if related_approvals else {}
+        qc_status = self._display_qc_status(latest_qc.get("status")) if latest_qc else "Belum QC"
+        approval_status = self._display_approval_status(latest_approval.get("status") or latest_qc.get("approval_status"))
+        product = item.get("products") if isinstance(item.get("products"), dict) else {}
+        return {
+            "id": batch_id,
+            "batch_code": batch_code,
+            "sku_code": item.get("product_code") or item.get("sku_code") or product.get("product_code") or product.get("sku_code"),
+            "product_name": item.get("product_name") or product.get("product_name") or item.get("product_id"),
+            "batch_sequence": item.get("batch_sequence") or item.get("pemasakan_ke"),
+            "cook_name": item.get("cook_name") or item.get("cook"),
+            "quantity": item.get("quantity") or item.get("qty"),
+            "production_time": item.get("production_time") or item.get("started_at") or item.get("created_at"),
+            "production_date": item.get("production_date") or str(item.get("created_at") or "")[:10],
+            "qc_status": qc_status,
+            "qc_status_key": self._normalize_batch_filter(qc_status),
+            "approval_status": approval_status,
+            "approval_status_key": self._normalize_batch_filter(approval_status),
+            "batch_status_key": self._normalize_batch_filter(item.get("status")),
+            "last_inspector": latest_qc.get("staff_display_name") or latest_qc.get("inspector_name") or "-",
+            "last_qc_report_id": latest_qc.get("id"),
+            "approval_id": latest_approval.get("id"),
+        }
+
+    def _same_batch(self, row, batch_id, batch_code):
+        values = {
+            str(row.get("batch_id") or ""),
+            str(row.get("batch_code") or ""),
+            str(row.get("related_batch_id") or ""),
+            str(row.get("related_batch_code") or ""),
+        }
+        return bool((batch_id and str(batch_id) in values) or (batch_code and str(batch_code) in values))
+
+    def _normalize_batch_filter(self, value):
+        text = str(value or "").strip().lower().replace("_", " ")
+        aliases = {
+            "": "",
+            "semua": "",
+            "all": "",
+            "belum qc": "belum qc",
+            "no qc": "belum qc",
+            "pending approval": "pending approval",
+            "pending": "pending approval",
+            "approved": "approved",
+            "rejected": "rejected",
+            "reject": "rejected",
+            "pass": "pass",
+            "passed": "pass",
+            "hold": "hold",
+            "warning": "hold",
+            "pending review": "hold",
+            "fail": "fail",
+            "failed": "fail",
+        }
+        return aliases.get(text, text)
+
+    def _display_qc_status(self, value):
+        key = self._normalize_batch_filter(value)
+        return {
+            "pass": "PASS",
+            "hold": "HOLD",
+            "fail": "FAIL",
+            "pending approval": "Pending Approval",
+            "belum qc": "Belum QC",
+        }.get(key, str(value or "Belum QC"))
+
+    def _display_approval_status(self, value):
+        key = self._normalize_batch_filter(value)
+        return {
+            "pending approval": "Pending Approval",
+            "approved": "Approved",
+            "rejected": "Rejected",
+        }.get(key, "Pending Approval" if not key else str(value))
+
     def get_staff_activity_report(self, limit=100):
         rows = self._fetch("staff_activity", order_by="created_at", limit=limit)
         if not rows:
@@ -1085,6 +1222,125 @@ class AdminService:
             item["inspector_name"] = item.get("staff_display_name")
         item.setdefault("product_photo_url", item.get("product_photo_url") or item.get("photo_url"))
         return item
+
+    def _approval_summary(self, row):
+        item = self._approval_with_related(row)
+        evidence = self._approval_evidence_url(item)
+        return {
+            "id": item.get("approval_id") or item.get("id"),
+            "approval_id": item.get("approval_id") or item.get("id"),
+            "related_id": item.get("related_id") or item.get("report_id"),
+            "batch_code": item.get("batch_code") or item.get("batch_id") or "-",
+            "product_name": item.get("product_name") or item.get("product") or "-",
+            "qc_status": self._display_qc_status(item.get("status") or item.get("qc_status")),
+            "status": item.get("approval_status") or item.get("status") or "pending",
+            "approval_status": item.get("approval_status") or "pending",
+            "source": item.get("source") or item.get("related_type") or "approval",
+            "inspector_display_name": item.get("inspector_name") or item.get("staff_display_name") or "Unknown User",
+            "staff_id": item.get("staff_id") or item.get("created_by"),
+            "staff_display_name": item.get("staff_display_name"),
+            "submitted_at": item.get("submitted_at") or item.get("created_at"),
+            "created_at": item.get("created_at") or item.get("submitted_at"),
+            "evidence_url": evidence,
+            "photo_url": evidence,
+            "product_photo_url": item.get("product_photo_url") or evidence,
+        }
+
+    def _approval_detail_from_row(self, approval):
+        related_type = approval.get("related_type")
+        related_id = approval.get("related_id") or approval.get("report_id")
+        if related_type == "qc_report" and related_id:
+            report = (self._fetch("qc_reports", limit=1, filters=[("eq", "id", related_id)]) or [None])[0]
+            if report:
+                return self._approval_detail_from_report(report, approval)
+        if related_id:
+            report = (self._fetch("qc_reports", limit=1, filters=[("eq", "id", related_id)]) or [None])[0]
+            if report:
+                return self._approval_detail_from_report(report, approval)
+        return self._approval_detail_from_report(approval, approval)
+
+    def _approval_detail_from_report(self, report, approval):
+        qc = self._approval_from_qc_report(report)
+        batch = self._approval_batch_info(qc)
+        evidence = self._approval_evidence_url(qc)
+        history = self._approval_recheck_history(qc)
+        return {
+            "id": approval.get("id") or qc.get("id"),
+            "approval_id": approval.get("id") or qc.get("approval_id") or qc.get("id"),
+            "related_id": approval.get("related_id") or qc.get("id"),
+            "batch_code": batch.get("batch_code") or qc.get("batch_code") or qc.get("batch_id"),
+            "product_name": batch.get("product_name") or qc.get("product_name"),
+            "batch_sequence": batch.get("batch_sequence") or qc.get("batch_sequence"),
+            "cook_name": batch.get("cook_name") or qc.get("cook_name"),
+            "quantity": batch.get("quantity") or qc.get("quantity"),
+            "production_time": batch.get("production_time") or batch.get("created_at") or qc.get("production_time"),
+            "qc_status": self._display_qc_status(qc.get("status") or qc.get("qc_status")),
+            "inspection_type": qc.get("inspection_type") or qc.get("qc_stage") or qc.get("ccp_stage") or qc.get("check_type"),
+            "temperature": qc.get("temperature") or qc.get("cooking_temperature") or qc.get("temperature_c"),
+            "ph": qc.get("ph") or qc.get("ph_value"),
+            "brix": qc.get("brix") or qc.get("brix_value"),
+            "tds": qc.get("tds") or qc.get("tds_value"),
+            "notes": qc.get("notes") or qc.get("parameter_notes") or qc.get("finding_notes"),
+            "inspection_round": qc.get("inspection_round") or qc.get("batch_sequence"),
+            "is_recheck": bool(qc.get("is_recheck") or qc.get("recheck_of") or qc.get("parent_report_id")),
+            "inspector_display_name": qc.get("inspector_name") or qc.get("staff_display_name") or "Unknown User",
+            "submitted_at": qc.get("submitted_at") or qc.get("created_at") or approval.get("created_at"),
+            "evidence_url": evidence,
+            "photo_url": evidence,
+            "storage_path": qc.get("storage_path") or qc.get("product_storage_path") or qc.get("temperature_storage_path") or qc.get("barcode_storage_path"),
+            "history": history,
+        }
+
+    def _approval_batch_info(self, qc):
+        batch_id = qc.get("batch_id")
+        batch_code = qc.get("batch_code")
+        rows = []
+        if batch_id:
+            rows = self._fetch("production_batches", select="*, products(*)", limit=1, filters=[("eq", "id", batch_id)])
+        if not rows and batch_code:
+            rows = self._fetch("production_batches", select="*, products(*)", limit=1, filters=[("eq", "batch_code", batch_code)])
+        batch = rows[0] if rows else {}
+        product = batch.get("products") if isinstance(batch.get("products"), dict) else {}
+        return {
+            "batch_code": batch.get("batch_code"),
+            "product_name": batch.get("product_name") or product.get("product_name"),
+            "batch_sequence": batch.get("batch_sequence"),
+            "cook_name": batch.get("cook_name"),
+            "quantity": batch.get("quantity"),
+            "production_time": batch.get("production_time") or batch.get("started_at") or batch.get("created_at"),
+            "created_at": batch.get("created_at"),
+        }
+
+    def _approval_evidence_url(self, row):
+        item = self.normalize_evidence_url(dict(row or {}))
+        return (
+            item.get("photo_url")
+            or item.get("evidence_url")
+            or item.get("product_photo_url")
+            or item.get("temperature_photo_url")
+            or item.get("barcode_photo_url")
+        )
+
+    def _approval_recheck_history(self, qc):
+        batch_id = qc.get("batch_id")
+        batch_code = qc.get("batch_code")
+        if not (batch_id or batch_code):
+            return []
+        rows = self._fetch("qc_reports", order_by="created_at", limit=20)
+        history = []
+        for row in rows:
+            if row.get("id") == qc.get("id") or not self._same_batch(row, batch_id, batch_code):
+                continue
+            normalized = self._normalize_qc_report(row)
+            history.append({
+                "id": normalized.get("id"),
+                "submitted_at": normalized.get("created_at") or normalized.get("submitted_at"),
+                "status": self._display_qc_status(normalized.get("status")),
+                "inspection_round": normalized.get("inspection_round") or normalized.get("batch_sequence"),
+                "inspector_display_name": normalized.get("staff_display_name") or normalized.get("inspector_name"),
+                "notes": normalized.get("notes"),
+            })
+        return history
 
     def _approval_with_related(self, row):
         item = dict(row or {})

@@ -1152,6 +1152,99 @@ textarea {
   overflow-x: auto;
 }
 
+.batch-production-filters {
+  margin-bottom: 10px;
+}
+
+.approval-review-content {
+  width: min(980px, 96vw);
+}
+
+.approval-review-body {
+  display: grid;
+  gap: 14px;
+}
+
+.review-section {
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, .82);
+}
+
+.review-section h4 {
+  margin: 0 0 10px;
+  font-size: .92rem;
+  font-weight: 900;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-field span {
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.review-field strong,
+.review-field p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.review-evidence img {
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.approval-review-footer {
+  align-items: end;
+  justify-content: space-between;
+}
+
+.reject-reason-field {
+  display: grid;
+  gap: 6px;
+  width: min(560px, 100%);
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.reject-reason-field textarea {
+  min-height: 72px;
+}
+
+.approval-decision-actions {
+  display: flex;
+  gap: 10px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1288,6 +1381,16 @@ textarea {
 
   .daily-report-actions > * {
     width: 100%;
+  }
+
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .approval-review-footer,
+  .approval-decision-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .report-filter-bar {

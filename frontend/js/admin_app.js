@@ -13,6 +13,7 @@ const adminApp = {
     learningModules: [],
     reportTab: 'monitoring',
     dailyReportRows: [],
+    currentApprovalId: null,
 
     init() {
         this.checkAuth();
@@ -22,6 +23,7 @@ const adminApp = {
         this.safeRun(() => this.setupThemeToggle(), 'theme toggle');
         this.safeRun(() => this.setupCrudForm(), 'crud form');
         this.safeRun(() => this.setupModalBehavior(), 'modal behavior');
+        this.safeRun(() => this.setupBatchProductionDefaults(), 'batch production');
         this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
         this.safeRun(() => this.setupTableFilters(), 'table filters');
         this.refreshIcons();
@@ -219,7 +221,7 @@ const adminApp = {
             case 'google-sheets': this.loadGoogleSheetsExport(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadOperationalReports(); break;
-            case 'daily-reports': this.loadDailyReports(); break;
+            case 'daily-reports': this.loadBatchProduction(); break;
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
@@ -865,12 +867,14 @@ const adminApp = {
             if (event.key !== 'Escape') return;
             if (document.getElementById('crud-modal')?.classList.contains('active')) this.closeCrudModal();
             if (document.getElementById('image-modal')?.classList.contains('active')) this.closeImageModal();
+            if (document.getElementById('approval-review-modal')?.classList.contains('active')) this.closeApprovalReview();
         });
         document.querySelectorAll('.enterprise-modal').forEach(modal => {
             modal.addEventListener('click', event => {
                 if (event.target !== modal) return;
                 if (modal.id === 'crud-modal') this.closeCrudModal();
                 if (modal.id === 'image-modal') this.closeImageModal();
+                if (modal.id === 'approval-review-modal') this.closeApprovalReview();
             });
         });
     },
@@ -1520,6 +1524,96 @@ const adminApp = {
         return `${this.escapeHtml(cooking)}<br>${this.escapeHtml(final)}`;
     },
 
+    setupBatchProductionDefaults() {
+        const input = document.getElementById('batch-production-date');
+        if (input && !input.value) input.value = this.jakartaDateString();
+    },
+
+    batchProductionQuery() {
+        const params = new URLSearchParams({
+            date: document.getElementById('batch-production-date')?.value || this.jakartaDateString(),
+            limit: '200',
+        });
+        const search = document.getElementById('batch-production-search')?.value?.trim();
+        const status = document.getElementById('batch-production-status')?.value;
+        if (search) params.set('search', search);
+        if (status) params.set('status', status);
+        return params;
+    },
+
+    async loadBatchProduction() {
+        const tbody = document.getElementById('table-batch-production');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading batch production...</td></tr>';
+        const res = await this.fetchAdminData(`${this.apiBase}/batches?${this.batchProductionQuery().toString()}`);
+        const rows = Array.isArray(res?.data?.rows) ? res.data.rows : (Array.isArray(res?.rows) ? res.rows : []);
+        this.renderBatchProduction(rows);
+    },
+
+    renderBatchProduction(rows = []) {
+        const tbody = document.getElementById('table-batch-production');
+        if (!tbody) return;
+        this.updateTableMeta('batch-production-count', rows.length, 'batch');
+        if (!rows.length) {
+            tbody.innerHTML = `
+                <tr><td colspan="10">
+                    ${this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
+                    <div class="row-actions" style="justify-content:center; margin-top:12px;">
+                        <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
+                        <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
+                    </div>
+                </td></tr>
+            `;
+            this.refreshIcons();
+            return;
+        }
+        tbody.innerHTML = rows.map(row => {
+            const batchCode = row.batch_code || '-';
+            const product = [row.sku_code, row.product_name].filter(Boolean).join(' / ') || '-';
+            const qcStatus = this.statusBadge(row.qc_status || 'Belum QC');
+            const approvalStatus = this.statusBadge(row.approval_status || 'Pending Approval');
+            return `
+                <tr>
+                    <td data-label="Batch Code"><strong>${this.escapeHtml(batchCode)}</strong></td>
+                    <td data-label="SKU/Product">${this.escapeHtml(product)}</td>
+                    <td data-label="Pemasakan ke">${this.escapeHtml(row.batch_sequence || '-')}</td>
+                    <td data-label="Cook">${this.escapeHtml(row.cook_name || '-')}</td>
+                    <td data-label="Qty">${this.escapeHtml(row.quantity || '-')}</td>
+                    <td data-label="Jam Produksi">${this.dateTime(row.production_time)}</td>
+                    <td data-label="QC Status">${qcStatus}</td>
+                    <td data-label="Approval Status">${approvalStatus}</td>
+                    <td data-label="Last Inspector">${this.escapeHtml(row.last_inspector || '-')}</td>
+                    <td data-label="Action">
+                        <span class="row-actions">
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openBatchDetail(${this.safeJson(row)})'><i data-lucide="eye"></i> Detail</button>
+                            <button class="btn-secondary btn-sm" onclick="adminApp.openBatchQcReport('${this.escapeAttr(row.last_qc_report_id || row.batch_code || '')}')"><i data-lucide="clipboard-check"></i> QC Report</button>
+                            <button class="btn-secondary btn-sm" onclick="adminApp.openBatchTraceability('${this.escapeAttr(row.batch_code || '')}')"><i data-lucide="qr-code"></i> Traceability</button>
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        this.refreshIcons();
+    },
+
+    openBatchDetail(row) {
+        this.openBatchTraceability(row.batch_code || '');
+    },
+
+    openBatchQcReport(reportOrBatch) {
+        this.navigateTo('reports');
+        const filter = document.getElementById('report-filter-product');
+        if (filter && reportOrBatch) filter.value = reportOrBatch;
+        this.switchReportTab('qc');
+    },
+
+    openBatchTraceability(batchCode) {
+        this.navigateTo('traceability');
+        const input = document.getElementById('traceability-barcode');
+        if (input && batchCode) input.value = batchCode;
+        this.loadTraceability();
+    },
+
     setupDailyReportDefaults() {
         const input = document.getElementById('daily-report-date');
         if (input && !input.value) input.value = this.jakartaDateString();
@@ -1637,8 +1731,21 @@ const adminApp = {
     },
 
     statusBadge(value) {
-        const status = String(value || 'pending').toLowerCase();
-        return `<span class="status-badge status-${this.escapeAttr(status)}">${this.escapeHtml(status.toUpperCase())}</span>`;
+        const label = String(value || 'pending').trim();
+        const status = label.toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
+        const className = {
+            approved: 'pass',
+            pass: 'pass',
+            rejected: 'fail',
+            fail: 'fail',
+            failed: 'fail',
+            hold: 'warning',
+            warning: 'warning',
+            'pending-approval': 'warning',
+            pending: 'pending',
+            'belum-qc': 'pending',
+        }[status] || status;
+        return `<span class="status-badge status-${this.escapeAttr(className)}">${this.escapeHtml(label.toUpperCase())}</span>`;
     },
 
     staffCell(row, idField = 'staff_id') {
@@ -1840,7 +1947,7 @@ const adminApp = {
     async loadApprovals() {
         const tbody = this.approvalsTableBody();
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading approvals...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading approvals...</td></tr>';
         try {
             const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
             if (!res) throw new Error('Gagal memuat approvals dari server.');
@@ -1848,7 +1955,7 @@ const adminApp = {
             this.renderApprovals(rows);
         } catch (error) {
             console.error('[Admin] Failed to load approvals:', error);
-            tbody.innerHTML = `<tr><td colspan="5">${this.emptyState('Gagal memuat approvals', this.escapeHtml(error.message || 'server tidak merespons'))}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7">${this.emptyState('Gagal memuat approvals', this.escapeHtml(error.message || 'server tidak merespons'))}</td></tr>`;
         }
     },
 
@@ -1873,24 +1980,25 @@ const adminApp = {
         if (!tbody) return;
         tbody.innerHTML = '';
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada approval pending.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada approval pending.</td></tr>';
             this.updateTableMeta('approval-row-count', 0, 'pending');
             return;
         }
         rows.forEach(row => {
-            const evidence = row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || row.public_url || '';
+            const evidence = row.evidence_url || row.product_photo_url || row.temperature_photo_url || row.barcode_photo_url || row.photo_url || row.public_url || '';
             const evidenceUrls = (evidence || '').split(';').filter(u => u);
             const tr = document.createElement('tr');
+            tr.addEventListener('dblclick', () => this.openApprovalReview(row.id || row.approval_id));
             tr.innerHTML = `
-                <td data-label="Batch"><strong>${row.batch_code || row.batch_id || '-'}</strong></td>
-                <td data-label="Status"><span class="status-badge status-${row.status || 'pending'}">${(row.approval_status || row.status || 'pending').toUpperCase()}</span></td>
-                <td data-label="Inspector">${this.staffCell(row)}</td>
-                <td data-label="Evidence">${evidence ? `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(evidence)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
+                <td data-label="Batch Code"><strong>${this.escapeHtml(row.batch_code || row.batch_id || '-')}</strong></td>
+                <td data-label="Product">${this.escapeHtml(row.product_name || '-')}</td>
+                <td data-label="QC Result">${this.statusBadge(row.qc_status || row.status || 'pending')}</td>
+                <td data-label="Inspector">${this.escapeHtml(row.inspector_display_name || this.formatStaffDisplay(row).name)}</td>
+                <td data-label="Submitted At">${this.dateTime(row.submitted_at || row.created_at)}</td>
+                <td data-label="Evidence">${evidence ? `<button class="btn-secondary btn-sm" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Lihat ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>` : '-'}</td>
                 <td data-label="Action">
-                    <div>${row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</div>
                     <span class="row-actions">
-                        <button class="btn-primary btn-sm" onclick="adminApp.resolveApproval('${row.id}', true)"><i data-lucide="check"></i> Approve</button>
-                        <button class="btn-danger btn-sm" onclick="adminApp.resolveApproval('${row.id}', false)"><i data-lucide="x"></i> Reject</button>
+                        <button class="btn-primary btn-sm" onclick="adminApp.openApprovalReview('${this.escapeAttr(row.id || row.approval_id)}')"><i data-lucide="eye"></i> Review</button>
                     </span>
                 </td>
             `;
@@ -1901,11 +2009,112 @@ const adminApp = {
         this.refreshIcons();
     },
 
-    async resolveApproval(id, approved) {
-        const comment = approved ? 'Approved from admin panel' : prompt('Alasan reject?') || 'Rejected from admin panel';
+    async openApprovalReview(id) {
+        if (!id) return;
+        this.currentApprovalId = id;
+        const modal = document.getElementById('approval-review-modal');
+        const body = document.getElementById('approval-review-body');
+        const reason = document.getElementById('approval-reject-reason');
+        if (reason) reason.value = '';
+        if (body) body.innerHTML = this.emptyState('Loading approval detail...', 'Mengambil batch, hasil QC, evidence, dan history.');
+        modal?.classList.add('active');
+        this.setModalOpen(true);
         try {
-            await API.post(`${this.apiBase}/approvals/${id}/${approved ? 'approve' : 'reject'}`, { comment });
+            const detail = await this.fetchAdminData(`${this.apiBase}/approvals/${encodeURIComponent(id)}`);
+            this.renderApprovalReview(detail || {});
+        } catch (error) {
+            if (body) body.innerHTML = this.emptyState('Gagal memuat detail approval', this.escapeHtml(error.message || 'server tidak merespons'));
+        }
+    },
+
+    closeApprovalReview() {
+        document.getElementById('approval-review-modal')?.classList.remove('active');
+        this.currentApprovalId = null;
+        this.setModalOpen(this.anyModalOpen());
+    },
+
+    renderApprovalReview(item = {}) {
+        const body = document.getElementById('approval-review-body');
+        const subtitle = document.getElementById('approval-review-subtitle');
+        if (subtitle) subtitle.textContent = `${item.batch_code || '-'} / ${item.product_name || '-'}`;
+        if (!body) return;
+        const field = (label, value) => `<div class="review-field"><span>${this.escapeHtml(label)}</span><strong>${this.escapeHtml(value ?? '-')}</strong></div>`;
+        const evidence = item.evidence_url || item.photo_url || '';
+        const history = Array.isArray(item.history) ? item.history : [];
+        body.innerHTML = `
+            <section class="review-section">
+                <h4>Batch Info</h4>
+                <div class="review-grid">
+                    ${field('Batch Code', item.batch_code)}
+                    ${field('Product', item.product_name)}
+                    ${field('Pemasakan ke', item.batch_sequence)}
+                    ${field('Cook', item.cook_name)}
+                    ${field('Qty', item.quantity)}
+                    ${field('Jam Produksi', this.dateTime(item.production_time))}
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>QC Result</h4>
+                <div class="review-grid">
+                    ${field('Inspection Type', item.inspection_type)}
+                    ${field('Temperature', item.temperature)}
+                    ${field('pH', item.ph)}
+                    ${field('Brix', item.brix)}
+                    ${field('TDS', item.tds)}
+                    <div class="review-field"><span>Status</span>${this.statusBadge(item.qc_status || 'pending')}</div>
+                    ${field('Inspection Round', item.inspection_round)}
+                    ${field('Is Re-check', item.is_recheck ? 'Ya' : 'Tidak')}
+                    ${field('Inspector', item.inspector_display_name)}
+                </div>
+                <div class="review-field" style="margin-top:10px;"><span>Notes</span><p>${this.escapeHtml(item.notes || '-')}</p></div>
+            </section>
+            <section class="review-section">
+                <h4>Evidence</h4>
+                <div class="review-evidence">
+                    ${evidence ? `<img src="${this.escapeAttr(String(evidence).split(';')[0])}" alt="QC evidence">` : '<p class="admin-muted">Tidak ada foto evidence.</p>'}
+                    ${evidence ? `<button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : ''}
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>History</h4>
+                ${history.length ? history.map(row => `
+                    <div class="action-item">
+                        <span class="action-icon"><i data-lucide="history"></i></span>
+                        <div><strong>${this.escapeHtml(row.status || '-')} / Round ${this.escapeHtml(row.inspection_round || '-')}</strong><p class="admin-muted">${this.dateTime(row.submitted_at)} - ${this.escapeHtml(row.inspector_display_name || '-')} - ${this.escapeHtml(row.notes || '-')}</p></div>
+                    </div>
+                `).join('') : '<p class="admin-muted">Belum ada re-check history.</p>'}
+            </section>
+        `;
+        this.refreshIcons();
+    },
+
+    async approveCurrentApproval() {
+        if (!this.currentApprovalId) return;
+        await this.resolveApproval(this.currentApprovalId, true, 'Approved from approval review');
+        this.closeApprovalReview();
+    },
+
+    async rejectCurrentApproval() {
+        if (!this.currentApprovalId) return;
+        const reason = document.getElementById('approval-reject-reason')?.value?.trim();
+        if (!reason) {
+            this.notify('Reject reason wajib diisi.');
+            document.getElementById('approval-reject-reason')?.focus();
+            return;
+        }
+        await this.resolveApproval(this.currentApprovalId, false, reason);
+        this.closeApprovalReview();
+    },
+
+    async resolveApproval(id, approved) {
+        const comment = arguments.length > 2 ? arguments[2] : '';
+        const finalComment = comment || (approved ? 'Approved from admin panel' : 'Rejected from admin panel');
+        try {
+            await API.post(`${this.apiBase}/approvals/${id}/${approved ? 'approve' : 'reject'}`, { comment: finalComment });
             await this.loadApprovals();
+            if (document.getElementById('table-batch-production')) {
+                await this.loadBatchProduction().catch(error => console.warn('[Admin] batch refresh skipped:', error));
+            }
             if (document.getElementById('table-reports')) {
                 await this.loadQCReports().catch(error => console.warn('[Admin] QC reports refresh skipped:', error));
             }

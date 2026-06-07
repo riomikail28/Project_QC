@@ -128,6 +128,28 @@ def approvals():
     return jsonify({"detail": res.get("detail", "Error fetching approvals")}), 500
 
 
+@admin_bp.route("/approvals/<approval_id>", methods=["GET"])
+@require_role("admin")
+def approval_detail(approval_id):
+    res = get_admin_service().get_approval_detail(approval_id)
+    if res.get("success"):
+        return jsonify(res["data"])
+    return jsonify({"detail": res.get("detail", "Error fetching approval detail")}), 404
+
+
+@admin_bp.route("/batches", methods=["GET"])
+@require_role("admin")
+def admin_batches():
+    limit = min(max(int(request.args.get("limit", 200)), 1), 500)
+    res = get_admin_service().get_batch_production(
+        date=request.args.get("date"),
+        status_filter=request.args.get("status"),
+        search=request.args.get("search"),
+        limit=limit,
+    )
+    return _enveloped(res)
+
+
 def _enveloped(res, ok_status=200):
     status = ok_status if res.get("success") else 500
     body = {
@@ -391,6 +413,18 @@ def legacy_export_daily_report():
 @require_role("admin")
 def legacy_approvals():
     return approvals()
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>", methods=["GET"])
+@require_role("admin")
+def legacy_approval_detail(approval_id):
+    return approval_detail(approval_id)
+
+
+@admin_legacy_bp.route("/batches", methods=["GET"])
+@require_role("admin")
+def legacy_admin_batches():
+    return admin_batches()
 
 
 @admin_legacy_bp.route("/approvals/<approval_id>/approve", methods=["POST"])
