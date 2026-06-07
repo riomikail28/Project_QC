@@ -23,6 +23,7 @@ const adminApp = {
         this.safeRun(() => this.setupCrudForm(), 'crud form');
         this.safeRun(() => this.setupModalBehavior(), 'modal behavior');
         this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
+        this.safeRun(() => this.setupTableFilters(), 'table filters');
         this.refreshIcons();
         
         // Initial load
@@ -41,6 +42,35 @@ const adminApp = {
             console.error(`[Admin] Failed to initialize ${label}:`, error);
             return null;
         }
+    },
+
+    setupTableFilters() {
+        document.addEventListener('input', (event) => {
+            const input = event.target.closest('[data-table-filter]');
+            if (!input) return;
+            this.applyTableFilter(input.dataset.tableFilter);
+        });
+    },
+
+    applyTableFilter(tbodyId) {
+        const input = document.querySelector(`[data-table-filter="${tbodyId}"]`);
+        const tbody = document.getElementById(tbodyId);
+        if (!input || !tbody) return;
+        const query = input.value.trim().toLowerCase();
+        let visible = 0;
+        tbody.querySelectorAll('tr').forEach(row => {
+            const isEmptyState = row.querySelector('td[colspan]');
+            const match = !query || row.textContent.toLowerCase().includes(query);
+            row.hidden = !isEmptyState && !match;
+            if (!row.hidden && !isEmptyState) visible += 1;
+        });
+        if (tbodyId === 'reports-table-body') this.updateTableMeta('reports-row-count', visible, 'rows');
+        if (tbodyId === 'approvals-table-body') this.updateTableMeta('approval-row-count', visible, 'pending');
+    },
+
+    updateTableMeta(id, count, noun) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${count} ${noun}`;
     },
 
     checkAuth() {
@@ -182,7 +212,7 @@ const adminApp = {
         switch(target) {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
-            case 'alerts': this.loadOverview(); break;
+            case 'alerts': this.loadAlertsWorkflow(); break;
             case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
             case 'learning': this.loadLearning(); break;
@@ -448,9 +478,12 @@ const adminApp = {
         rows = this.filterOperationalRows(rows);
         if (!rows.length) {
             body.innerHTML = `<tr><td colspan="${config.columns.length}" style="text-align:center;">Belum ada data laporan.</td></tr>`;
+            this.updateTableMeta('reports-row-count', 0, 'rows');
             return;
         }
         body.innerHTML = rows.map(row => `<tr>${config.render(row).map((value, index) => `<td data-label="${config.columns[index]}">${value}</td>`).join('')}</tr>`).join('');
+        this.updateTableMeta('reports-row-count', rows.length, 'rows');
+        this.applyTableFilter('reports-table-body');
         this.refreshIcons();
     },
 
@@ -483,9 +516,133 @@ const adminApp = {
             document.getElementById('alert-badge').innerText = res.total_open_alerts || 0;
             this.setText('alerts-open-count', res.total_open_alerts || 0);
             this.setText('alerts-pending-count', res.total_qc_pending || 0);
+            this.updateQueueCounts(res);
+            this.renderOverviewActions(res);
+            this.renderAlertsWorkflow(res);
 
             this.initCharts(res, trendEnvelope?.data || [], statusEnvelope?.data || {});
         }
+    },
+
+    async loadAlertsWorkflow() {
+        await this.loadOverview();
+    },
+
+    updateQueueCounts(data = {}) {
+        const alerts = Number(data.total_open_alerts || 0);
+        const approvals = Number(data.total_qc_pending || 0);
+        this.setText('nav-alert-count', alerts + approvals);
+        this.setText('nav-approval-count', approvals);
+        this.setText('alert-badge', alerts + approvals);
+    },
+
+    renderOverviewActions(data = {}) {
+        const target = document.getElementById('overview-action-list');
+        if (!target) return;
+        const alerts = Number(data.total_open_alerts || 0);
+        const approvals = Number(data.total_qc_pending || 0);
+        const batches = Number(data.total_batches_today || 0);
+        const items = [
+            {
+                visible: alerts > 0,
+                className: 'is-danger',
+                icon: 'flame',
+                title: `${alerts} alert suhu terbuka`,
+                body: 'Prioritaskan unit dengan suhu abnormal dan cek evidence terakhir.',
+                action: 'Investigasi',
+                target: 'monitoring',
+            },
+            {
+                visible: approvals > 0,
+                className: 'is-warning',
+                icon: 'badge-alert',
+                title: `${approvals} QC menunggu keputusan`,
+                body: 'Review batch, inspector, dan evidence sebelum approve atau reject.',
+                action: 'Review',
+                target: 'approval',
+            },
+            {
+                visible: batches === 0,
+                className: '',
+                icon: 'factory',
+                title: 'Belum ada batch hari ini',
+                body: 'Pantau laporan staff dan pastikan aktivitas produksi sudah tercatat.',
+                action: 'Cek Batch',
+                target: 'daily-reports',
+            },
+        ].filter(item => item.visible);
+
+        if (!items.length) {
+            target.innerHTML = this.emptyState('Tidak ada tindakan kritis', 'Semua queue operasional sedang terkendali.');
+            this.refreshIcons();
+            return;
+        }
+
+        target.innerHTML = items.map(item => `
+            <div class="action-item ${item.className}">
+                <span class="action-icon"><i data-lucide="${item.icon}"></i></span>
+                <div>
+                    <strong>${this.escapeHtml(item.title)}</strong>
+                    <p class="admin-muted">${this.escapeHtml(item.body)}</p>
+                </div>
+                <button class="btn-secondary" type="button" onclick="adminApp.navigateTo('${item.target}')">${this.escapeHtml(item.action)}</button>
+            </div>
+        `).join('');
+        this.refreshIcons();
+    },
+
+    renderAlertsWorkflow(data = {}) {
+        const target = document.getElementById('alerts-action-board');
+        if (!target) return;
+        const alerts = Number(data.total_open_alerts || 0);
+        const approvals = Number(data.total_qc_pending || 0);
+        if (!alerts && !approvals) {
+            target.innerHTML = this.emptyState('Queue bersih', 'Tidak ada alert suhu atau approval pending saat ini.');
+            this.refreshIcons();
+            return;
+        }
+
+        const rows = [
+            {
+                count: alerts,
+                className: 'is-danger',
+                icon: 'thermometer',
+                title: 'Investigasi alert suhu',
+                body: 'Buka Monitoring, cek unit abnormal, evidence, dan threshold sebelum eskalasi.',
+                action: 'Buka Monitoring',
+                target: 'monitoring',
+            },
+            {
+                count: approvals,
+                className: 'is-warning',
+                icon: 'clipboard-check',
+                title: 'Review approval QC',
+                body: 'Validasi batch, inspector, dan foto evidence. Reject wajib punya alasan.',
+                action: 'Buka Approvals',
+                target: 'approval',
+            },
+            {
+                count: alerts + approvals,
+                className: '',
+                icon: 'file-search',
+                title: 'Audit aktivitas terbaru',
+                body: 'Gunakan Audit Trail setelah tindakan untuk memastikan jejak keputusan terekam.',
+                action: 'Buka Audit',
+                target: 'audit',
+            },
+        ];
+
+        target.innerHTML = rows.map(row => `
+            <div class="queue-item ${row.className}">
+                <span class="queue-icon"><i data-lucide="${row.icon}"></i></span>
+                <div>
+                    <strong>${this.escapeHtml(row.title)} <span class="status-badge status-${row.className === 'is-danger' ? 'fail' : row.className === 'is-warning' ? 'warning' : 'pending'}">${row.count}</span></strong>
+                    <p class="admin-muted">${this.escapeHtml(row.body)}</p>
+                </div>
+                <button class="btn-primary" type="button" onclick="adminApp.navigateTo('${row.target}')">${this.escapeHtml(row.action)}</button>
+            </div>
+        `).join('');
+        this.refreshIcons();
     },
 
     initCharts(data, trendRows = [], qcStatus = {}) {
@@ -604,10 +761,10 @@ const adminApp = {
             }
             tbody.innerHTML = staff.map(item => `
                 <tr>
-                    <td><strong>${item.full_name || item.username || '-'}</strong></td>
-                    <td>${item.username || '-'}</td>
-                    <td><span class="status-badge status-${item.role === 'admin' ? 'fail' : 'pass'}">${(item.role || 'staff').toUpperCase()}</span></td>
-                    <td>
+                    <td data-label="Nama"><strong>${item.full_name || item.username || '-'}</strong></td>
+                    <td data-label="Username">${item.username || '-'}</td>
+                    <td data-label="Role"><span class="status-badge status-${item.role === 'admin' ? 'fail' : 'pass'}">${(item.role || 'staff').toUpperCase()}</span></td>
+                    <td data-label="Action">
                         <span class="row-actions">
                             <button class="btn-secondary btn-sm" onclick='adminApp.openStaffModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
                             <button class="btn-danger btn-sm" onclick="adminApp.deleteStaff('${item.id}')"><i data-lucide="trash-2"></i> Hapus</button>
@@ -615,6 +772,7 @@ const adminApp = {
                     </td>
                 </tr>
             `).join('');
+            this.applyTableFilter('table-staff');
             this.refreshIcons();
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Gagal memuat staff.</td></tr>';
@@ -1023,13 +1181,13 @@ const adminApp = {
             }
             tbody.innerHTML = products.map(item => `
                 <tr>
-                    <td><strong>${item.product_code || item.sku_code || '-'}</strong></td>
-                    <td>${item.product_name || '-'}</td>
-                    <td>${this.formatRange(item.ph_min, item.ph_max, 'pH')}</td>
-                    <td>${this.formatRange(item.brix_min, item.brix_max, '%')}</td>
-                    <td>${this.formatRange(item.tds_min, item.tds_max, 'ppm')}</td>
-                    <td><span class="status-badge status-${item.is_active === false ? 'pending' : 'pass'}">${item.is_active === false ? 'NONAKTIF' : 'AKTIF'}</span></td>
-                    <td>
+                    <td data-label="Kode SKU"><strong>${item.product_code || item.sku_code || '-'}</strong></td>
+                    <td data-label="Nama Produk">${item.product_name || '-'}</td>
+                    <td data-label="pH">${this.formatRange(item.ph_min, item.ph_max, 'pH')}</td>
+                    <td data-label="Brix">${this.formatRange(item.brix_min, item.brix_max, '%')}</td>
+                    <td data-label="TDS">${this.formatRange(item.tds_min, item.tds_max, 'ppm')}</td>
+                    <td data-label="Status"><span class="status-badge status-${item.is_active === false ? 'pending' : 'pass'}">${item.is_active === false ? 'NONAKTIF' : 'AKTIF'}</span></td>
+                    <td data-label="Action">
                         <span class="row-actions">
                             <button class="btn-secondary btn-sm" onclick='adminApp.openSkuModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
                             <button class="btn-danger btn-sm" onclick="adminApp.deleteSku('${item.id}')"><i data-lucide="trash-2"></i> Hapus</button>
@@ -1037,6 +1195,7 @@ const adminApp = {
                     </td>
                 </tr>
             `).join('');
+            this.applyTableFilter('table-sku');
             this.refreshIcons();
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Gagal memuat SKU.</td></tr>';
@@ -1675,6 +1834,7 @@ const adminApp = {
             `;
             tbody.appendChild(tr);
         });
+        this.applyTableFilter('table-traceability');
     },
 
     async loadApprovals() {
@@ -1714,6 +1874,7 @@ const adminApp = {
         tbody.innerHTML = '';
         if (!rows.length) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada approval pending.</td></tr>';
+            this.updateTableMeta('approval-row-count', 0, 'pending');
             return;
         }
         rows.forEach(row => {
@@ -1735,6 +1896,8 @@ const adminApp = {
             `;
             tbody.appendChild(tr);
         });
+        this.updateTableMeta('approval-row-count', rows.length, 'pending');
+        this.applyTableFilter('approvals-table-body');
         this.refreshIcons();
     },
 

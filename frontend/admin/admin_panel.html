@@ -19,21 +19,28 @@
                 <span class="admin-brand-icon"><i data-lucide="shield-check"></i></span>
                 <span>QC Enterprise</span>
             </div>
-            <ul class="sidebar-menu">
+            <ul class="sidebar-menu" aria-label="Admin navigation">
+                <li class="sidebar-group-label">Command Center</li>
                 <li><a href="#section-overview" class="sidebar-item admin-nav-link active" data-target="overview" data-section="overview"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
+                <li><a href="#section-alerts" class="sidebar-item admin-nav-link" data-target="alerts" data-section="alerts"><i data-lucide="bell-ring"></i><span>Action Queue</span><span class="nav-count" id="nav-alert-count">0</span></a></li>
+
+                <li class="sidebar-group-label">Operations</li>
                 <li><a href="#section-monitoring" class="sidebar-item admin-nav-link" data-target="monitoring" data-section="monitoring"><i data-lucide="thermometer"></i><span>Monitoring</span></a></li>
                 <li><a href="#section-daily-reports" class="sidebar-item admin-nav-link" data-target="daily-reports" data-section="daily-reports"><i data-lucide="factory"></i><span>Batch Production</span></a></li>
                 <li><a href="#section-reports" class="sidebar-item admin-nav-link" data-target="reports" data-section="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></a></li>
-                <li><a href="#section-alerts" class="sidebar-item admin-nav-link" data-target="alerts" data-section="alerts"><i data-lucide="bell-ring"></i><span>Alerts</span></a></li>
+                <li><a href="#section-traceability" class="sidebar-item admin-nav-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Traceability</span></a></li>
+
+                <li class="sidebar-group-label">Quality Control</li>
+                <li><a href="#section-approval" class="sidebar-item admin-nav-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span><span class="nav-count" id="nav-approval-count">0</span></a></li>
+                <li><a href="#section-sku" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
                 <li><a href="#section-audit" class="sidebar-item admin-nav-link" data-target="audit" data-section="audit"><i data-lucide="file-text"></i><span>Audit Trail</span></a></li>
+
+                <li class="sidebar-group-label">Admin</li>
                 <li><a href="#section-staff" class="sidebar-item admin-nav-link" data-target="staff" data-section="staff"><i data-lucide="users"></i><span>Staff</span></a></li>
                 <li><a href="#section-learning" class="sidebar-item admin-nav-link" data-target="learning" data-section="learning"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
                 <li><a href="#section-google-sheets" class="sidebar-item admin-nav-link" data-target="google-sheets" data-section="google-sheets"><i data-lucide="sheet"></i><span>Google Sheets</span></a></li>
                 <li><a href="#section-facility" class="sidebar-item admin-nav-link" data-target="facility" data-section="facility"><i data-lucide="settings"></i><span>Settings</span></a></li>
-                <li><a href="#section-sku" class="sidebar-item admin-nav-link admin-sub-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
-                <li><a href="#section-approval" class="sidebar-item admin-nav-link admin-sub-link" data-target="approval" data-section="approval"><i data-lucide="badge-check"></i><span>Approvals</span></a></li>
-                <li><a href="#section-traceability" class="sidebar-item admin-nav-link admin-sub-link" data-target="traceability" data-section="traceability"><i data-lucide="qr-code"></i><span>Traceability</span></a></li>
-                <li style="margin-top: auto;"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
+                <li class="sidebar-logout"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>
         </aside>
 
@@ -82,33 +89,59 @@
                         </div>
                     </div>
                     <div class="metric-grid">
-                        <div class="metric-card">
+                        <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('daily-reports')">
                             <div class="metric-header">
                                 <span>Total Batch (Hari Ini)</span>
                                 <i data-lucide="package" class="metric-icon" style="color: var(--primary-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-batches">...</div>
-                        </div>
-                        <div class="metric-card">
+                            <p class="metric-action-copy">Lihat laporan batch hari ini</p>
+                        </button>
+                        <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('reports')">
                             <div class="metric-header">
                                 <span>QC Completed</span>
                                 <i data-lucide="circle-check" class="metric-icon" style="color: var(--success-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-qc-done">...</div>
-                        </div>
-                        <div class="metric-card">
+                            <p class="metric-action-copy">Buka laporan QC</p>
+                        </button>
+                        <button class="metric-card metric-action-card is-warning" type="button" onclick="adminApp.navigateTo('approval')">
                             <div class="metric-header">
                                 <span>Pending Approval</span>
                                 <i data-lucide="triangle-alert" class="metric-icon" style="color: var(--warning-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-qc-pending">...</div>
-                        </div>
-                        <div class="metric-card">
+                            <p class="metric-action-copy">Review dan putuskan approval</p>
+                        </button>
+                        <button class="metric-card metric-action-card is-danger" type="button" onclick="adminApp.navigateTo('alerts')">
                             <div class="metric-header">
                                 <span>Abnormal Alerts (Open)</span>
                                 <i data-lucide="flame" class="metric-icon" style="color: var(--danger-color)"></i>
                             </div>
                             <div class="metric-value" id="metric-alerts">...</div>
+                            <p class="metric-action-copy">Buka queue tindakan</p>
+                        </button>
+                    </div>
+
+                    <div class="workflow-grid">
+                        <div class="card attention-card">
+                            <div class="admin-section-toolbar compact">
+                                <div>
+                                    <h3 class="card-title" style="margin:0;">Need Attention</h3>
+                                    <p class="admin-muted">Prioritas tindakan admin berdasarkan risiko operasional.</p>
+                                </div>
+                                <button class="btn-secondary" onclick="adminApp.navigateTo('alerts')"><i data-lucide="list-checks"></i> Semua Queue</button>
+                            </div>
+                            <div id="overview-action-list" class="action-list"></div>
+                        </div>
+                        <div class="card workflow-card">
+                            <h3 class="card-title">QC Workflow</h3>
+                            <div class="workflow-steps">
+                                <button type="button" onclick="adminApp.navigateTo('monitoring')"><i data-lucide="thermometer"></i><span>Detect</span><small>Monitor suhu real-time</small></button>
+                                <button type="button" onclick="adminApp.navigateTo('alerts')"><i data-lucide="bell-ring"></i><span>Triage</span><small>Prioritaskan deviasi</small></button>
+                                <button type="button" onclick="adminApp.navigateTo('approval')"><i data-lucide="badge-check"></i><span>Decide</span><small>Approve/reject evidence</small></button>
+                                <button type="button" onclick="adminApp.navigateTo('audit')"><i data-lucide="file-search"></i><span>Audit</span><small>Verifikasi jejak sistem</small></button>
+                            </div>
                         </div>
                     </div>
 
@@ -141,22 +174,24 @@
                     <div class="card">
                         <div class="admin-section-toolbar">
                             <div>
-                                <h3 class="card-title" style="margin:0;">Alerts</h3>
-                                <p class="admin-muted">Ringkasan alert suhu dan deviasi QC yang perlu tindakan.</p>
+                                <h3 class="card-title" style="margin:0;">Action Queue</h3>
+                                <p class="admin-muted">Alert suhu dan approval pending yang perlu follow-up admin.</p>
                             </div>
-                            <button class="btn-primary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh Summary</button>
+                            <button class="btn-primary" onclick="adminApp.loadAlertsWorkflow()"><i data-lucide="refresh-cw"></i> Refresh Queue</button>
                         </div>
                         <div class="metric-grid">
-                            <div class="metric-card">
+                            <button class="metric-card metric-action-card is-danger" type="button" onclick="adminApp.navigateTo('monitoring')">
                                 <div class="metric-header"><span>Open Temperature Alerts</span><i data-lucide="bell-ring" class="metric-icon" style="color: var(--danger-color)"></i></div>
                                 <div class="metric-value" id="alerts-open-count">0</div>
-                            </div>
-                            <div class="metric-card">
+                                <p class="metric-action-copy">Investigasi di Monitoring</p>
+                            </button>
+                            <button class="metric-card metric-action-card is-warning" type="button" onclick="adminApp.navigateTo('approval')">
                                 <div class="metric-header"><span>Pending Approval</span><i data-lucide="badge-alert" class="metric-icon" style="color: var(--warning-color)"></i></div>
                                 <div class="metric-value" id="alerts-pending-count">0</div>
-                            </div>
+                                <p class="metric-action-copy">Review evidence QC</p>
+                            </button>
                         </div>
-                        <p class="admin-muted">Detail alert suhu tersedia di menu Monitoring. Queue approval tersedia di menu Approvals.</p>
+                        <div class="queue-board" id="alerts-action-board"></div>
                     </div>
                 </section>
 
@@ -169,6 +204,9 @@
                                 <p class="admin-muted">Kelola master produk dan standar QC pH, Brix, serta TDS.</p>
                             </div>
                             <button class="btn-primary" onclick="adminApp.openSkuModal()"><i data-lucide="plus"></i> Tambah SKU</button>
+                        </div>
+                        <div class="table-toolbar">
+                            <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Filter SKU atau produk" data-table-filter="table-sku"></label>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -198,6 +236,9 @@
                                 <p class="admin-muted">Tambah, edit, dan hapus akun QC staff/admin.</p>
                             </div>
                             <button class="btn-primary" onclick="adminApp.openStaffModal()"><i data-lucide="user-plus"></i> Tambah Staff</button>
+                        </div>
+                        <div class="table-toolbar">
+                            <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Filter nama, username, role" data-table-filter="table-staff"></label>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -364,6 +405,10 @@
                             <button class="admin-tab" data-report-tab="alert" onclick="adminApp.switchReportTab('alert')">Alert Report</button>
                         </div>
 
+                        <div class="table-toolbar">
+                            <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Cari dalam hasil laporan" data-table-filter="reports-table-body"></label>
+                            <span class="table-meta" id="reports-row-count">0 rows</span>
+                        </div>
                         <div class="reports-table-wrap">
                             <table class="enterprise-table" id="reports-table">
                                 <thead>
@@ -425,10 +470,13 @@
                 <!-- SECTION: Traceability -->
                 <section id="section-traceability" class="dashboard-section">
                     <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; gap: 12px;">
+                        <div class="traceability-toolbar">
                             <h3 class="card-title" style="margin:0;">Barcode & Batch Traceability</h3>
                             <input id="traceability-barcode" placeholder="Scan / input barcode" style="padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
                             <button class="btn-primary" onclick="adminApp.loadTraceability()"><i data-lucide="search"></i> Search</button>
+                        </div>
+                        <div class="table-toolbar">
+                            <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Filter hasil traceability" data-table-filter="table-traceability"></label>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -450,7 +498,17 @@
                 <!-- SECTION: Approvals -->
                 <section id="section-approval" class="dashboard-section">
                     <div class="card">
-                        <h3 class="card-title">Pending QC Approval</h3>
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Pending QC Approval</h3>
+                                <p class="admin-muted">Review batch, evidence, dan catatan inspector sebelum keputusan.</p>
+                            </div>
+                            <button class="btn-secondary" onclick="adminApp.loadApprovals()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
+                        <div class="table-toolbar">
+                            <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Filter batch atau inspector" data-table-filter="approvals-table-body"></label>
+                            <span class="table-meta" id="approval-row-count">0 pending</span>
+                        </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
                                 <thead>
