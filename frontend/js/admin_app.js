@@ -1188,10 +1188,14 @@ const adminApp = {
 
     setupCrudForm() {
         const form = document.getElementById('crud-form');
-        if (!form) return;
-        form.addEventListener('submit', async (event) => {
+        if (form) form.addEventListener('submit', async (event) => {
             event.preventDefault();
             await this.submitCrudForm();
+        });
+        const monitoringUnitForm = document.getElementById('monitoring-unit-form');
+        if (monitoringUnitForm) monitoringUnitForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            await this.submitMonitoringUnitForm();
         });
     },
 
@@ -1199,6 +1203,7 @@ const adminApp = {
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             if (document.getElementById('crud-modal')?.classList.contains('active')) return this.closeCrudModal();
+            if (document.getElementById('monitoring-unit-form-panel') && !document.getElementById('monitoring-unit-form-panel').hidden) return this.closeMonitoringUnitPanel();
             if (document.getElementById('monitoring-management-modal')?.classList.contains('active')) return this.closeMonitoringManagement();
             if (document.getElementById('image-modal')?.classList.contains('active')) return this.closeImageModal();
             if (document.getElementById('approval-review-modal')?.classList.contains('active')) return this.closeApprovalReview();
@@ -1245,11 +1250,13 @@ const adminApp = {
         if (!modal) return;
         modal.classList.add('active');
         this.setModalOpen(true);
+        this.closeMonitoringUnitPanel();
         await this.loadMonitoringManagementList();
     },
 
     closeMonitoringManagement() {
         document.getElementById('monitoring-management-modal')?.classList.remove('active');
+        this.closeMonitoringUnitPanel();
         this.setModalOpen(this.anyModalOpen());
     },
 
@@ -1270,46 +1277,66 @@ const adminApp = {
     renderMonitoringManagementList(rooms) {
         const list = document.getElementById('monitoring-management-list');
         if (!list) return;
-        const devices = (rooms || []).flatMap(room => (room.devices || []).map(device => ({
-            ...device,
-            room_id: device.room_id || room.id,
-            room_name: room.name,
-        })));
-        if (!devices.length) {
+        const hasDevices = (rooms || []).some(room => (room.devices || []).length);
+        if (!hasDevices) {
             list.innerHTML = `
                 <div class="empty-admin-state">
                     <strong>Belum ada unit monitoring.</strong><br>
-                    Tambahkan room dan device monitoring suhu dari tombol di atas.
+                    <button type="button" class="btn-primary" onclick="adminApp.openMonitoringUnitModal()" style="margin-top:12px;"><i data-lucide="plus"></i> Tambah Unit Monitoring</button>
                 </div>
             `;
+            this.refreshIcons();
             return;
         }
         list.innerHTML = `
-            <div class="monitoring-management-table">
-                <div class="monitoring-management-row monitoring-management-head">
-                    <span>Room</span>
-                    <span>Device name</span>
-                    <span>Type</span>
-                    <span>Threshold min/max</span>
-                    <span>Status</span>
-                    <span>Action</span>
-                </div>
-                ${devices.map(device => `
-                    <div class="monitoring-management-row">
-                        <span data-label="Room">${this.escapeHtml(device.room_name || 'Unassigned')}</span>
-                        <span data-label="Device name"><strong>${this.escapeHtml(device.name || '-')}</strong></span>
-                        <span data-label="Type">${this.escapeHtml(this.deviceTypeLabel(device.device_type || device.type))}</span>
-                        <span data-label="Threshold min/max">${this.escapeHtml(this.formatRange(device.min_temperature, device.max_temperature, 'C'))}</span>
-                        <span data-label="Status"><span class="status-badge ${device.is_active === false ? 'status-pending' : 'status-pass'}">${device.is_active === false ? 'Inactive' : 'Active'}</span></span>
-                        <span data-label="Action" class="row-actions">
-                            <button class="btn-secondary btn-sm" onclick='adminApp.openMonitoringUnitModal(${this.safeJson(device)})'><i data-lucide="pencil"></i> Edit</button>
-                            <button class="btn-danger btn-sm" onclick="adminApp.deactivateMonitoringDevice('${device.id}')"><i data-lucide="archive"></i> Nonaktifkan</button>
-                        </span>
-                    </div>
-                `).join('')}
+            <div class="monitoring-room-card-grid">
+                ${(rooms || []).map(room => this.renderMonitoringRoomCard(room)).join('')}
             </div>
         `;
         this.refreshIcons();
+    },
+
+    renderMonitoringRoomCard(room = {}) {
+        const devices = (room.devices || []).map(device => ({
+            ...device,
+            room_id: device.room_id || room.id,
+            room_name: room.name,
+        }));
+        return `
+            <article class="monitoring-room-card" data-room-name="${this.escapeAttr(room.name || '')}">
+                <div class="monitoring-room-card-header">
+                    <div>
+                        <h4><i data-lucide="folder"></i>${this.escapeHtml(room.name || 'Unassigned')}</h4>
+                        <p>${devices.length} Unit Monitoring</p>
+                    </div>
+                    <button type="button" class="btn-primary btn-sm" onclick='adminApp.openMonitoringUnitModal(null, ${this.safeJson(room)})'><i data-lucide="plus"></i> Tambah Device ke Room Ini</button>
+                </div>
+                <div class="monitoring-device-tree">
+                    ${devices.length ? devices.map((device, index) => this.renderMonitoringDeviceChild(device, index, devices.length)).join('') : '<div class="monitoring-device-empty">Belum ada device di room ini.</div>'}
+                </div>
+            </article>
+        `;
+    },
+
+    renderMonitoringDeviceChild(device = {}, index = 0, total = 1) {
+        const branch = index === total - 1 ? '└─' : '├─';
+        return `
+            <div class="monitoring-device-child">
+                <span class="monitoring-device-branch" aria-hidden="true">${branch}</span>
+                <div class="monitoring-device-item">
+                    <div>
+                        <strong>${this.escapeHtml(device.name || '-')}</strong>
+                        <p>Type: ${this.escapeHtml(this.deviceTypeLabel(device.device_type || device.type))}</p>
+                        <p>Threshold: ${this.escapeHtml(this.formatRange(device.min_temperature, device.max_temperature, 'C'))}</p>
+                    </div>
+                    <span class="status-badge ${device.is_active === false ? 'status-pending' : 'status-pass'}">${device.is_active === false ? 'Inactive' : 'Active'}</span>
+                    <span class="row-actions monitoring-device-actions">
+                        <button type="button" class="btn-secondary btn-sm" onclick='adminApp.openMonitoringUnitModal(${this.safeJson(device)})'><i data-lucide="pencil"></i> Edit</button>
+                        <button type="button" class="btn-danger btn-sm" onclick="adminApp.deactivateMonitoringDevice('${device.id}')"><i data-lucide="archive"></i> Nonaktifkan</button>
+                    </span>
+                </div>
+            </div>
+        `;
     },
 
     deviceTypeLabel(type) {
@@ -1323,12 +1350,20 @@ const adminApp = {
             .join('');
     },
 
-    openMonitoringUnitModal(device = null) {
+    openMonitoringUnitModal(device = null, room = null) {
         const item = device || {};
+        const roomContext = room || {};
         const type = item.device_type || item.type || 'room_temp';
-        this.openCrudModal(item.id ? 'Edit Unit Monitoring' : 'Tambah Unit Monitoring', item.id ? 'editMonitoringUnit' : 'addMonitoringUnit', `
+        this.crudMode = item.id ? 'editMonitoringUnit' : 'addMonitoringUnit';
+        this.crudId = item.id || null;
+        this.crudContext = { roomId: item.room_id || roomContext.id || null };
+        this.setText('monitoring-unit-form-title', item.id ? 'Edit Unit Monitoring' : 'Tambah Unit Monitoring');
+        const panel = document.getElementById('monitoring-unit-form-panel');
+        const fields = document.getElementById('monitoring-unit-fields');
+        if (!panel || !fields) return;
+        fields.innerHTML = `
             <label>Room name
-                <input id="monitoring-unit-room-name" list="monitoring-room-options" value="${this.escapeAttr(item.room_name || item.facility_rooms?.name || '')}" required>
+                <input id="monitoring-unit-room-name" list="monitoring-room-options" value="${this.escapeAttr(item.room_name || item.facility_rooms?.name || roomContext.name || '')}" required>
                 <datalist id="monitoring-room-options">${this.roomOptionsDatalist()}</datalist>
             </label>
             <label>Device name
@@ -1356,7 +1391,22 @@ const adminApp = {
             <label>Notes optional
                 <textarea id="monitoring-unit-notes">${this.escapeHtml(item.description || item.notes || '')}</textarea>
             </label>
-        `, { id: item.id, roomId: item.room_id });
+        `;
+        panel.hidden = false;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        this.refreshIcons();
+    },
+
+    closeMonitoringUnitPanel() {
+        const panel = document.getElementById('monitoring-unit-form-panel');
+        const form = document.getElementById('monitoring-unit-form');
+        if (panel) panel.hidden = true;
+        if (form) form.reset();
+        if (this.crudMode === 'addMonitoringUnit' || this.crudMode === 'editMonitoringUnit') {
+            this.crudMode = null;
+            this.crudId = null;
+            this.crudContext = {};
+        }
     },
 
     defaultTargetForType(type, minTemperature, maxTemperature) {
@@ -1502,6 +1552,38 @@ const adminApp = {
         return value === '' ? null : Number(value);
     },
 
+    async submitMonitoringUnitForm() {
+        try {
+            const roomName = document.getElementById('monitoring-unit-room-name').value.trim();
+            const room = await this.ensureMonitoringRoom(roomName);
+            const deviceType = document.getElementById('monitoring-unit-device-type').value;
+            const minTemperature = this.numberOrNull('monitoring-unit-min');
+            const maxTemperature = this.numberOrNull('monitoring-unit-max');
+            const payload = {
+                room_id: room.id,
+                name: document.getElementById('monitoring-unit-device-name').value.trim(),
+                device_type: deviceType,
+                target_temperature: this.defaultTargetForType(deviceType, minTemperature, maxTemperature),
+                min_temperature: minTemperature,
+                max_temperature: maxTemperature,
+                is_active: document.getElementById('monitoring-unit-is-active').value === 'true',
+                description: document.getElementById('monitoring-unit-notes').value.trim(),
+            };
+            if (this.crudMode === 'addMonitoringUnit') {
+                await API.post('/admin/facility/devices', payload);
+            } else {
+                await API.patch(`/admin/facility/devices/${this.crudId}`, payload);
+            }
+            await this.loadMonitoringManagementList();
+            await this.loadMonitoring();
+            const facilitySectionActive = document.getElementById('section-facility')?.classList.contains('active');
+            if (facilitySectionActive) await this.loadFacilityManager();
+            this.closeMonitoringUnitPanel();
+        } catch (error) {
+            alert(`Gagal menyimpan unit monitoring: ${error.message}`);
+        }
+    },
+
     async submitCrudForm() {
         try {
             if (this.crudMode === 'addStaff' || this.crudMode === 'editStaff') {
@@ -1544,33 +1626,6 @@ const adminApp = {
                     await API.patch(`/admin/facility/devices/${this.crudId}`, payload);
                 }
                 await this.loadFacilityManager();
-            }
-
-            if (this.crudMode === 'addMonitoringUnit' || this.crudMode === 'editMonitoringUnit') {
-                const roomName = document.getElementById('monitoring-unit-room-name').value.trim();
-                const room = await this.ensureMonitoringRoom(roomName);
-                const deviceType = document.getElementById('monitoring-unit-device-type').value;
-                const minTemperature = this.numberOrNull('monitoring-unit-min');
-                const maxTemperature = this.numberOrNull('monitoring-unit-max');
-                const payload = {
-                    room_id: room.id,
-                    name: document.getElementById('monitoring-unit-device-name').value.trim(),
-                    device_type: deviceType,
-                    target_temperature: this.defaultTargetForType(deviceType, minTemperature, maxTemperature),
-                    min_temperature: minTemperature,
-                    max_temperature: maxTemperature,
-                    is_active: document.getElementById('monitoring-unit-is-active').value === 'true',
-                    description: document.getElementById('monitoring-unit-notes').value.trim(),
-                };
-                if (this.crudMode === 'addMonitoringUnit') {
-                    await API.post('/admin/facility/devices', payload);
-                } else {
-                    await API.patch(`/admin/facility/devices/${this.crudId}`, payload);
-                }
-                await this.loadMonitoringManagementList();
-                await this.loadMonitoring();
-                const facilitySectionActive = document.getElementById('section-facility')?.classList.contains('active');
-                if (facilitySectionActive) await this.loadFacilityManager();
             }
 
             if (this.crudMode === 'addSku' || this.crudMode === 'editSku') {

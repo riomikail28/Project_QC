@@ -1265,7 +1265,7 @@ select {
 }
 
 .monitoring-management-content {
-  width: min(1120px, 96vw);
+  width: min(1240px, 96vw);
 }
 
 .monitoring-management-actions {
@@ -1280,33 +1280,169 @@ select {
   gap: 10px;
 }
 
-.monitoring-management-table {
+.monitoring-management-shell {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: 16px;
+  align-items: start;
 }
 
-.monitoring-management-row {
+.monitoring-room-card-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1.1fr .8fr 1fr .75fr 1.35fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.monitoring-room-card {
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: var(--shadow-sm);
+}
+
+.monitoring-room-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monitoring-room-card-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.04rem;
+}
+
+.monitoring-room-card-header h4 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary-color);
+}
+
+.monitoring-room-card-header p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: .84rem;
+  font-weight: 800;
+}
+
+.monitoring-device-tree {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-left: 18px;
+  border-left: 2px solid rgba(37, 99, 235, .18);
+}
+
+.monitoring-device-child {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+}
+
+.monitoring-device-branch {
+  padding-top: 14px;
+  color: rgba(37, 99, 235, .64);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.monitoring-device-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(191,219,254,.72);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, .86);
 }
 
-.monitoring-management-head {
-  position: sticky;
-  top: -24px;
-  z-index: 2;
-  border-radius: 0;
-  background: rgba(239, 246, 255, .96);
+.monitoring-device-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.monitoring-device-item p {
+  margin: 2px 0 0;
   color: var(--text-secondary);
-  font-size: .76rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: .06em;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.monitoring-device-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.monitoring-device-empty {
+  padding: 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  background: rgba(248, 250, 252, .72);
+}
+
+.monitoring-unit-form-panel {
+  position: sticky;
+  top: 0;
+  max-height: calc(90vh - 170px);
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, .22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: var(--shadow-md);
+}
+
+.monitoring-unit-form {
+  display: flex;
+  min-height: 0;
+  max-height: inherit;
+  flex-direction: column;
+}
+
+.monitoring-unit-form-header,
+.monitoring-unit-form-footer {
+  position: sticky;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 16px;
+  background: inherit;
+}
+
+.monitoring-unit-form-header {
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monitoring-unit-form-header h4 {
+  margin: 0;
+}
+
+.monitoring-unit-fields {
+  grid-template-columns: 1fr;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.monitoring-unit-form-footer {
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--border-color);
 }
 
 .empty-admin-state {
@@ -1799,6 +1935,24 @@ textarea {
 
   .monitoring-management-row {
     grid-template-columns: 1fr;
+  }
+
+  .monitoring-management-shell,
+  .monitoring-room-card-grid,
+  .monitoring-device-item {
+    grid-template-columns: 1fr;
+  }
+
+  .monitoring-room-card-header,
+  .monitoring-unit-form-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .monitoring-unit-form-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
   }
 
   .monitoring-management-head {

@@ -608,7 +608,25 @@
                     <button type="button" class="btn-primary" onclick="adminApp.openMonitoringUnitModal()"><i data-lucide="plus"></i> Tambah Unit Monitoring</button>
                     <button type="button" class="btn-secondary" onclick="adminApp.loadMonitoringManagementList()"><i data-lucide="refresh-cw"></i> Refresh</button>
                 </div>
-                <div id="monitoring-management-list" class="monitoring-management-list"></div>
+                <div class="monitoring-management-shell">
+                    <div id="monitoring-management-list" class="monitoring-management-list"></div>
+                    <aside class="monitoring-unit-form-panel" id="monitoring-unit-form-panel" hidden aria-labelledby="monitoring-unit-form-title">
+                        <form id="monitoring-unit-form" class="monitoring-unit-form">
+                            <div class="monitoring-unit-form-header">
+                                <div>
+                                    <h4 id="monitoring-unit-form-title">Tambah Unit Monitoring</h4>
+                                    <p class="admin-muted">Room, device, threshold, dan status active.</p>
+                                </div>
+                                <button type="button" class="icon-btn modal-close-btn" onclick="adminApp.closeMonitoringUnitPanel()" aria-label="Close form"><i data-lucide="x"></i></button>
+                            </div>
+                            <div id="monitoring-unit-fields" class="admin-form-grid monitoring-unit-fields"></div>
+                            <div class="monitoring-unit-form-footer">
+                                <button type="button" class="btn-secondary" onclick="adminApp.closeMonitoringUnitPanel()">Cancel</button>
+                                <button type="submit" class="btn-primary"><i data-lucide="save"></i> Save</button>
+                            </div>
+                        </form>
+                    </aside>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="adminApp.closeMonitoringManagement()">Close</button>
