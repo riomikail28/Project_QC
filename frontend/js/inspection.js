@@ -211,6 +211,7 @@ const Inspection = {
                 document.querySelectorAll('.qc-status-option').forEach(item => {
                     item.classList.toggle('active', item === button);
                 });
+                this.updateFastQcMode();
                 this.updateSubmitState();
                 this.updateSummary();
             });
@@ -291,6 +292,8 @@ const Inspection = {
             this.recheckParentInspection = this.lastInspection.id;
             this.activeInspection = null;
             this.message('Mode re-check aktif. Submit berikutnya akan menjadi ronde lanjutan.', false);
+            this.setText('qcFormTitle', 'RE-CHECK QC');
+            this.updateFastQcMode();
             this.updateSummary();
             this.updateSubmitState();
         });
@@ -304,6 +307,7 @@ const Inspection = {
         ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const input = document.getElementById(id);
             if (input) input.addEventListener('input', () => {
+                this.updateFastQcMode();
                 this.updateSubmitState();
                 this.updateSummary();
             });
@@ -343,11 +347,35 @@ const Inspection = {
 
         if (stageField) stageField.hidden = true;
         if (statusField) statusField.hidden = !hasContext;
-        if (notesField) notesField.hidden = !hasContext;
         if (submitBtn) submitBtn.style.display = hasContext ? '' : 'none';
 
         // Update stage fields visibility
         this.updateStageFields(hasContext);
+        this.updateFastQcMode();
+    },
+
+    updateFastQcMode() {
+        const hasContext = this.hasProductContext();
+        const holdFail = this.requiresHoldFailEvidence();
+        const recheck = Boolean(this.recheckParentInspection);
+        const parameterPanel = document.getElementById('qcParameterPanel');
+        const notesField = document.getElementById('notesField');
+        const uploadCard = document.getElementById('cookingUploadCard');
+        const photoLabel = document.getElementById('cookingPhotoLabel');
+        const sheet = document.getElementById('qcFormSheet');
+        const standardDriven = this.productHasAdditionalStandards();
+
+        if (parameterPanel) parameterPanel.open = Boolean(hasContext && (holdFail || recheck || standardDriven));
+        if (notesField) notesField.hidden = !hasContext || (!holdFail && !recheck);
+        if (uploadCard) uploadCard.hidden = !hasContext || (!holdFail && !recheck);
+        if (photoLabel) photoLabel.textContent = holdFail ? 'Foto evidence wajib' : 'Foto evidence optional';
+        if (sheet) {
+            sheet.classList.toggle('fast-pass-mode', hasContext && this.selectedStatus === 'pass' && !recheck);
+            sheet.classList.toggle('hold-fail-mode', holdFail);
+            sheet.classList.toggle('recheck-mode', recheck);
+        }
+        this.renderRecheckBanner();
+        this.updateInlineValidation();
     },
 
     /* ═══════════════════════════════════════════════
@@ -368,12 +396,16 @@ const Inspection = {
                     this.photoFiles[id] = prepared;
                     this.renderPhotoPreview(id, prepared);
                     this.setPhotoCompressionStatus(id, `Foto siap dikirim (${ImageCompression.formatBytes(prepared.size)}).`);
+                    this.updateFastQcMode();
+                    this.updateSubmitState();
                     this.updateSummary();
                 } catch (err) {
                     this.message(err.message || 'Upload gagal', true);
                     input.value = '';
                     delete this.photoFiles[id];
                     this.clearPhotoPreview(id);
+                    this.updateFastQcMode();
+                    this.updateSubmitState();
                     this.updateSummary();
                 }
             });
@@ -419,6 +451,20 @@ const Inspection = {
         if (temperatureValue != null && !Number.isFinite(temperatureValue)) {
             this.message('Suhu masak harus berupa angka.', true);
             return;
+        }
+        if (this.requiresHoldFailEvidence()) {
+            if (!notes) {
+                this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
+                document.getElementById('qcNotes')?.focus();
+                this.updateSubmitState();
+                return;
+            }
+            if (!cookingPhoto) {
+                this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
+                document.getElementById('cookingUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                this.updateSubmitState();
+                return;
+            }
         }
         try {
             [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
@@ -521,12 +567,61 @@ const Inspection = {
     updateSubmitState() {
         const button = document.getElementById('submitQcBtn');
         if (!button) return;
-        const hasProduct = this.hasProductContext();
-        const hasStatus = Boolean(this.selectedStatus);
         const isLocked = Boolean(this.activeInspection);
-        button.disabled = isLocked || !(hasProduct && hasStatus);
+        const validation = this.fastQcValidation();
+        button.disabled = isLocked || !validation.canSubmit;
+        button.innerHTML = `<i class="fas fa-paper-plane"></i>${this.submitButtonCopy()}`;
+        this.updateInlineValidation(validation);
         this.updateStepState();
         this.updateSummary();
+    },
+
+    fastQcValidation() {
+        const hasProduct = this.hasProductContext();
+        const hasStatus = Boolean(this.selectedStatus);
+        const temperature = document.getElementById('qcTemp')?.value;
+        const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
+        const hasTemperature = this.selectedStage !== 'cooking_check' || (temperatureValue != null && Number.isFinite(temperatureValue));
+        const notes = document.getElementById('qcNotes')?.value?.trim();
+        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
+        const needsEvidence = this.requiresHoldFailEvidence();
+        const hasHoldFailNotes = !needsEvidence || Boolean(notes);
+        const hasHoldFailPhoto = !needsEvidence || Boolean(cookingPhoto);
+        return {
+            hasProduct,
+            hasStatus,
+            hasTemperature,
+            needsEvidence,
+            hasHoldFailNotes,
+            hasHoldFailPhoto,
+            canSubmit: Boolean(hasProduct && hasStatus && hasTemperature && hasHoldFailNotes && hasHoldFailPhoto),
+        };
+    },
+
+    requiresHoldFailEvidence() {
+        return this.selectedStatus === 'hold' || this.selectedStatus === 'fail';
+    },
+
+    submitButtonCopy() {
+        if (this.recheckParentInspection) return 'Simpan Re-check';
+        if (this.selectedStatus === 'hold') return 'Simpan HOLD';
+        if (this.selectedStatus === 'fail') return 'Simpan FAIL';
+        if (this.selectedStatus === 'pass') return 'Simpan PASS';
+        return 'Simpan QC';
+    },
+
+    updateInlineValidation(validation = this.fastQcValidation()) {
+        const tempError = document.getElementById('qcTempError');
+        const notesError = document.getElementById('qcNotesError');
+        const photoError = document.getElementById('qcPhotoError');
+        if (tempError) tempError.hidden = !validation.hasProduct || validation.hasTemperature;
+        if (notesError) notesError.hidden = !validation.needsEvidence || validation.hasHoldFailNotes;
+        if (photoError) photoError.hidden = !validation.needsEvidence || validation.hasHoldFailPhoto;
+        if (validation.needsEvidence && (!validation.hasHoldFailNotes || !validation.hasHoldFailPhoto)) {
+            this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
+        } else if (document.getElementById('qcSubmitMessage')?.textContent === 'Catatan dan foto wajib untuk HOLD/FAIL.') {
+            this.message('', false);
+        }
     },
 
     /* ═══════════════════════════════════════════════
@@ -547,13 +642,17 @@ const Inspection = {
 
     updateSummary() {
         const panel = document.getElementById('qcSubmitSummary');
+        const mini = document.getElementById('qcMiniSummary');
         if (!panel) return;
         const hasContext = this.hasProductContext();
-        panel.hidden = !hasContext;
+        const showFullSummary = hasContext && (this.requiresHoldFailEvidence() || Boolean(this.recheckParentInspection));
+        panel.hidden = !showFullSummary;
+        if (mini) mini.hidden = !hasContext || showFullSummary;
         if (!hasContext) return;
         const manualSku = document.getElementById('qcSku')?.value?.trim();
         const productName = this.selectedProduct?.product_name || 'Manual SKU';
         const sku = this.selectedProduct?.product_code || manualSku || '-';
+        const temperature = document.getElementById('qcTemp')?.value || '-';
         const photos = ['cookingPhoto', 'barcodePhoto', 'labelPhoto']
             .reduce((total, id) => total + (this.photoFiles[id] ? 1 : (document.getElementById(id)?.files?.length || 0)), 0);
         this.setText('summaryProduct', `${productName} (${sku})`);
@@ -564,6 +663,41 @@ const Inspection = {
             : (this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
         this.setText('summaryStatus', statusText);
         this.setText('summaryEvidence', photos ? `${photos} foto terlampir` : 'Belum ada foto');
+        this.setText('miniSummaryBatch', this.selectedBatch?.batch_code || 'Batch baru');
+        this.setText('miniSummaryStatus', `Status ${this.selectedStatus ? this.selectedStatus.toUpperCase() : '-'}`);
+        this.setText('miniSummaryTemp', `Suhu ${temperature} C`);
+    },
+
+    productHasAdditionalStandards() {
+        const source = { ...(this.selectedProduct || {}), ...(this.selectedBatch || {}) };
+        return [
+            'ph_min', 'ph_max', 'standard_ph', 'target_ph',
+            'brix_min', 'brix_max', 'standard_brix', 'target_brix',
+            'tds_min', 'tds_max', 'standard_tds', 'target_tds',
+        ].some(key => source[key] !== undefined && source[key] !== null && source[key] !== '');
+    },
+
+    renderRecheckBanner() {
+        const banner = document.getElementById('qcRecheckBanner');
+        const round = document.getElementById('qcRecheckRound');
+        const previous = document.getElementById('qcRecheckPrevious');
+        if (!banner) return;
+        const active = Boolean(this.recheckParentInspection);
+        banner.hidden = !active;
+        if (!active) {
+            if (previous) previous.innerHTML = '';
+            return;
+        }
+        const last = this.lastInspection || this.selectedBatch?.last_qc || {};
+        const nextRound = Math.max(2, Number(last.inspection_round || 1) + 1);
+        if (round) round.textContent = `Re-check round: #${nextRound}`;
+        if (previous) {
+            previous.innerHTML = `
+                <div><span>Status sebelumnya</span><strong>${this.escapeHtml(String(last.status || '-').toUpperCase())}</strong></div>
+                <div><span>Suhu sebelumnya</span><strong>${this.escapeHtml(last.temperature || '-')}</strong></div>
+                <div><span>Catatan sebelumnya</span><strong>${this.escapeHtml(last.notes || '-')}</strong></div>
+            `;
+        }
     },
 
     setText(id, value) {
@@ -1125,7 +1259,7 @@ const Inspection = {
         document.querySelectorAll('.qc-stage-option, .qc-status-option').forEach(item => item.classList.remove('active'));
         this.renderBatchSummary(product, batch);
         this.renderQcConcurrency(null, batch.last_qc || null);
-        this.setText('qcFormTitle', 'QC CHECK');
+        this.setText('qcFormTitle', this.recheckParentInspection ? 'RE-CHECK QC' : 'QC CHECK');
         this.setText('qcFormSubtitle', `Batch #${batch.batch_sequence || '-'}`);
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
@@ -1142,6 +1276,7 @@ const Inspection = {
         document.body.classList.add('qc-sheet-open', 'modal-open');
         this.updateProgressiveFields();
         this.updateSubmitState();
+        window.setTimeout(() => document.getElementById('qcTemp')?.focus(), 60);
     },
 
     closeQcSheet() {

@@ -703,6 +703,55 @@ select {
   padding: 0 12px;
 }
 
+.monitoring-daily-card {
+  text-align: left;
+}
+
+.monitoring-slot-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.monitoring-slot-row {
+  display: grid;
+  grid-template-columns: 58px minmax(80px, 1fr) minmax(70px, .8fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, .9);
+  font-size: 12px;
+}
+
+.monitoring-slot-row strong {
+  color: var(--text-primary);
+}
+
+.monitoring-slot-row small {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.monitoring-detail-slot .status-badge {
+  margin-left: 8px;
+}
+
+.finding-status-hero {
+  border-color: rgba(37, 99, 235, .22);
+  background: rgba(239, 246, 255, .72);
+}
+
+.finding-current-status .status-badge {
+  min-height: 38px;
+  padding: 9px 14px;
+  font-size: 14px;
+}
+
+.finding-status-actions .selected {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .16);
+}
+
 .sku-qc-card,
 .finding-card {
   min-height: 210px;

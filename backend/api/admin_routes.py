@@ -75,6 +75,19 @@ def monitoring_realtime():
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error fetching monitoring data")}), 500
 
+
+@admin_bp.route("/monitoring/daily", methods=["GET"])
+@require_role("admin")
+def monitoring_daily():
+    return _enveloped(get_admin_service().get_daily_monitoring(date=request.args.get("date")))
+
+
+@admin_bp.route("/qc-findings/<finding_id>/status", methods=["PATCH"])
+@require_role("admin")
+def update_qc_finding_status(finding_id):
+    data = request.get_json(silent=True) or {}
+    return _enveloped(get_admin_service().update_qc_finding_status(finding_id, data.get("status")))
+
 @admin_bp.route("/qc-reports", methods=["GET"])
 @require_role("admin")
 def qc_reports():

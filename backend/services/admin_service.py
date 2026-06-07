@@ -199,6 +199,137 @@ class AdminService:
             logger.error("Realtime monitoring failed: %s", exc)
             return {"success": False, "detail": str(exc)}
 
+    def get_daily_monitoring(self, date=None):
+        date = date or self._jakarta_today()
+        slots = ("07:00", "13:00", "16:00", "19:00")
+        try:
+            rooms = self._fetch("facility_rooms", order_by="name", limit=1000)
+            room_lookup = {str(room.get("id")): room for room in rooms}
+            devices = self._fetch("facility_devices", order_by="name", limit=2000)
+            logs = self._daily_temperature_rows(date, 5000)
+
+            logs_by_device = {}
+            fallback_logs = {}
+            for log in logs:
+                key = str(log.get("device_id") or "")
+                if key:
+                    logs_by_device.setdefault(key, []).append(log)
+                fallback_key = (str(log.get("room") or "").lower(), str(log.get("device") or "").lower())
+                fallback_logs.setdefault(fallback_key, []).append(log)
+
+            data = []
+            for device in devices:
+                room_id = device.get("room_id")
+                room = room_lookup.get(str(room_id), {})
+                room_name = room.get("name") or device.get("room_name") or "Unassigned"
+                device_name = device.get("name") or device.get("device_name") or device.get("device_type") or "Temperature Point"
+                device_logs = logs_by_device.get(str(device.get("id") or ""), [])
+                if not device_logs:
+                    device_logs = fallback_logs.get((str(room_name).lower(), str(device_name).lower()), [])
+                slot_rows = [self._daily_slot_row(slot, device_logs, date) for slot in slots]
+                submitted = [slot for slot in slot_rows if slot.get("temperature") is not None]
+                latest = max(submitted, key=lambda row: row.get("submitted_at") or "") if submitted else None
+                data.append({
+                    "device_id": device.get("id"),
+                    "room_id": room_id,
+                    "room": room_name,
+                    "device_name": device_name,
+                    "type": device.get("device_type") or device.get("type") or "room_temp",
+                    "threshold_min": device.get("min_temperature"),
+                    "threshold_max": device.get("max_temperature"),
+                    "threshold_temp": device.get("threshold_temp"),
+                    "latest_temperature": latest.get("temperature") if latest else None,
+                    "latest_status": latest.get("status") if latest else None,
+                    "daily_status": self._daily_device_status(slot_rows, date),
+                    "slots": slot_rows,
+                })
+
+            return self._empty({"date": date, "devices": data})
+        except Exception as exc:
+            logger.error("Daily monitoring failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
+
+    def _daily_slot_row(self, slot, logs, date):
+        match = self._slot_log(logs, slot)
+        if not match:
+            return {
+                "slot_time": slot,
+                "temperature": None,
+                "status": self._missing_slot_status(slot, date),
+                "staff_name": None,
+                "submitted_at": None,
+                "photo_url": None,
+                "notes": None,
+            }
+        status = str(match.get("status") or "").upper()
+        if status in {"FAIL", "WARNING"} or str(match.get("is_normal", "")).lower() == "false":
+            normalized_status = "WARNING"
+        else:
+            normalized_status = "PASS"
+        return {
+            "slot_time": slot,
+            "temperature": match.get("temperature"),
+            "status": normalized_status,
+            "staff_name": match.get("staff_display_name") or match.get("staff_name"),
+            "submitted_at": match.get("created_at") or match.get("submitted_at"),
+            "photo_url": match.get("photo_url"),
+            "notes": match.get("notes"),
+        }
+
+    def _slot_log(self, logs, slot):
+        exact = [row for row in logs if str(row.get("slot_time") or "")[:5] == slot]
+        if exact:
+            return max(exact, key=lambda row: row.get("created_at") or row.get("submitted_at") or "")
+        target = int(slot[:2]) * 60 + int(slot[3:])
+        best = None
+        best_diff = 9999
+        for row in logs:
+            value = row.get("created_at") or row.get("submitted_at")
+            if not value:
+                continue
+            try:
+                date = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                local = date.astimezone(timezone(timedelta(hours=7)))
+            except Exception:
+                continue
+            diff = abs((local.hour * 60 + local.minute) - target)
+            if diff <= 120 and diff < best_diff:
+                best = row
+                best_diff = diff
+        return best
+
+    def _missing_slot_status(self, slot, date):
+        today = self._jakarta_today()
+        if date < today:
+            return "MISSED"
+        if date > today:
+            return "BELUM_INPUT"
+        now = datetime.now(timezone(timedelta(hours=7)))
+        slot_time = datetime.fromisoformat(f"{date}T{slot}:00").replace(tzinfo=timezone(timedelta(hours=7)))
+        return "MISSED" if now > slot_time else "BELUM_INPUT"
+
+    def _daily_device_status(self, slots, date):
+        statuses = {str(slot.get("status") or "").upper() for slot in slots}
+        if "WARNING" in statuses or "FAIL" in statuses:
+            return "WARNING"
+        if "MISSED" in statuses:
+            return "MISSED"
+        if "BELUM_INPUT" in statuses:
+            return "PENDING"
+        return "PASS"
+
+    def update_qc_finding_status(self, finding_id, status):
+        normalized = str(status or "").strip().upper().replace("-", "_").replace(" ", "_")
+        if normalized not in {"OPEN", "IN_PROGRESS", "CLOSED"}:
+            return self._fail("Status temuan tidak valid")
+        updated = self._update_by_id("qc_findings", finding_id, {
+            "status": normalized,
+            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        })
+        if not updated:
+            return self._fail("QC finding not found")
+        return self._empty(self._normalize_qc_finding(updated[0]))
+
     def get_qc_reports(self, page=1, limit=20, status_filter=None):
         if not self.sb:
             return {"success": True, "data": [], "count": 0}
@@ -1149,10 +1280,12 @@ class AdminService:
             "temperature": row.get("temperature_c") or row.get("temperature"),
             "humidity": row.get("humidity_rh") or row.get("humidity"),
             "status": normalized_status,
+            "slot_time": row.get("slot_time"),
             "photo_url": row.get("photo_url"),
             "storage_path": row.get("storage_path"),
             "notes": row.get("reason") or row.get("notes"),
             "created_at": row.get("recorded_at") or row.get("created_at"),
+            "submitted_at": row.get("submitted_at") or row.get("recorded_at") or row.get("created_at"),
         })
 
     def _evidence_from_reports(self, rows):

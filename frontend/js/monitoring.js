@@ -15,6 +15,7 @@ let selectedPhotoFiles = [];
 let latestTemperatureLogs = [];
 let activeUnitFilter = "all";
 let todaySchedule = null;
+const expandedRoomIds = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
     bindUnitFilters();
@@ -98,6 +99,8 @@ function renderDevices(devices, options = {}) {
     deviceCountLabel.innerText = `${devices.length} Unit`;
     document.getElementById("summaryUnitCount").innerText = totalDevices || devices.length;
     document.getElementById("summaryStatus").innerText = totalDevices || devices.length ? "Aktif" : "Kosong";
+    renderNextDevice();
+    renderRoomProgress();
 
     if (!devices.length) {
         const hasLogs = options.hasLogs ?? latestTemperatureLogs.length > 0;
@@ -112,21 +115,91 @@ function renderDevices(devices, options = {}) {
         return;
     }
 
-    deviceList.innerHTML = devices.map(device => {
-        const scheduleStatus = deviceScheduleStatus(device.id);
-        return `
-        <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
-            <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
-            <div class="status-badge ${scheduleStatus.className} device-status">${scheduleStatus.label}</div>
-            <div class="device-name">${device.display_name || device.name}</div>
-            <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
-            <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
-            <div class="device-meta">${device.recorded_at ? `Update: ${new Date(device.recorded_at).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})} - Petugas: QC` : "Belum ada log"}</div>
-            <div class="sparkline"></div>
-            <div class="health-bar"><span></span></div>
-        </div>
+    const visibleRooms = groupedRoomsForDevices(devices);
+    ensureExpandedRooms(visibleRooms);
+    deviceList.innerHTML = visibleRooms.map(room => renderMonitoringRoomGroup(room)).join("");
+}
+
+function groupedRoomsForDevices(devices) {
+    const selectedIds = new Set(devices.map(device => device.id));
+    return facilityStructure
+        .map(room => ({
+            ...room,
+            devices: sortMonitoringDevices((room.devices || []).filter(device => selectedIds.has(device.id))),
+        }))
+        .filter(room => room.devices.length);
+}
+
+function ensureExpandedRooms(rooms) {
+    if (selectedRoomId && selectedRoomId !== "all") {
+        expandedRoomIds.add(selectedRoomId);
+        return;
+    }
+    const next = nextDeviceToCheck();
+    if (next?.room?.id) expandedRoomIds.add(next.room.id);
+    if (!expandedRoomIds.size && rooms[0]?.id) expandedRoomIds.add(rooms[0].id);
+}
+
+function renderMonitoringRoomGroup(room) {
+    const progress = roomProgress(room);
+    const expanded = expandedRoomIds.has(room.id);
+    return `
+        <article class="monitor-room-group" data-room-id="${room.id}">
+            <button class="monitor-room-toggle" type="button" onclick="toggleRoomGroup('${room.id}')" aria-expanded="${expanded}">
+                <span>
+                    <strong>${room.name}</strong>
+                    <small>${progress.completed}/${progress.total} device selesai</small>
+                </span>
+                <span class="room-progress-inline">
+                    <span class="room-progress-track"><span style="width:${progress.percent}%"></span></span>
+                    <i class="fas fa-chevron-${expanded ? "up" : "down"}"></i>
+                </span>
+            </button>
+            <div class="monitor-device-list ${expanded ? "is-expanded" : "is-collapsed"}">
+                ${room.devices.map(device => renderMonitoringDeviceCard(device, room)).join("")}
+            </div>
+        </article>
     `;
-    }).join("");
+}
+
+function renderMonitoringDeviceCard(device, room) {
+    const scheduleStatus = deviceScheduleStatus(device.id);
+    const input = lastInputMeta(device);
+    const alert = isDeviceAlert(device);
+    return `
+        <button class="device-card smart-device-card ${device.type} ${alert ? "alert-required" : ""}" type="button" onclick="openLogModal('${device.id}')">
+            <div class="device-main">
+                <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
+                <div>
+                    <div class="device-name">${device.name || unitName(device.type)}</div>
+                    <div class="device-target">${room.name} - Target: ${device.threshold_temp || 0}&deg;C</div>
+                </div>
+            </div>
+            <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
+            <div class="device-slot-info">
+                <span>Slot</span>
+                <strong>${activeMonitoringSlot()?.time || "--"}</strong>
+            </div>
+            <div class="device-input-info">
+                <span>Input</span>
+                <strong>${input.staff}</strong>
+                <small>${input.time}</small>
+            </div>
+            <div class="device-status-stack">
+                <span class="status-badge ${scheduleStatus.className} device-status">${scheduleStatus.label}</span>
+                <small class="${alert ? "photo-required" : "photo-optional"}">${alert ? "Foto wajib jika abnormal" : "Foto opsional"}</small>
+            </div>
+        </button>
+    `;
+}
+
+function toggleRoomGroup(roomId) {
+    if (expandedRoomIds.has(roomId)) {
+        expandedRoomIds.delete(roomId);
+    } else {
+        expandedRoomIds.add(roomId);
+    }
+    renderDevices(filteredDevices(selectedRoomId === "all" || !selectedRoomId ? null : (facilityStructure.find(room => room.id === selectedRoomId)?.devices || [])));
 }
 
 function openLogModal(deviceId) {
@@ -195,7 +268,7 @@ document.getElementById("photo-input").addEventListener("change", async event =>
     try {
         selectedPhotoFiles.forEach(file => API.validatePhoto(file));
     } catch (err) {
-        alert(err.message || "Upload gagal");
+        showMonitoringToast(err.message || "Upload foto gagal", true);
         removePhoto();
         return;
     }
@@ -245,7 +318,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     try {
         selectedPhotoFiles.forEach(file => API.validatePhoto(file));
     } catch (err) {
-        alert(err.message || "Upload gagal");
+        showMonitoringToast(err.message || "Upload foto gagal", true);
         return;
     }
 
@@ -368,6 +441,8 @@ function renderTodaySchedule() {
                 <span>Belum waktunya</span>
             </article>
         `).join("");
+        renderNextDevice();
+        renderRoomProgress();
         return;
     }
 
@@ -383,6 +458,8 @@ function renderTodaySchedule() {
             ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
         </article>
     `).join("");
+    renderNextDevice();
+    renderRoomProgress();
 }
 
 function activeMonitoringSlot() {
@@ -417,13 +494,120 @@ function deviceScheduleStatus(deviceId) {
     return { status: "pending", label: "Belum input", className: "muted" };
 }
 
+function sortMonitoringDevices(devices) {
+    return [...devices].sort((a, b) => monitoringRank(a) - monitoringRank(b) || String(a.name || "").localeCompare(String(b.name || "")));
+}
+
+function monitoringRank(device) {
+    const scheduleStatus = deviceScheduleStatus(device.id).status;
+    if (scheduleStatus === "pending") return 1;
+    if (scheduleStatus === "missed" || scheduleStatus === "late") return 2;
+    if (isDeviceAlert(device)) return 3;
+    if (scheduleStatus === "completed") return 4;
+    return 5;
+}
+
+function isDeviceAlert(device) {
+    if (device.is_normal === false) return true;
+    const temp = Number(device.last_temperature_c ?? device.temperature_c);
+    if (!Number.isFinite(temp)) return false;
+    const min = Number(device.min_temperature ?? device.threshold_min ?? device.min_temp);
+    const max = Number(device.max_temperature ?? device.threshold_max ?? device.max_temp);
+    if (Number.isFinite(min) && temp < min) return true;
+    if (Number.isFinite(max) && temp > max) return true;
+    return false;
+}
+
+function nextDeviceToCheck() {
+    const candidates = facilityStructure.flatMap(room => (room.devices || []).map(device => ({ room, device })));
+    return candidates
+        .filter(item => ["pending", "missed", "late"].includes(deviceScheduleStatus(item.device.id).status))
+        .sort((a, b) => monitoringRank(a.device) - monitoringRank(b.device))[0] || null;
+}
+
+function renderNextDevice() {
+    const section = document.getElementById("nextDeviceSection");
+    if (!section) return;
+    const title = document.getElementById("nextDeviceTitle");
+    const status = document.getElementById("nextDeviceStatus");
+    const roomEl = document.getElementById("nextDeviceRoom");
+    const nameEl = document.getElementById("nextDeviceName");
+    const slotEl = document.getElementById("nextDeviceSlot");
+    const action = document.getElementById("nextDeviceAction");
+    const next = nextDeviceToCheck();
+    const activeSlot = activeMonitoringSlot();
+
+    if (!next) {
+        title.textContent = activeSlot ? "Semua device slot aktif sudah dicek" : "Belum ada slot aktif";
+        status.textContent = activeSlot ? "Lanjutkan tugas QC lain atau cek log terakhir." : scheduleUnavailableMessage();
+        roomEl.textContent = "--";
+        nameEl.textContent = "Tidak ada prioritas";
+        slotEl.textContent = `Slot: ${activeSlot?.time || "--"}`;
+        action.disabled = true;
+        action.onclick = null;
+        section.classList.toggle("is-clear", Boolean(activeSlot));
+        return;
+    }
+
+    const deviceStatus = deviceScheduleStatus(next.device.id);
+    title.textContent = `${next.room.name}`;
+    status.textContent = `Status: ${deviceStatus.label}`;
+    roomEl.textContent = next.room.name;
+    nameEl.textContent = next.device.name || unitName(next.device.type);
+    slotEl.textContent = `Slot: ${activeSlot?.time || "--"}`;
+    action.disabled = false;
+    action.onclick = () => openLogModal(next.device.id);
+    section.classList.remove("is-clear");
+}
+
+function renderRoomProgress() {
+    const container = document.getElementById("roomProgressList");
+    if (!container) return;
+    if (!facilityStructure.length) {
+        container.innerHTML = '<div class="empty-state compact">Belum ada area monitoring</div>';
+        return;
+    }
+    container.innerHTML = facilityStructure.map(room => {
+        const progress = roomProgress(room);
+        return `
+            <div class="room-progress-item">
+                <div>
+                    <strong>${room.name}</strong>
+                    <span>${progress.completed}/${progress.total} device selesai</span>
+                </div>
+                <div class="room-progress-track"><span style="width:${progress.percent}%"></span></div>
+            </div>
+        `;
+    }).join("");
+}
+
+function roomProgress(room) {
+    const devices = room.devices || [];
+    const completed = devices.filter(device => deviceScheduleStatus(device.id).status === "completed").length;
+    const total = devices.length;
+    return {
+        completed,
+        total,
+        percent: total ? Math.round((completed / total) * 100) : 0,
+    };
+}
+
+function lastInputMeta(device) {
+    const recordedAt = device.recorded_at || device.last_recorded_at || device.created_at;
+    const staff = device.staff_name || device.staff || device.recorded_by || device.user_name || "Belum ada";
+    return {
+        staff: recordedAt ? staff : "Belum ada",
+        time: recordedAt ? new Date(recordedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "--",
+    };
+}
+
 function showMonitoringToast(message, isError = false) {
     const globalToast = window.showToast;
     if (typeof globalToast === "function" && globalToast !== showMonitoringToast) {
         globalToast(message, isError ? "error" : "success");
         return;
     }
-    alert(message);
+    console[isError ? "error" : "log"](message);
 }
 
 function bindUnitFilters() {

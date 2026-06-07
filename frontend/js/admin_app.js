@@ -16,6 +16,8 @@ const adminApp = {
     currentApprovalId: null,
     productionBoardRows: [],
     monitoringHistoryRows: [],
+    monitoringDailyDevices: [],
+    currentFindingsRows: [],
     monitoringManagementRooms: [],
 
     init() {
@@ -949,60 +951,25 @@ const adminApp = {
     async loadMonitoring() {
         const grid = document.getElementById('monitoring-grid');
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
-        
+
         const date = this.monitoringDateValue();
-        const [res, historyEnvelope] = await Promise.all([
-            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`),
-            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(date)}&limit=500`),
-        ]);
-        if (!res) return;
-        this.monitoringHistoryRows = this.reportRows(historyEnvelope);
+        this.setText('monitoring-date-label', `Tanggal monitoring: ${this.longDate(date)}`);
+        const envelope = await this.fetchAdminData(`${this.apiBase}/monitoring/daily?date=${encodeURIComponent(date)}`);
+        const data = envelope?.data || envelope || {};
+        const devices = Array.isArray(data.devices) ? data.devices : [];
+        this.monitoringDailyDevices = devices;
 
         grid.innerHTML = '';
-        if (res.length === 0) {
-            grid.innerHTML = this.emptyState('No data available yet', 'Data will appear after staff submit QC activity.');
+        if (!devices.length) {
+            grid.innerHTML = this.emptyState('Belum ada unit monitoring.', 'Tambahkan room/device dari Kelola Unit untuk mulai tracking suhu.');
             return;
         }
 
-        res.forEach(dev => {
-            const log = dev.latest_log;
-            let tempDisplay = log ? `${log.temperature_c} °C` : '-- °C';
-            let statusIcon = 'fa-check-circle';
-            let statusColor = 'var(--success-color)';
-            
-            if (log && !log.is_normal) {
-                statusIcon = 'fa-exclamation-triangle';
-                statusColor = 'var(--danger-color)';
-            } else if (!log) {
-                statusIcon = 'fa-question-circle';
-                statusColor = 'var(--text-secondary)';
-            }
-
-            const card = document.createElement('div');
-            card.className = 'metric-card metric-action-card';
-            card.tabIndex = 0;
-            card.role = 'button';
-            const evidence = log?.photo_url || '';
-            card.innerHTML = `
-                <div class="metric-header">
-                    <span>${dev.facility_rooms?.name || 'Unassigned'} - ${dev.name}</span>
-                    <i data-lucide="${log && !log.is_normal ? 'triangle-alert' : log ? 'circle-check' : 'circle-help'}" class="metric-icon" style="color: ${statusColor}"></i>
-                </div>
-                <div class="metric-value">${tempDisplay}</div>
-                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px;">
-                    Ambang Batas: ${dev.threshold_temp} °C
-                </div>
-                ${evidence ? `<div style="margin-top:10px;">${this.renderEvidenceCell({ photo_url: evidence, storage_path: log?.storage_path || '' })}</div>` : ''}
-            `;
-            card.addEventListener('click', () => this.openMonitoringDevice(dev));
-            card.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') this.openMonitoringDevice(dev);
-            });
-            grid.appendChild(card);
-        });
+        const hasAnyInput = devices.some(device => (device.slots || []).some(slot => slot.temperature !== null && slot.temperature !== undefined));
+        const emptyBanner = hasAnyInput ? '' : this.emptyState('Belum ada input monitoring pada tanggal ini.', 'Semua slot device untuk tanggal ini masih Belum input.');
+        grid.innerHTML = emptyBanner + devices.map(device => this.renderMonitoringDailyCard(device)).join('');
         this.refreshIcons();
     },
-
     setupMonitoringDefaults() {
         const input = document.getElementById('monitoring-date');
         if (input && !input.value) input.value = this.jakartaDateString();
@@ -1033,28 +1000,61 @@ const adminApp = {
         return this.jakartaDateString();
     },
 
-    openMonitoringDevice(dev) {
-        const title = `${dev.facility_rooms?.name || 'Unassigned'} ${dev.name || ''}`.trim();
-        const rows = (this.monitoringHistoryRows || []).filter(row => {
-            const haystack = `${row.room || ''} ${row.device || ''} ${row.device_name || ''}`.toLowerCase();
-            return haystack.includes(String(dev.name || '').toLowerCase()) || haystack.includes(String(dev.facility_rooms?.name || '').toLowerCase());
-        });
-        const slots = ['07:00', '13:00', '16:00', '19:00'];
-        const slotHtml = slots.map(slot => {
-            const match = this.closestSlotRow(rows, slot);
-            return `
-                <div class="action-item">
-                    <span class="action-icon"><i data-lucide="clock-3"></i></span>
-                    <div>
-                        <strong>${slot}</strong>
-                        <p class="admin-muted">${match ? `${match.temperature ?? '-'} C / ${String(match.status || '-').toUpperCase()} / ${this.formatStaffDisplay(match).name}` : 'Belum ada input pada slot ini.'}</p>
-                    </div>
+    renderMonitoringDailyCard(device = {}) {
+        const latest = device.latest_temperature !== null && device.latest_temperature !== undefined ? `${device.latest_temperature} C` : 'Belum input';
+        const status = device.daily_status || 'PENDING';
+        const slots = (device.slots || []).map(slot => `
+            <div class="monitoring-slot-row">
+                <strong>${this.escapeHtml(slot.slot_time || '-')}</strong>
+                <span>${slot.temperature !== null && slot.temperature !== undefined ? `${this.escapeHtml(slot.temperature)} C` : 'Belum input'}</span>
+                <small>${this.escapeHtml(slot.staff_name || '-')}</small>
+            </div>
+        `).join('');
+        return `
+            <button class="metric-card metric-action-card monitoring-daily-card" type="button" onclick='adminApp.openMonitoringDevice(${this.safeJson(device)})'>
+                <div class="metric-header">
+                    <span>${this.escapeHtml(device.room || 'Unassigned')} - ${this.escapeHtml(device.device_name || '-')}</span>
+                    ${this.statusBadge(status)}
                 </div>
-            `;
-        }).join('');
-        this.openQcDetailModal(title, `Histori suhu ${this.monitoringDateValue()}`, `<div class="action-list">${slotHtml}</div>`);
+                <div class="metric-value">${this.escapeHtml(latest)}</div>
+                <p class="admin-muted">Threshold: ${this.escapeHtml(this.formatRange(device.threshold_min, device.threshold_max, 'C') || `${device.threshold_temp ?? '-'} C`)}</p>
+                <div class="monitoring-slot-list">${slots}</div>
+            </button>
+        `;
     },
 
+    openMonitoringDevice(dev) {
+        const title = `${dev.room || 'Unassigned'} - ${dev.device_name || ''}`.trim();
+        const slotHtml = (dev.slots || []).map(slot => `
+            <div class="action-item monitoring-detail-slot">
+                <span class="action-icon"><i data-lucide="clock-3"></i></span>
+                <div>
+                    <strong>${this.escapeHtml(slot.slot_time || '-')} ${this.statusBadge(slot.status || 'BELUM_INPUT')}</strong>
+                    <p class="admin-muted">${slot.temperature !== null && slot.temperature !== undefined ? `${this.escapeHtml(slot.temperature)} C` : 'Belum input'} / Staff: ${this.escapeHtml(slot.staff_name || '-')}</p>
+                    <p class="admin-muted">Submitted: ${this.dateTime(slot.submitted_at)}</p>
+                    ${slot.notes ? `<p>${this.escapeHtml(slot.notes)}</p>` : ''}
+                    ${slot.photo_url ? this.renderEvidenceCell({ photo_url: slot.photo_url }) : ''}
+                </div>
+            </div>
+        `).join('');
+        const html = `
+            <section class="review-section">
+                <h4>Device Info</h4>
+                <div class="review-grid">
+                    ${this.reviewField('Room', dev.room)}
+                    ${this.reviewField('Device', dev.device_name)}
+                    ${this.reviewField('Type', dev.type)}
+                    ${this.reviewField('Threshold', this.formatRange(dev.threshold_min, dev.threshold_max, 'C') || dev.threshold_temp)}
+                    <div class="review-field"><span>Status harian</span>${this.statusBadge(dev.daily_status || 'PENDING')}</div>
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>Timeline Slot</h4>
+                <div class="action-list">${slotHtml}</div>
+            </section>
+        `;
+        this.openQcDetailModal(title, `Tanggal monitoring: ${this.longDate(this.monitoringDateValue())}`, html);
+    },
     closestSlotRow(rows, slot) {
         const target = Number(slot.slice(0, 2)) * 60 + Number(slot.slice(3));
         let best = null;
@@ -2301,30 +2301,34 @@ const adminApp = {
         board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
         const res = await this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`);
         const rows = this.findingRows(res);
-        const openRows = rows.filter(row => !['closed', 'resolved'].includes(String(row.status || row.approval_status || '').toLowerCase()));
+        this.currentFindingsRows = rows;
+        const openRows = rows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
         this.setText('nav-findings-count', openRows.length);
         this.setText('metric-findings-open', openRows.length);
-        this.renderFindingsBoard(openRows);
+        this.renderFindingsBoard(rows);
     },
 
     renderFindingsBoard(rows = []) {
         const board = document.getElementById('findings-board');
         if (!board) return;
         if (!rows.length) {
-            board.innerHTML = this.emptyState('Tidak ada QC temuan open.', 'Temuan baru akan muncul setelah staff mengirim finding.');
+            board.innerHTML = this.emptyState('Tidak ada QC temuan.', 'Temuan baru akan muncul setelah staff mengirim finding.');
             this.refreshIcons();
             return;
         }
         board.innerHTML = rows.map(row => {
             const title = row.title || row.finding_type || row.reason || row.description || 'QC Temuan';
             const hasPhoto = Boolean(row.photo_url || row.evidence_url || row.public_url || row.storage_path);
+            const lifecycle = this.findingLifecycleStatus(row);
+            const severity = this.findingSeverityStatus(row);
             return `
-                <button class="metric-card metric-action-card finding-card" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>
-                    <div class="metric-header"><span>${this.escapeHtml(String(row.status || row.severity || 'WARNING').toUpperCase())}</span><i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i></div>
+                <button class="metric-card metric-action-card finding-card" data-finding-id="${this.escapeAttr(row.id || '')}" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>
+                    <div class="metric-header"><span>${this.statusBadge(lifecycle)}</span><i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i></div>
                     <h3>${this.escapeHtml(title)}</h3>
                     <p class="admin-muted">Staff: <strong>${this.escapeHtml(row.staff_display_name || row.inspector_name || row.staff_name || '-')}</strong></p>
                     <p class="admin-muted">Jam: <strong>${this.escapeHtml(this.timeOnly(row.created_at || row.submitted_at))}</strong></p>
                     <p class="metric-action-copy">Foto: ${hasPhoto ? 'Ada' : 'Tidak ada'}</p>
+                    <p class="admin-muted">Severity: <strong>${this.escapeHtml(severity)}</strong></p>
                     <span class="btn-secondary btn-sm">Detail</span>
                 </button>
             `;
@@ -2335,7 +2339,13 @@ const adminApp = {
     openFindingDetail(row) {
         const photo = row.photo_url || row.evidence_url || row.public_url || '';
         const title = row.title || row.finding_type || row.reason || 'QC Temuan';
+        const lifecycle = this.findingLifecycleStatus(row);
+        const severity = this.findingSeverityStatus(row);
         const html = `
+            <section class="review-section finding-status-hero">
+                <h4>Status Saat Ini</h4>
+                <div id="finding-current-status-badge" class="finding-current-status">${this.statusBadge(lifecycle)}</div>
+            </section>
             <section class="review-section">
                 <h4>Foto</h4>
                 <div class="review-evidence">
@@ -2349,24 +2359,73 @@ const adminApp = {
                     ${this.reviewField('Staff', row.staff_display_name || row.inspector_name || row.staff_name)}
                     ${this.reviewField('Tanggal', this.dateOnly(row.created_at || row.submitted_at))}
                     ${this.reviewField('Jam', this.timeOnly(row.created_at || row.submitted_at))}
-                    <div class="review-field"><span>Status</span>${this.statusBadge(row.status || row.approval_status || 'open')}</div>
+                    <div class="review-field"><span>Status lifecycle</span>${this.statusBadge(lifecycle)}</div>
+                    <div class="review-field"><span>Severity/status awal</span>${this.statusBadge(severity)}</div>
                 </div>
             </section>
             <section class="review-section">
                 <h4>Action</h4>
-                <div class="row-actions">
-                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Open')">Open</button>
-                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'In Progress')">In Progress</button>
-                    <button class="btn-primary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Closed')">Closed</button>
+                <div class="row-actions finding-status-actions" id="finding-status-actions">
+                    ${this.findingStatusButton(row.id, 'OPEN', lifecycle)}
+                    ${this.findingStatusButton(row.id, 'IN_PROGRESS', lifecycle)}
+                    ${this.findingStatusButton(row.id, 'CLOSED', lifecycle)}
                 </div>
-                <p class="admin-muted" id="finding-local-status"></p>
             </section>
         `;
         this.openQcDetailModal(title, row.location || row.area || '', html);
     },
 
-    setFindingLocalStatus(id, status) {
-        this.setText('finding-local-status', `Status temuan ${id || ''} diset ke ${status} pada tampilan admin.`);
+    findingLifecycleStatus(row = {}) {
+        const raw = String(row.status || row.lifecycle_status || row.approval_status || 'OPEN').trim().toUpperCase().replace(/[\s-]+/g, '_');
+        if (raw === 'CLOSED' || raw === 'RESOLVED') return 'CLOSED';
+        if (raw === 'IN_PROGRESS' || raw === 'INPROGRESS') return 'IN_PROGRESS';
+        return 'OPEN';
+    },
+
+    findingSeverityStatus(row = {}) {
+        const raw = String(row.severity || row.initial_status || row.finding_status || row.status || row.finding_type || 'FINDING').trim().toUpperCase().replace(/[\s-]+/g, '_');
+        if (['OPEN', 'IN_PROGRESS', 'CLOSED', 'RESOLVED', 'PENDING'].includes(raw)) return 'FINDING';
+        return raw || 'FINDING';
+    },
+
+    findingStatusButton(id, status, current) {
+        const selected = status === current;
+        const label = status === 'IN_PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase();
+        return `<button class="${selected ? 'btn-primary selected' : 'btn-secondary'}" data-finding-status="${status}" onclick="adminApp.updateFindingStatus('${this.escapeAttr(id || '')}', '${status}', this)" ${selected ? 'aria-pressed="true"' : ''}>${label}</button>`;
+    },
+
+    async updateFindingStatus(id, status, button) {
+        if (!id) return this.notify('ID temuan tidak tersedia.', 'error');
+        const label = status === 'IN_PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase();
+        const original = button?.innerHTML || label;
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i data-lucide="loader-2"></i> Loading';
+            this.refreshIcons();
+        }
+        try {
+            const envelope = await API.patch(`${this.apiBase}/qc-findings/${encodeURIComponent(id)}/status`, { status });
+            const updated = envelope?.data || envelope;
+            this.currentFindingsRows = (this.currentFindingsRows || []).map(row => row.id === id ? { ...row, ...updated, status } : row);
+            this.renderFindingsBoard(this.currentFindingsRows);
+            const badge = document.getElementById('finding-current-status-badge');
+            if (badge) badge.innerHTML = this.statusBadge(status);
+            const actions = document.getElementById('finding-status-actions');
+            if (actions) actions.innerHTML = ['OPEN', 'IN_PROGRESS', 'CLOSED'].map(item => this.findingStatusButton(id, item, status)).join('');
+            const openRows = this.currentFindingsRows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
+            this.setText('nav-findings-count', openRows.length);
+            this.setText('metric-findings-open', openRows.length);
+            this.notify(`Status temuan berhasil diubah ke ${label}.`, 'success');
+            this.loadOverview();
+        } catch (error) {
+            this.notify(`Gagal mengubah status temuan: ${error.message || 'Coba lagi'}`, 'error');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = original;
+            }
+            this.refreshIcons();
+        }
     },
 
     timeOnly(value) {
@@ -2581,6 +2640,12 @@ const adminApp = {
         return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleDateString('id-ID');
     },
 
+    longDate(value) {
+        if (!value) return '-';
+        const date = new Date(`${value}T00:00:00+07:00`);
+        return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    },
+
     statusBadge(value) {
         const label = String(value || 'pending').trim();
         const status = label.toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
@@ -2592,6 +2657,11 @@ const adminApp = {
             failed: 'fail',
             hold: 'warning',
             warning: 'warning',
+            open: 'warning',
+            'in-progress': 'pending',
+            closed: 'pass',
+            missed: 'fail',
+            'belum-input': 'pending',
             'pending-approval': 'warning',
             pending: 'pending',
             'belum-qc': 'pending',
@@ -3033,3 +3103,4 @@ window.adminApp = adminApp;
 document.addEventListener('DOMContentLoaded', () => {
     adminApp.init();
 });
+

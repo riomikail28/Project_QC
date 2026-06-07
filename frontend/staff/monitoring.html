@@ -55,6 +55,30 @@
             <div id="scheduleSlotGrid" class="schedule-slot-grid"></div>
         </section>
 
+        <section class="next-device-section" id="nextDeviceSection" aria-labelledby="nextDeviceTitle">
+            <div class="next-device-copy">
+                <span class="eyebrow">Device Berikutnya Untuk Dicek</span>
+                <h3 id="nextDeviceTitle">Menentukan prioritas...</h3>
+                <p id="nextDeviceStatus">Data monitoring sedang dimuat.</p>
+            </div>
+            <div class="next-device-meta">
+                <span id="nextDeviceRoom">--</span>
+                <strong id="nextDeviceName">--</strong>
+                <small id="nextDeviceSlot">Slot: --</small>
+            </div>
+            <button class="btn-primary next-device-action" id="nextDeviceAction" type="button" disabled>
+                <i class="fas fa-pen-to-square"></i> Input Sekarang
+            </button>
+        </section>
+
+        <section class="room-progress-card" aria-labelledby="roomProgressTitle">
+            <div class="section-header">
+                <h3 class="section-title" id="roomProgressTitle">Progress Area</h3>
+                <span class="section-link">Slot aktif</span>
+            </div>
+            <div class="room-progress-list" id="roomProgressList"></div>
+        </section>
+
         <section class="page-grid">
             <div class="section-header">
                 <h3 class="section-title">Filter</h3>
@@ -177,6 +201,7 @@
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/profile-menu.js"></script>
+    <script src="../js/ui-mobile.js"></script>
     <script src="../js/monitoring.js"></script>
     <script src="../js/quick-actions.js"></script>
     <script>

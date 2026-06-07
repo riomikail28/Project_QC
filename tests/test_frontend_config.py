@@ -62,7 +62,8 @@ def test_dashboard_renames_photo_quick_action_to_qc_temuan():
     assert 'data-quick-action="photo" type="button"><span>QC Temuan</span>' in html
     assert "<h3>QC Temuan</h3>" in html
     assert "Laporan temuan quality control" in html
-    assert "Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" in html
+    assert "Kategori Temuan" in html
+    assert "Catatan tambahan" in html
 
 
 def test_global_image_compression_helper_available_and_safe_fallback():

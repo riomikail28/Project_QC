@@ -83,6 +83,11 @@
 
             <div class="qc-form-body">
             <section class="qc-batch-summary" id="qcBatchSummary"></section>
+            <section class="qc-recheck-banner" id="qcRecheckBanner" hidden>
+                <strong>Mode Re-check aktif. Hasil ini akan menjadi pemeriksaan lanjutan.</strong>
+                <span id="qcRecheckRound">Re-check round: #2</span>
+                <div class="qc-recheck-previous" id="qcRecheckPrevious"></div>
+            </section>
 
             <section class="qc-concurrency-panel" id="qcConcurrencyPanel" hidden aria-live="polite">
                 <div class="qc-concurrency-header">
@@ -103,17 +108,20 @@
                     <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
                     <span aria-hidden="true">C</span>
                 </div>
-                <label>Parameter QC</label>
-                <div class="qc-optional-grid">
-                    <label>pH <input class="input-field" id="qcPh" type="number" step="0.01" placeholder="pH"></label>
-                    <label>Brix <input class="input-field" id="qcBrix" type="number" step="0.1" placeholder="Brix"></label>
-                    <label>TDS <input class="input-field" id="qcTds" type="number" step="1" placeholder="TDS"></label>
-                </div>
+                <p class="field-error" id="qcTempError" hidden>Suhu masak wajib diisi untuk Cek Masakan.</p>
+                <details class="qc-parameter-panel" id="qcParameterPanel">
+                    <summary>Parameter QC Tambahan</summary>
+                    <div class="qc-optional-grid">
+                        <label>pH <input class="input-field" id="qcPh" type="number" step="0.01" placeholder="pH"></label>
+                        <label>Brix <input class="input-field" id="qcBrix" type="number" step="0.1" placeholder="Brix"></label>
+                        <label>TDS <input class="input-field" id="qcTds" type="number" step="1" placeholder="TDS"></label>
+                    </div>
+                </details>
                 <div class="upload-card-compact" id="cookingUploadCard">
                     <div class="upload-card-header" onclick="document.getElementById('cookingPhoto').click()">
                         <div class="upload-card-info">
                             <i class="fas fa-camera"></i>
-                            <span>Foto evidence</span>
+                            <span id="cookingPhotoLabel">Foto evidence optional</span>
                         </div>
                         <button class="btn-secondary upload-card-btn" type="button">Ambil Foto</button>
                     </div>
@@ -121,6 +129,7 @@
                     <small id="cookingPhotoCompressionStatus" class="photo-compression-hint">Foto akan dikompres otomatis sebelum dikirim.</small>
                     <input id="cookingPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
                 </div>
+                <p class="field-error" id="qcPhotoError" hidden>Foto evidence wajib untuk HOLD/FAIL.</p>
             </div>
 
             <div class="simple-field" id="finalFields" hidden>
@@ -162,6 +171,7 @@
             <div class="simple-field optional-notes" id="notesField" hidden>
                 <label for="qcNotes">Catatan</label>
                 <textarea class="input-field simple-notes" id="qcNotes" rows="3" placeholder="Tulis catatan jika ada"></textarea>
+                <p class="field-error" id="qcNotesError" hidden>Catatan dan foto wajib untuk HOLD/FAIL.</p>
             </div>
 
             <section class="qc-submit-summary" id="qcSubmitSummary" hidden aria-live="polite">
@@ -175,6 +185,11 @@
                     <div><dt>Status</dt><dd id="summaryStatus">-</dd></div>
                     <div><dt>Evidence</dt><dd id="summaryEvidence">Belum ada foto</dd></div>
                 </dl>
+            </section>
+            <section class="qc-mini-summary" id="qcMiniSummary" hidden aria-live="polite">
+                <span id="miniSummaryBatch">Batch -</span>
+                <strong id="miniSummaryStatus">Status -</strong>
+                <span id="miniSummaryTemp">Suhu -</span>
             </section>
             <p class="simple-qc-message" id="qcSubmitMessage" aria-live="polite"></p>
             </div>

@@ -510,6 +510,140 @@
   pointer-events: none;
 }
 
+.qc-parameter-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(248,250,252,.92);
+  overflow: hidden;
+}
+
+.qc-parameter-panel summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.qc-parameter-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.qc-parameter-panel summary::after {
+  content: "+";
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(37,99,235,.1);
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.qc-parameter-panel[open] summary::after {
+  content: "-";
+}
+
+.qc-parameter-panel .qc-optional-grid {
+  padding: 0 12px 12px;
+}
+
+.field-error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, .09);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.qc-mini-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(37,99,235,.16);
+  border-radius: 14px;
+  background: rgba(239,246,255,.82);
+  font-size: 12px;
+}
+
+.qc-mini-summary span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.qc-mini-summary strong {
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.qc-recheck-banner {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(245,158,11,.34);
+  border-radius: 16px;
+  background: rgba(255,247,237,.96);
+  color: #92400e;
+}
+
+.qc-recheck-banner > strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.qc-recheck-banner > span {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.qc-recheck-previous {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.qc-recheck-previous div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 11px;
+  background: rgba(255,255,255,.72);
+}
+
+.qc-recheck-previous span,
+.qc-recheck-previous strong {
+  display: block;
+}
+
+.qc-recheck-previous span {
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.qc-recheck-previous strong {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.hold-fail-mode #cookingUploadCard {
+  border-color: rgba(239,68,68,.28);
+  background: rgba(254,242,242,.88);
+}
+
 /* ═══════════════════════════════════════════════
    Desktop Breakpoint
    ═══════════════════════════════════════════════ */
@@ -938,6 +1072,10 @@
   .inspection-page {
     width: min(100% - 18px, 680px);
     padding-top: 8px;
+  }
+
+  .qc-recheck-previous {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .inspection-page .simple-qc-card {

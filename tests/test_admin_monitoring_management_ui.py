@@ -87,7 +87,9 @@ def test_existing_monitoring_grid_contract_is_unchanged():
     assert 'id="monitoring-grid"' in html
     assert "async loadMonitoring()" in js
     assert "const grid = document.getElementById('monitoring-grid');" in js
-    assert "grid.appendChild(card);" in js
+    assert "/monitoring/daily?date=" in js
+    assert "renderMonitoringDailyCard" in js
+    assert "monitoring-slot-row" in js
 
 
 def test_monitoring_room_groups_are_full_width_not_two_column_cards():
