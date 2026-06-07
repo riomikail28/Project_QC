@@ -343,6 +343,23 @@ select {
   margin-bottom: 18px;
 }
 
+.command-kpi-grid,
+.queue-card-grid,
+.qc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+@media (min-width: 1280px) {
+  .command-kpi-grid,
+  .queue-card-grid,
+  .qc-card-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 .metric-card,
 .card {
   border: 1px solid var(--border-color);
@@ -418,6 +435,71 @@ select {
   color: var(--text-secondary);
   font-size: .82rem;
   font-weight: 700;
+}
+
+.monitoring-toolbar-card {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.monitoring-date-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.monitoring-date-controls input,
+.monitoring-date-controls select {
+  min-width: 150px;
+  padding: 0 12px;
+}
+
+.sku-qc-card,
+.finding-card {
+  min-height: 210px;
+}
+
+.sku-qc-card h3,
+.finding-card h3 {
+  margin: 10px 0 8px;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.sku-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.sku-status-grid span {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, .82);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.sku-status-grid strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.batch-list-button {
+  width: 100%;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
 }
 
 .workflow-grid {
@@ -1332,6 +1414,24 @@ textarea {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .command-kpi-grid,
+  .queue-card-grid,
+  .qc-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .monitoring-toolbar-card,
+  .monitoring-date-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .monitoring-date-controls input,
+  .monitoring-date-controls select,
+  .monitoring-date-controls button {
+    width: 100%;
   }
 
   .metric-card {

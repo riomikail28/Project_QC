@@ -135,7 +135,7 @@ def test_approve_success_refreshes_approvals_and_batch_production():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
 
     assert "await this.loadApprovals()" in js
-    assert "await this.loadBatchProduction().catch" in js
+    assert "await this.loadProductionBoard().catch" in js
     assert "Approval berhasil diproses." in js
 
 
@@ -143,7 +143,8 @@ def test_batch_production_and_approvals_use_different_renderers():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
 
     assert "async loadBatchProduction()" in js
+    assert "async loadProductionBoard()" in js
     assert "renderBatchProduction(rows)" in js
     assert "renderApprovals(rows = [])" in js
-    assert "case 'daily-reports': this.loadBatchProduction(); break;" in js
+    assert "case 'daily-reports': this.loadProductionBoard(); break;" in js
     assert "case 'approval': this.loadApprovals(); break;" in js

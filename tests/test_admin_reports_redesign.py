@@ -32,7 +32,8 @@ def test_audit_trail_section_exists_with_human_readable_labels():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
 
     assert "Audit Trail / System Logs" in html
-    assert ">Audit Trail<" in html
+    sidebar = html.split('<ul class="sidebar-menu"', 1)[1].split("</ul>", 1)[0]
+    assert ">Audit Trail<" not in sidebar
     assert "auditActionLabel" in js
     assert "INPUT_TEMPERATURE: 'Input Suhu'" in js
     assert "SUBMIT: 'Submit QC'" in js

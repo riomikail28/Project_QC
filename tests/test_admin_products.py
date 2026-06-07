@@ -91,16 +91,17 @@ def test_admin_qc_reports_include_staff_dashboard_findings(client, admin_headers
     assert rows[0]["storage_path"] == "staff/2026-05-16/finding.jpg"
 
 
-def test_admin_qc_reports_loads_findings_for_reports_hash():
+def test_admin_qc_findings_has_final_card_route():
     html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
 
-    assert 'data-section="reports"' in html
-    assert "case 'reports': this.loadOperationalReports(); break;" in js
+    assert 'data-section="findings"' in html
+    assert "case 'findings': this.loadFindingsBoard(); break;" in js
+    assert "renderFindingsBoard" in js
     assert "renderEvidenceCell" in js
     assert "storage_path" in js
-    assert "admin-evidence-path" in css
+    assert "finding-card" in css
 
 
 def test_admin_api_urls_do_not_double_api_prefix():

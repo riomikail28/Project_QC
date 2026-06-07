@@ -14,6 +14,8 @@ const adminApp = {
     reportTab: 'monitoring',
     dailyReportRows: [],
     currentApprovalId: null,
+    productionBoardRows: [],
+    monitoringHistoryRows: [],
 
     init() {
         this.checkAuth();
@@ -24,6 +26,7 @@ const adminApp = {
         this.safeRun(() => this.setupCrudForm(), 'crud form');
         this.safeRun(() => this.setupModalBehavior(), 'modal behavior');
         this.safeRun(() => this.setupBatchProductionDefaults(), 'batch production');
+        this.safeRun(() => this.setupMonitoringDefaults(), 'monitoring');
         this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
         this.safeRun(() => this.setupTableFilters(), 'table filters');
         this.refreshIcons();
@@ -215,13 +218,14 @@ const adminApp = {
             case 'overview': this.loadOverview(); break;
             case 'monitoring': this.loadMonitoring(); break;
             case 'alerts': this.loadAlertsWorkflow(); break;
+            case 'findings': this.loadFindingsBoard(); break;
             case 'sku': this.loadSku(); break;
             case 'staff': this.loadStaff(); break;
             case 'learning': this.loadLearning(); break;
             case 'google-sheets': this.loadGoogleSheetsExport(); break;
             case 'facility': this.loadFacilityManager(); break;
             case 'reports': this.loadOperationalReports(); break;
-            case 'daily-reports': this.loadBatchProduction(); break;
+            case 'daily-reports': this.loadProductionBoard(); break;
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
@@ -505,25 +509,27 @@ const adminApp = {
     },
 
     async loadOverview() {
-        const [res, trendEnvelope, statusEnvelope] = await Promise.all([
+        const [res, reportSummary, findingsEnvelope] = await Promise.all([
             this.fetchAdminData(`${this.apiBase}/analytics/overview`),
-            this.fetchAdminData('/dashboard/production-trend'),
-            this.fetchAdminData('/dashboard/qc-status'),
+            this.fetchAdminData(`${this.apiBase}/reports/summary`),
+            this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`),
         ]);
-        if (res) {
-            document.getElementById('metric-batches').innerText = res.total_batches_today || 0;
-            document.getElementById('metric-qc-done').innerText = res.total_qc_completed || 0;
-            document.getElementById('metric-qc-pending').innerText = res.total_qc_pending || 0;
-            document.getElementById('metric-alerts').innerText = res.total_open_alerts || 0;
-            document.getElementById('alert-badge').innerText = res.total_open_alerts || 0;
-            this.setText('alerts-open-count', res.total_open_alerts || 0);
-            this.setText('alerts-pending-count', res.total_qc_pending || 0);
-            this.updateQueueCounts(res);
-            this.renderOverviewActions(res);
-            this.renderAlertsWorkflow(res);
+        const overview = res || {};
+        const summary = reportSummary?.data || reportSummary || {};
+        const findings = this.findingRows(findingsEnvelope);
+        const openFindings = findings.filter(row => !['closed', 'resolved'].includes(String(row.status || row.approval_status || '').toLowerCase())).length;
+        const totalQc = Number(summary.total_qc_today || 0);
+        const pass = Number(summary.pass || 0);
+        const passRate = totalQc ? Math.round((pass / totalQc) * 100) : 0;
 
-            this.initCharts(res, trendEnvelope?.data || [], statusEnvelope?.data || {});
-        }
+        this.setText('metric-monitoring-today', summary.total_monitoring_today || 0);
+        this.setText('metric-batches', overview.total_batches_today || 0);
+        this.setText('metric-qc-pending', overview.total_qc_pending || summary.pending_approval || 0);
+        this.setText('metric-findings-open', openFindings);
+        this.setText('metric-pass-rate', `${passRate}%`);
+        this.setText('metric-alerts', overview.total_open_alerts || summary.temperature_alerts || 0);
+        this.updateQueueCounts({ ...overview, total_qc_pending: overview.total_qc_pending || summary.pending_approval || 0, total_open_alerts: overview.total_open_alerts || summary.temperature_alerts || 0, open_findings: openFindings });
+        this.renderAlertsWorkflow({ ...overview, total_qc_pending: overview.total_qc_pending || summary.pending_approval || 0, total_open_alerts: overview.total_open_alerts || summary.temperature_alerts || 0, open_findings: openFindings });
     },
 
     async loadAlertsWorkflow() {
@@ -533,9 +539,11 @@ const adminApp = {
     updateQueueCounts(data = {}) {
         const alerts = Number(data.total_open_alerts || 0);
         const approvals = Number(data.total_qc_pending || 0);
-        this.setText('nav-alert-count', alerts + approvals);
+        const findings = Number(data.open_findings || 0);
+        this.setText('nav-alert-count', alerts + approvals + findings);
         this.setText('nav-approval-count', approvals);
-        this.setText('alert-badge', alerts + approvals);
+        this.setText('nav-findings-count', findings);
+        this.setText('alert-badge', alerts + approvals + findings);
     },
 
     renderOverviewActions(data = {}) {
@@ -598,11 +606,7 @@ const adminApp = {
         if (!target) return;
         const alerts = Number(data.total_open_alerts || 0);
         const approvals = Number(data.total_qc_pending || 0);
-        if (!alerts && !approvals) {
-            target.innerHTML = this.emptyState('Queue bersih', 'Tidak ada alert suhu atau approval pending saat ini.');
-            this.refreshIcons();
-            return;
-        }
+        const findings = Number(data.open_findings || 0);
 
         const rows = [
             {
@@ -621,28 +625,29 @@ const adminApp = {
                 title: 'Review approval QC',
                 body: 'Validasi batch, inspector, dan foto evidence. Reject wajib punya alasan.',
                 action: 'Buka Approvals',
-                target: 'approval',
+                target: 'daily-reports',
             },
             {
-                count: alerts + approvals,
-                className: '',
-                icon: 'file-search',
-                title: 'Audit aktivitas terbaru',
-                body: 'Gunakan Audit Trail setelah tindakan untuk memastikan jejak keputusan terekam.',
-                action: 'Buka Audit',
-                target: 'audit',
+                count: findings,
+                className: 'is-warning',
+                icon: 'clipboard-list',
+                title: 'QC Temuan Baru',
+                body: 'Temuan lapangan yang masih open atau perlu tindak lanjut.',
+                action: 'Buka Temuan',
+                target: 'findings',
             },
         ];
 
         target.innerHTML = rows.map(row => `
-            <div class="queue-item ${row.className}">
+            <button class="metric-card metric-action-card ${row.className}" type="button" onclick="adminApp.navigateTo('${row.target}')">
                 <span class="queue-icon"><i data-lucide="${row.icon}"></i></span>
                 <div>
-                    <strong>${this.escapeHtml(row.title)} <span class="status-badge status-${row.className === 'is-danger' ? 'fail' : row.className === 'is-warning' ? 'warning' : 'pending'}">${row.count}</span></strong>
-                    <p class="admin-muted">${this.escapeHtml(row.body)}</p>
+                    <div class="metric-header"><span>${this.escapeHtml(row.title)}</span></div>
+                    <div class="metric-value">${row.count}</div>
+                    <p class="metric-action-copy">${this.escapeHtml(row.body)}</p>
+                    <span class="btn-secondary btn-sm" style="margin-top:10px;">Open</span>
                 </div>
-                <button class="btn-primary" type="button" onclick="adminApp.navigateTo('${row.target}')">${this.escapeHtml(row.action)}</button>
-            </div>
+            </button>
         `).join('');
         this.refreshIcons();
     },
@@ -699,8 +704,13 @@ const adminApp = {
         const grid = document.getElementById('monitoring-grid');
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
         
-        const res = await this.fetchAdminData(`${this.apiBase}/monitoring/realtime`);
+        const date = this.monitoringDateValue();
+        const [res, historyEnvelope] = await Promise.all([
+            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`),
+            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(date)}&limit=500`),
+        ]);
         if (!res) return;
+        this.monitoringHistoryRows = this.reportRows(historyEnvelope);
 
         grid.innerHTML = '';
         if (res.length === 0) {
@@ -723,7 +733,9 @@ const adminApp = {
             }
 
             const card = document.createElement('div');
-            card.className = 'metric-card';
+            card.className = 'metric-card metric-action-card';
+            card.tabIndex = 0;
+            card.role = 'button';
             const evidence = log?.photo_url || '';
             card.innerHTML = `
                 <div class="metric-header">
@@ -736,9 +748,84 @@ const adminApp = {
                 </div>
                 ${evidence ? `<div style="margin-top:10px;">${this.renderEvidenceCell({ photo_url: evidence, storage_path: log?.storage_path || '' })}</div>` : ''}
             `;
+            card.addEventListener('click', () => this.openMonitoringDevice(dev));
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') this.openMonitoringDevice(dev);
+            });
             grid.appendChild(card);
         });
         this.refreshIcons();
+    },
+
+    setupMonitoringDefaults() {
+        const input = document.getElementById('monitoring-date');
+        if (input && !input.value) input.value = this.jakartaDateString();
+    },
+
+    handleMonitoringDateMode() {
+        const mode = document.getElementById('monitoring-date-mode')?.value || 'today';
+        const input = document.getElementById('monitoring-date');
+        if (!input) return;
+        input.hidden = mode !== 'custom';
+        if (mode === 'today') input.value = this.jakartaDateString();
+        if (mode === 'yesterday') {
+            const date = new Date();
+            date.setDate(date.getDate() - 1);
+            input.value = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+        }
+        this.loadMonitoring();
+    },
+
+    monitoringDateValue() {
+        const mode = document.getElementById('monitoring-date-mode')?.value || 'today';
+        if (mode === 'custom') return document.getElementById('monitoring-date')?.value || this.jakartaDateString();
+        if (mode === 'yesterday') {
+            const date = new Date();
+            date.setDate(date.getDate() - 1);
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+        }
+        return this.jakartaDateString();
+    },
+
+    openMonitoringDevice(dev) {
+        const title = `${dev.facility_rooms?.name || 'Unassigned'} ${dev.name || ''}`.trim();
+        const rows = (this.monitoringHistoryRows || []).filter(row => {
+            const haystack = `${row.room || ''} ${row.device || ''} ${row.device_name || ''}`.toLowerCase();
+            return haystack.includes(String(dev.name || '').toLowerCase()) || haystack.includes(String(dev.facility_rooms?.name || '').toLowerCase());
+        });
+        const slots = ['07:00', '13:00', '16:00', '19:00'];
+        const slotHtml = slots.map(slot => {
+            const match = this.closestSlotRow(rows, slot);
+            return `
+                <div class="action-item">
+                    <span class="action-icon"><i data-lucide="clock-3"></i></span>
+                    <div>
+                        <strong>${slot}</strong>
+                        <p class="admin-muted">${match ? `${match.temperature ?? '-'} C / ${String(match.status || '-').toUpperCase()} / ${this.formatStaffDisplay(match).name}` : 'Belum ada input pada slot ini.'}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        this.openQcDetailModal(title, `Histori suhu ${this.monitoringDateValue()}`, `<div class="action-list">${slotHtml}</div>`);
+    },
+
+    closestSlotRow(rows, slot) {
+        const target = Number(slot.slice(0, 2)) * 60 + Number(slot.slice(3));
+        let best = null;
+        let bestDiff = 9999;
+        rows.forEach(row => {
+            const value = row.created_at || row.recorded_at || row.submitted_at;
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return;
+            const local = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            const minutes = local.getHours() * 60 + local.getMinutes();
+            const diff = Math.abs(minutes - target);
+            if (diff < bestDiff && diff <= 120) {
+                best = row;
+                bestDiff = diff;
+            }
+        });
+        return best;
     },
 
     emptyState(title = 'No data available yet', message = 'Data will appear after staff submit QC activity.') {
@@ -868,6 +955,7 @@ const adminApp = {
             if (document.getElementById('crud-modal')?.classList.contains('active')) this.closeCrudModal();
             if (document.getElementById('image-modal')?.classList.contains('active')) this.closeImageModal();
             if (document.getElementById('approval-review-modal')?.classList.contains('active')) this.closeApprovalReview();
+            if (document.getElementById('qc-detail-modal')?.classList.contains('active')) this.closeQcDetailModal();
         });
         document.querySelectorAll('.enterprise-modal').forEach(modal => {
             modal.addEventListener('click', event => {
@@ -875,6 +963,7 @@ const adminApp = {
                 if (modal.id === 'crud-modal') this.closeCrudModal();
                 if (modal.id === 'image-modal') this.closeImageModal();
                 if (modal.id === 'approval-review-modal') this.closeApprovalReview();
+                if (modal.id === 'qc-detail-modal') this.closeQcDetailModal();
             });
         });
     },
@@ -1524,6 +1613,257 @@ const adminApp = {
         return `${this.escapeHtml(cooking)}<br>${this.escapeHtml(final)}`;
     },
 
+    async loadProductionBoard() {
+        const board = document.getElementById('production-qc-board');
+        if (!board) return this.loadBatchProduction();
+        board.innerHTML = '<div class="empty-admin-state">Loading Production QC Board...</div>';
+        const params = this.batchProductionQuery();
+        const [batchEnvelope, productsEnvelope] = await Promise.all([
+            this.fetchAdminData(`${this.apiBase}/batches?${params.toString()}`),
+            this.fetchAdminData(`${this.apiBase}/products`),
+        ]);
+        const batches = Array.isArray(batchEnvelope?.data?.rows) ? batchEnvelope.data.rows : (Array.isArray(batchEnvelope?.rows) ? batchEnvelope.rows : []);
+        const products = Array.isArray(productsEnvelope) ? productsEnvelope : (productsEnvelope?.data || []);
+        this.productionBoardRows = batches;
+        this.renderProductionBoard(this.groupProductionBySku(batches, products));
+    },
+
+    groupProductionBySku(batches = [], products = []) {
+        const groups = new Map();
+        const ensure = (key, product = {}) => {
+            const groupKey = key || product.product_code || product.sku_code || product.product_name || 'GENERAL-QC';
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    sku_code: product.product_code || product.sku_code || groupKey,
+                    product_name: product.product_name || product.name || groupKey,
+                    batches: [],
+                    pass: 0,
+                    hold: 0,
+                    fail: 0,
+                    pending: 0,
+                });
+            }
+            return groups.get(groupKey);
+        };
+        products.forEach(product => ensure(product.product_code || product.sku_code, product));
+        batches.forEach(batch => {
+            const key = batch.sku_code || batch.product_code || batch.product_name || 'GENERAL-QC';
+            const group = ensure(key, { product_code: batch.sku_code || batch.product_code, product_name: batch.product_name });
+            group.batches.push(batch);
+            const qc = String(batch.qc_status || '').toLowerCase();
+            const approval = String(batch.approval_status || '').toLowerCase();
+            if (qc.includes('pass')) group.pass += 1;
+            else if (qc.includes('fail')) group.fail += 1;
+            else if (qc.includes('hold') || qc.includes('warning')) group.hold += 1;
+            if (approval.includes('pending')) group.pending += 1;
+        });
+        return Array.from(groups.values()).filter(group => group.batches.length || products.length <= 60);
+    },
+
+    renderProductionBoard(groups = []) {
+        const board = document.getElementById('production-qc-board');
+        if (!board) return;
+        if (!groups.length) {
+            board.innerHTML = this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.');
+            this.refreshIcons();
+            return;
+        }
+        board.innerHTML = groups.map(group => `
+            <button class="metric-card metric-action-card sku-qc-card" type="button" onclick='adminApp.openSkuBoard(${this.safeJson(group)})'>
+                <div class="metric-header"><span>${this.escapeHtml(group.sku_code || '-')}</span><i data-lucide="package-check" class="metric-icon" style="color: var(--primary-color)"></i></div>
+                <h3>${this.escapeHtml(group.product_name || '-')}</h3>
+                <p class="admin-muted">Batch Hari Ini: <strong>${group.batches.length}</strong></p>
+                <div class="sku-status-grid">
+                    <span>PASS <strong>${group.pass}</strong></span>
+                    <span>HOLD <strong>${group.hold}</strong></span>
+                    <span>FAIL <strong>${group.fail}</strong></span>
+                </div>
+                <p class="metric-action-copy">Pending Approval: ${group.pending}</p>
+                <span class="btn-secondary btn-sm">Lihat Detail</span>
+            </button>
+        `).join('');
+        this.refreshIcons();
+    },
+
+    openSkuBoard(group) {
+        const batches = group.batches || [];
+        const html = batches.length ? `
+            <div class="action-list">
+                ${batches.map((batch, index) => `
+                    <button class="action-item batch-list-button" type="button" onclick='adminApp.openBatchBoardDetail(${this.safeJson(batch)})'>
+                        <span class="action-icon"><i data-lucide="package"></i></span>
+                        <div>
+                            <strong>Batch #${this.escapeHtml(batch.batch_sequence || index + 1)} - ${this.escapeHtml(batch.batch_code || '-')}</strong>
+                            <p class="admin-muted">${this.escapeHtml(batch.qc_status || 'Belum QC')} / ${this.escapeHtml(batch.approval_status || 'Pending Approval')}</p>
+                        </div>
+                        <span class="btn-secondary btn-sm">Detail</span>
+                    </button>
+                `).join('')}
+            </div>
+        ` : this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch untuk SKU ini belum tersedia pada tanggal terpilih.');
+        this.openQcDetailModal(group.sku_code || 'SKU', group.product_name || '', html);
+    },
+
+    async openBatchBoardDetail(batch) {
+        let detail = batch || {};
+        if (batch.approval_id) {
+            const approvalDetail = await this.fetchAdminData(`${this.apiBase}/approvals/${encodeURIComponent(batch.approval_id)}`);
+            if (approvalDetail) detail = { ...batch, ...approvalDetail };
+        }
+        const evidence = detail.evidence_url || detail.photo_url || '';
+        const history = Array.isArray(detail.history) ? detail.history : [];
+        const approvalActions = detail.approval_id ? `
+            <div class="review-section">
+                <h4>Approval</h4>
+                <label class="reject-reason-field">Reject Reason<textarea id="board-reject-reason" placeholder="Wajib diisi jika reject"></textarea></label>
+                <div class="approval-decision-actions" style="margin-top:10px;">
+                    <button class="btn-danger" onclick="adminApp.rejectBoardApproval('${this.escapeAttr(detail.approval_id)}')"><i data-lucide="x"></i> Reject</button>
+                    <button class="btn-primary" onclick="adminApp.approveBoardApproval('${this.escapeAttr(detail.approval_id)}')"><i data-lucide="check"></i> Approve</button>
+                </div>
+            </div>
+        ` : '';
+        const html = `
+            <section class="review-section"><h4>Batch Info</h4><div class="review-grid">
+                ${this.reviewField('Batch Code', detail.batch_code)}
+                ${this.reviewField('Product', detail.product_name)}
+                ${this.reviewField('Cook', detail.cook_name)}
+                ${this.reviewField('Quantity', detail.quantity)}
+                ${this.reviewField('Pemasakan Ke', detail.batch_sequence)}
+                ${this.reviewField('Jam Produksi', this.dateTime(detail.production_time))}
+            </div></section>
+            <section class="review-section"><h4>QC Result</h4><div class="review-grid">
+                ${this.reviewField('Temperature', detail.temperature)}
+                ${this.reviewField('pH', detail.ph)}
+                ${this.reviewField('Brix', detail.brix)}
+                ${this.reviewField('TDS', detail.tds)}
+                <div class="review-field"><span>Status</span>${this.statusBadge(detail.qc_status || 'Belum QC')}</div>
+                ${this.reviewField('Inspector', detail.inspector_display_name || detail.last_inspector)}
+            </div><div class="review-field" style="margin-top:10px;"><span>Notes</span><p>${this.escapeHtml(detail.notes || '-')}</p></div></section>
+            <section class="review-section"><h4>Evidence Photo</h4><div class="review-evidence">
+                ${evidence ? `<img src="${this.escapeAttr(String(evidence).split(';')[0])}" alt="QC evidence"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada evidence.</p>'}
+            </div></section>
+            <section class="review-section"><h4>Re-check History</h4>${history.length ? history.map(row => `<p class="admin-muted">${this.dateTime(row.submitted_at)} - ${this.escapeHtml(row.status || '-')} - ${this.escapeHtml(row.notes || '-')}</p>`).join('') : '<p class="admin-muted">Belum ada re-check history.</p>'}</section>
+            <section class="review-section"><h4>Traceability</h4><button class="btn-secondary" onclick="adminApp.openBatchTraceabilityDetail('${this.escapeAttr(detail.batch_code || '')}')"><i data-lucide="qr-code"></i> Traceability</button><div id="batch-traceability-inline"></div></section>
+            ${approvalActions}
+        `;
+        this.openQcDetailModal(detail.batch_code || 'Batch Detail', detail.product_name || '', html);
+    },
+
+    reviewField(label, value) {
+        return `<div class="review-field"><span>${this.escapeHtml(label)}</span><strong>${this.escapeHtml(value ?? '-')}</strong></div>`;
+    },
+
+    async approveBoardApproval(id) {
+        await this.resolveApproval(id, true, 'Approved from Production QC Board');
+        this.closeQcDetailModal();
+    },
+
+    async rejectBoardApproval(id) {
+        const reason = document.getElementById('board-reject-reason')?.value?.trim();
+        if (!reason) {
+            this.notify('Reject reason wajib diisi.');
+            document.getElementById('board-reject-reason')?.focus();
+            return;
+        }
+        await this.resolveApproval(id, false, reason);
+        this.closeQcDetailModal();
+    },
+
+    async openBatchTraceabilityDetail(batchCode) {
+        const target = document.getElementById('batch-traceability-inline');
+        if (!target) return;
+        target.innerHTML = '<p class="admin-muted">Loading traceability...</p>';
+        const res = await this.fetchAdminData(`${this.apiBase}/traceability?limit=50&barcode=${encodeURIComponent(batchCode || '')}`);
+        const rows = Array.isArray(res) ? res : [];
+        target.innerHTML = rows.length ? rows.map(row => `
+            <div class="action-item">
+                <span class="action-icon"><i data-lucide="qr-code"></i></span>
+                <div><strong>${this.escapeHtml(row.batch_code || row.batch_id || batchCode || '-')}</strong><p class="admin-muted">${this.escapeHtml(row.product_name || row.product_id || '-')} / ${this.dateTime(row.created_at)}</p></div>
+            </div>
+        `).join('') : '<p class="admin-muted">Traceability belum tersedia untuk batch ini.</p>';
+        this.refreshIcons();
+    },
+
+    async loadFindingsBoard() {
+        const board = document.getElementById('findings-board');
+        if (!board) return;
+        board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
+        const res = await this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`);
+        const rows = this.findingRows(res);
+        const openRows = rows.filter(row => !['closed', 'resolved'].includes(String(row.status || row.approval_status || '').toLowerCase()));
+        this.setText('nav-findings-count', openRows.length);
+        this.setText('metric-findings-open', openRows.length);
+        this.renderFindingsBoard(openRows);
+    },
+
+    renderFindingsBoard(rows = []) {
+        const board = document.getElementById('findings-board');
+        if (!board) return;
+        if (!rows.length) {
+            board.innerHTML = this.emptyState('Tidak ada QC temuan open.', 'Temuan baru akan muncul setelah staff mengirim finding.');
+            this.refreshIcons();
+            return;
+        }
+        board.innerHTML = rows.map(row => {
+            const title = row.title || row.finding_type || row.reason || row.description || 'QC Temuan';
+            const hasPhoto = Boolean(row.photo_url || row.evidence_url || row.public_url || row.storage_path);
+            return `
+                <button class="metric-card metric-action-card finding-card" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>
+                    <div class="metric-header"><span>${this.escapeHtml(String(row.status || row.severity || 'WARNING').toUpperCase())}</span><i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i></div>
+                    <h3>${this.escapeHtml(title)}</h3>
+                    <p class="admin-muted">Staff: <strong>${this.escapeHtml(row.staff_display_name || row.inspector_name || row.staff_name || '-')}</strong></p>
+                    <p class="admin-muted">Jam: <strong>${this.escapeHtml(this.timeOnly(row.created_at || row.submitted_at))}</strong></p>
+                    <p class="metric-action-copy">Foto: ${hasPhoto ? 'Ada' : 'Tidak ada'}</p>
+                    <span class="btn-secondary btn-sm">Detail</span>
+                </button>
+            `;
+        }).join('');
+        this.refreshIcons();
+    },
+
+    openFindingDetail(row) {
+        const photo = row.photo_url || row.evidence_url || row.public_url || '';
+        const title = row.title || row.finding_type || row.reason || 'QC Temuan';
+        const html = `
+            <section class="review-section">
+                <h4>Foto</h4>
+                <div class="review-evidence">
+                    ${photo ? `<img src="${this.escapeAttr(String(photo).split(';')[0])}" alt="Foto temuan"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(photo)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada foto.</p>'}
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>Detail Temuan</h4>
+                <div class="review-grid">
+                    ${this.reviewField('Deskripsi', row.description || row.reason || row.notes || title)}
+                    ${this.reviewField('Staff', row.staff_display_name || row.inspector_name || row.staff_name)}
+                    ${this.reviewField('Tanggal', this.dateOnly(row.created_at || row.submitted_at))}
+                    ${this.reviewField('Jam', this.timeOnly(row.created_at || row.submitted_at))}
+                    <div class="review-field"><span>Status</span>${this.statusBadge(row.status || row.approval_status || 'open')}</div>
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>Action</h4>
+                <div class="row-actions">
+                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Open')">Open</button>
+                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'In Progress')">In Progress</button>
+                    <button class="btn-primary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Closed')">Closed</button>
+                </div>
+                <p class="admin-muted" id="finding-local-status"></p>
+            </section>
+        `;
+        this.openQcDetailModal(title, row.location || row.area || '', html);
+    },
+
+    setFindingLocalStatus(id, status) {
+        this.setText('finding-local-status', `Status temuan ${id || ''} diset ke ${status} pada tampilan admin.`);
+    },
+
+    timeOnly(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '-' : date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    },
+
     setupBatchProductionDefaults() {
         const input = document.getElementById('batch-production-date');
         if (input && !input.value) input.value = this.jakartaDateString();
@@ -1975,6 +2315,33 @@ const adminApp = {
         return [];
     },
 
+    reportRows(response) {
+        const data = response?.data ?? response;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.rows)) return data.rows;
+        if (Array.isArray(data?.data)) return data.data;
+        return [];
+    },
+
+    findingRows(response) {
+        return this.reportRows(response);
+    },
+
+    openQcDetailModal(title, subtitle, html) {
+        this.setText('qc-detail-title', title || 'Detail');
+        this.setText('qc-detail-subtitle', subtitle || '');
+        const body = document.getElementById('qc-detail-body');
+        if (body) body.innerHTML = html || '';
+        document.getElementById('qc-detail-modal')?.classList.add('active');
+        this.setModalOpen(true);
+        this.refreshIcons();
+    },
+
+    closeQcDetailModal() {
+        document.getElementById('qc-detail-modal')?.classList.remove('active');
+        this.setModalOpen(this.anyModalOpen());
+    },
+
     renderApprovals(rows = []) {
         const tbody = this.approvalsTableBody();
         if (!tbody) return;
@@ -2112,8 +2479,8 @@ const adminApp = {
         try {
             await API.post(`${this.apiBase}/approvals/${id}/${approved ? 'approve' : 'reject'}`, { comment: finalComment });
             await this.loadApprovals();
-            if (document.getElementById('table-batch-production')) {
-                await this.loadBatchProduction().catch(error => console.warn('[Admin] batch refresh skipped:', error));
+            if (document.getElementById('production-qc-board')) {
+                await this.loadProductionBoard().catch(error => console.warn('[Admin] production board refresh skipped:', error));
             }
             if (document.getElementById('table-reports')) {
                 await this.loadQCReports().catch(error => console.warn('[Admin] QC reports refresh skipped:', error));

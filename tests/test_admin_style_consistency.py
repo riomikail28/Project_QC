@@ -19,16 +19,19 @@ def test_admin_navigation_is_internal_sections():
     html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
     for label in (
         "Dashboard",
-        "Monitoring",
-        "Batch Production",
-        "QC Inspection",
-        "Alerts",
-        "Reports",
+        "Action Queue",
+        "Monitoring Suhu",
+        "Production QC Board",
+        "QC Temuan",
         "Staff",
+        "Products",
+        "Google Sheets",
         "Learning ITDV",
-        "Settings",
     ):
         assert label in html
+    sidebar = html.split('<ul class="sidebar-menu"', 1)[1].split("</ul>", 1)[0]
+    for removed in ("Batch Production", "Approvals", "Traceability", "Reports", "Audit Trail"):
+        assert removed not in sidebar
     assert "dashboard.html#admin" not in html
 
 
