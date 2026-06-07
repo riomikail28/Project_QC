@@ -95,6 +95,7 @@ def add_device(
     min_temperature: float = None,
     max_temperature: float = None,
     is_active: bool = True,
+    description: str = "",
 ):
     """Add a new device (chiller/freezer/etc) to a room."""
     sb = get_client()
@@ -117,6 +118,8 @@ def add_device(
             "is_default": False,
             "is_active": bool(is_active),
         }
+        if description:
+            payload["description"] = description
         if not sb:
             rows = direct_db_query("facility_devices", "POST", payload)
             return rows[0] if rows else None
@@ -415,6 +418,8 @@ def update_room(room_id: str, data: dict):
 def update_device(device_id: str, data: dict):
     """Update a facility device."""
     payload = {}
+    if data.get("room_id"):
+        payload["room_id"] = data["room_id"]
     if data.get("name"):
         payload["name"] = data["name"]
         payload["slug"] = _slug(data["name"])
@@ -435,6 +440,8 @@ def update_device(device_id: str, data: dict):
         payload["max_temperature"] = _coerce_float(data.get("max_temperature"), None)
     if "is_active" in data:
         payload["is_active"] = bool(data.get("is_active"))
+    if "description" in data or "notes" in data:
+        payload["description"] = data.get("description", data.get("notes")) or ""
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not payload:
         return None

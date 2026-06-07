@@ -172,6 +172,7 @@ def facility_devices():
             data.get("min_temperature"),
             data.get("max_temperature"),
             data.get("is_active", True),
+            data.get("description") or data.get("notes") or "",
         )
         if not device:
             return jsonify({"success": False, "message": "Gagal menambah unit. Database belum terhubung atau data tidak valid."}), 503

@@ -48,17 +48,6 @@
                     <h2 id="page-title" style="margin:0; font-size: 1.2rem;">Overview</h2>
                 </div>
                 <div class="topbar-right">
-                    <label class="admin-search">
-                        <i data-lucide="search"></i>
-                        <input type="search" placeholder="Search report, batch, staff...">
-                    </label>
-                    <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
-                        <i data-lucide="moon"></i>
-                    </button>
-                    <button class="icon-btn" title="Notifications">
-                        <i data-lucide="bell"></i>
-                        <span class="badge" id="alert-badge">0</span>
-                    </button>
                     <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
                         <div class="user-avatar" style="width:32px; height:32px;">A</div>
                         <span style="font-size:0.9rem; font-weight:500;">Admin</span>
@@ -71,57 +60,112 @@
                 
                 <!-- SECTION: Overview -->
                 <section id="section-overview" class="dashboard-section active">
-                    <div class="admin-section-toolbar">
+                    <div class="admin-hero-strip command-center-hero">
                         <div>
-                            <h3 class="card-title" style="margin:0;">Dashboard</h3>
+                            <h1>QC Enterprise Command Center</h1>
                             <p class="admin-muted">Ringkasan operasional QC Central Kitchen hari ini.</p>
                         </div>
-                        <button class="btn-secondary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        <div class="admin-hero-actions">
+                            <button class="btn-secondary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
                     </div>
-                    <div class="metric-grid command-kpi-grid">
-                        <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('monitoring')">
-                            <div class="metric-header">
-                                <span>Total Monitoring Hari Ini</span>
-                                <i data-lucide="thermometer" class="metric-icon" style="color: var(--primary-color)"></i>
+
+                    <section class="dashboard-command-section" aria-labelledby="need-attention-title">
+                        <div class="command-section-head">
+                            <h3 id="need-attention-title">Need Attention</h3>
+                            <p>Prioritas operasional yang perlu keputusan admin hari ini.</p>
+                        </div>
+                        <div class="attention-grid" id="overview-need-attention"></div>
+                    </section>
+
+                    <section class="dashboard-command-section" aria-labelledby="active-staff-title">
+                        <div class="command-section-head">
+                            <h3 id="active-staff-title">Staff Aktif Hari Ini</h3>
+                            <p>Aktivitas staff dari monitoring, QC check, dan QC temuan.</p>
+                        </div>
+                        <div class="active-staff-grid" id="overview-active-staff"></div>
+                    </section>
+
+                    <section class="dashboard-command-section" aria-labelledby="kpi-summary-title">
+                        <div class="command-section-head">
+                            <h3 id="kpi-summary-title">KPI Ringkasan</h3>
+                            <p>Angka operasional utama QC Central Kitchen.</p>
+                        </div>
+                        <div class="metric-grid command-kpi-grid">
+                            <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('monitoring')">
+                                <div class="metric-header">
+                                    <span>Total Monitoring Hari Ini</span>
+                                    <i data-lucide="thermometer" class="metric-icon" style="color: var(--primary-color)"></i>
+                                </div>
+                                <div class="metric-value" id="metric-monitoring-today">0</div>
+                            </button>
+                            <button class="metric-card metric-action-card" type="button" onclick="adminApp.openProductionBoardFiltered('')">
+                                <div class="metric-header">
+                                    <span>Total Batch Hari Ini</span>
+                                    <i data-lucide="package" class="metric-icon" style="color: var(--primary-color)"></i>
+                                </div>
+                                <div class="metric-value" id="metric-batches">0</div>
+                            </button>
+                            <button class="metric-card metric-action-card" type="button" onclick="adminApp.openProductionBoardFiltered('pass')">
+                                <div class="metric-header">
+                                    <span>PASS Rate Hari Ini</span>
+                                    <i data-lucide="circle-check" class="metric-icon" style="color: var(--success-color)"></i>
+                                </div>
+                                <div class="metric-value" id="metric-pass-rate">0%</div>
+                            </button>
+                            <button class="metric-card metric-action-card is-warning" type="button" onclick="adminApp.navigateTo('findings')">
+                                <div class="metric-header">
+                                    <span>Total QC Temuan</span>
+                                    <i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i>
+                                </div>
+                                <div class="metric-value" id="metric-findings-open">0</div>
+                            </button>
+                            <button class="metric-card metric-action-card is-danger" type="button" onclick="adminApp.navigateTo('monitoring')">
+                                <div class="metric-header">
+                                    <span>Device Alert</span>
+                                    <i data-lucide="flame" class="metric-icon" style="color: var(--danger-color)"></i>
+                                </div>
+                                <div class="metric-value" id="metric-alerts">0</div>
+                            </button>
+                        </div>
+                    </section>
+
+                    <div class="overview-insight-grid">
+                        <section class="card command-panel" aria-labelledby="today-qc-summary-title">
+                            <div class="command-section-head compact">
+                                <h3 id="today-qc-summary-title">Today QC Summary</h3>
+                                <p>Distribusi status QC hari ini.</p>
                             </div>
-                            <div class="metric-value" id="metric-monitoring-today">0</div>
-                        </button>
-                        <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('daily-reports')">
-                            <div class="metric-header">
-                                <span>Total Batch Hari Ini</span>
-                                <i data-lucide="package" class="metric-icon" style="color: var(--primary-color)"></i>
+                            <div id="overview-qc-summary" class="summary-bars"></div>
+                        </section>
+
+                        <section class="card command-panel" aria-labelledby="monitoring-slot-title">
+                            <div class="command-section-head compact">
+                                <h3 id="monitoring-slot-title">Monitoring Slot Completion</h3>
+                                <p>Completion per slot monitoring suhu.</p>
                             </div>
-                            <div class="metric-value" id="metric-batches">0</div>
-                        </button>
-                        <button class="metric-card metric-action-card is-warning" type="button" onclick="adminApp.navigateTo('daily-reports')">
-                            <div class="metric-header">
-                                <span>Pending Approval</span>
-                                <i data-lucide="triangle-alert" class="metric-icon" style="color: var(--warning-color)"></i>
-                            </div>
-                            <div class="metric-value" id="metric-qc-pending">0</div>
-                        </button>
-                        <button class="metric-card metric-action-card is-warning" type="button" onclick="adminApp.navigateTo('findings')">
-                            <div class="metric-header">
-                                <span>QC Temuan Open</span>
-                                <i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i>
-                            </div>
-                            <div class="metric-value" id="metric-findings-open">0</div>
-                        </button>
-                        <button class="metric-card metric-action-card" type="button" onclick="adminApp.navigateTo('daily-reports')">
-                            <div class="metric-header">
-                                <span>PASS Rate Hari Ini</span>
-                                <i data-lucide="circle-check" class="metric-icon" style="color: var(--success-color)"></i>
-                            </div>
-                            <div class="metric-value" id="metric-pass-rate">0%</div>
-                        </button>
-                        <button class="metric-card metric-action-card is-danger" type="button" onclick="adminApp.navigateTo('monitoring')">
-                            <div class="metric-header">
-                                <span>Device Alert</span>
-                                <i data-lucide="flame" class="metric-icon" style="color: var(--danger-color)"></i>
-                            </div>
-                            <div class="metric-value" id="metric-alerts">0</div>
-                        </button>
+                            <div id="overview-slot-completion" class="slot-completion-list"></div>
+                        </section>
                     </div>
+
+                    <section class="card command-panel" aria-labelledby="production-snapshot-title">
+                        <div class="command-section-head compact with-action">
+                            <div>
+                                <h3 id="production-snapshot-title">Production QC Snapshot</h3>
+                                <p>Maksimal 5 produk dari Production QC Board.</p>
+                            </div>
+                            <button class="btn-secondary btn-sm" onclick="adminApp.openProductionBoardFiltered('')">Lihat semua di Production QC Board</button>
+                        </div>
+                        <div id="overview-production-snapshot" class="production-snapshot-list"></div>
+                    </section>
+
+                    <section class="card command-panel" aria-labelledby="recent-activity-title">
+                        <div class="command-section-head compact">
+                            <h3 id="recent-activity-title">Recent Activity</h3>
+                            <p>Aktivitas terbaru dari staff dan admin.</p>
+                        </div>
+                        <div id="overview-recent-activity" class="recent-activity-list"></div>
+                    </section>
                 </section>
 
                 <!-- SECTION: Live Monitoring -->
@@ -139,6 +183,7 @@
                             </select>
                             <input id="monitoring-date" type="date" hidden>
                             <button class="btn-primary" onclick="adminApp.loadMonitoring()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-secondary" onclick="adminApp.openMonitoringManagement()"><i data-lucide="settings-2"></i> Kelola Unit</button>
                         </div>
                     </div>
                     <div class="metric-grid" id="monitoring-grid">
@@ -393,6 +438,13 @@
                         <div class="monitoring-date-controls">
                             <input id="batch-production-date" type="date">
                             <input id="batch-production-search" type="search" placeholder="Search SKU, batch, cook">
+                            <select id="batch-production-status" hidden>
+                                <option value=""></option>
+                                <option value="pending approval">Pending Approval</option>
+                                <option value="hold">HOLD</option>
+                                <option value="pass">PASS</option>
+                                <option value="fail">FAIL</option>
+                            </select>
                             <button class="btn-primary" onclick="adminApp.loadProductionBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                     </div>
@@ -509,8 +561,8 @@
     </div>
 
     <!-- Image Preview Modal -->
-    <div class="enterprise-modal" id="image-modal" role="dialog" aria-modal="true" aria-labelledby="image-modal-title">
-        <div class="modal-content">
+    <div class="enterprise-modal admin-photo-preview-overlay" id="image-modal" role="dialog" aria-modal="true" aria-labelledby="image-modal-title">
+        <div class="modal-content admin-photo-preview-modal">
             <div class="modal-header">
                 <h3 id="image-modal-title" style="margin:0;">Evidence Preview</h3>
                 <button class="icon-btn modal-close-btn" type="button" onclick="adminApp.closeImageModal()" aria-label="Close modal"><i data-lucide="x"></i></button>
@@ -539,6 +591,28 @@
                     <button type="submit" class="btn-primary"><i data-lucide="save"></i> Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="enterprise-modal" id="monitoring-management-modal" role="dialog" aria-modal="true" aria-labelledby="monitoring-management-title">
+        <div class="modal-content monitoring-management-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="monitoring-management-title" style="margin:0;">Kelola Unit Monitoring</h3>
+                    <p class="admin-muted">Room, device, threshold, dan status unit monitoring suhu.</p>
+                </div>
+                <button type="button" class="icon-btn modal-close-btn" onclick="adminApp.closeMonitoringManagement()" aria-label="Close modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="monitoring-management-actions">
+                    <button type="button" class="btn-primary" onclick="adminApp.openMonitoringUnitModal()"><i data-lucide="plus"></i> Tambah Unit Monitoring</button>
+                    <button type="button" class="btn-secondary" onclick="adminApp.loadMonitoringManagementList()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                </div>
+                <div id="monitoring-management-list" class="monitoring-management-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="adminApp.closeMonitoringManagement()">Close</button>
+            </div>
         </div>
     </div>
 
