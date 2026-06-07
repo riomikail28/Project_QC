@@ -1289,7 +1289,7 @@ const adminApp = {
             return;
         }
         list.innerHTML = `
-            <div class="monitoring-room-card-grid">
+            <div class="monitoring-room-group-list">
                 ${(rooms || []).map(room => this.renderMonitoringRoomCard(room)).join('')}
             </div>
         `;
@@ -1303,18 +1303,42 @@ const adminApp = {
             room_name: room.name,
         }));
         return `
-            <article class="monitoring-room-card" data-room-name="${this.escapeAttr(room.name || '')}">
-                <div class="monitoring-room-card-header">
+            <article class="monitoring-room-group" data-room-name="${this.escapeAttr(room.name || '')}">
+                <div class="monitoring-room-group-header">
                     <div>
                         <h4><i data-lucide="folder"></i>${this.escapeHtml(room.name || 'Unassigned')}</h4>
                         <p>${devices.length} Unit Monitoring</p>
                     </div>
-                    <button type="button" class="btn-primary btn-sm" onclick='adminApp.openMonitoringUnitModal(null, ${this.safeJson(room)})'><i data-lucide="plus"></i> Tambah Device ke Room Ini</button>
+                    <button type="button" class="btn-primary btn-sm" onclick='adminApp.openMonitoringUnitModal(null, ${this.safeJson(room)})'><i data-lucide="plus"></i> Tambah Device</button>
                 </div>
-                <div class="monitoring-device-tree">
-                    ${devices.length ? devices.map((device, index) => this.renderMonitoringDeviceChild(device, index, devices.length)).join('') : '<div class="monitoring-device-empty">Belum ada device di room ini.</div>'}
+                <div class="monitoring-device-list">
+                    ${devices.length ? `
+                        <div class="monitoring-device-list-head">
+                            <span>Device</span>
+                            <span>Type</span>
+                            <span>Threshold</span>
+                            <span>Status</span>
+                            <span>Action</span>
+                        </div>
+                        ${devices.map(device => this.renderMonitoringDeviceRow(device)).join('')}
+                    ` : '<div class="monitoring-device-empty">Belum ada device di room ini.</div>'}
                 </div>
             </article>
+        `;
+    },
+
+    renderMonitoringDeviceRow(device = {}) {
+        return `
+            <div class="monitoring-device-row">
+                <span class="monitoring-device-name" data-label="Device"><strong>${this.escapeHtml(device.name || '-')}</strong></span>
+                <span class="monitoring-device-type" data-label="Type">${this.escapeHtml(this.deviceTypeLabel(device.device_type || device.type))}</span>
+                <span class="monitoring-device-threshold" data-label="Threshold">${this.escapeHtml(this.formatRange(device.min_temperature, device.max_temperature, 'C'))}</span>
+                <span class="monitoring-device-status" data-label="Status"><span class="status-badge ${device.is_active === false ? 'status-pending' : 'status-pass'}">${device.is_active === false ? 'Inactive' : 'Active'}</span></span>
+                <span class="row-actions monitoring-device-actions" data-label="Action">
+                    <button type="button" class="btn-secondary btn-sm" onclick='adminApp.openMonitoringUnitModal(${this.safeJson(device)})'><i data-lucide="pencil"></i> Edit</button>
+                    <button type="button" class="btn-danger btn-sm" onclick="adminApp.deactivateMonitoringDevice('${device.id}')"><i data-lucide="archive"></i> Nonaktifkan</button>
+                </span>
+            </div>
         `;
     },
 

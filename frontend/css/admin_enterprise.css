@@ -1391,6 +1391,122 @@ select {
   background: rgba(248, 250, 252, .72);
 }
 
+.monitoring-room-group-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.monitoring-room-group {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: var(--shadow-sm);
+}
+
+.monitoring-room-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monitoring-room-group-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.monitoring-room-group-header h4 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary-color);
+}
+
+.monitoring-room-group-header p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: .84rem;
+  font-weight: 800;
+}
+
+.monitoring-room-group-header .btn-sm {
+  white-space: nowrap;
+}
+
+.monitoring-device-list {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.monitoring-device-list-head,
+.monitoring-device-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) minmax(110px, 1fr) minmax(150px, 1.5fr) minmax(92px, auto) minmax(180px, auto);
+  gap: 14px;
+  align-items: center;
+  min-width: 760px;
+}
+
+.monitoring-device-list-head {
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.monitoring-device-row {
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background: rgba(248, 250, 252, .56);
+}
+
+.monitoring-device-row:first-of-type {
+  border-top-color: transparent;
+}
+
+.monitoring-device-name,
+.monitoring-device-type,
+.monitoring-device-threshold,
+.monitoring-device-status {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.monitoring-device-name strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monitoring-device-threshold {
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.monitoring-device-status {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.monitoring-device-actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .monitoring-unit-form-panel {
   position: sticky;
   top: 0;
@@ -1939,11 +2055,54 @@ textarea {
 
   .monitoring-management-shell,
   .monitoring-room-card-grid,
-  .monitoring-device-item {
+  .monitoring-device-item,
+  .monitoring-device-list-head,
+  .monitoring-device-row {
     grid-template-columns: 1fr;
   }
 
+  .monitoring-device-list-head {
+    display: none;
+  }
+
+  .monitoring-device-list {
+    overflow-x: visible;
+  }
+
+  .monitoring-device-row {
+    min-width: 0;
+    gap: 8px;
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+  }
+
+  .monitoring-device-row > span[data-label] {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 8px;
+    white-space: normal;
+  }
+
+  .monitoring-device-row > span[data-label]::before {
+    content: attr(data-label);
+    color: var(--text-secondary);
+    font-size: .72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .monitoring-device-actions {
+    justify-content: stretch;
+  }
+
+  .monitoring-device-actions > * {
+    flex: 1;
+  }
+
   .monitoring-room-card-header,
+  .monitoring-room-group-header,
   .monitoring-unit-form-footer {
     align-items: stretch;
     flex-direction: column;
