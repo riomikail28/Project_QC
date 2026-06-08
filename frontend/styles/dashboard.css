@@ -546,4 +546,46 @@
     justify-content: flex-start;
     white-space: normal;
   }
+
+  .staff-analytics-secondary {
+    display: none;
+  }
+
+  .task-board-head h1 {
+    font-size: 24px;
+  }
+
+  .task-board-head p {
+    display: none;
+  }
+
+  .staff-task-board,
+  .staff-quick-panel,
+  .today-compact-summary {
+    gap: 10px;
+  }
+
+  .task-now-card {
+    min-height: 118px;
+    gap: 7px;
+  }
+
+  .task-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .task-cta {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .today-kpi {
+    padding: 10px;
+  }
+
+  .today-kpi strong {
+    font-size: 19px;
+  }
 }

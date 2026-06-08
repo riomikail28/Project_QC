@@ -33,12 +33,6 @@
     </header>
 
     <main class="app-shell page-grid">
-        <section class="glass-card monitor-hero animate-in">
-            <span class="eyebrow">Kendali Fasilitas Langsung</span>
-            <h1>Pantau suhu chiller, freezer, dan ruangan.</h1>
-            <p>Cek suhu harian dengan cepat dan mudah.</p>
-        </section>
-
         <section class="daily-schedule-card" aria-labelledby="dailyScheduleTitle">
             <div class="schedule-head">
                 <div>
@@ -71,15 +65,7 @@
             </button>
         </section>
 
-        <section class="room-progress-card" aria-labelledby="roomProgressTitle">
-            <div class="section-header">
-                <h3 class="section-title" id="roomProgressTitle">Progress Area</h3>
-                <span class="section-link">Slot aktif</span>
-            </div>
-            <div class="room-progress-list" id="roomProgressList"></div>
-        </section>
-
-        <section class="page-grid">
+        <section class="page-grid unit-filter-section">
             <div class="section-header">
                 <h3 class="section-title">Filter</h3>
                 <span class="status-badge success"><span class="online-dot"></span>Aktif</span>
@@ -108,13 +94,21 @@
             <div class="device-grid" id="device-list"></div>
         </section>
 
-        <section class="panel-card">
-            <div class="section-header">
+        <details class="room-progress-card progress-collapsible" aria-labelledby="roomProgressTitle">
+            <summary class="section-header">
+                <h3 class="section-title" id="roomProgressTitle">Progress Area</h3>
+                <span class="section-link">Slot aktif</span>
+            </summary>
+            <div class="room-progress-list" id="roomProgressList"></div>
+        </details>
+
+        <details class="panel-card recent-log-card">
+            <summary class="section-header">
                 <h3 class="section-title">Log Terakhir</h3>
                 <span class="section-link">Riwayat</span>
-            </div>
+            </summary>
             <div id="recent-logs" class="activity-list"></div>
-        </section>
+        </details>
     </main>
 
     <div class="fab-container" data-quick-actions>

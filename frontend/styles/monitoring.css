@@ -217,6 +217,41 @@
   box-shadow: var(--shadow);
 }
 
+.progress-collapsible,
+.recent-log-card {
+  overflow: hidden;
+}
+
+.progress-collapsible > summary,
+.recent-log-card > summary {
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+}
+
+.progress-collapsible > summary::-webkit-details-marker,
+.recent-log-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.progress-collapsible > summary::after,
+.recent-log-card > summary::after {
+  content: "+";
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(37,99,235,.1);
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.progress-collapsible[open] > summary::after,
+.recent-log-card[open] > summary::after {
+  content: "-";
+}
+
 .next-device-section {
   grid-template-columns: minmax(0, 1.2fr) minmax(180px, .7fr) auto;
   align-items: center;
@@ -777,18 +812,50 @@ textarea {
 }
 
 @media (max-width: 520px) {
+  .monitor-hero {
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .monitor-hero h1 {
+    margin: 4px 0;
+    font-size: 20px;
+  }
+
+  .monitor-hero p,
+  .monitor-hero .eyebrow {
+    display: none;
+  }
+
+  .daily-schedule-card,
+  .next-device-section,
+  .room-progress-card,
+  .recent-log-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
   .bottom-sheet {
     width: 96vw;
     max-height: 90vh;
+    padding: 8px 12px 0;
   }
 
   .sheet-footer {
     align-items: stretch;
-    flex-direction: column-reverse;
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
   }
-}
 
-@media (max-width: 520px) {
+  .sheet-footer .btn-primary,
+  .sheet-footer .btn-secondary {
+    min-height: 44px;
+    flex: 1;
+    border-radius: 13px;
+    padding-inline: 10px;
+  }
+
   .schedule-head {
     align-items: stretch;
   }
@@ -798,7 +865,33 @@ textarea {
   }
 
   .schedule-slot {
-    min-height: 82px;
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  .schedule-slot strong {
+    font-size: 18px;
+  }
+
+  .next-device-copy h3 {
+    font-size: 18px;
+  }
+
+  .next-device-meta {
+    padding: 10px;
+  }
+
+  .next-device-meta strong {
+    font-size: 17px;
+  }
+
+  .monitor-summary {
+    display: none;
+  }
+
+  .photo-placeholder,
+  .photo-preview {
+    min-height: 96px;
   }
 }
 

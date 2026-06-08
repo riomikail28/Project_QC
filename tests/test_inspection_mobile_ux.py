@@ -41,6 +41,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "renderPhotoPreview" in js
     assert "Catatan" in html
     assert "capture=\"environment\"" in html
+    assert "padding-bottom: max(128px" in css
 
 
 def test_qc_check_helper_text_not_duplicated():
@@ -86,6 +87,7 @@ def test_qc_check_field_mobile_ux_has_step_summary_and_context():
     assert "rememberRecentSubmission" in js
     assert ".qc-status-option" in css
     assert "min-height: 76px" in css
+    assert "min-height: 58px" in css
 
 
 def test_qc_check_sku_card_workflow_contract():
@@ -121,6 +123,18 @@ def test_qc_modal_has_scrollable_body_and_sticky_footer():
     assert "overflow-x: hidden" in css
     assert "position: sticky" in css
     assert "bottom: 0" in css
+    assert "max-height: 90vh" in css
+    assert "padding: 12px 14px max(96px" in css
+
+
+def test_qc_check_mobile_cards_and_actions_are_compact():
+    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
+
+    assert ".sku-card" in css and "padding: 12px;" in css
+    assert ".sku-card-head h2" in css and "font-size: 17px;" in css
+    assert ".batch-card" in css and "padding: 10px;" in css
+    assert ".add-sku-btn" in css and "min-height: 44px;" in css
+    assert ".qc-form-footer .btn-secondary" in css and "min-height: 44px;" in css
 
 
 def test_qc_modal_close_cancel_and_escape_contract():

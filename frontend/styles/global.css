@@ -1141,6 +1141,43 @@ label {
   }
 }
 
+@media (max-width: 739px) {
+  .app-shell {
+    padding-bottom: max(110px, calc(var(--nav-height) + 38px + env(safe-area-inset-bottom)));
+  }
+
+  :where(.alert-drawer, .bottom-sheet, .qc-form-sheet) {
+    max-height: 90vh;
+  }
+
+  :where(.alert-drawer-body, .sheet-body, .qc-form-body) {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  :where(.alert-drawer-footer, .sheet-footer, .qc-form-footer) {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    flex-shrink: 0;
+  }
+
+  :where(button, .btn-primary, .btn-secondary, input, select, textarea, .nav-item) {
+    min-height: 44px;
+  }
+
+  .fab-container {
+    right: 14px;
+    bottom: calc(var(--nav-height) + 18px + env(safe-area-inset-bottom));
+  }
+
+  .fab {
+    width: 50px;
+    height: 50px;
+  }
+}
+
 @media (min-width: 1100px) {
   .nav-clock {
     display: block;

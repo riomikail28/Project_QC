@@ -88,6 +88,18 @@ def test_qc_temuan_payload_includes_category_status_and_prefixed_finding():
     assert "formData.append('status', 'open')" in html
 
 
+def test_qc_temuan_mobile_drawer_is_bounded_scrollable_and_sticky():
+    css = read("frontend/styles/alerts.css")
+
+    assert "#findingDrawer" in css and "max-height: 90vh;" in css
+    assert "#findingDrawer .alert-drawer-body" in css
+    assert "padding-bottom: max(96px" in css
+    assert ".alert-drawer-header" in css and "position: sticky;" in css and "top: 0;" in css
+    assert ".alert-drawer-footer" in css and "position: sticky;" in css and "bottom: 0;" in css
+    assert "#findingDrawer .finding-preview" in css and "max-height: 240px;" in css
+    assert "#findingImg" in css and "object-fit: contain;" in css
+
+
 def test_monitoring_toast_cleanup_has_no_alert_fallback():
     js = read("frontend/js/monitoring.js")
 

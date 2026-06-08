@@ -108,6 +108,7 @@
 
 .inspection-page {
   padding-bottom: 120px;
+  padding-bottom: max(120px, calc(var(--nav-height) + 48px + env(safe-area-inset-bottom)));
 }
 
 .qc-layout-single {
@@ -1542,16 +1543,76 @@ body.modal-open {
 @media (max-width: 640px) {
   .simple-qc-page.inspection-page {
     width: min(100% - 18px, 680px);
+    padding-bottom: max(128px, calc(var(--nav-height) + 56px + env(safe-area-inset-bottom)));
   }
 
   .sku-qc-header {
     display: grid;
-    padding: 16px;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .simple-qc-title {
+    font-size: 24px;
+  }
+
+  .simple-qc-subtitle,
+  .qc-operational-date {
+    font-size: 12px;
   }
 
   .add-sku-btn {
     width: 100%;
+    min-height: 44px;
+    border-radius: 13px;
     justify-content: center;
+  }
+
+  .sku-qc-workspace,
+  .sku-card-grid {
+    gap: 12px;
+  }
+
+  .sku-search-panel,
+  .sku-card {
+    border-radius: 18px;
+  }
+
+  .sku-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .sku-card-head h2 {
+    margin: 4px 0;
+    font-size: 17px;
+  }
+
+  .sku-code,
+  .sku-card-head > strong {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .sku-status-strip {
+    gap: 6px;
+  }
+
+  .sku-status-chip {
+    padding: 7px 5px;
+    border-radius: 11px;
+    font-size: 10px;
+  }
+
+  .sku-status-chip strong {
+    font-size: 15px;
+  }
+
+  .batch-card {
+    gap: 8px;
+    padding: 10px;
+    border-radius: 14px;
   }
 
   .sku-status-strip,
@@ -1570,7 +1631,7 @@ body.modal-open {
     bottom: 0;
     width: 100%;
     max-width: none;
-    max-height: 92vh;
+    max-height: 90vh;
     transform: none;
     border-right: 0;
     border-left: 0;
@@ -1579,7 +1640,7 @@ body.modal-open {
   }
 
   .qc-form-body {
-    padding-bottom: 24px;
+    padding: 12px 14px max(96px, calc(22px + env(safe-area-inset-bottom)));
   }
 
   .qc-optional-grid {
@@ -1587,7 +1648,8 @@ body.modal-open {
   }
 
   .qc-form-sheet .upload-card-header {
-    min-height: 72px;
+    min-height: 52px;
+    padding: 10px 12px;
   }
 
   .qc-form-sheet .upload-card-btn {
@@ -1604,7 +1666,48 @@ body.modal-open {
   .batch-actions .btn-primary,
   .batch-actions .btn-secondary {
     width: 100%;
+    min-height: 44px;
+    border-radius: 12px;
     justify-content: center;
+  }
+
+  .sku-next-batch-btn {
+    min-height: 44px;
+    border-radius: 13px;
+  }
+
+  .qc-form-head {
+    padding: 12px 14px 10px;
+  }
+
+  .qc-form-head h2 {
+    font-size: 18px;
+  }
+
+  .qc-form-footer {
+    gap: 8px;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .qc-form-footer .btn-secondary,
+  .qc-form-footer .btn-primary {
+    min-height: 44px;
+    border-radius: 13px;
+  }
+
+  .inspection-page .qc-status-option {
+    min-height: 58px;
+    border-radius: 13px;
+    font-size: 17px;
+  }
+
+  .inspection-page .upload-card-info i {
+    width: 32px;
+    height: 32px;
+  }
+
+  .inspection-page .upload-card-info span {
+    font-size: 13px;
   }
 }
 

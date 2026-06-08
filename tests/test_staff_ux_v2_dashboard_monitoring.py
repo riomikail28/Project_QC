@@ -10,6 +10,7 @@ def read(path):
 
 def test_staff_dashboard_task_first_sections_before_analytics():
     html = read("frontend/staff/dashboard.html")
+    css = read("frontend/styles/dashboard.css")
 
     task_index = html.index("Tugas Saya Sekarang")
     quick_index = html.index("Quick Action")
@@ -22,6 +23,9 @@ def test_staff_dashboard_task_first_sections_before_analytics():
     assert "Batch Menunggu QC" in html
     assert "Re-check Pending" in html
     assert "QC Temuan Open" in html
+    assert "staff-analytics-secondary" in html
+    assert ".staff-analytics-secondary" in css
+    assert "display: none;" in css
 
 
 def test_staff_dashboard_compact_actions_and_kpis_exist():
@@ -43,12 +47,27 @@ def test_smart_monitoring_next_device_and_room_progress_sections_exist():
 
     schedule_index = html.index("scheduleSlotGrid")
     next_index = html.index("Device Berikutnya Untuk Dicek")
-    progress_index = html.index("Progress Area")
     filters_index = html.index("Filter")
+    devices_index = html.index("Daftar Unit")
+    progress_index = html.index("Progress Area")
+    logs_index = html.index("Log Terakhir")
 
-    assert schedule_index < next_index < progress_index < filters_index
+    assert schedule_index < next_index < filters_index < devices_index < progress_index < logs_index
     assert "nextDeviceAction" in html
     assert "roomProgressList" in html
+    assert 'class="room-progress-card progress-collapsible"' in html
+    assert 'class="panel-card recent-log-card"' in html
+
+
+def test_monitoring_mobile_hero_removed_and_secondary_sections_collapsible():
+    html = read("frontend/staff/monitoring.html")
+    css = read("frontend/styles/monitoring.css")
+
+    assert "Pantau suhu chiller, freezer, dan ruangan." not in html
+    assert "<details" in html
+    assert ".progress-collapsible > summary" in css
+    assert ".recent-log-card > summary" in css
+    assert ".monitor-summary" in css and "display: none;" in css
 
 
 def test_smart_monitoring_groups_devices_by_collapsible_room():

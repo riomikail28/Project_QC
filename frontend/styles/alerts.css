@@ -97,11 +97,12 @@
 
 #findingDrawer .alert-drawer-body {
   min-height: 0;
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-bottom: max(88px, calc(18px + env(safe-area-inset-bottom)));
 }
 
 #findingDrawer .finding-preview {
-  max-height: 320px;
+  min-height: 112px;
+  max-height: 240px;
   overflow: hidden;
 }
 
@@ -145,6 +146,7 @@
     width: 100%;
     height: auto;
     max-height: 90vh;
+    padding: 12px 14px 0;
     border-left: 0;
     border-top: 1px solid var(--border);
     border-radius: 26px 26px 0 0;
@@ -161,21 +163,32 @@
 
   .alert-drawer-footer {
     align-items: stretch;
-    flex-direction: column-reverse;
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  }
+
+  .alert-drawer-footer .btn-primary,
+  .alert-drawer-footer .btn-secondary {
+    min-height: 44px;
+    flex: 1;
+    border-radius: 13px;
+    padding-inline: 10px;
   }
 
   #findingDrawer .alert-drawer-body {
     gap: 10px;
+    padding-bottom: max(96px, calc(22px + env(safe-area-inset-bottom)));
   }
 
   #findingDrawer .finding-preview {
     min-height: 0;
-    padding: 12px;
+    padding: 10px;
   }
 
   #findingPhotoPreview,
   #findingImg {
-    max-height: 220px;
+    max-height: 160px;
   }
 
   .alert-drawer.active {
