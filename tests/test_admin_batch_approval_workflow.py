@@ -148,3 +148,44 @@ def test_batch_production_and_approvals_use_different_renderers():
     assert "renderApprovals(rows = [])" in js
     assert "case 'daily-reports': this.loadProductionBoard(); break;" in js
     assert "case 'approval': this.loadApprovals(); break;" in js
+
+
+def test_production_qc_board_is_activity_based_not_product_master_based():
+    html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    load_block = js[js.index("async loadProductionBoard()"):js.index("groupProductionBySku", js.index("async loadProductionBoard()"))]
+    group_start = js.index("groupProductionBySku(batches = [])")
+    group_block = js[group_start:js.index("renderProductionBoardSummary", group_start)]
+
+    assert 'id="production-board-summary"' in html
+    assert "this.fetchAdminData(`${this.apiBase}/batches?${params.toString()}`)" in load_block
+    assert "this.fetchAdminData(`${this.apiBase}/products`)" not in load_block
+    assert "products.forEach" not in group_block
+    assert "return Array.from(groups.values()).filter(group => group.batches.length)" in group_block
+
+
+def test_production_qc_board_summary_and_empty_state_contract():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
+
+    assert "renderProductionBoardSummary(groups, batches" in js
+    assert "SKU Diproduksi" in js
+    assert "Total Batch" in js
+    assert "Pending Approval" in js
+    assert "Belum ada produksi pada tanggal ini." in js
+    assert "Buka Staff QC Check" in js
+    assert "Buat Batch Baru" in js
+    assert ".production-board-summary" in css
+    assert ".production-empty-actions" in css
+
+
+def test_production_qc_board_detail_lists_batches_for_selected_date():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    detail_block = js[js.index("openSkuBoard(group)"):js.index("async openBatchBoardDetail", js.index("openSkuBoard(group)"))]
+
+    assert "const batches = group.batches || []" in detail_block
+    assert "Batch #${this.escapeHtml(batch.batch_sequence || index + 1)}" in detail_block
+    assert "Cook:" in detail_block
+    assert "Jam:" in detail_block
+    assert "batch.qc_status || 'Belum QC'" in detail_block
+    assert "batch.approval_status || 'Pending Approval'" in detail_block

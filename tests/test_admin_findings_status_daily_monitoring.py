@@ -164,6 +164,62 @@ def test_admin_frontend_qc_findings_ticket_status_contract():
     assert "data-finding-id" in js
 
 
+def test_admin_qc_temuan_operational_dashboard_contract():
+    html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
+
+    assert "findings-date-mode" in html
+    assert "Hari Ini" in html and "Kemarin" in html and "7 Hari Terakhir" in html and "30 Hari Terakhir" in html and "Custom Date" in html
+    assert "findings-summary-grid" in html
+    assert "findings-status-filter" in html
+    assert 'data-finding-filter="OVERDUE"' in html
+    assert "handleFindingsDateMode" in js
+    assert "findingsDateRange" in js
+    assert "filterFindingsByDate" in js
+    assert "renderFindingsSummary" in js
+    assert "setFindingsStatusFilter" in js
+    assert ".findings-summary-grid" in css
+    assert ".finding-status-filter" in css
+
+
+def test_admin_qc_temuan_cards_show_status_category_thumbnail_age_and_overdue():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
+
+    board_start = js.index("renderFindingsBoard(rows = [])")
+    board_block = js[board_start:js.index("findingCategory(row = {})", board_start)]
+    assert "finding-status-badge" in board_block
+    assert "finding-category-badge" in board_block
+    assert "finding-thumb" in board_block
+    assert "Tidak Ada Foto" in board_block
+    assert "Dibuat:" in board_block
+    assert "finding-overdue-badge" in board_block
+    assert "Lihat Detail" in board_block
+    assert "Severity:" not in board_block
+    assert "findingCategory(row = {})" in js
+    assert "isFindingOverdue(row = {})" in js
+    assert "relativeAge(value)" in js
+    assert ".finding-card-open" in css
+    assert ".finding-card-in-progress" in css
+    assert ".finding-card-closed" in css
+    assert ".finding-thumb" in css and "width: 60px;" in css and "height: 60px;" in css
+    assert ".finding-detail-btn" in css and "width: 100%;" in css
+
+
+def test_admin_qc_temuan_detail_modal_is_more_informative():
+    js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
+    detail_block = js[js.index("openFindingDetail(row)"):js.index("findingCategory(row = {})", js.index("openFindingDetail(row)"))]
+
+    assert "finding-detail-hero" in detail_block
+    assert "<span>Status</span>" in detail_block
+    assert "<span>Kategori</span>" in detail_block
+    assert "<span>Dibuat</span>" in detail_block
+    assert "finding-status-history" in detail_block
+    assert "OPEN" in detail_block and "IN_PROGRESS" in detail_block and "CLOSED" in detail_block
+    assert "review-evidence" in detail_block
+
+
 def test_admin_frontend_monitoring_daily_date_history_contract():
     html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")

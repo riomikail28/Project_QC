@@ -448,6 +448,7 @@
                             <button class="btn-primary" onclick="adminApp.loadProductionBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                     </div>
+                    <div class="metric-grid production-board-summary" id="production-board-summary"></div>
                     <div class="qc-card-grid" id="production-qc-board"></div>
                     <div id="table-batch-production" hidden></div>
                 </section>
@@ -459,7 +460,25 @@
                             <h3 class="card-title" style="margin:0;">QC Temuan</h3>
                             <p class="admin-muted">Temuan QC terbuka dan tindak lanjut status.</p>
                         </div>
-                        <button class="btn-secondary" onclick="adminApp.loadFindingsBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        <div class="monitoring-date-controls findings-date-controls">
+                            <select id="findings-date-mode" onchange="adminApp.handleFindingsDateMode()">
+                                <option value="today">Hari Ini</option>
+                                <option value="yesterday">Kemarin</option>
+                                <option value="7d">7 Hari Terakhir</option>
+                                <option value="30d">30 Hari Terakhir</option>
+                                <option value="custom">Custom Date</option>
+                            </select>
+                            <input id="findings-date" type="date" hidden>
+                            <button class="btn-secondary" onclick="adminApp.loadFindingsBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="metric-grid findings-summary-grid" id="findings-summary-grid"></div>
+                    <div class="finding-status-filter" id="findings-status-filter" role="tablist" aria-label="Filter status temuan">
+                        <button class="admin-tab active" type="button" data-finding-filter="all" onclick="adminApp.setFindingsStatusFilter('all')">Semua</button>
+                        <button class="admin-tab" type="button" data-finding-filter="OPEN" onclick="adminApp.setFindingsStatusFilter('OPEN')">OPEN</button>
+                        <button class="admin-tab" type="button" data-finding-filter="IN_PROGRESS" onclick="adminApp.setFindingsStatusFilter('IN_PROGRESS')">IN PROGRESS</button>
+                        <button class="admin-tab" type="button" data-finding-filter="CLOSED" onclick="adminApp.setFindingsStatusFilter('CLOSED')">CLOSED</button>
+                        <button class="admin-tab" type="button" data-finding-filter="OVERDUE" onclick="adminApp.setFindingsStatusFilter('OVERDUE')">OVERDUE</button>
                     </div>
                     <div class="qc-card-grid" id="findings-board"></div>
                 </section>
