@@ -70,16 +70,68 @@ def test_monitoring_mobile_hero_removed_and_secondary_sections_collapsible():
     assert ".monitor-summary" in css and "display: none;" in css
 
 
-def test_smart_monitoring_groups_devices_by_collapsible_room():
+def test_smart_monitoring_groups_devices_by_mobile_room_grid():
     js = read("frontend/js/monitoring.js")
     css = read("frontend/styles/monitoring.css")
 
     assert "renderMonitoringRoomGroup" in js
-    assert "toggleRoomGroup" in js
-    assert "monitor-room-group" in js
-    assert "monitor-device-list" in js
-    assert ".monitor-room-group" in css
-    assert ".monitor-device-list.is-collapsed" in css
+    assert "renderMonitoringDeviceMiniCard" in js
+    assert "monitoring-room-grid-section" in js
+    assert "monitoring-device-mini-grid" in js
+    assert "monitoring-device-mini-card" in js
+    assert ".monitoring-room-grid-section" in css
+    assert ".monitoring-device-mini-grid" in css
+    assert ".monitoring-device-mini-card" in css
+
+
+def test_monitoring_mobile_grouped_room_order_and_required_rooms_present():
+    js = read("frontend/js/monitoring.js")
+
+    assert 'const monitoringRoomOrder = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"]' in js
+    assert "monitoringRoomRank" in js
+    assert ".sort((a, b) => monitoringRoomRank(a.name) - monitoringRoomRank(b.name)" in js
+
+
+def test_monitoring_ppic_and_grouper_devices_render_as_mini_cards():
+    js = read("frontend/js/monitoring.js")
+
+    assert "monitoring-device-mini-name" in js
+    assert "monitoring-device-mini-room" in js
+    assert "monitoring-device-mini-temp" in js
+    assert "monitoring-device-mini-status" in js
+    assert 'if (type === "room_temp") return "Suhu Ruangan";' in js
+    assert 'if (type === "chiller" || type === "undercounter") return "Chiller";' in js
+    assert 'if (type === "freezer") return "Freezer";' in js
+
+
+def test_monitoring_mobile_grid_uses_three_columns():
+    css = read("frontend/styles/monitoring.css")
+
+    assert "@media (max-width: 520px)" in css
+    assert ".monitoring-device-mini-grid" in css
+    assert "grid-template-columns: repeat(3, 1fr);" in css
+    assert "gap: 10px 12px;" in css
+
+
+def test_monitoring_mini_card_click_opens_existing_bottom_sheet_flow():
+    html = read("frontend/staff/monitoring.html")
+    js = read("frontend/js/monitoring.js")
+
+    assert 'id="log-modal" class="bottom-sheet"' in html
+    assert 'onclick="openLogModal(\'${device.id}\')"' in js
+    assert 'modal.classList.add("active")' in js
+    assert 'overlay.classList.add("active")' in js
+
+
+def test_monitoring_filters_still_drive_grouped_grid_and_empty_rooms_hidden():
+    js = read("frontend/js/monitoring.js")
+
+    assert "bindUnitFilters" in js
+    assert 'activeUnitFilter = label.startsWith("chiller") ? "chiller"' in js
+    assert 'if (activeUnitFilter === "critical") return source.filter(device => isDeviceAlert(device));' in js
+    assert "renderDevices(filteredDevices(selectedRoomId === \"all\" || !selectedRoomId ? null" in js
+    assert ".filter(room => room.devices.length)" in js
+    assert "Belum ada unit monitoring sesuai filter." in js
 
 
 def test_smart_monitoring_sort_priority_and_device_metadata():
@@ -90,9 +142,10 @@ def test_smart_monitoring_sort_priority_and_device_metadata():
     assert 'scheduleStatus === "missed" || scheduleStatus === "late") return 2' in js
     assert "isDeviceAlert(device)) return 3" in js
     assert 'scheduleStatus === "completed") return 4' in js
-    assert "lastInputMeta(device)" in js
-    assert "Foto wajib jika abnormal" in js
-    assert "Foto opsional" in js
+    assert "monitoringMiniCardStatus" in js
+    assert 'return { label: "ALERT", className: "is-alert", isAlert: true }' in js
+    assert 'return { label: "PASS", className: "is-pass", isAlert: false }' in js
+    assert 'return { label: "Pending", className: "is-pending", isAlert: false }' in js
 
 
 def test_monitoring_submit_flow_and_bottom_navigation_unchanged():

@@ -35,12 +35,23 @@
         <section class="sku-qc-workspace">
             <header class="sku-qc-header">
                 <div>
-                    <h1 class="simple-qc-title">QC Check</h1>
-                    <p class="simple-qc-subtitle">Pilih atau tambahkan SKU untuk mulai pengecekan.</p>
+                    <h1 class="simple-qc-title">SKU Hari Ini</h1>
+                    <p class="simple-qc-subtitle">Cari SKU, pilih produk, lalu pilih batch untuk QC Check.</p>
                     <p class="qc-operational-date" id="qcOperationalDate">Tanggal QC: -</p>
                 </div>
                 <button class="btn-primary add-sku-btn" id="addSkuBtn" type="button"><i class="fas fa-plus"></i> Tambah Produk / SKU</button>
             </header>
+
+            <section class="sku-list-toolbar" aria-labelledby="skuTodayTitle">
+                <div>
+                    <h2 id="skuTodayTitle">SKU HARI INI</h2>
+                    <span id="skuTodayCount">0 SKU</span>
+                </div>
+                <label class="sku-list-search" for="skuListSearch">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input class="input-field" id="skuListSearch" placeholder="Search SKU" autocomplete="off">
+                </label>
+            </section>
 
             <section class="sku-search-panel" id="skuSearchPanel" hidden>
                 <div class="simple-field" id="productPickerField">
@@ -54,7 +65,10 @@
                 </div>
             </section>
 
-            <p class="simple-qc-message sku-empty-note" id="skuEmptyNote">Belum ada batch hari ini. Pilih SKU atau buat pemasakan baru.</p>
+            <div class="sku-empty-state" id="skuEmptyNote">
+                <p class="simple-qc-message">Belum ada SKU hari ini.</p>
+                <button class="btn-primary" type="button" onclick="Inspection.openSkuSearch()"><i class="fas fa-plus"></i> Tambah Produk / SKU</button>
+            </div>
 
             <section class="sku-card-grid" id="skuCardGrid" aria-live="polite"></section>
 
@@ -69,6 +83,28 @@
             <div id="contextBatchList" hidden></div>
             <div id="recentQcList" hidden></div>
         </section>
+
+        <div class="qc-sheet-backdrop" id="skuDetailBackdrop" hidden aria-hidden="true"></div>
+        <aside class="sku-detail-drawer" id="skuDetailDrawer" hidden aria-hidden="true" aria-modal="true" aria-labelledby="skuDetailTitle">
+            <div class="qc-form-handle"></div>
+            <header class="sku-detail-head">
+                <div>
+                    <span class="sku-code" id="skuDetailCode">SKU</span>
+                    <h2 id="skuDetailTitle">Detail SKU</h2>
+                    <p id="skuDetailCategory">Kategori</p>
+                </div>
+                <button class="sheet-close-btn" id="skuDetailCloseBtn" type="button" aria-label="Tutup detail SKU"><i class="fas fa-xmark"></i></button>
+            </header>
+            <div class="sku-detail-body">
+                <div class="sku-status-strip" id="skuDetailStatusStrip"></div>
+                <div class="sku-detail-section-title">
+                    <strong>Batch List</strong>
+                    <span id="skuDetailBatchCount">0 Batch</span>
+                </div>
+                <div class="sku-batch-list sku-detail-batch-list" id="skuDetailBatchList"></div>
+                <button class="btn-secondary sku-next-batch-btn" id="skuDetailNextBatchBtn" type="button">+ Tambah Pemasakan Berikutnya</button>
+            </div>
+        </aside>
 
         <div class="qc-sheet-backdrop" id="qcFormBackdrop" hidden aria-hidden="true"></div>
         <section class="qc-form-sheet" id="qcFormSheet" hidden aria-hidden="true" aria-modal="true" aria-labelledby="qcFormTitle">

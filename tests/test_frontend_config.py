@@ -61,7 +61,7 @@ def test_dashboard_renames_photo_quick_action_to_qc_temuan():
 
     assert 'data-quick-action="photo" type="button"><span>QC Temuan</span>' in html
     assert "<h3>QC Temuan</h3>" in html
-    assert "Laporan temuan quality control" in html
+    assert "Laporkan temuan QC" in html
     assert "Kategori Temuan" in html
     assert "Catatan tambahan" in html
 

@@ -15,7 +15,7 @@ let selectedPhotoFiles = [];
 let latestTemperatureLogs = [];
 let activeUnitFilter = "all";
 let todaySchedule = null;
-const expandedRoomIds = new Set();
+const monitoringRoomOrder = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
 
 document.addEventListener("DOMContentLoaded", () => {
     bindUnitFilters();
@@ -107,8 +107,8 @@ function renderDevices(devices, options = {}) {
         deviceList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-temperature-half"></i>
-                <h4>${hasLogs ? "Unit belum terpetakan" : "Belum ada unit monitoring"}</h4>
-                <p>${hasLogs ? "Log suhu sudah tersedia, tetapi data unit belum punya room/device yang bisa ditampilkan." : "Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu."}</p>
+                <h4>Belum ada unit monitoring sesuai filter.</h4>
+                <p>${hasLogs ? "Log suhu sudah tersedia, tetapi data unit belum punya room/device yang cocok dengan filter saat ini." : "Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu."}</p>
                 ${hasLogs ? "" : `<button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i> Kembali Dashboard</button>`}
             </div>
         `;
@@ -116,7 +116,6 @@ function renderDevices(devices, options = {}) {
     }
 
     const visibleRooms = groupedRoomsForDevices(devices);
-    ensureExpandedRooms(visibleRooms);
     deviceList.innerHTML = visibleRooms.map(room => renderMonitoringRoomGroup(room)).join("");
 }
 
@@ -127,79 +126,59 @@ function groupedRoomsForDevices(devices) {
             ...room,
             devices: sortMonitoringDevices((room.devices || []).filter(device => selectedIds.has(device.id))),
         }))
-        .filter(room => room.devices.length);
+        .filter(room => room.devices.length)
+        .sort((a, b) => monitoringRoomRank(a.name) - monitoringRoomRank(b.name) || String(a.name || "").localeCompare(String(b.name || "")));
 }
 
-function ensureExpandedRooms(rooms) {
-    if (selectedRoomId && selectedRoomId !== "all") {
-        expandedRoomIds.add(selectedRoomId);
-        return;
-    }
-    const next = nextDeviceToCheck();
-    if (next?.room?.id) expandedRoomIds.add(next.room.id);
-    if (!expandedRoomIds.size && rooms[0]?.id) expandedRoomIds.add(rooms[0].id);
+function monitoringRoomRank(roomName) {
+    const index = monitoringRoomOrder.findIndex(item => item.toLowerCase() === String(roomName || "").toLowerCase());
+    return index === -1 ? monitoringRoomOrder.length : index;
 }
 
 function renderMonitoringRoomGroup(room) {
     const progress = roomProgress(room);
-    const expanded = expandedRoomIds.has(room.id);
     return `
-        <article class="monitor-room-group" data-room-id="${room.id}">
-            <button class="monitor-room-toggle" type="button" onclick="toggleRoomGroup('${room.id}')" aria-expanded="${expanded}">
-                <span>
-                    <strong>${room.name}</strong>
-                    <small>${progress.completed}/${progress.total} device selesai</small>
-                </span>
-                <span class="room-progress-inline">
-                    <span class="room-progress-track"><span style="width:${progress.percent}%"></span></span>
-                    <i class="fas fa-chevron-${expanded ? "up" : "down"}"></i>
-                </span>
-            </button>
-            <div class="monitor-device-list ${expanded ? "is-expanded" : "is-collapsed"}">
-                ${room.devices.map(device => renderMonitoringDeviceCard(device, room)).join("")}
+        <article class="monitoring-room-grid-section" data-room-id="${room.id}" data-room-name="${room.name}">
+            <div class="monitoring-room-title">
+                <h4>${room.name}</h4>
+                <span>${progress.completed}/${progress.total} selesai</span>
+            </div>
+            <div class="monitoring-device-mini-grid">
+                ${room.devices.map(device => renderMonitoringDeviceMiniCard(device, room)).join("")}
             </div>
         </article>
     `;
 }
 
-function renderMonitoringDeviceCard(device, room) {
-    const scheduleStatus = deviceScheduleStatus(device.id);
-    const input = lastInputMeta(device);
-    const alert = isDeviceAlert(device);
+function renderMonitoringDeviceMiniCard(device, room) {
+    const status = monitoringMiniCardStatus(device);
+    const temperature = monitoringMiniCardTemperature(device);
     return `
-        <button class="device-card smart-device-card ${device.type} ${alert ? "alert-required" : ""}" type="button" onclick="openLogModal('${device.id}')">
-            <div class="device-main">
-                <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
-                <div>
-                    <div class="device-name">${device.name || unitName(device.type)}</div>
-                    <div class="device-target">${room.name} - Target: ${device.threshold_temp || 0}&deg;C</div>
-                </div>
-            </div>
-            <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
-            <div class="device-slot-info">
-                <span>Slot</span>
-                <strong>${activeMonitoringSlot()?.time || "--"}</strong>
-            </div>
-            <div class="device-input-info">
-                <span>Input</span>
-                <strong>${input.staff}</strong>
-                <small>${input.time}</small>
-            </div>
-            <div class="device-status-stack">
-                <span class="status-badge ${scheduleStatus.className} device-status">${scheduleStatus.label}</span>
-                <small class="${alert ? "photo-required" : "photo-optional"}">${alert ? "Foto wajib jika abnormal" : "Foto opsional"}</small>
-            </div>
+        <button class="monitoring-device-mini-card ${device.type} ${status.isAlert ? "alert-required" : ""}" type="button" onclick="openLogModal('${device.id}')">
+            <span class="monitoring-device-mini-name">${device.name || unitName(device.type)}</span>
+            <span class="monitoring-device-mini-room">${room.name}</span>
+            <strong class="monitoring-device-mini-temp">${temperature}</strong>
+            <span class="monitoring-device-mini-status ${status.className}">${status.label}</span>
         </button>
     `;
 }
 
-function toggleRoomGroup(roomId) {
-    if (expandedRoomIds.has(roomId)) {
-        expandedRoomIds.delete(roomId);
-    } else {
-        expandedRoomIds.add(roomId);
-    }
-    renderDevices(filteredDevices(selectedRoomId === "all" || !selectedRoomId ? null : (facilityStructure.find(room => room.id === selectedRoomId)?.devices || [])));
+function monitoringMiniCardStatus(device) {
+    const scheduleStatus = deviceScheduleStatus(device.id);
+    const alert = isDeviceAlert(device);
+    if (alert) return { label: "ALERT", className: "is-alert", isAlert: true };
+    if (scheduleStatus.status === "completed") return { label: "PASS", className: "is-pass", isAlert: false };
+    if (scheduleStatus.status === "missed") return { label: "Terlewat", className: "is-warning", isAlert: false };
+    if (scheduleStatus.status === "pending") return { label: "Pending", className: "is-pending", isAlert: false };
+    return { label: "Belum Input", className: "is-pending", isAlert: false };
+}
+
+function monitoringMiniCardTemperature(device) {
+    const activeStatus = todaySchedule?.device_statuses?.[device.id]?.active_status;
+    const raw = activeStatus?.temperature_c ?? device.last_temperature_c ?? device.temperature_c;
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return "--&deg;C";
+    return `${Number.isInteger(value) ? value : value.toFixed(1)}&deg;C`;
 }
 
 function openLogModal(deviceId) {
@@ -388,7 +367,7 @@ async function loadRecentLogs() {
                     <i class="fas fa-clipboard-list"></i>
                     <h4>Belum ada log suhu</h4>
                     <p>Log terbaru akan muncul setelah staff menyimpan laporan suhu pertama.</p>
-                    <button class="btn-primary" type="button" onclick="document.querySelector('.device-card')?.click()">
+                    <button class="btn-primary" type="button" onclick="document.querySelector('.monitoring-device-mini-card')?.click()">
                         <i class="fas fa-plus"></i> Input Suhu
                     </button>
                 </div>
@@ -629,7 +608,7 @@ function filteredDevices(devices = null) {
     const source = devices || allDevices();
     if (activeUnitFilter === "chiller") return source.filter(device => device.type === "chiller" || device.type === "undercounter");
     if (activeUnitFilter === "freezer") return source.filter(device => device.type === "freezer");
-    if (activeUnitFilter === "critical") return source.filter(device => device.is_normal === false);
+    if (activeUnitFilter === "critical") return source.filter(device => isDeviceAlert(device));
     if (activeUnitFilter === "active") return source.filter(device => Boolean(device.recorded_at));
     return source;
 }

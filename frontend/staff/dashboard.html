@@ -254,23 +254,31 @@
                 <div class="alert-icon"><i class="fas fa-camera"></i></div>
                 <div>
                     <h3>QC Temuan</h3>
-                    <p>Laporan temuan quality control</p>
+                    <p>Laporkan temuan QC</p>
                 </div>
             </div>
             <button class="icon-button" onclick="closeQcFinding()" aria-label="Close modal"><i class="fas fa-times"></i></button>
         </div>
-        <div class="alert-drawer-body">
+        <div class="alert-drawer-body" id="findingDrawerBody">
             <input type="file" id="findingPhotoInput" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none" onchange="handleFindingPhoto(event)">
-            <button type="button" class="finding-preview" onclick="openFindingCamera()" style="cursor:pointer; width:100%; border:0; text-align:center; font:inherit;">
+            <button type="button" class="finding-preview finding-upload-card" onclick="openFindingCamera()">
                 <div class="alert-icon" id="findingPreviewIcon"><i class="fas fa-camera"></i></div>
-                <div id="findingPhotoPreview" style="display:none; width:100%; position:relative;">
-                    <img id="findingImg" src="" alt="Preview foto temuan QC" style="width:100%; border-radius:12px; margin-bottom:12px;">
-                    <span class="badge" id="findingPhotoBadge" style="position:absolute; top:10px; right:10px; background:var(--primary); color:white; padding:4px 8px; border-radius:12px; font-size:12px; display:none">1</span>
+                <div class="finding-empty-photo" id="findingEmptyPhoto">
+                    <strong>Belum ada foto</strong>
+                    <span>Tap untuk ambil foto evidence</span>
                 </div>
-                <strong>Foto temuan QC</strong>
-                <span id="findingPrompt">Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)</span>
+                <div id="findingPhotoPreview" class="finding-photo-preview">
+                    <img id="findingImg" src="" alt="Preview foto temuan QC">
+                    <span class="badge" id="findingPhotoBadge">1</span>
+                </div>
+                <div class="finding-upload-copy">
+                    <strong>Upload Foto</strong>
+                    <span id="findingPrompt">Tap untuk ambil foto</span>
+                    <small id="findingPhotoMeta"></small>
+                    <small id="findingPhotoReady" hidden>Foto siap dikirim</small>
+                </div>
             </button>
-            <small id="findingCompressionStatus" style="display:block; margin-top:8px; color:var(--text-muted);">Foto akan dikompres otomatis sebelum dikirim.</small>
+            <small class="finding-helper-text" id="findingCompressionStatus">Foto akan dikompres otomatis sebelum dikirim.</small>
             <div class="finding-category-block">
                 <strong>Kategori Temuan</strong>
                 <div class="finding-category-chips" id="findingCategoryChips" role="radiogroup" aria-label="Kategori Temuan">
@@ -285,9 +293,11 @@
             </div>
             <div class="finding-reason">
                 <strong>Catatan tambahan</strong>
-                <textarea id="findingReason" placeholder="Tambahkan detail jika perlu. Wajib diisi jika memilih Lainnya." style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
+                <textarea id="findingReason" rows="3" placeholder="Tambahkan detail jika perlu." oninput="autoResizeFindingReason(this)"></textarea>
+                <small>Opsional kecuali kategori Lainnya</small>
             </div>
             <p class="simple-qc-message" id="findingInlineMessage" aria-live="polite"></p>
+            <p class="finding-scroll-hint" id="findingScrollHint" hidden>Scroll untuk melihat form lainnya</p>
         </div>
         <div class="alert-drawer-footer">
             <button type="button" class="btn-secondary" onclick="closeQcFinding()">Cancel</button>
@@ -405,6 +415,7 @@
             document.getElementById('findingOverlay').classList.add('active');
             document.getElementById('findingDrawer').classList.add('active');
             document.body.classList.add('modal-open');
+            resetFindingScrollHint();
         }
 
         function closeQcFinding() {
@@ -456,18 +467,24 @@
             const img = document.getElementById('findingImg');
             const badge = document.getElementById('findingPhotoBadge');
             const prompt = document.getElementById('findingPrompt');
+            const empty = document.getElementById('findingEmptyPhoto');
+            const meta = document.getElementById('findingPhotoMeta');
+            const ready = document.getElementById('findingPhotoReady');
 
             if (icon) icon.style.display = 'none';
+            if (empty) empty.style.display = 'none';
             if (preview) preview.style.display = 'block';
             if (img) img.src = selectedFindingPhotoUrl;
             if (badge) {
                 badge.textContent = preparedFiles.length;
                 badge.style.display = preparedFiles.length > 1 ? 'inline-flex' : 'none';
             }
-            if (prompt) prompt.textContent = 'Foto siap dikirim. Klik lagi untuk ganti foto.';
+            const totalSize = preparedFiles.reduce((sum, item) => sum + (item.size || 0), 0);
+            if (prompt) prompt.textContent = 'Tap untuk ganti foto';
+            if (meta) meta.textContent = ImageCompression.formatBytes(totalSize);
+            if (ready) ready.hidden = false;
             if (status) {
-                const totalSize = preparedFiles.reduce((sum, item) => sum + (item.size || 0), 0);
-                status.textContent = `Foto siap dikirim (${ImageCompression.formatBytes(totalSize)}).`;
+                status.textContent = 'Foto akan dikompres otomatis sebelum dikirim.';
             }
         }
 
@@ -568,14 +585,23 @@
             const prompt = document.getElementById('findingPrompt');
             const status = document.getElementById('findingCompressionStatus');
             const message = document.getElementById('findingInlineMessage');
+            const empty = document.getElementById('findingEmptyPhoto');
+            const meta = document.getElementById('findingPhotoMeta');
+            const ready = document.getElementById('findingPhotoReady');
 
             if (input) input.value = '';
-            if (reason) reason.value = '';
+            if (reason) {
+                reason.value = '';
+                autoResizeFindingReason(reason);
+            }
             if (icon) icon.style.display = 'grid';
+            if (empty) empty.style.display = 'grid';
             if (preview) preview.style.display = 'none';
             if (img) img.removeAttribute('src');
             if (badge) badge.style.display = 'none';
-            if (prompt) prompt.textContent = 'Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)';
+            if (prompt) prompt.textContent = 'Tap untuk ambil foto';
+            if (meta) meta.textContent = '';
+            if (ready) ready.hidden = true;
             if (status) status.textContent = 'Foto akan dikompres otomatis sebelum dikirim.';
             if (message) message.textContent = '';
             selectedFindingCategory = '';
@@ -584,6 +610,40 @@
                 button.setAttribute('aria-checked', 'false');
             });
         }
+
+        function autoResizeFindingReason(textarea) {
+            if (!textarea) return;
+            textarea.style.height = 'auto';
+            textarea.style.height = `${Math.max(92, textarea.scrollHeight)}px`;
+        }
+
+        function resetFindingScrollHint() {
+            const body = document.getElementById('findingDrawerBody');
+            const hint = document.getElementById('findingScrollHint');
+            if (!body || !hint) return;
+            body.scrollTop = 0;
+            body.dataset.scrollSeen = 'false';
+            requestAnimationFrame(() => {
+                const hasOverflow = body.scrollHeight > body.clientHeight + 8;
+                hint.hidden = !hasOverflow;
+                body.classList.toggle('show-scroll-hint', hasOverflow);
+            });
+        }
+
+        function dismissFindingScrollHint() {
+            const body = document.getElementById('findingDrawerBody');
+            const hint = document.getElementById('findingScrollHint');
+            if (!body || !hint || body.dataset.scrollSeen === 'true') return;
+            body.dataset.scrollSeen = 'true';
+            body.classList.remove('show-scroll-hint');
+            hint.hidden = true;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.getElementById('findingDrawerBody');
+            if (body) body.addEventListener('scroll', dismissFindingScrollHint, { passive: true });
+            autoResizeFindingReason(document.getElementById('findingReason'));
+        });
 
         async function resolveAlertInDrawer(id) {
             if (!confirm('Tandai alert ini sebagai selesai?')) return;

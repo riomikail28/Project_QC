@@ -365,8 +365,137 @@
 
 .device-grid {
   display: grid;
-  gap: 14px;
+  gap: 18px;
   grid-template-columns: minmax(0, 1fr);
+}
+
+.monitoring-room-grid-section {
+  display: grid;
+  gap: 10px;
+}
+
+.monitoring-room-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.monitoring-room-title h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.monitoring-room-title span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.monitoring-device-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 12px;
+}
+
+.monitoring-device-mini-card {
+  min-width: 0;
+  min-height: 126px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  align-items: start;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(148,163,184,.28);
+  border-radius: 8px;
+  background: rgba(255,255,255,.94);
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 10px 24px rgba(15,23,42,.06);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.monitoring-device-mini-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37,99,235,.36);
+  box-shadow: 0 14px 28px rgba(15,23,42,.09);
+}
+
+.monitoring-device-mini-card.alert-required {
+  border-color: rgba(239,68,68,.42);
+  background: rgba(255,247,247,.96);
+}
+
+.monitoring-device-mini-name {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.15;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.monitoring-device-mini-room {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitoring-device-mini-temp {
+  align-self: center;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.monitoring-device-mini-status {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.monitoring-device-mini-status.is-pass {
+  border: 1px solid rgba(16,185,129,.22);
+  background: rgba(16,185,129,.12);
+  color: var(--success);
+}
+
+.monitoring-device-mini-status.is-alert {
+  border: 1px solid rgba(239,68,68,.22);
+  background: rgba(239,68,68,.12);
+  color: var(--danger);
+}
+
+.monitoring-device-mini-status.is-warning {
+  border: 1px solid rgba(245,158,11,.24);
+  background: rgba(245,158,11,.13);
+  color: var(--warning);
+}
+
+.monitoring-device-mini-status.is-pending {
+  border: 1px solid rgba(100,116,139,.18);
+  background: rgba(100,116,139,.1);
+  color: var(--muted);
 }
 
 .monitor-room-group {
@@ -797,6 +926,10 @@ textarea {
     grid-template-columns: 1fr 1fr;
   }
 
+  .monitoring-device-mini-grid {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  }
+
   .bottom-sheet {
     left: 50%;
     right: auto;
@@ -887,6 +1020,41 @@ textarea {
 
   .monitor-summary {
     display: none;
+  }
+
+  .device-grid {
+    gap: 16px;
+  }
+
+  .monitoring-room-title h4 {
+    font-size: 15px;
+  }
+
+  .monitoring-device-mini-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 12px;
+  }
+
+  .monitoring-device-mini-card {
+    min-height: 108px;
+    padding: 9px 8px;
+  }
+
+  .monitoring-device-mini-name {
+    font-size: 11px;
+  }
+
+  .monitoring-device-mini-room {
+    font-size: 9px;
+  }
+
+  .monitoring-device-mini-temp {
+    font-size: 19px;
+  }
+
+  .monitoring-device-mini-status {
+    padding: 4px 6px;
+    font-size: 8px;
   }
 
   .photo-placeholder,

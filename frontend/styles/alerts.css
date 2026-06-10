@@ -95,21 +95,112 @@
   max-height: 90vh;
 }
 
+#findingDrawer .alert-drawer-header {
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+#findingDrawer .alert-drawer-title {
+  gap: 10px;
+}
+
+#findingDrawer .alert-drawer-title .alert-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+#findingDrawer .alert-drawer-title h3 {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+#findingDrawer .alert-drawer-title p {
+  margin-top: 2px;
+}
+
 #findingDrawer .alert-drawer-body {
   min-height: 0;
-  padding-bottom: max(88px, calc(18px + env(safe-area-inset-bottom)));
+  position: relative;
+  overflow-y: auto;
+  padding-bottom: 120px;
 }
 
 #findingDrawer .finding-preview {
   min-height: 112px;
-  max-height: 240px;
+  max-height: none;
   overflow: hidden;
 }
 
+#findingDrawer .finding-upload-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: 10px 12px;
+  cursor: pointer;
+  border: 1px dashed rgba(37, 99, 235, .28);
+  text-align: left;
+  font: inherit;
+}
+
+#findingDrawer .finding-upload-card .alert-icon {
+  grid-row: 1 / span 2;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+#findingDrawer .finding-upload-card .finding-empty-photo {
+  grid-column: 2;
+}
+
+#findingDrawer .finding-upload-card .finding-photo-preview {
+  grid-column: 1 / -1;
+}
+
+#findingDrawer .finding-upload-card .finding-upload-copy {
+  grid-column: 2;
+}
+
+#findingDrawer .finding-upload-card:focus-visible,
+#findingDrawer .finding-category-chip:focus-visible,
+#findingDrawer textarea:focus-visible {
+  outline: 3px solid rgba(37,99,235,.18);
+  outline-offset: 2px;
+}
+
+#findingDrawer .finding-empty-photo {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+#findingDrawer .finding-empty-photo strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+#findingDrawer .finding-empty-photo span,
+#findingDrawer .finding-upload-copy span,
+#findingDrawer .finding-upload-copy small,
+#findingDrawer .finding-helper-text,
+#findingDrawer .finding-reason small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 #findingPhotoPreview {
+  display: none;
+  width: 100%;
   max-height: 220px;
   overflow: hidden;
   border-radius: 12px;
+  position: relative;
 }
 
 #findingImg {
@@ -118,6 +209,127 @@
   max-height: 220px;
   object-fit: contain;
   background: rgba(15, 23, 42, .06);
+}
+
+#findingPhotoBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+#findingDrawer .finding-upload-copy {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  width: 100%;
+}
+
+#findingDrawer .finding-upload-copy strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+#findingPhotoReady {
+  color: var(--success) !important;
+}
+
+#findingDrawer .finding-helper-text {
+  display: block;
+  margin-top: -4px;
+}
+
+#findingDrawer .finding-category-block {
+  gap: 8px;
+  margin-top: 0;
+  padding: 10px;
+}
+
+#findingDrawer .finding-category-chips {
+  gap: 6px;
+}
+
+#findingDrawer .finding-category-chip {
+  min-height: 30px;
+  max-width: 46%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: normal;
+}
+
+#findingDrawer .finding-reason {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+}
+
+#findingDrawer .finding-reason strong {
+  margin-bottom: 0;
+}
+
+#findingDrawer .finding-reason textarea {
+  width: 100%;
+  min-height: 92px;
+  max-height: 180px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.94);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: none;
+  overflow-y: auto;
+}
+
+#findingDrawer .alert-drawer-footer {
+  padding-top: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.98));
+}
+
+#findingDrawer .finding-scroll-hint {
+  position: sticky;
+  bottom: 8px;
+  z-index: 4;
+  justify-self: center;
+  margin: -64px 0 12px;
+  padding: 7px 10px;
+  border: 1px solid rgba(37,99,235,.16);
+  border-radius: 999px;
+  background: rgba(255,255,255,.94);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(15,23,42,.12);
+  pointer-events: none;
+}
+
+#findingDrawer .alert-drawer-body.show-scroll-hint::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: block;
+  height: 54px;
+  margin-top: -54px;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.96));
+  pointer-events: none;
 }
 
 .alert-action-box {
@@ -178,17 +390,32 @@
 
   #findingDrawer .alert-drawer-body {
     gap: 10px;
-    padding-bottom: max(96px, calc(22px + env(safe-area-inset-bottom)));
+    padding-bottom: 120px;
+  }
+
+  #findingDrawer .alert-drawer-header {
+    padding-bottom: 8px;
   }
 
   #findingDrawer .finding-preview {
-    min-height: 0;
+    min-height: 108px;
     padding: 10px;
   }
 
   #findingPhotoPreview,
   #findingImg {
-    max-height: 160px;
+    max-height: 132px;
+  }
+
+  #findingDrawer .finding-category-chip {
+    min-height: 28px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  #findingDrawer .alert-drawer-footer .btn-primary,
+  #findingDrawer .alert-drawer-footer .btn-secondary {
+    min-height: 40px;
   }
 
   .alert-drawer.active {
