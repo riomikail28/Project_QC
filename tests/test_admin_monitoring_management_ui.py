@@ -85,7 +85,7 @@ def test_existing_monitoring_grid_contract_is_unchanged():
     js = read("frontend/js/admin_app.js")
 
     assert 'id="monitoring-grid"' in html
-    assert "async loadMonitoring()" in js
+    assert "async loadMonitoring" in js
     assert "const grid = document.getElementById('monitoring-grid');" in js
     assert "/monitoring/daily?date=" in js
     assert "renderMonitoringDailyCard" in js

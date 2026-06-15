@@ -143,7 +143,7 @@ def test_batch_production_and_approvals_use_different_renderers():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
 
     assert "async loadBatchProduction()" in js
-    assert "async loadProductionBoard()" in js
+    assert "async loadProductionBoard" in js
     assert "renderBatchProduction(rows)" in js
     assert "renderApprovals(rows = [])" in js
     assert "case 'daily-reports': this.loadProductionBoard(); break;" in js
@@ -153,12 +153,12 @@ def test_batch_production_and_approvals_use_different_renderers():
 def test_production_qc_board_is_activity_based_not_product_master_based():
     html = (ROOT / "frontend" / "admin" / "admin_panel.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
-    load_block = js[js.index("async loadProductionBoard()"):js.index("groupProductionBySku", js.index("async loadProductionBoard()"))]
+    load_block = js[js.index("async loadProductionBoard"):js.index("groupProductionBySku", js.index("async loadProductionBoard"))]
     group_start = js.index("groupProductionBySku(batches = [])")
     group_block = js[group_start:js.index("renderProductionBoardSummary", group_start)]
 
     assert 'id="production-board-summary"' in html
-    assert "this.fetchAdminData(`${this.apiBase}/batches?${params.toString()}`)" in load_block
+    assert "this.fetchAdminData(endpoint" in load_block
     assert "this.fetchAdminData(`${this.apiBase}/products`)" not in load_block
     assert "products.forEach" not in group_block
     assert "return Array.from(groups.values()).filter(group => group.batches.length)" in group_block

@@ -8,8 +8,62 @@ const API_BASE = window.location.origin.includes('localhost') || window.location
     : '/api';
 
 const API = {
-    // PERFORMANCE_OPTIMIZED: shared memory cache + in-flight request dedupe for fast route switching.
-    _cache: new Map(),
+    _cache: (() => {
+        // PERFORMANCE_OPTIMIZED: Persist API cache in tab sessionStorage to survive page reloads on Staff app.
+        // Falls back to Memory Map if sessionStorage is disabled or throws.
+        try {
+            const testKey = '__qc_cache_test__';
+            sessionStorage.setItem(testKey, '1');
+            sessionStorage.removeItem(testKey);
+            
+            return {
+                get(key) {
+                    try {
+                        const val = sessionStorage.getItem(`api_cache:${key}`);
+                        return val ? JSON.parse(val) : undefined;
+                    } catch (e) {
+                        return undefined;
+                    }
+                },
+                set(key, val) {
+                    try {
+                        sessionStorage.setItem(`api_cache:${key}`, JSON.stringify(val));
+                    } catch (e) {}
+                    return this;
+                },
+                delete(key) {
+                    try {
+                        sessionStorage.removeItem(`api_cache:${key}`);
+                    } catch (e) {}
+                    return true;
+                },
+                clear() {
+                    try {
+                        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                            const k = sessionStorage.key(i);
+                            if (k && k.startsWith('api_cache:')) {
+                                sessionStorage.removeItem(k);
+                            }
+                        }
+                    } catch (e) {}
+                },
+                keys() {
+                    const list = [];
+                    try {
+                        for (let i = 0; i < sessionStorage.length; i++) {
+                            const k = sessionStorage.key(i);
+                            if (k && k.startsWith('api_cache:')) {
+                                list.push(k.substring(10)); // remove "api_cache:"
+                            }
+                        }
+                    } catch (e) {}
+                    return list;
+                }
+            };
+        } catch (e) {
+            return new Map();
+        }
+    })(),
     _pending: new Map(),
 
     async get(endpoint) {
