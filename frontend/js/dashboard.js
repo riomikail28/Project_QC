@@ -4,6 +4,7 @@
 
 const Dashboard = {
     refreshTimer: null,
+    lazyRenderTimer: null,
 
     async init() {
         await this.loadAll();
@@ -12,8 +13,10 @@ const Dashboard = {
     },
 
     async loadAll({ silent = false } = {}) {
+        const started = performance.now();
         if (!silent) this.setLoading();
         try {
+            // PERFORMANCE_OPTIMIZED: KPI data is rendered first; secondary panels follow after idle/visibility.
             const [summary, trend, qcStatus, monitoring, alerts, todaySummary, schedule] = await Promise.all([
                 this.fetchEnvelope('/dashboard/summary'),
                 this.fetchEnvelope('/dashboard/production-trend'),
@@ -27,12 +30,15 @@ const Dashboard = {
             this.renderTaskNow(summary, todaySummary, schedule);
             this.renderCompactToday(summary, todaySummary, schedule);
             this.renderSummary(summary);
-            this.renderProductionTrend(trend);
-            this.renderQcStatus(qcStatus);
-            this.renderMonitoring(monitoring);
-            this.renderCriticalIssues(alerts);
-            this.renderTodaySummary(todaySummary);
-            this.refreshIcons();
+            this.deferSecondaryRender(() => {
+                this.renderProductionTrend(trend);
+                this.renderQcStatus(qcStatus);
+                this.renderMonitoring(monitoring);
+                this.renderCriticalIssues(alerts);
+                this.renderTodaySummary(todaySummary);
+                this.refreshIcons();
+            });
+            console.info(`[PERFORMANCE_OPTIMIZED] Dashboard load time: ${Math.round(performance.now() - started)}ms`);
         } catch (error) {
             console.error('Failed to load real dashboard data:', error);
             this.renderError();
@@ -40,7 +46,10 @@ const Dashboard = {
     },
 
     async fetchEnvelope(endpoint) {
-        const response = await API.get(endpoint);
+        const response = await API.getSWR(endpoint, {
+            ttlMs: 60000,
+            onUpdate: data => this.renderEndpointUpdate(endpoint, data?.data)
+        });
         if (!response || response.success !== true) {
             throw new Error(response?.message || `Failed to load ${endpoint}`);
         }
@@ -49,13 +58,50 @@ const Dashboard = {
 
     async fetchOptionalEnvelope(endpoint) {
         try {
-            const response = await API.get(endpoint);
+            const response = await API.getSWR(endpoint, {
+                ttlMs: 60000,
+                onUpdate: data => this.renderEndpointUpdate(endpoint, data?.data)
+            });
             if (!response || response.success !== true) return null;
             return response.data;
         } catch (error) {
             console.warn(`Optional dashboard data failed: ${endpoint}`, error);
             return null;
         }
+    },
+
+    deferSecondaryRender(callback) {
+        clearTimeout(this.lazyRenderTimer);
+        const run = () => {
+            if (document.visibilityState === 'hidden') {
+                this.lazyRenderTimer = setTimeout(run, 250);
+                return;
+            }
+            callback();
+        };
+        if (window.requestIdleCallback) {
+            requestIdleCallback(run, { timeout: 800 });
+        } else {
+            this.lazyRenderTimer = setTimeout(run, 0);
+        }
+    },
+
+    renderEndpointUpdate(endpoint, data) {
+        if (!data) return;
+        if (endpoint === '/dashboard/summary') {
+            this.renderSummary(data);
+        } else if (endpoint === '/dashboard/production-trend') {
+            this.renderProductionTrend(data);
+        } else if (endpoint === '/dashboard/qc-status') {
+            this.renderQcStatus(data);
+        } else if (endpoint === '/dashboard/realtime-monitoring') {
+            this.renderMonitoring(data);
+        } else if (endpoint === '/dashboard/alerts') {
+            this.renderCriticalIssues(data);
+        } else if (endpoint === '/dashboard/today-summary') {
+            this.renderTodaySummary(data);
+        }
+        this.refreshIcons();
     },
 
     setLoading() {

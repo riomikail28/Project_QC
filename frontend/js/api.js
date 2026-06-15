@@ -8,19 +8,86 @@ const API_BASE = window.location.origin.includes('localhost') || window.location
     : '/api';
 
 const API = {
+    // PERFORMANCE_OPTIMIZED: shared memory cache + in-flight request dedupe for fast route switching.
+    _cache: new Map(),
+    _pending: new Map(),
+
     async get(endpoint) {
+        const url = this._url(endpoint);
+        const pendingKey = `GET:${url}`;
+        if (this._pending.has(pendingKey)) return this._pending.get(pendingKey);
+        const request = this._getNetwork(endpoint).finally(() => this._pending.delete(pendingKey));
+        this._pending.set(pendingKey, request);
+        return request;
+    },
+
+    async getCached(endpoint, ttlMs = 60000, options = {}) {
+        const key = options.cacheKey || this._cacheKey(endpoint);
+        const cached = this._cache.get(key);
+        if (!options.force && cached && Date.now() < cached.expiresAt) {
+            return cached.data;
+        }
+        const data = await this.get(endpoint);
+        this._setCache(key, data, ttlMs);
+        return data;
+    },
+
+    async getSWR(endpoint, options = {}) {
+        const ttlMs = options.ttlMs ?? 60000;
+        const key = options.cacheKey || this._cacheKey(endpoint);
+        const cached = this._cache.get(key);
+        const isFresh = cached && Date.now() < cached.expiresAt;
+
+        if (cached && !options.force) {
+            if (!isFresh && options.revalidate !== false) {
+                this.get(endpoint)
+                    .then(data => {
+                        this._setCache(key, data, ttlMs);
+                        options.onUpdate?.(data);
+                    })
+                    .catch(error => options.onError?.(error));
+            }
+            return cached.data;
+        }
+
+        const data = await this.get(endpoint);
+        this._setCache(key, data, ttlMs);
+        return data;
+    },
+
+    hasFreshCache(endpoint, cacheKey = null) {
+        const cached = this._cache.get(cacheKey || this._cacheKey(endpoint));
+        return Boolean(cached && Date.now() < cached.expiresAt);
+    },
+
+    clearCache(pattern = null) {
+        if (!pattern) {
+            this._cache.clear();
+            return;
+        }
+        for (const key of this._cache.keys()) {
+            if (key.includes(pattern)) this._cache.delete(key);
+        }
+    },
+
+    async _getNetwork(endpoint) {
         try {
             const url = this._url(endpoint);
+            const started = performance.now();
             const response = await fetch(url, {
                 headers: this._headers(),
                 credentials: 'include'
             });
             try {
-                return await this._handleResponse(response);
+                const data = await this._handleResponse(response);
+                this._metric('API response time', endpoint, started);
+                return data;
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { headers: this._headers(), credentials: 'include' });
-                    return await this._handleResponse(retryResp);
+                    const data = await this._handleResponse(retryResp);
+                    this._metric('API response time', `${endpoint} retry`, started);
+                    return data;
                 }
                 throw err;
             }
@@ -33,6 +100,7 @@ const API = {
     async post(endpoint, data) {
         try {
             const url = this._url(endpoint);
+            const started = performance.now();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: this._headers(),
@@ -40,11 +108,17 @@ const API = {
                 credentials: 'include'
             });
             try {
-                return await this._handleResponse(response);
+                const result = await this._handleResponse(response);
+                this._afterMutation(endpoint);
+                this._metric('API response time', `POST ${endpoint}`, started);
+                return result;
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'POST', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
-                    return await this._handleResponse(retryResp);
+                    const result = await this._handleResponse(retryResp);
+                    this._afterMutation(endpoint);
+                    this._metric('API response time', `POST ${endpoint} retry`, started);
+                    return result;
                 }
                 throw err;
             }
@@ -57,6 +131,7 @@ const API = {
     async patch(endpoint, data) {
         try {
             const url = this._url(endpoint);
+            const started = performance.now();
             const response = await fetch(url, {
                 method: 'PATCH',
                 headers: this._headers(),
@@ -64,11 +139,17 @@ const API = {
                 credentials: 'include'
             });
             try {
-                return await this._handleResponse(response);
+                const result = await this._handleResponse(response);
+                this._afterMutation(endpoint);
+                this._metric('API response time', `PATCH ${endpoint}`, started);
+                return result;
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'PATCH', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
-                    return await this._handleResponse(retryResp);
+                    const result = await this._handleResponse(retryResp);
+                    this._afterMutation(endpoint);
+                    this._metric('API response time', `PATCH ${endpoint} retry`, started);
+                    return result;
                 }
                 throw err;
             }
@@ -81,17 +162,24 @@ const API = {
     async delete(endpoint) {
         try {
             const url = this._url(endpoint);
+            const started = performance.now();
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: this._headers(),
                 credentials: 'include'
             });
             try {
-                return await this._handleResponse(response);
+                const result = await this._handleResponse(response);
+                this._afterMutation(endpoint);
+                this._metric('API response time', `DELETE ${endpoint}`, started);
+                return result;
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'DELETE', headers: this._headers(), credentials: 'include' });
-                    return await this._handleResponse(retryResp);
+                    const result = await this._handleResponse(retryResp);
+                    this._afterMutation(endpoint);
+                    this._metric('API response time', `DELETE ${endpoint} retry`, started);
+                    return result;
                 }
                 throw err;
             }
@@ -104,6 +192,7 @@ const API = {
     async upload(endpoint, formData) {
         try {
             const url = this._url(endpoint);
+            const started = performance.now();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -113,11 +202,17 @@ const API = {
                 credentials: 'include'
             });
             try {
-                return await this._handleResponse(response);
+                const result = await this._handleResponse(response);
+                this._afterMutation(endpoint);
+                this._metric('API response time', `UPLOAD ${endpoint}`, started);
+                return result;
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('qc_token')}` }, body: formData, credentials: 'include' });
-                    return await this._handleResponse(retryResp);
+                    const result = await this._handleResponse(retryResp);
+                    this._afterMutation(endpoint);
+                    this._metric('API response time', `UPLOAD ${endpoint} retry`, started);
+                    return result;
                 }
                 throw err;
             }
@@ -266,6 +361,31 @@ const API = {
         const path = raw.startsWith('/') ? raw : `/${raw}`;
         if (path === '/api' || path.startsWith('/api/')) return path;
         return `${API_BASE}${path}`;
+    },
+
+    _cacheKey(endpoint) {
+        return `GET:${this._url(endpoint)}`;
+    },
+
+    _setCache(key, data, ttlMs) {
+        this._cache.set(key, {
+            data,
+            expiresAt: Date.now() + ttlMs,
+            storedAt: Date.now()
+        });
+    },
+
+    _afterMutation(endpoint) {
+        const path = String(endpoint || '');
+        this.clearCache('dashboard');
+        ['dashboard', 'monitoring', 'reports', 'batches', 'findings', 'products', 'staff', 'facility', 'inspection'].forEach(pattern => {
+            if (path.includes(pattern)) this.clearCache(pattern);
+        });
+    },
+
+    _metric(label, endpoint, started) {
+        const duration = Math.round(performance.now() - started);
+        console.info(`[PERFORMANCE_OPTIMIZED] ${label}: ${endpoint} ${duration}ms`);
     },
 
     _headers() {

@@ -20,6 +20,8 @@ const adminApp = {
     currentFindingsRows: [],
     findingsStatusFilter: 'all',
     monitoringManagementRooms: [],
+    activeSection: 'overview',
+    sectionRefreshTimers: {},
 
     init() {
         this.checkAuth();
@@ -83,6 +85,10 @@ const adminApp = {
         if (el) el.textContent = `${count} ${noun}`;
     },
 
+    setHtmlIfChanged(element, html) {
+        if (element && element.innerHTML !== html) element.innerHTML = html;
+    },
+
     checkAuth() {
         if (!Auth.check() || !Auth.isAdmin()) {
             window.location.href = Auth.check() ? '/staff/dashboard.html' : '/staff/login.html';
@@ -128,6 +134,7 @@ const adminApp = {
 
     navigateTo(target, activeItem = null) {
         if (!target) return;
+        this.activeSection = target;
         const item = activeItem || document.querySelector(`.sidebar-item[data-section="${target}"], .sidebar-item[data-target="${target}"]`);
         document.querySelectorAll('.sidebar-item[data-target]').forEach(link => link.classList.remove('active'));
         if (item) item.classList.add('active');
@@ -200,14 +207,37 @@ const adminApp = {
         });
     },
 
-    async fetchAdminData(endpoint) {
+    async fetchAdminData(endpoint, options = {}) {
         try {
-            return await API.get(endpoint);
+            const ttlMs = options.ttlMs ?? this.adminCacheTtl(endpoint);
+            if (options.cache === false) return await API.get(endpoint);
+            return await API.getSWR(endpoint, {
+                ttlMs,
+                force: options.force,
+                revalidate: options.revalidate,
+                onUpdate: options.onUpdate,
+                onError: error => console.warn(`[PERFORMANCE_OPTIMIZED] Background refresh failed: ${endpoint}`, error)
+            });
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
             this.notify(error.message || 'Gagal memuat data admin');
             return null;
         }
+    },
+
+    adminCacheTtl(endpoint) {
+        const value = String(endpoint || '');
+        if (value.includes('/monitoring/')) return 30000;
+        if (value.includes('/analytics') || value.includes('/reports/summary') || value.includes('/daily-reports')) return 60000;
+        if (value.includes('/reports/findings') || value.includes('/batches') || value.includes('/products') || value.includes('/staff')) return 60000;
+        return 45000;
+    },
+
+    scheduleSectionRefresh(section, fn) {
+        clearTimeout(this.sectionRefreshTimers[section]);
+        this.sectionRefreshTimers[section] = setTimeout(() => {
+            if (this.activeSection === section) fn();
+        }, 100);
     },
 
     notify(message, type = 'error') {
@@ -513,16 +543,18 @@ const adminApp = {
         window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
     },
 
-    async loadOverview() {
+    async loadOverview({ fromRevalidate = false } = {}) {
+        const started = performance.now();
         const today = this.jakartaDateString();
+        const onUpdate = fromRevalidate ? null : () => this.scheduleSectionRefresh('overview', () => this.loadOverview({ fromRevalidate: true }));
         const [res, reportSummary, findingsEnvelope, dailyEnvelope, batchEnvelope, monitoringEnvelope, realtimeEnvelope] = await Promise.all([
-            this.fetchAdminData(`${this.apiBase}/analytics/overview`),
-            this.fetchAdminData(`${this.apiBase}/reports/summary`),
-            this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`),
-            this.fetchAdminData(`${this.apiBase}/daily-reports?date=${encodeURIComponent(today)}&limit=500`),
-            this.fetchAdminData(`${this.apiBase}/batches?date=${encodeURIComponent(today)}&limit=200`),
-            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(today)}&limit=500`),
-            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`),
+            this.fetchAdminData(`${this.apiBase}/analytics/overview`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/reports/summary`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/daily-reports?date=${encodeURIComponent(today)}&limit=500`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/batches?date=${encodeURIComponent(today)}&limit=200`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(today)}&limit=500`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`, { onUpdate, revalidate: !fromRevalidate }),
         ]);
         const overview = res || {};
         const summary = reportSummary?.data || reportSummary || {};
@@ -560,6 +592,7 @@ const adminApp = {
         this.renderRecentActivity({ dailyRows, findings, batchRows, monitoringRows });
         this.updateQueueCounts({ ...overview, total_qc_pending: pendingApproval, total_open_alerts: deviceAlerts, open_findings: openFindings });
         this.renderAlertsWorkflow({ ...overview, total_qc_pending: pendingApproval, total_open_alerts: deviceAlerts, open_findings: openFindings });
+        console.info(`[PERFORMANCE_OPTIMIZED] Dashboard load time: ${Math.round(performance.now() - started)}ms`);
     },
 
     renderNeedAttention({ pendingApproval = 0, deviceAlerts = 0, openFindings = 0, holdBatch = 0 } = {}) {
@@ -950,18 +983,32 @@ const adminApp = {
         });
     },
 
-    async loadMonitoring() {
+    async loadMonitoring({ fromRevalidate = false } = {}) {
+        const started = performance.now();
         const grid = document.getElementById('monitoring-grid');
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
-
         const date = this.monitoringDateValue();
+        const endpoint = `${this.apiBase}/monitoring/daily?date=${encodeURIComponent(date)}`;
+        if (!API.hasFreshCache(endpoint)) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
+        }
+
         this.setText('monitoring-date-label', `Tanggal monitoring: ${this.longDate(date)}`);
-        const envelope = await this.fetchAdminData(`${this.apiBase}/monitoring/daily?date=${encodeURIComponent(date)}`);
+        const envelope = await this.fetchAdminData(endpoint, {
+            ttlMs: 30000,
+            revalidate: !fromRevalidate,
+            onUpdate: () => this.scheduleSectionRefresh('monitoring', () => this.loadMonitoring({ fromRevalidate: true }))
+        });
+        this.renderMonitoringDaily(envelope);
+        console.info(`[PERFORMANCE_OPTIMIZED] Monitoring load time: ${Math.round(performance.now() - started)}ms`);
+    },
+
+    renderMonitoringDaily(envelope) {
+        const grid = document.getElementById('monitoring-grid');
+        if (!grid) return;
         const data = envelope?.data || envelope || {};
         const devices = Array.isArray(data.devices) ? data.devices : [];
         this.monitoringDailyDevices = devices;
 
-        grid.innerHTML = '';
         if (!devices.length) {
             grid.innerHTML = this.emptyState('Belum ada unit monitoring.', 'Tambahkan room/device dari Kelola Unit untuk mulai tracking suhu.');
             return;
@@ -969,7 +1016,8 @@ const adminApp = {
 
         const hasAnyInput = devices.some(device => (device.slots || []).some(slot => slot.temperature !== null && slot.temperature !== undefined));
         const emptyBanner = hasAnyInput ? '' : this.emptyState('Belum ada input monitoring pada tanggal ini.', 'Semua slot device untuk tanggal ini masih Belum input.');
-        grid.innerHTML = emptyBanner + devices.map(device => this.renderMonitoringDailyCard(device)).join('');
+        // PERFORMANCE_OPTIMIZED: keep device list source cached; only replace the board when daily slot data changed.
+        this.setHtmlIfChanged(grid, emptyBanner + devices.map(device => this.renderMonitoringDailyCard(device)).join(''));
         this.refreshIcons();
     },
     setupMonitoringDefaults() {
@@ -1086,17 +1134,24 @@ const adminApp = {
         `;
     },
 
-    async loadStaff() {
+    async loadStaff({ fromRevalidate = false } = {}) {
         const tbody = document.getElementById('table-staff');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
+        const endpoint = '/staff';
+        if (!API.hasFreshCache(endpoint)) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
+        }
         try {
-            const staff = await API.get('/staff');
+            const staff = await API.getSWR(endpoint, {
+                ttlMs: 60000,
+                revalidate: !fromRevalidate,
+                onUpdate: () => this.scheduleSectionRefresh('staff', () => this.loadStaff({ fromRevalidate: true }))
+            });
             if (!staff.length) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada staff.</td></tr>';
                 return;
             }
-            tbody.innerHTML = staff.map(item => `
+            this.setHtmlIfChanged(tbody, staff.map(item => `
                 <tr>
                     <td data-label="Nama"><strong>${item.full_name || item.username || '-'}</strong></td>
                     <td data-label="Username">${item.username || '-'}</td>
@@ -1108,7 +1163,7 @@ const adminApp = {
                         </span>
                     </td>
                 </tr>
-            `).join('');
+            `).join(''));
             this.applyTableFilter('table-staff');
             this.refreshIcons();
         } catch (error) {
@@ -1775,17 +1830,24 @@ const adminApp = {
         }
     },
 
-    async loadSku() {
+    async loadSku({ fromRevalidate = false } = {}) {
         const tbody = document.getElementById('table-sku');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
+        const endpoint = '/v1/admin/products';
+        if (!API.hasFreshCache(endpoint)) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
+        }
         try {
-            const products = await API.get('/v1/admin/products');
+            const products = await API.getSWR(endpoint, {
+                ttlMs: 60000,
+                revalidate: !fromRevalidate,
+                onUpdate: () => this.scheduleSectionRefresh('sku', () => this.loadSku({ fromRevalidate: true }))
+            });
             if (!products.length) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada SKU produk.</td></tr>';
                 return;
             }
-            tbody.innerHTML = products.map(item => `
+            this.setHtmlIfChanged(tbody, products.map(item => `
                 <tr>
                     <td data-label="Kode SKU"><strong>${item.product_code || item.sku_code || '-'}</strong></td>
                     <td data-label="Nama Produk">${item.product_name || '-'}</td>
@@ -1800,7 +1862,7 @@ const adminApp = {
                         </span>
                     </td>
                 </tr>
-            `).join('');
+            `).join(''));
             this.applyTableFilter('table-sku');
             this.refreshIcons();
         } catch (error) {
@@ -2126,17 +2188,26 @@ const adminApp = {
         return `${this.escapeHtml(cooking)}<br>${this.escapeHtml(final)}`;
     },
 
-    async loadProductionBoard() {
+    async loadProductionBoard({ fromRevalidate = false } = {}) {
+        const started = performance.now();
         const board = document.getElementById('production-qc-board');
         if (!board) return this.loadBatchProduction();
-        board.innerHTML = '<div class="empty-admin-state">Loading Production QC Board...</div>';
         const params = this.batchProductionQuery();
-        const batchEnvelope = await this.fetchAdminData(`${this.apiBase}/batches?${params.toString()}`);
+        const endpoint = `${this.apiBase}/batches?${params.toString()}`;
+        if (!API.hasFreshCache(endpoint)) {
+            board.innerHTML = '<div class="empty-admin-state">Loading Production QC Board...</div>';
+        }
+        const batchEnvelope = await this.fetchAdminData(endpoint, {
+            ttlMs: 60000,
+            revalidate: !fromRevalidate,
+            onUpdate: () => this.scheduleSectionRefresh('daily-reports', () => this.loadProductionBoard({ fromRevalidate: true }))
+        });
         const batches = Array.isArray(batchEnvelope?.data?.rows) ? batchEnvelope.data.rows : (Array.isArray(batchEnvelope?.rows) ? batchEnvelope.rows : []);
         this.productionBoardRows = batches;
         const groups = this.groupProductionBySku(batches);
         this.renderProductionBoardSummary(groups, batches, batchEnvelope?.data?.date || params.get('date'));
         this.renderProductionBoard(groups);
+        console.info(`[PERFORMANCE_OPTIMIZED] Production QC Board load time: ${Math.round(performance.now() - started)}ms`);
     },
 
     groupProductionBySku(batches = []) {
@@ -2208,7 +2279,7 @@ const adminApp = {
             this.refreshIcons();
             return;
         }
-        board.innerHTML = groups.map(group => `
+        this.setHtmlIfChanged(board, groups.map(group => `
             <button class="metric-card metric-action-card sku-qc-card" type="button" onclick='adminApp.openSkuBoard(${this.safeJson(group)})'>
                 <div class="metric-header"><span>${this.escapeHtml(group.sku_code || '-')}</span><i data-lucide="package-check" class="metric-icon" style="color: var(--primary-color)"></i></div>
                 <h3>${this.escapeHtml(group.product_name || '-')}</h3>
@@ -2221,7 +2292,7 @@ const adminApp = {
                 <p class="metric-action-copy">Pending Approval: ${group.pending}</p>
                 <span class="btn-secondary btn-sm">Lihat Detail</span>
             </button>
-        `).join('');
+        `).join(''));
         this.refreshIcons();
     },
 
@@ -2325,11 +2396,19 @@ const adminApp = {
         this.refreshIcons();
     },
 
-    async loadFindingsBoard() {
+    async loadFindingsBoard({ fromRevalidate = false } = {}) {
+        const started = performance.now();
         const board = document.getElementById('findings-board');
         if (!board) return;
-        board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
-        const res = await this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`);
+        const endpoint = `${this.apiBase}/reports/findings?limit=200`;
+        if (!API.hasFreshCache(endpoint)) {
+            board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
+        }
+        const res = await this.fetchAdminData(endpoint, {
+            ttlMs: 60000,
+            revalidate: !fromRevalidate,
+            onUpdate: () => this.scheduleSectionRefresh('findings', () => this.loadFindingsBoard({ fromRevalidate: true }))
+        });
         const rows = this.filterFindingsByDate(this.findingRows(res));
         this.currentFindingsRows = rows;
         const openRows = rows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
@@ -2337,6 +2416,7 @@ const adminApp = {
         this.setText('metric-findings-open', openRows.length);
         this.renderFindingsSummary(rows);
         this.renderFindingsBoard(this.filteredFindingRows(rows));
+        console.info(`[PERFORMANCE_OPTIMIZED] QC Temuan load time: ${Math.round(performance.now() - started)}ms`);
     },
 
     setupFindingsDefaults() {
@@ -2424,15 +2504,16 @@ const adminApp = {
             this.refreshIcons();
             return;
         }
-        board.innerHTML = rows.map(row => {
+        this.setHtmlIfChanged(board, rows.map(row => {
             const title = row.title || row.finding_type || row.reason || row.description || 'QC Temuan';
             const lifecycle = this.findingLifecycleStatus(row);
             const category = this.findingCategory(row);
             const photo = this.findingPhoto(row);
+            const thumb = this.thumbnailUrl(photo);
             const overdue = this.isFindingOverdue(row);
             return `
                 <article class="metric-card finding-card finding-card-${this.escapeAttr(lifecycle.toLowerCase().replace('_', '-'))}" data-finding-id="${this.escapeAttr(row.id || '')}">
-                    <div class="finding-card-main" role="button" tabindex="0" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>
+                    <div class="finding-card-main">
                         <div class="finding-card-top">
                             <span class="finding-status-badge finding-status-${this.escapeAttr(lifecycle.toLowerCase().replace('_', '-'))}">${this.escapeHtml(lifecycle.replace('_', ' '))}</span>
                             ${overdue ? '<span class="finding-overdue-badge">OVERDUE</span>' : ''}
@@ -2440,7 +2521,7 @@ const adminApp = {
                         <h3>${this.escapeHtml(title)}</h3>
                         <span class="finding-category-badge">${this.escapeHtml(category)}</span>
                         <div class="finding-card-body">
-                            <div class="finding-thumb">${photo ? `<img src="${this.escapeAttr(photo)}" alt="Foto temuan">` : '<span>Tidak Ada Foto</span>'}</div>
+                            <div class="finding-thumb">${thumb ? `<img src="${this.escapeAttr(thumb)}" alt="Foto temuan" loading="lazy" decoding="async">` : '<span>Tidak Ada Foto</span>'}</div>
                             <div>
                                 <p class="admin-muted">Staff: <strong>${this.escapeHtml(row.staff_display_name || row.inspector_name || row.staff_name || '-')}</strong></p>
                                 <p class="admin-muted">Dibuat: <strong>${this.escapeHtml(this.relativeAge(row.created_at || row.submitted_at))}</strong></p>
@@ -2450,12 +2531,13 @@ const adminApp = {
                     <button class="btn-secondary finding-detail-btn" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>Lihat Detail</button>
                 </article>
             `;
-        }).join('');
+        }).join(''));
         this.refreshIcons();
     },
 
     openFindingDetail(row) {
         const photo = this.findingPhoto(row);
+        const thumb = this.thumbnailUrl(photo);
         const title = row.title || row.finding_type || row.reason || 'QC Temuan';
         const lifecycle = this.findingLifecycleStatus(row);
         const category = this.findingCategory(row);
@@ -2475,7 +2557,7 @@ const adminApp = {
             <section class="review-section">
                 <h4>Foto</h4>
                 <div class="review-evidence">
-                    ${photo ? `<img src="${this.escapeAttr(String(photo).split(';')[0])}" alt="Foto temuan"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(photo)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada foto.</p>'}
+                    ${thumb ? `<img src="${this.escapeAttr(thumb)}" alt="Foto temuan" loading="lazy" decoding="async"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(photo)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada foto.</p>'}
                 </div>
             </section>
             <section class="review-section">
@@ -2516,6 +2598,14 @@ const adminApp = {
     findingPhoto(row = {}) {
         const photo = row.photo_url || row.evidence_url || row.public_url || '';
         return photo ? String(photo).split(';')[0] : '';
+    },
+
+    thumbnailUrl(url) {
+        const raw = String(url || '').split(';')[0].trim();
+        if (!raw) return '';
+        if (!/^https?:\/\//i.test(raw)) return raw;
+        const separator = raw.includes('?') ? '&' : '?';
+        return `${raw}${separator}width=180&quality=65`;
     },
 
     isFindingOverdue(row = {}) {

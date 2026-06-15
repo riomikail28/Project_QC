@@ -30,17 +30,23 @@ function authHeaders() {
 }
 
 async function loadFacilityStructure() {
+    const started = performance.now();
     try {
-        const res = await fetch("/api/facility/structure", { headers: authHeaders() });
-        if (res.status === 401) {
-            window.location.href = "/login.html";
-            return;
-        }
-        const envelope = await res.json();
+        // PERFORMANCE_OPTIMIZED: reuse monitoring structure cache when returning to the page.
+        const envelope = await API.getSWR("/facility/structure", {
+            ttlMs: 30000,
+            onUpdate: data => {
+                const structure = Array.isArray(data) ? data : (data.data || []);
+                facilityStructure = normalizeFacilityStructure(structure);
+                renderRoomSelector();
+                selectRoom(selectedRoomId || "all");
+            }
+        });
         const structure = Array.isArray(envelope) ? envelope : (envelope.data || []);
         facilityStructure = normalizeFacilityStructure(structure);
         renderRoomSelector();
         if (facilityStructure.length) selectRoom("all");
+        console.info(`[PERFORMANCE_OPTIMIZED] Monitoring load time: ${Math.round(performance.now() - started)}ms`);
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
         facilityStructure = [];
@@ -349,12 +355,18 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
 async function loadRecentLogs() {
     try {
-        const res = await fetch("/api/monitoring/latest", { headers: authHeaders() });
-        if (res.status === 401) {
-            window.location.href = "/login.html";
-            return;
-        }
-        const logs = await res.json();
+        // PERFORMANCE_OPTIMIZED: stale logs render immediately, then background refresh updates this panel.
+        const logs = await API.getSWR("/monitoring/latest", {
+            ttlMs: 30000,
+            onUpdate: data => renderRecentLogsData(Array.isArray(data) ? data : [])
+        });
+        renderRecentLogsData(Array.isArray(logs) ? logs : []);
+    } catch (err) {
+        console.error("Gagal memuat log", err);
+    }
+}
+
+function renderRecentLogsData(logs) {
         latestTemperatureLogs = Array.isArray(logs) ? logs : [];
         renderRoomSelector();
         selectRoom(selectedRoomId || "all");
@@ -386,14 +398,18 @@ async function loadRecentLogs() {
                 </div>
             </div>
         `).join("");
-    } catch (err) {
-        console.error("Gagal memuat log", err);
-    }
 }
 
 async function loadTodaySchedule() {
     try {
-        const response = await API.get("/facility/monitoring/schedule/today");
+        // PERFORMANCE_OPTIMIZED: schedule uses 30s stale-while-revalidate cache for instant return navigation.
+        const response = await API.getSWR("/facility/monitoring/schedule/today", {
+            ttlMs: 30000,
+            onUpdate: data => {
+                todaySchedule = data.data || null;
+                renderTodaySchedule();
+            }
+        });
         todaySchedule = response.data || null;
         renderTodaySchedule();
     } catch (err) {
