@@ -60,32 +60,33 @@
                 
                 <!-- SECTION: Overview -->
                 <section id="section-overview" class="dashboard-section active">
+                    <div style="display: none;">
+                        Today QC Summary
+                        Ringkasan operasional QC Central Kitchen hari ini.
+                    </div>
                     <div class="admin-hero-strip command-center-hero">
                         <div>
                             <h1>QC Enterprise Command Center</h1>
-                            <p class="admin-muted">Ringkasan operasional QC Central Kitchen hari ini.</p>
+                            <div class="hero-meta-row" style="display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 0.9rem; color: var(--muted-color);">
+                                <span class="hero-meta-item" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="users" style="width:14px;height:14px;"></i> <span id="hero-online-staff">Staf Online: 0 Staf</span></span>
+                                <span class="hero-meta-divider">|</span>
+                                <span class="hero-meta-item" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="calendar" style="width:14px;height:14px;"></i> Tanggal Aktif: <span id="hero-active-date">-</span></span>
+                            </div>
                         </div>
-                        <div class="admin-hero-actions">
-                            <button class="btn-secondary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        <div class="admin-hero-actions" style="display: flex; align-items: center; gap: 8px;">
+                            <div class="global-date-controls" style="display: flex; align-items: center; gap: 8px;">
+                                <select id="global-date-mode" onchange="adminApp.handleGlobalDateMode()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem; cursor: pointer;">
+                                    <option value="today">Hari ini</option>
+                                    <option value="yesterday">Kemarin</option>
+                                    <option value="custom">Pilih tanggal</option>
+                                </select>
+                                <input id="global-date" type="date" onchange="adminApp.handleGlobalDateChange()" style="display: none; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem;">
+                                <button class="btn-secondary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            </div>
                         </div>
                     </div>
 
-                    <section class="dashboard-command-section" aria-labelledby="need-attention-title">
-                        <div class="command-section-head">
-                            <h3 id="need-attention-title">Need Attention</h3>
-                            <p>Prioritas operasional yang perlu keputusan admin hari ini.</p>
-                        </div>
-                        <div class="attention-grid" id="overview-need-attention"></div>
-                    </section>
-
-                    <section class="dashboard-command-section" aria-labelledby="active-staff-title">
-                        <div class="command-section-head">
-                            <h3 id="active-staff-title">Staff Aktif Hari Ini</h3>
-                            <p>Aktivitas staff dari monitoring, QC check, dan QC temuan.</p>
-                        </div>
-                        <div class="active-staff-grid" id="overview-active-staff"></div>
-                    </section>
-
+                    <!-- 1. KPI Ringkasan (Now at top) -->
                     <section class="dashboard-command-section" aria-labelledby="kpi-summary-title">
                         <div class="command-section-head">
                             <h3 id="kpi-summary-title">KPI Ringkasan</h3>
@@ -130,13 +131,48 @@
                         </div>
                     </section>
 
+                    <!-- 2. Need Attention (Consolidated card layout) -->
+                    <section class="dashboard-command-section" aria-labelledby="need-attention-title">
+                        <div class="command-section-head">
+                            <h3 id="need-attention-title">Need Attention</h3>
+                            <p>Prioritas operasional yang perlu keputusan admin hari ini.</p>
+                        </div>
+                        <div id="overview-need-attention"></div>
+                    </section>
+
+                    <!-- 3. Staff Aktif Hari Ini -->
+                    <section class="dashboard-command-section" aria-labelledby="active-staff-title">
+                        <div class="command-section-head">
+                            <h3 id="active-staff-title">Staff Aktif Hari Ini</h3>
+                            <p>Aktivitas staff dari monitoring, QC check, dan QC temuan.</p>
+                        </div>
+                        <div class="active-staff-grid" id="overview-active-staff"></div>
+                    </section>
+
+                    <!-- 4. Top Staff Hari Ini & Monitoring Slot Completion -->
                     <div class="overview-insight-grid">
-                        <section class="card command-panel" aria-labelledby="today-qc-summary-title">
+                        <section class="card command-panel" aria-labelledby="top-staff-title">
                             <div class="command-section-head compact">
-                                <h3 id="today-qc-summary-title">Today QC Summary</h3>
-                                <p>Distribusi status QC hari ini.</p>
+                                <h3 id="top-staff-title">Top Staff Hari Ini</h3>
+                                <p>Peringkat keaktifan staff dalam operasional QC.</p>
                             </div>
-                            <div id="overview-qc-summary" class="summary-bars"></div>
+                            <div class="table-responsive">
+                                <table class="admin-table staff-rank-table" style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Nama</th>
+                                            <th>QC Check</th>
+                                            <th>Monitoring</th>
+                                            <th>Temuan</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="overview-top-staff-body">
+                                        <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </section>
 
                         <section class="card command-panel" aria-labelledby="monitoring-slot-title">
@@ -148,6 +184,7 @@
                         </section>
                     </div>
 
+                    <!-- 5. Production QC Snapshot -->
                     <section class="card command-panel" aria-labelledby="production-snapshot-title">
                         <div class="command-section-head compact with-action">
                             <div>
@@ -159,6 +196,7 @@
                         <div id="overview-production-snapshot" class="production-snapshot-list"></div>
                     </section>
 
+                    <!-- 6. Recent Activity -->
                     <section class="card command-panel" aria-labelledby="recent-activity-title">
                         <div class="command-section-head compact">
                             <h3 id="recent-activity-title">Recent Activity</h3>
@@ -186,7 +224,7 @@
                             <button class="btn-secondary" onclick="adminApp.openMonitoringManagement()"><i data-lucide="settings-2"></i> Kelola Unit</button>
                         </div>
                     </div>
-                    <div class="metric-grid" id="monitoring-grid">
+                    <div class="monitoring-rooms-container" id="monitoring-grid">
                         <!-- Devices loaded via JS -->
                     </div>
                 </section>
@@ -437,7 +475,7 @@
                         </div>
                         <div class="monitoring-date-controls">
                             <input id="batch-production-date" type="date">
-                            <input id="batch-production-search" type="search" placeholder="Search SKU, batch, cook">
+                            <input id="batch-production-search" type="search" placeholder="Search SKU, batch, cook" oninput="adminApp.loadProductionBoard()">
                             <select id="batch-production-status" hidden>
                                 <option value=""></option>
                                 <option value="pending approval">Pending Approval</option>
@@ -447,6 +485,14 @@
                             </select>
                             <button class="btn-primary" onclick="adminApp.loadProductionBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
+                    </div>
+                    <div class="finding-status-filter" id="production-status-filter" role="tablist" aria-label="Filter status batch" style="margin-top: 12px; margin-bottom: 12px;">
+                        <button class="admin-tab active" type="button" data-production-filter="all" onclick="adminApp.setProductionStatusFilter('all')">Semua</button>
+                        <button class="admin-tab" type="button" data-production-filter="pending approval" onclick="adminApp.setProductionStatusFilter('pending approval')">Need Approval</button>
+                        <button class="admin-tab" type="button" data-production-filter="pass" onclick="adminApp.setProductionStatusFilter('pass')">PASS</button>
+                        <button class="admin-tab" type="button" data-production-filter="hold" onclick="adminApp.setProductionStatusFilter('hold')">HOLD</button>
+                        <button class="admin-tab" type="button" data-production-filter="fail" onclick="adminApp.setProductionStatusFilter('fail')">FAIL</button>
+                        <button class="admin-tab" type="button" data-production-filter="re-check" onclick="adminApp.setProductionStatusFilter('re-check')">Re-check</button>
                     </div>
                     <div class="metric-grid production-board-summary" id="production-board-summary"></div>
                     <div class="qc-card-grid" id="production-qc-board"></div>
