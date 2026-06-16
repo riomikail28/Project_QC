@@ -43,9 +43,11 @@ const CCP = {
         } else if (stageNum === 3) {
             container.innerHTML = this._input('room_temp', 'Suhu Ruangan / Penyimpanan (°C)', 'number', '0.0');
         } else if (stageNum === 4) {
-            if (this.product?.brix_min !== undefined) container.innerHTML += this._input('brix', 'Brix (%)', 'number', '0.0');
-            if (this.product?.ph_min !== undefined) container.innerHTML += this._input('ph', 'pH Value', 'number', '0.0');
-            if (this.product?.tds_min !== undefined) container.innerHTML += this._input('tds', 'TDS (ppm)', 'number', '0');
+            let html = '';
+            if (this.product?.brix_min !== undefined) html += this._input('brix', 'Brix (%)', 'number', '0.0');
+            if (this.product?.ph_min !== undefined) html += this._input('ph', 'pH Value', 'number', '0.0');
+            if (this.product?.tds_min !== undefined) html += this._input('tds', 'TDS (ppm)', 'number', '0');
+            container.innerHTML = html;
         }
     },
 

@@ -25,9 +25,7 @@ const AlertsPage = {
                 return;
             }
 
-            alerts.forEach(alert => {
-                container.innerHTML += this.renderAlertCard(alert);
-            });
+            container.innerHTML = alerts.map(alert => this.renderAlertCard(alert)).join('');
         } catch (err) {
             UI.toast('Gagal memuat alert', 'error');
         }
