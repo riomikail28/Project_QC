@@ -47,7 +47,7 @@ def test_parameter_qc_is_collapsible_and_expands_for_hold_fail():
 
     assert '<details class="qc-parameter-panel" id="qcParameterPanel">' in html
     assert "Parameter QC Tambahan" in html
-    assert "if (parameterPanel) parameterPanel.open = Boolean(hasContext && (holdFail || recheck || standardDriven))" in js
+    assert "isAdvancedPanelOpen" in js
     assert "productHasAdditionalStandards" in js
 
 
@@ -83,3 +83,22 @@ def test_submit_button_copy_changes_by_status_and_recheck():
     assert "return 'Simpan FAIL'" in js
     assert "return 'Simpan PASS'" in js
     assert "button.innerHTML = `<i class=\"fas fa-paper-plane\"></i>${this.submitButtonCopy()}`" in js
+
+
+def test_qc_parameter_panel_stays_open_after_input_change():
+    html = read("frontend/staff/inspection.html")
+    js = read("frontend/js/inspection.js")
+
+    # State variable let isAdvancedPanelOpen = false; should store the open state and be used on re-render.
+    assert "let isAdvancedPanelOpen = false;" in js
+    assert "isAdvancedPanelOpen" in js
+    assert "classList.remove('collapsed')" in js
+    assert "classList.add('collapsed')" in js
+    assert "parameterPanel.open = true" in js
+    assert "parameterPanel.open = false" in js
+    assert "parameterPanel.addEventListener('toggle'" in js
+
+    # Event listener for temperature does not trigger rendering/toggling functions
+    assert "renderInspection" not in js
+    assert "renderForm" not in js
+    assert "toggleAdvancedParameters" not in js

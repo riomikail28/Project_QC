@@ -7,6 +7,8 @@
  * Form fields appear progressively to minimize scroll on mobile.
  */
 
+let isAdvancedPanelOpen = false;
+
 const Inspection = {
     selectedStatus: null,
     selectedStage: null,
@@ -222,6 +224,9 @@ const Inspection = {
                 document.querySelectorAll('.qc-status-option').forEach(item => {
                     item.classList.toggle('active', item === button);
                 });
+                if (this.selectedStatus === 'hold' || this.selectedStatus === 'fail') {
+                    isAdvancedPanelOpen = true;
+                }
                 this.updateFastQcMode();
                 this.updateSubmitState();
                 this.updateSummary();
@@ -304,6 +309,7 @@ const Inspection = {
             this.activeInspection = null;
             this.message('Mode re-check aktif. Submit berikutnya akan menjadi ronde lanjutan.', false);
             this.setText('qcFormTitle', 'RE-CHECK QC');
+            isAdvancedPanelOpen = true;
             this.updateFastQcMode();
             this.updateSummary();
             this.updateSubmitState();
@@ -323,6 +329,13 @@ const Inspection = {
                 this.updateSummary();
             });
         });
+
+        const parameterPanel = document.getElementById('qcParameterPanel');
+        if (parameterPanel) {
+            parameterPanel.addEventListener('toggle', () => {
+                isAdvancedPanelOpen = parameterPanel.open;
+            });
+        }
     },
 
     /* ═══════════════════════════════════════════════
@@ -376,7 +389,15 @@ const Inspection = {
         const sheet = document.getElementById('qcFormSheet');
         const standardDriven = this.productHasAdditionalStandards();
 
-        if (parameterPanel) parameterPanel.open = Boolean(hasContext && (holdFail || recheck || standardDriven));
+        if (parameterPanel) {
+            if (isAdvancedPanelOpen) {
+                parameterPanel.classList.remove('collapsed');
+                parameterPanel.open = true;
+            } else {
+                parameterPanel.classList.add('collapsed');
+                parameterPanel.open = false;
+            }
+        }
         if (notesField) notesField.hidden = !hasContext || (!holdFail && !recheck);
         if (uploadCard) uploadCard.hidden = !hasContext || (!holdFail && !recheck);
         if (photoLabel) photoLabel.textContent = holdFail ? 'Foto evidence wajib' : 'Foto evidence optional';
@@ -1347,6 +1368,7 @@ const Inspection = {
         this.activeInspection = null;
         this.lastInspection = batch.last_qc || null;
         this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
+        isAdvancedPanelOpen = Boolean(this.recheckParentInspection);
         this.selectedStage = 'cooking_check';
         this.selectedStatus = null;
         ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
@@ -1382,6 +1404,7 @@ const Inspection = {
     },
 
     closeQcSheet() {
+        isAdvancedPanelOpen = false;
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
         if (sheet) {
