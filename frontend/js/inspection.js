@@ -72,6 +72,9 @@ const Inspection = {
                 API.getCached('/facility/structure', 600000).catch(() => {});
             }, 1000);
         }
+        
+        // Check for draft recovery
+        setTimeout(() => this.checkDraft(), 1000);
     },
 
     bindSkuWorkspace() {
@@ -254,6 +257,7 @@ const Inspection = {
                 this.updateFastQcMode();
                 this.updateSubmitState();
                 this.updateSummary();
+                this.saveDraft();
             });
         });
     },
@@ -269,6 +273,7 @@ const Inspection = {
                 this.updateProgressiveFields();
                 this.updateSubmitState();
                 this.updateSummary();
+                this.saveDraft();
             });
         });
     },
@@ -347,11 +352,61 @@ const Inspection = {
     bindCompletionState() {
         ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const input = document.getElementById(id);
-            if (input) input.addEventListener('input', () => {
-                this.updateFastQcMode();
-                this.updateSubmitState();
-                this.updateSummary();
-            });
+            if (input) {
+                input.addEventListener('input', () => {
+                    this.updateFastQcMode();
+                    this.updateSubmitState();
+                    this.updateSummary();
+                    this.saveDraft();
+                });
+            }
+        });
+
+        // Keydown Enter listener for Fast PASS mode and autofocus
+        ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') {
+                        if (id === 'qcNotes') {
+                            event.preventDefault();
+                            document.getElementById('submitQcBtn')?.focus();
+                            return;
+                        }
+                        
+                        event.preventDefault();
+                        
+                        let nextId = null;
+                        if (id === 'qcTemp') nextId = 'qcPh';
+                        else if (id === 'qcPh') nextId = 'qcBrix';
+                        else if (id === 'qcBrix') nextId = 'qcTds';
+                        else if (id === 'qcTds') nextId = 'qcNotes';
+                        
+                        let nextEl = nextId ? document.getElementById(nextId) : null;
+                        const isHoldFail = this.selectedStatus === 'hold' || this.selectedStatus === 'fail';
+                        
+                        while (nextEl) {
+                            const isPanelOpen = isAdvancedPanelOpen || document.getElementById('qcParameterPanel')?.open;
+                            const isFieldVisible = nextId === 'qcNotes' ? isHoldFail : isPanelOpen;
+                            if (isFieldVisible && !nextEl.disabled && !nextEl.closest('[hidden]')) {
+                                break;
+                            }
+                            if (nextId === 'qcPh') nextId = 'qcBrix';
+                            else if (nextId === 'qcBrix') nextId = 'qcTds';
+                            else if (nextId === 'qcTds') nextId = 'qcNotes';
+                            else nextId = null;
+                            
+                            nextEl = nextId ? document.getElementById(nextId) : null;
+                        }
+                        
+                        if (nextEl) {
+                            nextEl.focus();
+                        } else {
+                            document.getElementById('submitQcBtn')?.focus();
+                        }
+                    }
+                });
+            }
         });
 
         const parameterPanel = document.getElementById('qcParameterPanel');
@@ -567,6 +622,12 @@ const Inspection = {
                 created_at: new Date().toISOString()
             });
             const submittedProduct = this.selectedProduct;
+            const productKey = this.productKey(submittedProduct);
+            const currentBatchId = this.selectedBatch?.id || this.selectedBatch?.batch_code;
+            const nextBatch = currentBatchId && productKey ? this.skuBatchMap[productKey]?.batches?.find(b => String(b.id || b.batch_code) !== String(currentBatchId) && this.normalizeStatus(b.qc_status || b.status) === 'pending') : null;
+
+            localStorage.removeItem('inspection_draft');
+
             ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
                 localStorage.removeItem(id);
                 const el = document.getElementById(id);
@@ -604,10 +665,17 @@ const Inspection = {
             this.updateProgressiveFields();
             this.updateSubmitState();
             this.updateSummary();
-            this.message('QC berhasil disimpan', false);
+            
+            window.showToast('✓ QC berhasil', 'success', 1000);
             this.loadRecentSubmissions();
             this.closeQcSheet();
             if (submittedProduct) await this.addSkuCard(submittedProduct);
+
+            if (nextBatch) {
+                setTimeout(() => {
+                    this.openQcForm(submittedProduct, nextBatch, { recheck: false });
+                }, 1000);
+            }
         } catch (error) {
             this.message(`Gagal menyimpan QC: ${error.message || 'server tidak merespons'}`, true);
         } finally {
@@ -1464,9 +1532,9 @@ const Inspection = {
         this.activeInspection = null;
         this.lastInspection = batch.last_qc || null;
         this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
-        isAdvancedPanelOpen = Boolean(this.recheckParentInspection);
+        isAdvancedPanelOpen = Boolean(this.recheckParentInspection) || this.productHasAdditionalStandards();
         this.selectedStage = 'cooking_check';
-        this.selectedStatus = null;
+        this.selectedStatus = 'pass';
         ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -1476,7 +1544,12 @@ const Inspection = {
             if (input) input.value = '';
             this.clearPhotoPreview(id);
         });
-        document.querySelectorAll('.qc-stage-option, .qc-status-option').forEach(item => item.classList.remove('active'));
+        
+        document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.qc-status-option').forEach(item => {
+            item.classList.toggle('active', item.dataset.status === 'pass');
+        });
+        
         this.renderBatchSummary(product, batch);
         this.renderQcConcurrency(null, batch.last_qc || null);
         this.setText('qcFormTitle', this.recheckParentInspection ? 'RE-CHECK QC' : 'QC CHECK');
@@ -1852,5 +1925,91 @@ const Inspection = {
             '"': '&quot;',
             "'": '&#39;'
         }[char]));
+    },
+
+    saveDraft() {
+        const temp = document.getElementById('qcTemp')?.value;
+        const ph = document.getElementById('qcPh')?.value;
+        const brix = document.getElementById('qcBrix')?.value;
+        const tds = document.getElementById('qcTds')?.value;
+        const notes = document.getElementById('qcNotes')?.value;
+        
+        if (this.selectedProduct && (temp || ph || brix || tds || notes || this.selectedStatus)) {
+            localStorage.setItem('inspection_draft', JSON.stringify({
+                product: this.selectedProduct,
+                batch: this.selectedBatch,
+                stage: this.selectedStage,
+                status: this.selectedStatus,
+                temp,
+                ph,
+                brix,
+                tds,
+                notes,
+                recheckParent: this.recheckParentInspection,
+                timestamp: Date.now()
+            }));
+        } else {
+            localStorage.removeItem('inspection_draft');
+        }
+    },
+
+    checkDraft() {
+        const draftStr = localStorage.getItem('inspection_draft');
+        if (!draftStr) return;
+        const draft = JSON.parse(draftStr);
+        
+        // Show draft recovery prompt
+        const container = document.createElement("div");
+        container.id = "draftRecoveryPrompt";
+        container.style.cssText = "position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 16px; display: flex; flex-direction: column; gap: 12px;";
+        container.innerHTML = `
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-color, #1e293b);">Lanjutkan input QC sebelumnya?</div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnRecoverDraft" class="btn-primary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: none; background: #2563eb; color: white;">Lanjutkan</button>
+                <button id="btnDiscardDraft" class="btn-secondary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;">Buang</button>
+            </div>
+        `;
+        document.body.appendChild(container);
+        
+        document.getElementById("btnRecoverDraft").onclick = () => {
+            container.remove();
+            
+            // Set context and open sheet
+            this.selectedProduct = draft.product;
+            this.selectedBatch = draft.batch;
+            this.selectedStage = draft.stage || 'cooking_check';
+            this.selectedStatus = draft.status;
+            this.recheckParentInspection = draft.recheckParent;
+            isAdvancedPanelOpen = Boolean(this.recheckParentInspection) || this.productHasAdditionalStandards();
+            
+            this.updateSelectedProductCard();
+            this.openQcForm(draft.product, draft.batch, { recheck: Boolean(draft.recheckParent) });
+            
+            // Fill draft values
+            if (document.getElementById('qcTemp')) document.getElementById('qcTemp').value = draft.temp || '';
+            if (document.getElementById('qcPh')) document.getElementById('qcPh').value = draft.ph || '';
+            if (document.getElementById('qcBrix')) document.getElementById('qcBrix').value = draft.brix || '';
+            if (document.getElementById('qcTds')) document.getElementById('qcTds').value = draft.tds || '';
+            if (document.getElementById('qcNotes')) document.getElementById('qcNotes').value = draft.notes || '';
+            
+            // Visually select status options
+            if (draft.status) {
+                document.querySelectorAll('.qc-status-option').forEach(item => {
+                    item.classList.toggle('active', item.dataset.status === draft.status);
+                });
+            }
+            
+            this.updateFastQcMode();
+            this.updateSubmitState();
+            this.updateSummary();
+            
+            // Focus qcTemp
+            setTimeout(() => document.getElementById('qcTemp')?.focus(), 100);
+        };
+        
+        document.getElementById("btnDiscardDraft").onclick = () => {
+            container.remove();
+            localStorage.removeItem('inspection_draft');
+        };
     }
 };

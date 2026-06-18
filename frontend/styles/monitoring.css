@@ -983,7 +983,7 @@ textarea {
 
   .sheet-footer .btn-primary,
   .sheet-footer .btn-secondary {
-    min-height: 44px;
+    min-height: 48px;
     flex: 1;
     border-radius: 13px;
     padding-inline: 10px;

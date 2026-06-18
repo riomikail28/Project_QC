@@ -141,16 +141,16 @@
             <div class="simple-field" id="cookingFields" hidden>
                 <label for="qcTemp">SUHU MASAK</label>
                 <div class="temperature-input-wrap">
-                    <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C">
+                    <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C" inputmode="decimal" pattern="[0-9]*" autocomplete="off">
                     <span aria-hidden="true">C</span>
                 </div>
                 <p class="field-error" id="qcTempError" hidden>Suhu masak wajib diisi untuk Cek Masakan.</p>
                 <details class="qc-parameter-panel" id="qcParameterPanel">
                     <summary>Parameter QC Tambahan</summary>
                     <div class="qc-optional-grid">
-                        <label>pH <input class="input-field" id="qcPh" type="number" step="0.01" placeholder="pH"></label>
-                        <label>Brix <input class="input-field" id="qcBrix" type="number" step="0.1" placeholder="Brix"></label>
-                        <label>TDS <input class="input-field" id="qcTds" type="number" step="1" placeholder="TDS"></label>
+                        <label>pH <input class="input-field" id="qcPh" type="number" step="0.01" placeholder="pH" inputmode="decimal" pattern="[0-9]*" autocomplete="off"></label>
+                        <label>Brix <input class="input-field" id="qcBrix" type="number" step="0.1" placeholder="Brix" inputmode="decimal" pattern="[0-9]*" autocomplete="off"></label>
+                        <label>TDS <input class="input-field" id="qcTds" type="number" step="1" placeholder="TDS" inputmode="decimal" pattern="[0-9]*" autocomplete="off"></label>
                     </div>
                 </details>
                 <div class="upload-card-compact" id="cookingUploadCard">

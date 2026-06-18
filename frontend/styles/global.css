@@ -1167,6 +1167,23 @@ label {
     min-height: 44px;
   }
 
+  /* Glove-friendly 48px touch targets for manufacturing staff */
+  :where(button, .btn-primary, .btn-secondary, input, select, textarea, .nav-item, .quick-action-item, .add-sku-btn, .sheet-close-btn) {
+    min-height: 48px;
+  }
+
+  .finding-category-chip,
+  #findingDrawer .finding-category-chip,
+  .filter-chip,
+  .room-chip,
+  .sku-status-chip,
+  .chip {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .fab-container {
     right: 14px;
     bottom: calc(var(--nav-height) + 18px + env(safe-area-inset-bottom));

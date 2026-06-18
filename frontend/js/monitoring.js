@@ -23,6 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTodaySchedule();
     loadFacilityStructure();
     loadRecentLogs();
+    
+    // Bind draft recovery input listeners
+    ["input-temp", "input-rh", "input-reason"].forEach(id => {
+        document.getElementById(id)?.addEventListener("input", saveMonitoringDraft);
+    });
+    
+    // Check for draft recovery
+    setTimeout(checkMonitoringDraft, 1000);
 
     // Prefetch products for QC Check page
     if (window.requestIdleCallback) {
@@ -201,6 +209,46 @@ function monitoringMiniCardTemperature(device) {
     return `${Number.isInteger(value) ? value : value.toFixed(1)}&deg;C`;
 }
 
+function setupModalForDevice(deviceId) {
+    const activeSlot = activeMonitoringSlot();
+    if (!activeSlot) return false;
+    const room = facilityStructure.find(item => (item.devices || []).some(device => device.id === deviceId));
+    const device = (room?.devices || []).find(item => item.id === deviceId);
+    if (!device) return false;
+
+    document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
+    document.getElementById("selected-device-id").value = deviceId;
+    document.getElementById("selected-room-id").value = device.room_id || room.id;
+    document.getElementById("selected-slot-time").value = activeSlot.time;
+    const slotContext = document.getElementById("slotContext");
+    if (slotContext) {
+        slotContext.innerHTML = `
+            <strong>Slot ${activeSlot.time}</strong>
+            <span>${activeSlot.label}${activeSlot.status === "pending" ? " - input akan dicatat pada jadwal ini" : ""}</span>
+        `;
+    }
+
+    const iconEl = document.getElementById("sheet-icon");
+    if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;
+
+    document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
+    
+    // Clear inputs
+    document.getElementById("input-temp").value = "";
+    const humidityInput = document.getElementById("input-rh");
+    if (humidityInput) humidityInput.value = "";
+    const reasonInput = document.getElementById("input-reason");
+    if (reasonInput) reasonInput.value = "";
+    removePhoto();
+    
+    // Auto focus (Requirement 6)
+    setTimeout(() => {
+        document.getElementById("input-temp")?.focus();
+    }, 100);
+
+    return true;
+}
+
 function openLogModal(deviceId) {
     const activeSlot = activeMonitoringSlot();
     if (!activeSlot) {
@@ -220,22 +268,16 @@ function openLogModal(deviceId) {
         return;
     }
 
-    document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
-    document.getElementById("selected-device-id").value = deviceId;
-    document.getElementById("selected-room-id").value = device.room_id || room.id;
-    document.getElementById("selected-slot-time").value = activeSlot.time;
-    const slotContext = document.getElementById("slotContext");
-    if (slotContext) {
-        slotContext.innerHTML = `
-            <strong>Slot ${activeSlot.time}</strong>
-            <span>${activeSlot.label}${activeSlot.status === "pending" ? " - input akan dicatat pada jadwal ini" : ""}</span>
-        `;
+    // Reset finished state in modal if it was shown previously
+    const finishedState = modal.querySelector('.monitoring-finished-state');
+    if (finishedState) {
+        finishedState.remove();
     }
+    const formEl = document.getElementById("monitoring-form");
+    if (formEl) formEl.style.display = "";
 
-    const iconEl = document.getElementById("sheet-icon");
-    if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;
+    setupModalForDevice(deviceId);
 
-    document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
     modal.classList.add("active");
     overlay.classList.add("active");
     document.body.classList.add("modal-open");
@@ -245,6 +287,14 @@ function closeModal() {
     modal.classList.remove("active");
     overlay.classList.remove("active");
     document.body.classList.remove("modal-open");
+    
+    const finishedState = modal.querySelector('.monitoring-finished-state');
+    if (finishedState) {
+        finishedState.remove();
+    }
+    const formEl = document.getElementById("monitoring-form");
+    if (formEl) formEl.style.display = "";
+    
     document.getElementById("monitoring-form").reset();
     removePhoto();
 }
@@ -349,10 +399,39 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         const result = await API.upload("/facility/monitoring/submit", formData);
         if (result.success) {
-            showMonitoringToast("Data monitoring berhasil disimpan.");
-            closeModal();
+            // Success flow toast max 1s (Requirement 9)
+            showMonitoringToast("✓ Monitoring berhasil", false, 1000);
+            // showMonitoringToast("Data monitoring berhasil disimpan.")
+            
+            // Clear draft (Requirement 8)
+            localStorage.removeItem("monitoring_draft");
+
+            // Reload schedule and logs in background
             await loadTodaySchedule();
             loadRecentLogs();
+
+            // Auto advance (Requirement 2)
+            const next = nextDeviceToCheck();
+            if (next) {
+                setupModalForDevice(next.device.id);
+            } else {
+                // Device terakhir selesai
+                const formEl = document.getElementById("monitoring-form");
+                if (formEl) formEl.style.display = "none";
+                
+                let finishedState = modal.querySelector('.monitoring-finished-state');
+                if (!finishedState) {
+                    finishedState = document.createElement('div');
+                    finishedState.className = 'monitoring-finished-state';
+                    finishedState.style.cssText = 'text-align: center; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;';
+                    finishedState.innerHTML = `
+                        <i class="fas fa-check-circle" style="font-size: 64px; color: #10b981; margin-bottom: 8px;"></i>
+                        <h3 style="font-size: 20px; font-weight: 700; margin: 0; color: #1e293b;">Semua Monitoring Ruangan Selesai</h3>
+                        <button type="button" onclick="window.location.href='dashboard.html'" class="btn-primary" style="min-height: 48px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-radius: 12px; cursor: pointer; border: none; background: #2563eb; color: white;">Kembali ke Dashboard</button>
+                    `;
+                    modal.appendChild(finishedState);
+                }
+            }
         } else {
             showMonitoringToast(result.message || result.error || "Gagal menyimpan log suhu", true);
         }
@@ -547,6 +626,7 @@ function renderNextDevice() {
     const nameEl = document.getElementById("nextDeviceName");
     const slotEl = document.getElementById("nextDeviceSlot");
     const action = document.getElementById("nextDeviceAction");
+    const progressEl = document.getElementById("nextDeviceProgress");
     const next = nextDeviceToCheck();
     const activeSlot = activeMonitoringSlot();
 
@@ -559,6 +639,7 @@ function renderNextDevice() {
         action.disabled = true;
         action.onclick = null;
         section.classList.toggle("is-clear", Boolean(activeSlot));
+        if (progressEl) progressEl.innerHTML = "";
         return;
     }
 
@@ -571,6 +652,24 @@ function renderNextDevice() {
     action.disabled = false;
     action.onclick = () => openLogModal(next.device.id);
     section.classList.remove("is-clear");
+
+    if (progressEl) {
+        const progress = roomProgress(next.room);
+        const totalBlocks = 10;
+        const filledBlocks = Math.round((progress.completed / progress.total) * totalBlocks);
+        const emptyBlocks = totalBlocks - filledBlocks;
+        const barStr = "█".repeat(filledBlocks) + "░".repeat(emptyBlocks);
+        progressEl.innerHTML = `
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+                <span>${next.room.name}</span>
+                <span style="font-family: monospace; letter-spacing: 1px; color: var(--primary);">${barStr}</span>
+                <span>${progress.completed} / ${progress.total} Device</span>
+            </div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">
+                Device berikutnya: ${next.device.name || unitName(next.device.type)}
+            </div>
+        `;
+    }
 }
 
 function renderRoomProgress() {
@@ -790,4 +889,63 @@ function restoreCache() {
         console.error('Failed to restore monitoring cache:', e);
         return false;
     }
+}
+
+function saveMonitoringDraft() {
+    const deviceId = document.getElementById("selected-device-id").value;
+    const roomId = document.getElementById("selected-room-id").value;
+    const slotTime = document.getElementById("selected-slot-time").value;
+    const temp = document.getElementById("input-temp").value;
+    const rh = document.getElementById("input-rh").value;
+    const reason = document.getElementById("input-reason").value;
+
+    if (deviceId && (temp || rh || reason)) {
+        localStorage.setItem("monitoring_draft", JSON.stringify({
+            deviceId, roomId, slotTime, temp, rh, reason, timestamp: Date.now()
+        }));
+    } else {
+        localStorage.removeItem("monitoring_draft");
+    }
+}
+
+function checkMonitoringDraft() {
+    const draftStr = localStorage.getItem("monitoring_draft");
+    if (!draftStr) return;
+    const draft = JSON.parse(draftStr);
+    
+    // Check if slot time is still relevant
+    const activeSlot = activeMonitoringSlot();
+    if (!activeSlot || draft.slotTime !== activeSlot.time) {
+        localStorage.removeItem("monitoring_draft");
+        return;
+    }
+    
+    // Show draft recovery prompt
+    const container = document.createElement("div");
+    container.id = "draftRecoveryPrompt";
+    container.style.cssText = "position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 16px; display: flex; flex-direction: column; gap: 12px;";
+    container.innerHTML = `
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-color, #1e293b);">Lanjutkan input monitoring sebelumnya?</div>
+        <div style="display: flex; gap: 10px;">
+            <button id="btnRecoverDraft" class="btn-primary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: none; background: #2563eb; color: white;">Lanjutkan</button>
+            <button id="btnDiscardDraft" class="btn-secondary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;">Buang</button>
+        </div>
+    `;
+    document.body.appendChild(container);
+    
+    document.getElementById("btnRecoverDraft").onclick = () => {
+        container.remove();
+        openLogModal(draft.deviceId);
+        // Fill draft values
+        document.getElementById("input-temp").value = draft.temp;
+        if (draft.rh) document.getElementById("input-rh").value = draft.rh;
+        document.getElementById("input-reason").value = draft.reason;
+        // Focus Suhu
+        setTimeout(() => document.getElementById("input-temp").focus(), 100);
+    };
+    
+    document.getElementById("btnDiscardDraft").onclick = () => {
+        container.remove();
+        localStorage.removeItem("monitoring_draft");
+    };
 }
