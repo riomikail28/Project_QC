@@ -668,7 +668,6 @@
                 return;
             }
             if (!Auth.check()) window.location.href = 'login.html';
-            setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);
             const tick = () => {
                 const now = new Date();
                 document.getElementById('clockTime').innerText = now.toLocaleTimeString('id-ID');
@@ -683,7 +682,10 @@
             document.querySelectorAll('.finding-category-chip').forEach(button => {
                 button.addEventListener('click', () => selectFindingCategory(button.dataset.category || ''));
             });
-            Dashboard.init();
+            Dashboard.init().finally(() => {
+                const ls = document.getElementById('loading-screen');
+                if (ls) ls.classList.add('hidden');
+            });
         });
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;

@@ -395,9 +395,11 @@ const adminApp = {
 
     adminCacheTtl(endpoint) {
         const value = String(endpoint || '');
+        if (value.includes('/products') || value.includes('/staff')) return 1800000; // 30 mins Product/Staff TTL
+        if (value.includes('/analytics') || value.includes('/reports/summary')) return 30000; // 30s Dashboard KPI TTL
         if (value.includes('/monitoring/')) return 30000;
-        if (value.includes('/analytics') || value.includes('/reports/summary') || value.includes('/daily-reports')) return 60000;
-        if (value.includes('/reports/findings') || value.includes('/batches') || value.includes('/products') || value.includes('/staff')) return 60000;
+        if (value.includes('/daily-reports')) return 60000;
+        if (value.includes('/reports/findings') || value.includes('/batches')) return 60000;
         return 45000;
     },
 

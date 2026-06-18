@@ -22,6 +22,17 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTodaySchedule();
     loadFacilityStructure();
     loadRecentLogs();
+
+    // Prefetch products for QC Check page
+    if (window.requestIdleCallback) {
+        requestIdleCallback(() => {
+            API.getCached('/inspection/products', 1800000).catch(() => {});
+        });
+    } else {
+        setTimeout(() => {
+            API.getCached('/inspection/products', 1800000).catch(() => {});
+        }, 1000);
+    }
 });
 
 function authHeaders() {
@@ -34,7 +45,7 @@ async function loadFacilityStructure() {
     try {
         // PERFORMANCE_OPTIMIZED: reuse monitoring structure cache when returning to the page.
         const envelope = await API.getSWR("/facility/structure", {
-            ttlMs: 30000,
+            ttlMs: 600000,
             onUpdate: data => {
                 const structure = Array.isArray(data) ? data : (data.data || []);
                 facilityStructure = normalizeFacilityStructure(structure);

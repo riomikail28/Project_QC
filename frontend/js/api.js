@@ -108,16 +108,18 @@ const API = {
     async getSWR(endpoint, options = {}) {
         const key = options.cacheKey || this._cacheKey(endpoint);
         let ttlMs = options.ttlMs ?? 60000;
-        if (key === 'dashboard_summary') ttlMs = 60000;
+        if (key === 'dashboard_summary') ttlMs = 30000; // 30s according to Cache Rule
         else if (key === 'monitoring_today') ttlMs = 30000;
         else if (key === 'qc_findings_today') ttlMs = 60000;
         else if (key === 'production_board_today') ttlMs = 60000;
 
         const cached = this._cache.get(key);
+        const now = Date.now();
+        const isFresh = cached && now < cached.expiresAt;
 
         if (cached && !options.force) {
             console.log(`[METRIC] cache_hit: ${key}`);
-            if (options.revalidate !== false) {
+            if (options.revalidate !== false && !isFresh) {
                 this.get(endpoint)
                     .then(data => {
                         this._setCache(key, data, ttlMs);
@@ -479,7 +481,7 @@ const API = {
         });
     },
 
-    _afterMutation(endpoint) {
+     _afterMutation(endpoint) {
         const path = String(endpoint || '').toLowerCase();
         
         // Auto clear custom localStorage keys and standard sessionStorage caches
@@ -495,9 +497,12 @@ const API = {
         if (path.includes('finding') || path.includes('resolve') || path.includes('status')) {
             this._cache.delete('qc_findings_today');
         }
+        if (path.includes('profile')) {
+            this.clearCache('profile');
+        }
         
         this.clearCache('dashboard');
-        ['dashboard', 'monitoring', 'reports', 'batches', 'findings', 'products', 'staff', 'facility', 'inspection'].forEach(pattern => {
+        ['dashboard', 'monitoring', 'reports', 'batches', 'findings', 'products', 'staff', 'facility', 'inspection', 'profile'].forEach(pattern => {
             if (path.includes(pattern)) this.clearCache(pattern);
         });
 

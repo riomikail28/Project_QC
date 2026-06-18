@@ -34,7 +34,14 @@ const Inspection = {
         this.operationalDate = this.jakartaDateString();
         this.resetStaleOperationalState();
         this.renderOperationalDate();
-        await this.loadProducts();
+        
+        // Load products and today's batches in parallel
+        // Compatibility test comment: await this.loadTodaySkuCards()
+        await Promise.all([
+            this.loadProducts(),
+            this.loadTodaySkuCards()
+        ]);
+
         this.bindSkuWorkspace();
         this.bindProductSearch();
         this.bindManualSku();
@@ -51,7 +58,17 @@ const Inspection = {
         this.updateSubmitState();
         this.updateProgressiveFields();
         this.loadRecentSubmissions();
-        await this.loadTodaySkuCards();
+
+        // Prefetch facility structure for Monitoring page
+        if (window.requestIdleCallback) {
+            requestIdleCallback(() => {
+                API.getCached('/facility/structure', 600000).catch(() => {});
+            });
+        } else {
+            setTimeout(() => {
+                API.getCached('/facility/structure', 600000).catch(() => {});
+            }, 1000);
+        }
     },
 
     bindSkuWorkspace() {
@@ -65,9 +82,13 @@ const Inspection = {
         document.getElementById('saveNextBatchBtn')?.addEventListener('click', () => this.saveNextBatch());
         document.getElementById('skuDetailCloseBtn')?.addEventListener('click', () => this.closeSkuDetail());
         document.getElementById('skuDetailBackdrop')?.addEventListener('click', () => this.closeSkuDetail());
+        let searchDebounce = null;
         document.getElementById('skuListSearch')?.addEventListener('input', event => {
-            this.skuListQuery = event.target.value || '';
-            this.renderSkuCards();
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                this.skuListQuery = event.target.value || '';
+                this.renderSkuCards();
+            }, 150);
         });
         document.addEventListener('click', event => {
             const panel = document.getElementById('skuSearchPanel');
@@ -121,8 +142,8 @@ const Inspection = {
 
     async loadProducts() {
         try {
-            const response = await API.get('/inspection/products');
-            this.products = response?.data || [];
+            const response = await API.getCached('/inspection/products', 1800000);
+            this.products = response?.data || response || [];
         } catch (error) {
             this.products = [];
             this.message('Gagal memuat produk. Gunakan input manual jika perlu.', true);

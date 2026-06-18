@@ -10,6 +10,19 @@ const Dashboard = {
         await this.loadAll();
         clearInterval(this.refreshTimer);
         this.refreshTimer = setInterval(() => this.loadAll({ silent: true }), 30000);
+
+        // Prefetch facility structure and inspection products for other pages
+        if (window.requestIdleCallback) {
+            requestIdleCallback(() => {
+                API.getCached('/facility/structure', 600000).catch(() => {});
+                API.getCached('/inspection/products', 1800000).catch(() => {});
+            });
+        } else {
+            setTimeout(() => {
+                API.getCached('/facility/structure', 600000).catch(() => {});
+                API.getCached('/inspection/products', 1800000).catch(() => {});
+            }, 1000);
+        }
     },
 
     async loadAll({ silent = false } = {}) {
