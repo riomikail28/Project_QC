@@ -682,6 +682,20 @@
             document.querySelectorAll('.finding-category-chip').forEach(button => {
                 button.addEventListener('click', () => selectFindingCategory(button.dataset.category || ''));
             });
+
+            // Instant restore cache to hide loading screen instantly
+            try {
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.restoreCache === 'function') {
+                    const restored = Dashboard.restoreCache();
+                    if (restored) {
+                        const ls = document.getElementById('loading-screen');
+                        if (ls) ls.classList.add('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error('Failed instant restore cache:', e);
+            }
+
             Dashboard.init().finally(() => {
                 const ls = document.getElementById('loading-screen');
                 if (ls) ls.classList.add('hidden');

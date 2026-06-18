@@ -35,6 +35,9 @@ const Inspection = {
         this.resetStaleOperationalState();
         this.renderOperationalDate();
         
+        // Restore cache first
+        this.restoreCache();
+        
         // Load products and today's batches in parallel
         // Compatibility test comment: await this.loadTodaySkuCards()
         await Promise.all([
@@ -861,11 +864,23 @@ const Inspection = {
         this.skuBatchMap[productKey] = { loading: true, batches: [] };
         this.renderSkuCards();
         try {
-            const response = await API.get(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
+            const response = await API.getSWR(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`, {
+                ttlMs: 30000,
+                onUpdate: data => {
+                    this.skuBatchMap[productKey] = {
+                        loading: false,
+                        product: data?.data?.product || data?.product || product,
+                        batches: this.todayBatches(data?.data?.batches || data?.batches || []),
+                    };
+                    this.renderSkuCards();
+                    if (this.activeSkuDetailKey === productKey) this.renderSkuDetailDrawer(productKey);
+                    this.saveCache();
+                }
+            });
             this.skuBatchMap[productKey] = {
                 loading: false,
-                product: response?.data?.product || product,
-                batches: this.todayBatches(response?.data?.batches || []),
+                product: response?.data?.product || response?.product || product,
+                batches: this.todayBatches(response?.data?.batches || response?.batches || []),
             };
         } catch (error) {
             const fallback = await this.fetchBatchesBySku(product.product_code || product.sku_code || product.barcode);
@@ -873,39 +888,99 @@ const Inspection = {
         }
         this.renderSkuCards();
         if (this.activeSkuDetailKey === productKey) this.renderSkuDetailDrawer(productKey);
+        this.saveCache();
     },
 
     async loadTodaySkuCards() {
         try {
-            const response = await API.get(`/batch/today?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
-            const products = response?.data?.products || [];
-            this.skuCards = [];
-            this.skuBatchMap = {};
-            products.forEach(group => {
-                const product = {
-                    id: group.product_id || group.sku,
-                    product_code: group.sku,
-                    sku_code: group.sku,
-                    product_name: group.product_name,
-                    category: group.category,
-                };
-                const key = this.productKey(product);
-                if (!this.skuCards.some(item => this.productKey(item) === key)) {
-                    this.skuCards.push(product);
+            const response = await API.getSWR(`/batch/today?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`, {
+                ttlMs: 30000,
+                onUpdate: data => {
+                    const products = data?.data?.products || data?.products || [];
+                    this.processSkuCardsResponse(products);
+                    this.renderSkuCards();
+                    this.saveCache();
                 }
-                this.skuBatchMap[key] = {
-                    loading: false,
-                    product,
-                    batches: this.todayBatches(group.batches || []),
-                    status_summary: group.status_summary || null,
-                };
             });
+            const products = response?.data?.products || response?.products || [];
+            this.processSkuCardsResponse(products);
         } catch (error) {
             this.skuCards = [];
             this.skuBatchMap = {};
             this.message('Gagal memuat batch hari ini. Tambahkan SKU manual jika perlu.', true);
         }
         this.renderSkuCards();
+        this.saveCache();
+    },
+
+    processSkuCardsResponse(products) {
+        this.skuCards = [];
+        this.skuBatchMap = {};
+        products.forEach(group => {
+            const product = {
+                id: group.product_id || group.sku,
+                product_code: group.sku,
+                sku_code: group.sku,
+                product_name: group.product_name,
+                category: group.category,
+            };
+            const key = this.productKey(product);
+            if (!this.skuCards.some(item => this.productKey(item) === key)) {
+                this.skuCards.push(product);
+            }
+            this.skuBatchMap[key] = {
+                loading: false,
+                product,
+                batches: this.todayBatches(group.batches || []),
+                status_summary: group.status_summary || null,
+            };
+        });
+    },
+
+    saveCache() {
+        try {
+            const data = {
+                skuCards: this.skuCards,
+                skuBatchMap: this.skuBatchMap,
+                skuTodayCount: document.getElementById('skuTodayCount')?.textContent || '0 SKU',
+                skuCardGrid: document.getElementById('skuCardGrid')?.innerHTML || '',
+                skuEmptyNoteHidden: document.getElementById('skuEmptyNote')?.hidden ?? false
+            };
+            localStorage.setItem('page_cache:staff_inspection', JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save inspection cache:', e);
+        }
+    },
+
+    restoreCache() {
+        try {
+            const dataStr = localStorage.getItem('page_cache:staff_inspection');
+            if (!dataStr) return false;
+            const data = JSON.parse(dataStr);
+            
+            this.skuCards = data.skuCards || [];
+            this.skuBatchMap = data.skuBatchMap || {};
+            
+            const count = document.getElementById('skuTodayCount');
+            if (count) count.textContent = data.skuTodayCount || '0 SKU';
+            
+            const grid = document.getElementById('skuCardGrid');
+            if (grid) grid.innerHTML = data.skuCardGrid || '';
+            
+            const empty = document.getElementById('skuEmptyNote');
+            if (empty) empty.hidden = data.skuEmptyNoteHidden;
+
+            // Re-bind click handlers for the restored cards
+            grid?.querySelectorAll('[data-sku-detail]').forEach(button => {
+                button.addEventListener('click', () => this.openSkuDetail(button.dataset.skuDetail));
+            });
+
+            if (window.lucide) lucide.createIcons();
+            return true;
+        } catch (e) {
+            console.error('Failed to restore inspection cache:', e);
+            return false;
+        }
     },
 
     async fetchBatchesBySku(sku) {

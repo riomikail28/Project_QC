@@ -19,6 +19,7 @@ const monitoringRoomOrder = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ru
 
 document.addEventListener("DOMContentLoaded", () => {
     bindUnitFilters();
+    restoreCache();
     loadTodaySchedule();
     loadFacilityStructure();
     loadRecentLogs();
@@ -129,11 +130,13 @@ function renderDevices(devices, options = {}) {
                 ${hasLogs ? "" : `<button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i> Kembali Dashboard</button>`}
             </div>
         `;
+        triggerSaveCache();
         return;
     }
 
     const visibleRooms = groupedRoomsForDevices(devices);
     deviceList.innerHTML = visibleRooms.map(room => renderMonitoringRoomGroup(room)).join("");
+    triggerSaveCache();
 }
 
 function groupedRoomsForDevices(devices) {
@@ -395,6 +398,7 @@ function renderRecentLogsData(logs) {
                     </button>
                 </div>
             `;
+            triggerSaveCache();
             return;
         }
 
@@ -409,6 +413,7 @@ function renderRecentLogsData(logs) {
                 </div>
             </div>
         `).join("");
+        triggerSaveCache();
 }
 
 async function loadTodaySchedule() {
@@ -449,6 +454,7 @@ function renderTodaySchedule() {
         `).join("");
         renderNextDevice();
         renderRoomProgress();
+        triggerSaveCache();
         return;
     }
 
@@ -466,6 +472,7 @@ function renderTodaySchedule() {
     `).join("");
     renderNextDevice();
     renderRoomProgress();
+    triggerSaveCache();
 }
 
 function activeMonitoringSlot() {
@@ -681,4 +688,106 @@ function normalizeFacilityStructure(structure) {
 
 function isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+
+let saveCacheDebounce = null;
+function triggerSaveCache() {
+    clearTimeout(saveCacheDebounce);
+    saveCacheDebounce = setTimeout(saveCache, 200);
+}
+
+function saveCache() {
+    try {
+        const data = {
+            currentRoomName: document.getElementById('currentRoomName')?.textContent || '',
+            scheduleMessage: document.getElementById('scheduleMessage')?.textContent || '',
+            scheduleProgressCount: document.getElementById('scheduleProgressCount')?.textContent || '',
+            scheduleProgressBarWidth: document.getElementById('scheduleProgressBar')?.style.width || '',
+            scheduleSlotGrid: document.getElementById('scheduleSlotGrid')?.innerHTML || '',
+            
+            nextDeviceSectionClass: document.getElementById('nextDeviceSection')?.className || '',
+            nextDeviceTitle: document.getElementById('nextDeviceTitle')?.textContent || '',
+            nextDeviceStatus: document.getElementById('nextDeviceStatus')?.textContent || '',
+            nextDeviceRoom: document.getElementById('nextDeviceRoom')?.textContent || '',
+            nextDeviceName: document.getElementById('nextDeviceName')?.textContent || '',
+            nextDeviceSlot: document.getElementById('nextDeviceSlot')?.textContent || '',
+            nextDeviceActionDisabled: document.getElementById('nextDeviceAction')?.disabled ?? true,
+            
+            summaryUnitCount: document.getElementById('summaryUnitCount')?.textContent || '0',
+            summaryStatus: document.getElementById('summaryStatus')?.textContent || '',
+            summaryLogCount: document.getElementById('summaryLogCount')?.textContent || '0',
+            deviceCount: document.getElementById('deviceCount')?.textContent || '0 Unit',
+            
+            deviceList: document.getElementById('device-list')?.innerHTML || '',
+            roomProgressList: document.getElementById('roomProgressList')?.innerHTML || '',
+            recentLogs: document.getElementById('recent-logs')?.innerHTML || '',
+            roomList: document.getElementById('room-list')?.innerHTML || '',
+            
+            selectedRoomId: selectedRoomId,
+            facilityStructure: facilityStructure,
+            todaySchedule: todaySchedule,
+            latestTemperatureLogs: latestTemperatureLogs
+        };
+        localStorage.setItem('page_cache:staff_monitoring', JSON.stringify(data));
+    } catch (e) {
+        console.error('Failed to save monitoring cache:', e);
+    }
+}
+
+function restoreCache() {
+    try {
+        const dataStr = localStorage.getItem('page_cache:staff_monitoring');
+        if (!dataStr) return false;
+        const data = JSON.parse(dataStr);
+        
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.textContent = val;
+        };
+        const setHtml = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.innerHTML = val;
+        };
+
+        setText('currentRoomName', data.currentRoomName);
+        setText('scheduleMessage', data.scheduleMessage);
+        setText('scheduleProgressCount', data.scheduleProgressCount);
+        const bar = document.getElementById('scheduleProgressBar');
+        if (bar) bar.style.width = data.scheduleProgressBarWidth || '0%';
+        setHtml('scheduleSlotGrid', data.scheduleSlotGrid);
+        
+        const nextSec = document.getElementById('nextDeviceSection');
+        if (nextSec && data.nextDeviceSectionClass) nextSec.className = data.nextDeviceSectionClass;
+        setText('nextDeviceTitle', data.nextDeviceTitle);
+        setText('nextDeviceStatus', data.nextDeviceStatus);
+        setText('nextDeviceRoom', data.nextDeviceRoom);
+        setText('nextDeviceName', data.nextDeviceName);
+        setText('nextDeviceSlot', data.nextDeviceSlot);
+        const action = document.getElementById('nextDeviceAction');
+        if (action) {
+            action.disabled = data.nextDeviceActionDisabled;
+        }
+        
+        setText('summaryUnitCount', data.summaryUnitCount);
+        setText('summaryStatus', data.summaryStatus);
+        setText('summaryLogCount', data.summaryLogCount);
+        setText('deviceCount', data.deviceCount);
+        
+        setHtml('device-list', data.deviceList);
+        setHtml('roomProgressList', data.roomProgressList);
+        setHtml('recent-logs', data.recentLogs);
+        setHtml('room-list', data.roomList);
+        
+        if (data.selectedRoomId !== undefined) selectedRoomId = data.selectedRoomId;
+        if (data.facilityStructure !== undefined) facilityStructure = data.facilityStructure;
+        if (data.todaySchedule !== undefined) todaySchedule = data.todaySchedule;
+        if (data.latestTemperatureLogs !== undefined) latestTemperatureLogs = data.latestTemperatureLogs;
+        
+        renderNextDevice();
+        if (window.lucide) lucide.createIcons();
+        return true;
+    } catch (e) {
+        console.error('Failed to restore monitoring cache:', e);
+        return false;
+    }
 }

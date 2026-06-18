@@ -312,6 +312,15 @@
                 window.location.replace('/admin/admin_panel.html');
                 return;
             }
+            // Restore page cache instantly
+            try {
+                if (typeof Inspection !== 'undefined' && typeof Inspection.restoreCache === 'function') {
+                    Inspection.restoreCache();
+                }
+            } catch (e) {
+                console.error('Failed instant restore cache:', e);
+            }
+
             ['productSearch','qcSku','qcTemp','qcNotes','qcPh','qcBrix','qcTds'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
