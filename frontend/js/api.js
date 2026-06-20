@@ -8,169 +8,19 @@ const API_BASE = window.location.origin.includes('localhost') || window.location
     : '/api';
 
 const API = {
-    _cache: (() => {
-        // PERFORMANCE_OPTIMIZED: Persist API cache in tab sessionStorage to survive page reloads on Staff app.
-        // Falls back to Memory Map if sessionStorage is disabled or throws.
-        const CUSTOM_KEYS = ['dashboard_summary', 'monitoring_today', 'qc_findings_today', 'production_board_today'];
-        try {
-            const testKey = '__qc_cache_test__';
-            sessionStorage.setItem(testKey, '1');
-            sessionStorage.removeItem(testKey);
-            
-            return {
-                get(key) {
-                    try {
-                        if (CUSTOM_KEYS.includes(key)) {
-                            const val = localStorage.getItem(key);
-                            return val ? JSON.parse(val) : undefined;
-                        }
-                        const val = sessionStorage.getItem(`api_cache:${key}`);
-                        return val ? JSON.parse(val) : undefined;
-                    } catch (e) {
-                        return undefined;
-                    }
-                },
-                set(key, val) {
-                    try {
-                        if (CUSTOM_KEYS.includes(key)) {
-                            localStorage.setItem(key, JSON.stringify(val));
-                        } else {
-                            sessionStorage.setItem(`api_cache:${key}`, JSON.stringify(val));
-                        }
-                    } catch (e) {}
-                    return this;
-                },
-                delete(key) {
-                    try {
-                        if (CUSTOM_KEYS.includes(key)) {
-                            localStorage.removeItem(key);
-                        } else {
-                            sessionStorage.removeItem(`api_cache:${key}`);
-                        }
-                    } catch (e) {}
-                    return true;
-                },
-                clear() {
-                    try {
-                        CUSTOM_KEYS.forEach(k => {
-                            try { localStorage.removeItem(k); } catch (e) {}
-                        });
-                        for (let i = sessionStorage.length - 1; i >= 0; i--) {
-                            const k = sessionStorage.key(i);
-                            if (k && k.startsWith('api_cache:')) {
-                                sessionStorage.removeItem(k);
-                            }
-                        }
-                    } catch (e) {}
-                },
-                keys() {
-                    const list = [];
-                    try {
-                        CUSTOM_KEYS.forEach(k => {
-                            if (localStorage.getItem(k)) list.push(k);
-                        });
-                        for (let i = 0; i < sessionStorage.length; i++) {
-                            const k = sessionStorage.key(i);
-                            if (k && k.startsWith('api_cache:')) {
-                                list.push(k.substring(10)); // remove "api_cache:"
-                            }
-                        }
-                    } catch (e) {}
-                    return list;
-                }
-            };
-        } catch (e) {
-            return new Map();
-        }
-    })(),
-    _pending: new Map(),
-
     async get(endpoint) {
-        const url = this._url(endpoint);
-        const pendingKey = `GET:${url}`;
-        if (this._pending.has(pendingKey)) return this._pending.get(pendingKey);
-        const request = this._getNetwork(endpoint).finally(() => this._pending.delete(pendingKey));
-        this._pending.set(pendingKey, request);
-        return request;
-    },
-
-    async getCached(endpoint, ttlMs = 60000, options = {}) {
-        const key = options.cacheKey || this._cacheKey(endpoint);
-        const cached = this._cache.get(key);
-        if (!options.force && cached && Date.now() < cached.expiresAt) {
-            return cached.data;
-        }
-        const data = await this.get(endpoint);
-        this._setCache(key, data, ttlMs);
-        return data;
-    },
-
-    async getSWR(endpoint, options = {}) {
-        const key = options.cacheKey || this._cacheKey(endpoint);
-        let ttlMs = options.ttlMs ?? 60000;
-        if (key === 'dashboard_summary') ttlMs = 30000; // 30s according to Cache Rule
-        else if (key === 'monitoring_today') ttlMs = 30000;
-        else if (key === 'qc_findings_today') ttlMs = 60000;
-        else if (key === 'production_board_today') ttlMs = 60000;
-
-        const cached = this._cache.get(key);
-        const now = Date.now();
-        const isFresh = cached && now < cached.expiresAt;
-
-        if (cached && !options.force) {
-            console.log(`[METRIC] cache_hit: ${key}`);
-            if (options.revalidate !== false && !isFresh) {
-                this.get(endpoint)
-                    .then(data => {
-                        this._setCache(key, data, ttlMs);
-                        options.onUpdate?.(data);
-                    })
-                    .catch(error => {
-                        if (typeof options.onError === 'function') options.onError(error);
-                    });
-            }
-            return cached.data;
-        }
-
-        console.log(`[METRIC] cache_miss: ${key}`);
-        const data = await this.get(endpoint);
-        this._setCache(key, data, ttlMs);
-        return data;
-    },
-
-    hasFreshCache(endpoint, cacheKey = null) {
-        const cached = this._cache.get(cacheKey || this._cacheKey(endpoint));
-        return Boolean(cached && Date.now() < cached.expiresAt);
-    },
-
-    clearCache(pattern = null) {
-        if (!pattern) {
-            this._cache.clear();
-            return;
-        }
-        for (const key of this._cache.keys()) {
-            if (key.includes(pattern)) this._cache.delete(key);
-        }
-    },
-
-    async _getNetwork(endpoint) {
         try {
             const url = this._url(endpoint);
-            const started = performance.now();
             const response = await fetch(url, {
                 headers: this._headers(),
                 credentials: 'include'
             });
             try {
-                const data = await this._handleResponse(response);
-                this._metric('API response time', endpoint, started);
-                return data;
+                return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { headers: this._headers(), credentials: 'include' });
-                    const data = await this._handleResponse(retryResp);
-                    this._metric('API response time', `${endpoint} retry`, started);
-                    return data;
+                    return await this._handleResponse(retryResp);
                 }
                 throw err;
             }
@@ -183,7 +33,6 @@ const API = {
     async post(endpoint, data) {
         try {
             const url = this._url(endpoint);
-            const started = performance.now();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: this._headers(),
@@ -191,17 +40,11 @@ const API = {
                 credentials: 'include'
             });
             try {
-                const result = await this._handleResponse(response);
-                this._afterMutation(endpoint);
-                this._metric('API response time', `POST ${endpoint}`, started);
-                return result;
+                return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'POST', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
-                    const result = await this._handleResponse(retryResp);
-                    this._afterMutation(endpoint);
-                    this._metric('API response time', `POST ${endpoint} retry`, started);
-                    return result;
+                    return await this._handleResponse(retryResp);
                 }
                 throw err;
             }
@@ -214,7 +57,6 @@ const API = {
     async patch(endpoint, data) {
         try {
             const url = this._url(endpoint);
-            const started = performance.now();
             const response = await fetch(url, {
                 method: 'PATCH',
                 headers: this._headers(),
@@ -222,17 +64,11 @@ const API = {
                 credentials: 'include'
             });
             try {
-                const result = await this._handleResponse(response);
-                this._afterMutation(endpoint);
-                this._metric('API response time', `PATCH ${endpoint}`, started);
-                return result;
+                return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'PATCH', headers: this._headers(), body: JSON.stringify(data), credentials: 'include' });
-                    const result = await this._handleResponse(retryResp);
-                    this._afterMutation(endpoint);
-                    this._metric('API response time', `PATCH ${endpoint} retry`, started);
-                    return result;
+                    return await this._handleResponse(retryResp);
                 }
                 throw err;
             }
@@ -245,24 +81,17 @@ const API = {
     async delete(endpoint) {
         try {
             const url = this._url(endpoint);
-            const started = performance.now();
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: this._headers(),
                 credentials: 'include'
             });
             try {
-                const result = await this._handleResponse(response);
-                this._afterMutation(endpoint);
-                this._metric('API response time', `DELETE ${endpoint}`, started);
-                return result;
+                return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'DELETE', headers: this._headers(), credentials: 'include' });
-                    const result = await this._handleResponse(retryResp);
-                    this._afterMutation(endpoint);
-                    this._metric('API response time', `DELETE ${endpoint} retry`, started);
-                    return result;
+                    return await this._handleResponse(retryResp);
                 }
                 throw err;
             }
@@ -275,7 +104,6 @@ const API = {
     async upload(endpoint, formData) {
         try {
             const url = this._url(endpoint);
-            const started = performance.now();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -285,17 +113,11 @@ const API = {
                 credentials: 'include'
             });
             try {
-                const result = await this._handleResponse(response);
-                this._afterMutation(endpoint);
-                this._metric('API response time', `UPLOAD ${endpoint}`, started);
-                return result;
+                return await this._handleResponse(response);
             } catch (err) {
                 if (err && err.retry) {
                     const retryResp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('qc_token')}` }, body: formData, credentials: 'include' });
-                    const result = await this._handleResponse(retryResp);
-                    this._afterMutation(endpoint);
-                    this._metric('API response time', `UPLOAD ${endpoint} retry`, started);
-                    return result;
+                    return await this._handleResponse(retryResp);
                 }
                 throw err;
             }
@@ -444,85 +266,6 @@ const API = {
         const path = raw.startsWith('/') ? raw : `/${raw}`;
         if (path === '/api' || path.startsWith('/api/')) return path;
         return `${API_BASE}${path}`;
-    },
-
-    _jakartaTodayStr() {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    },
-
-    _cacheKey(endpoint) {
-        const urlStr = this._url(endpoint);
-        const todayStr = this._jakartaTodayStr();
-        
-        if (urlStr.includes('/analytics/overview')) {
-            return 'dashboard_summary';
-        }
-        if (urlStr.includes('/monitoring/daily')) {
-            if (!urlStr.includes('date=') || urlStr.includes(`date=${todayStr}`)) {
-                return 'monitoring_today';
-            }
-        }
-        if (urlStr.includes('/reports/findings')) {
-            return 'qc_findings_today';
-        }
-        if (urlStr.includes('/batches')) {
-            if (!urlStr.includes('date=') || urlStr.includes(`date=${todayStr}`)) {
-                return 'production_board_today';
-            }
-        }
-        return `GET:${urlStr}`;
-    },
-
-    _setCache(key, data, ttlMs) {
-        this._cache.set(key, {
-            data,
-            expiresAt: Date.now() + ttlMs,
-            storedAt: Date.now()
-        });
-    },
-
-     _afterMutation(endpoint) {
-        const path = String(endpoint || '').toLowerCase();
-        
-        // Auto clear custom localStorage keys and standard sessionStorage caches
-        this._cache.delete('dashboard_summary');
-        
-        if (path.includes('monitoring')) {
-            this._cache.delete('monitoring_today');
-        }
-        if (path.includes('inspection') || path.includes('submit') || path.includes('batch')) {
-            this._cache.delete('production_board_today');
-            this._cache.delete('monitoring_today');
-        }
-        if (path.includes('finding') || path.includes('resolve') || path.includes('status')) {
-            this._cache.delete('qc_findings_today');
-        }
-        if (path.includes('profile')) {
-            this.clearCache('profile');
-        }
-        
-        this.clearCache('dashboard');
-        ['dashboard', 'monitoring', 'reports', 'batches', 'findings', 'products', 'staff', 'facility', 'inspection', 'profile'].forEach(pattern => {
-            if (path.includes(pattern)) this.clearCache(pattern);
-        });
-
-        // Clear all Page Cache keys from localStorage
-        try {
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('page_cache:')) {
-                    localStorage.removeItem(key);
-                }
-            }
-        } catch (e) {
-            console.error('Failed to clear page cache in mutation', e);
-        }
-    },
-
-    _metric(label, endpoint, started) {
-        const duration = Math.round(performance.now() - started);
-        console.info(`[PERFORMANCE_OPTIMIZED] ${label}: ${endpoint} ${duration}ms`);
-        console.log(`[METRIC] api_response_time: ${endpoint} ${duration}ms`);
     },
 
     _headers() {

@@ -50,67 +50,7 @@
     </header>
 
     <main class="app-shell page-grid">
-        <section class="staff-task-board animate-in" aria-labelledby="staffTaskTitle">
-            <div class="task-board-head">
-                <span class="eyebrow">Tugas Saya Sekarang</span>
-                <h1 id="staffTaskTitle">Apa yang harus dikerjakan sekarang?</h1>
-                <p>Prioritas kerja QC lapangan untuk slot dan batch aktif hari ini.</p>
-            </div>
-            <div class="task-card-grid" id="staffTaskCards">
-                <button class="task-now-card monitoring" type="button" onclick="window.location.href='monitoring.html'">
-                    <span class="task-icon"><i class="fas fa-temperature-half"></i></span>
-                    <span class="task-title">Monitoring Slot Aktif</span>
-                    <strong id="taskMonitoringCount">0 Device Belum Dicek</strong>
-                    <span class="task-cta">Mulai Monitoring</span>
-                </button>
-                <button class="task-now-card qc" type="button" onclick="window.location.href='inspection.html'">
-                    <span class="task-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="task-title">Batch Menunggu QC</span>
-                    <strong id="taskBatchCount">0 Batch</strong>
-                    <span class="task-cta">Mulai QC</span>
-                </button>
-                <button class="task-now-card recheck" type="button" onclick="window.location.href='inspection.html'">
-                    <span class="task-icon"><i class="fas fa-rotate-right"></i></span>
-                    <span class="task-title">Re-check Pending</span>
-                    <strong id="taskRecheckCount">0 Re-check</strong>
-                    <span class="task-cta">Review</span>
-                </button>
-                <button class="task-now-card finding" type="button" onclick="openQcFinding()">
-                    <span class="task-icon"><i class="fas fa-camera"></i></span>
-                    <span class="task-title">QC Temuan Open</span>
-                    <strong id="taskFindingCount">0 Temuan</strong>
-                    <span class="task-cta">Lihat</span>
-                </button>
-            </div>
-        </section>
-
-        <section class="staff-quick-panel" aria-labelledby="staffQuickActionTitle">
-            <div class="section-header">
-                <h3 class="section-title" id="staffQuickActionTitle">Quick Action</h3>
-                <span class="section-link">Kerja cepat</span>
-            </div>
-            <div class="staff-quick-grid">
-                <a class="staff-quick-action" href="monitoring.html"><i class="fas fa-temperature-half"></i><span>Monitoring</span></a>
-                <a class="staff-quick-action" href="inspection.html"><i class="fas fa-clipboard-check"></i><span>QC Check</span></a>
-                <button class="staff-quick-action" type="button" onclick="openQcFinding()"><i class="fas fa-camera"></i><span>QC Temuan</span></button>
-                <a class="staff-quick-action" href="new_batch.html"><i class="fas fa-plus"></i><span>Tambah Batch</span></a>
-            </div>
-        </section>
-
-        <section class="today-compact-summary" aria-labelledby="staffTodaySummaryTitle">
-            <div class="section-header">
-                <h3 class="section-title" id="staffTodaySummaryTitle">Ringkasan Hari Ini</h3>
-                <span class="section-link">Compact</span>
-            </div>
-            <div class="today-kpi-strip">
-                <div class="today-kpi"><span>Monitoring selesai</span><strong id="staffMonitoringDone">0</strong></div>
-                <div class="today-kpi"><span>Batch selesai QC</span><strong id="staffBatchQcDone">0</strong></div>
-                <div class="today-kpi"><span>Temuan hari ini</span><strong id="staffFindingsToday">0</strong></div>
-                <div class="today-kpi"><span>PASS Rate</span><strong id="staffPassRate">--</strong></div>
-            </div>
-        </section>
-
-        <section class="dashboard-hero staff-analytics-secondary">
+        <section class="dashboard-hero">
             <div class="glass-card welcome-banner animate-in">
                 <span class="eyebrow">Pusat Kendali ASTRO QC</span>
                 <h1 id="greetingText">Selamat Pagi, Tim QC</h1>
@@ -135,7 +75,7 @@
             </div>
         </section>
 
-        <section class="metrics-grid stagger staff-analytics-secondary">
+        <section class="metrics-grid stagger">
             <div class="analytics-card animate-in">
                 <div class="card-icon"><i class="fas fa-barcode"></i></div>
                 <div class="card-value" id="totalBatches">0</div>
@@ -168,7 +108,7 @@
             </div>
         </section>
 
-        <section class="dashboard-main-grid staff-analytics-secondary">
+        <section class="dashboard-main-grid">
             <div class="panel-card chart-card">
                 <div class="section-header">
                     <h3 class="section-title">Produksi 7 Hari</h3>
@@ -190,7 +130,7 @@
             </div>
         </section>
 
-        <section class="summary-grid staff-analytics-secondary">
+        <section class="summary-grid">
             <div class="panel-card">
                 <div class="section-header">
                     <h3 class="section-title">Realtime Monitoring</h3>
@@ -254,54 +194,33 @@
                 <div class="alert-icon"><i class="fas fa-camera"></i></div>
                 <div>
                     <h3>QC Temuan</h3>
-                    <p>Laporkan temuan QC</p>
+                    <p>Laporan temuan quality control</p>
                 </div>
             </div>
             <button class="icon-button" onclick="closeQcFinding()" aria-label="Close modal"><i class="fas fa-times"></i></button>
         </div>
-        <div class="alert-drawer-body" id="findingDrawerBody">
+        <div class="alert-drawer-body">
             <input type="file" id="findingPhotoInput" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none" onchange="handleFindingPhoto(event)">
-            <button type="button" class="finding-preview finding-upload-card" onclick="openFindingCamera()">
+            <button type="button" class="finding-preview" onclick="openFindingCamera()" style="cursor:pointer; width:100%; border:0; text-align:center; font:inherit;">
                 <div class="alert-icon" id="findingPreviewIcon"><i class="fas fa-camera"></i></div>
-                <div class="finding-empty-photo" id="findingEmptyPhoto">
-                    <strong>Belum ada foto</strong>
-                    <span>Tap untuk ambil foto evidence</span>
+                <div id="findingPhotoPreview" style="display:none; width:100%; position:relative;">
+                    <img id="findingImg" src="" alt="Preview foto temuan QC" style="width:100%; border-radius:12px; margin-bottom:12px;">
+                    <span class="badge" id="findingPhotoBadge" style="position:absolute; top:10px; right:10px; background:var(--primary); color:white; padding:4px 8px; border-radius:12px; font-size:12px; display:none">1</span>
                 </div>
-                <div id="findingPhotoPreview" class="finding-photo-preview">
-                    <img id="findingImg" src="" alt="Preview foto temuan QC">
-                    <span class="badge" id="findingPhotoBadge">1</span>
-                </div>
-                <div class="finding-upload-copy">
-                    <strong>Upload Foto</strong>
-                    <span id="findingPrompt">Tap untuk ambil foto</span>
-                    <small id="findingPhotoMeta"></small>
-                    <small id="findingPhotoReady" hidden>Foto siap dikirim</small>
-                </div>
+                <strong>Foto temuan QC</strong>
+                <span id="findingPrompt">Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)</span>
             </button>
-            <small class="finding-helper-text" id="findingCompressionStatus">Foto akan dikompres otomatis sebelum dikirim.</small>
-            <div class="finding-category-block">
-                <strong>Kategori Temuan</strong>
-                <div class="finding-category-chips" id="findingCategoryChips" role="radiogroup" aria-label="Kategori Temuan">
-                    <button type="button" class="finding-category-chip" data-category="Suhu tidak sesuai">Suhu tidak sesuai</button>
-                    <button type="button" class="finding-category-chip" data-category="Area kotor">Area kotor</button>
-                    <button type="button" class="finding-category-chip" data-category="Benda asing">Benda asing</button>
-                    <button type="button" class="finding-category-chip" data-category="Label salah">Label salah</button>
-                    <button type="button" class="finding-category-chip" data-category="Kemasan rusak">Kemasan rusak</button>
-                    <button type="button" class="finding-category-chip" data-category="Alat rusak">Alat rusak</button>
-                    <button type="button" class="finding-category-chip" data-category="Lainnya">Lainnya</button>
-                </div>
-            </div>
+            <small id="findingCompressionStatus" style="display:block; margin-top:8px; color:var(--text-muted);">Foto akan dikompres otomatis sebelum dikirim.</small>
             <div class="finding-reason">
-                <strong>Catatan tambahan</strong>
-                <textarea id="findingReason" rows="3" placeholder="Tambahkan detail jika perlu." oninput="autoResizeFindingReason(this)"></textarea>
-                <small>Opsional kecuali kategori Lainnya</small>
+                <strong>Deskripsi Temuan</strong>
+                <textarea id="findingReason" placeholder="Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" style="width:100%; min-height:100px; padding:12px; border:1px solid var(--border); border-radius:12px; margin-top:8px; font-family:inherit;"></textarea>
             </div>
-            <p class="simple-qc-message" id="findingInlineMessage" aria-live="polite"></p>
-            <p class="finding-scroll-hint" id="findingScrollHint" hidden>Scroll untuk melihat form lainnya</p>
+            <p style="text-align:center; margin-top:12px; font-size:12px; color:var(--text-muted)">Atau buka dashboard inspeksi lengkap:</p>
+            <button class="btn-secondary" onclick="window.location.href='inspection.html'" style="width:100%; padding:12px; margin-top:4px;"><i class="fas fa-clipboard-check"></i>Buka QC Check</button>
         </div>
         <div class="alert-drawer-footer">
             <button type="button" class="btn-secondary" onclick="closeQcFinding()">Cancel</button>
-            <button class="btn-primary" id="submitFindingBtn" onclick="submitQcFinding()"><i class="fas fa-paper-plane"></i>Kirim Temuan</button>
+            <button class="btn-primary" id="submitFindingBtn" onclick="submitQcFinding()"><i class="fas fa-paper-plane"></i>Kirim Laporan Temuan</button>
         </div>
     </aside>
 
@@ -339,7 +258,6 @@
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/profile-menu.js"></script>
-    <script src="../js/ui-mobile.js"></script>
     <script src="../js/utils.js"></script>
     <script src="../js/dashboard.js"></script>
     <script src="../js/quick-actions.js"></script>
@@ -415,7 +333,6 @@
             document.getElementById('findingOverlay').classList.add('active');
             document.getElementById('findingDrawer').classList.add('active');
             document.body.classList.add('modal-open');
-            resetFindingScrollHint();
         }
 
         function closeQcFinding() {
@@ -426,15 +343,6 @@
 
         let selectedFindingPhotos = [];
         let selectedFindingPhotoUrl = '';
-        let selectedFindingCategory = '';
-
-        function staffToast(message, type = 'info') {
-            if (typeof window.showToast === 'function') {
-                window.showToast(message, type, 3500);
-            } else if (window.UI?.toast) {
-                UI.toast(message, type, 3500);
-            }
-        }
 
         function openFindingCamera() {
             const input = document.getElementById('findingPhotoInput');
@@ -451,7 +359,7 @@
             try {
                 files.forEach(item => API.validatePhoto(item));
             } catch (err) {
-                staffToast(err.message || 'Upload foto gagal', 'error');
+                alert(err.message || 'Upload gagal');
                 event.target.value = '';
                 return;
             }
@@ -467,71 +375,35 @@
             const img = document.getElementById('findingImg');
             const badge = document.getElementById('findingPhotoBadge');
             const prompt = document.getElementById('findingPrompt');
-            const empty = document.getElementById('findingEmptyPhoto');
-            const meta = document.getElementById('findingPhotoMeta');
-            const ready = document.getElementById('findingPhotoReady');
 
             if (icon) icon.style.display = 'none';
-            if (empty) empty.style.display = 'none';
             if (preview) preview.style.display = 'block';
             if (img) img.src = selectedFindingPhotoUrl;
             if (badge) {
                 badge.textContent = preparedFiles.length;
                 badge.style.display = preparedFiles.length > 1 ? 'inline-flex' : 'none';
             }
-            const totalSize = preparedFiles.reduce((sum, item) => sum + (item.size || 0), 0);
-            if (prompt) prompt.textContent = 'Tap untuk ganti foto';
-            if (meta) meta.textContent = ImageCompression.formatBytes(totalSize);
-            if (ready) ready.hidden = false;
+            if (prompt) prompt.textContent = 'Foto siap dikirim. Klik lagi untuk ganti foto.';
             if (status) {
-                status.textContent = 'Foto akan dikompres otomatis sebelum dikirim.';
+                const totalSize = preparedFiles.reduce((sum, item) => sum + (item.size || 0), 0);
+                status.textContent = `Foto siap dikirim (${ImageCompression.formatBytes(totalSize)}).`;
             }
-        }
-
-        function selectFindingCategory(category) {
-            selectedFindingCategory = category;
-            document.querySelectorAll('.finding-category-chip').forEach(button => {
-                const active = button.dataset.category === category;
-                button.classList.toggle('active', active);
-                button.setAttribute('aria-checked', active ? 'true' : 'false');
-            });
-            const reason = document.getElementById('findingReason');
-            const message = document.getElementById('findingInlineMessage');
-            if (reason) {
-                reason.placeholder = category === 'Lainnya'
-                    ? 'Tulis detail temuan secara manual.'
-                    : `Tambahkan detail untuk kategori ${category} jika perlu.`;
-                if (category === 'Lainnya') reason.focus();
-            }
-            if (message) message.textContent = category ? `Kategori dipilih: ${category}` : '';
-        }
-
-        function composeFindingReason(category, note) {
-            const cleanCategory = String(category || '').trim();
-            const cleanNote = String(note || '').trim();
-            if (!cleanCategory) return cleanNote;
-            if (!cleanNote && cleanCategory !== 'Lainnya') return `[${cleanCategory}] ${cleanCategory}`;
-            return `[${cleanCategory}] ${cleanNote}`;
         }
 
         async function submitQcFinding() {
             const reasonEl = document.getElementById('findingReason');
             const submitBtn = document.getElementById('submitFindingBtn');
             const reason = reasonEl ? reasonEl.value.trim() : '';
-            const category = selectedFindingCategory;
-            const findingText = composeFindingReason(category, reason);
 
-            if (!category && !reason) {
-                staffToast('Pilih kategori temuan atau isi catatan tambahan.', 'warning');
+            if (!selectedFindingPhotos.length) {
+                alert('Ambil foto temuan terlebih dahulu.');
+                openFindingCamera();
                 return;
             }
-            if (category === 'Lainnya' && !reason) {
-                staffToast('Catatan tambahan wajib untuk kategori Lainnya.', 'warning');
+            if (!reason) {
+                alert('Isi deskripsi temuan terlebih dahulu.');
                 if (reasonEl) reasonEl.focus();
                 return;
-            }
-            if (!selectedFindingPhotos.length) {
-                staffToast('Foto evidence disarankan untuk QC Temuan.', 'warning');
             }
 
             const originalHtml = submitBtn ? submitBtn.innerHTML : '';
@@ -544,11 +416,7 @@
                 const formData = new FormData();
                 const user = Auth.user() || {};
                 const staffName = user.full_name || user.name || user.username || user.email || 'Unknown Staff';
-                formData.append('reason', findingText);
-                formData.append('finding', findingText);
-                formData.append('temuan', findingText);
-                formData.append('category', category || 'Lainnya');
-                formData.append('status', 'open');
+                formData.append('reason', reason);
                 formData.append('finding_type', 'field_finding');
                 formData.append('source', 'staff_dashboard');
                 formData.append('staff_id', user.id || user.user_id || user.sub || '');
@@ -556,13 +424,13 @@
                 selectedFindingPhotos.forEach(file => formData.append('photo', file));
 
                 await API.upload('/qc/findings', formData);
-                staffToast('Temuan berhasil dikirim', 'success');
+                alert('Laporan temuan berhasil dikirim.');
                 resetQcFindingForm();
                 closeQcFinding();
                 Dashboard.init();
             } catch (error) {
                 console.error('Submit QC finding failed:', error);
-                staffToast(`Temuan gagal dikirim: ${error.message || 'Coba lagi.'}`, 'error');
+                alert(`✕ Upload gagal: ${error.message || 'Coba lagi.'}`);
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -584,66 +452,16 @@
             const badge = document.getElementById('findingPhotoBadge');
             const prompt = document.getElementById('findingPrompt');
             const status = document.getElementById('findingCompressionStatus');
-            const message = document.getElementById('findingInlineMessage');
-            const empty = document.getElementById('findingEmptyPhoto');
-            const meta = document.getElementById('findingPhotoMeta');
-            const ready = document.getElementById('findingPhotoReady');
 
             if (input) input.value = '';
-            if (reason) {
-                reason.value = '';
-                autoResizeFindingReason(reason);
-            }
+            if (reason) reason.value = '';
             if (icon) icon.style.display = 'grid';
-            if (empty) empty.style.display = 'grid';
             if (preview) preview.style.display = 'none';
             if (img) img.removeAttribute('src');
             if (badge) badge.style.display = 'none';
-            if (prompt) prompt.textContent = 'Tap untuk ambil foto';
-            if (meta) meta.textContent = '';
-            if (ready) ready.hidden = true;
+            if (prompt) prompt.textContent = 'Klik untuk ambil foto evidence (benda asing, hama, area kotor, dll)';
             if (status) status.textContent = 'Foto akan dikompres otomatis sebelum dikirim.';
-            if (message) message.textContent = '';
-            selectedFindingCategory = '';
-            document.querySelectorAll('.finding-category-chip').forEach(button => {
-                button.classList.remove('active');
-                button.setAttribute('aria-checked', 'false');
-            });
         }
-
-        function autoResizeFindingReason(textarea) {
-            if (!textarea) return;
-            textarea.style.height = 'auto';
-            textarea.style.height = `${Math.max(92, textarea.scrollHeight)}px`;
-        }
-
-        function resetFindingScrollHint() {
-            const body = document.getElementById('findingDrawerBody');
-            const hint = document.getElementById('findingScrollHint');
-            if (!body || !hint) return;
-            body.scrollTop = 0;
-            body.dataset.scrollSeen = 'false';
-            requestAnimationFrame(() => {
-                const hasOverflow = body.scrollHeight > body.clientHeight + 8;
-                hint.hidden = !hasOverflow;
-                body.classList.toggle('show-scroll-hint', hasOverflow);
-            });
-        }
-
-        function dismissFindingScrollHint() {
-            const body = document.getElementById('findingDrawerBody');
-            const hint = document.getElementById('findingScrollHint');
-            if (!body || !hint || body.dataset.scrollSeen === 'true') return;
-            body.dataset.scrollSeen = 'true';
-            body.classList.remove('show-scroll-hint');
-            hint.hidden = true;
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const body = document.getElementById('findingDrawerBody');
-            if (body) body.addEventListener('scroll', dismissFindingScrollHint, { passive: true });
-            autoResizeFindingReason(document.getElementById('findingReason'));
-        });
 
         async function resolveAlertInDrawer(id) {
             if (!confirm('Tandai alert ini sebagai selesai?')) return;
@@ -652,7 +470,7 @@
                 await loadAlertDrawer();
                 Dashboard.init();
             } catch (error) {
-                staffToast('Gagal menyelesaikan alert', 'error');
+                alert('Gagal menyelesaikan alert');
             }
         }
 
@@ -668,6 +486,7 @@
                 return;
             }
             if (!Auth.check()) window.location.href = 'login.html';
+            setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 650);
             const tick = () => {
                 const now = new Date();
                 document.getElementById('clockTime').innerText = now.toLocaleTimeString('id-ID');
@@ -679,27 +498,7 @@
             document.getElementById('greetingText').innerText = hour < 12 ? 'Good Morning, QC Team' : hour < 18 ? 'Good Afternoon, QC Team' : 'Good Evening, QC Team';
             const user = Auth.user();
             if (user?.username) document.getElementById('userInitial').innerText = user.username.substring(0, 2).toUpperCase();
-            document.querySelectorAll('.finding-category-chip').forEach(button => {
-                button.addEventListener('click', () => selectFindingCategory(button.dataset.category || ''));
-            });
-
-            // Instant restore cache to hide loading screen instantly
-            try {
-                if (typeof Dashboard !== 'undefined' && typeof Dashboard.restoreCache === 'function') {
-                    const restored = Dashboard.restoreCache();
-                    if (restored) {
-                        const ls = document.getElementById('loading-screen');
-                        if (ls) ls.classList.add('hidden');
-                    }
-                }
-            } catch (e) {
-                console.error('Failed instant restore cache:', e);
-            }
-
-            Dashboard.init().finally(() => {
-                const ls = document.getElementById('loading-screen');
-                if (ls) ls.classList.add('hidden');
-            });
+            Dashboard.init();
         });
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;

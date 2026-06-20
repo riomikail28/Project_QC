@@ -206,143 +206,6 @@
   color: #c2410c;
 }
 
-.next-device-section,
-.room-progress-card {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, .94);
-  box-shadow: var(--shadow);
-}
-
-.progress-collapsible,
-.recent-log-card {
-  overflow: hidden;
-}
-
-.progress-collapsible > summary,
-.recent-log-card > summary {
-  cursor: pointer;
-  list-style: none;
-  margin: 0;
-}
-
-.progress-collapsible > summary::-webkit-details-marker,
-.recent-log-card > summary::-webkit-details-marker {
-  display: none;
-}
-
-.progress-collapsible > summary::after,
-.recent-log-card > summary::after {
-  content: "+";
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(37,99,235,.1);
-  color: var(--primary);
-  font-weight: 900;
-}
-
-.progress-collapsible[open] > summary::after,
-.recent-log-card[open] > summary::after {
-  content: "-";
-}
-
-.next-device-section {
-  grid-template-columns: minmax(0, 1.2fr) minmax(180px, .7fr) auto;
-  align-items: center;
-  border-color: rgba(37, 99, 235, .22);
-  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(219,234,254,.82));
-}
-
-.next-device-section.is-clear {
-  border-color: rgba(16,185,129,.25);
-  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(220,252,231,.82));
-}
-
-.next-device-copy h3 {
-  margin: 4px 0 6px;
-  font-size: 22px;
-  line-height: 1.1;
-}
-
-.next-device-copy p,
-.next-device-meta small {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.next-device-meta {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(255,255,255,.72);
-}
-
-.next-device-meta span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.next-device-meta strong {
-  font-size: 20px;
-  line-height: 1.1;
-}
-
-.next-device-action {
-  white-space: nowrap;
-}
-
-.room-progress-list {
-  display: grid;
-  gap: 10px;
-}
-
-.room-progress-item {
-  display: grid;
-  grid-template-columns: minmax(120px, .8fr) minmax(140px, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(148,163,184,.22);
-  border-radius: 14px;
-  background: rgba(248,250,252,.86);
-}
-
-.room-progress-item strong,
-.room-progress-item span {
-  display: block;
-}
-
-.room-progress-item span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.room-progress-track {
-  overflow: hidden;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(148,163,184,.18);
-}
-
-.room-progress-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--success));
-}
-
 .slot-context {
   display: grid;
   gap: 4px;
@@ -365,195 +228,8 @@
 
 .device-grid {
   display: grid;
-  gap: 18px;
+  gap: 14px;
   grid-template-columns: minmax(0, 1fr);
-}
-
-.monitoring-room-grid-section {
-  display: grid;
-  gap: 10px;
-}
-
-.monitoring-room-title {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.monitoring-room-title h4 {
-  margin: 0;
-  color: var(--text);
-  font-size: 17px;
-  line-height: 1.15;
-}
-
-.monitoring-room-title span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.monitoring-device-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 12px;
-}
-
-.monitoring-device-mini-card {
-  min-width: 0;
-  min-height: 126px;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
-  align-items: start;
-  gap: 5px;
-  padding: 12px;
-  border: 1px solid rgba(148,163,184,.28);
-  border-radius: 8px;
-  background: rgba(255,255,255,.94);
-  color: var(--text);
-  text-align: left;
-  box-shadow: 0 10px 24px rgba(15,23,42,.06);
-  cursor: pointer;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-}
-
-.monitoring-device-mini-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(37,99,235,.36);
-  box-shadow: 0 14px 28px rgba(15,23,42,.09);
-}
-
-.monitoring-device-mini-card.alert-required {
-  border-color: rgba(239,68,68,.42);
-  background: rgba(255,247,247,.96);
-}
-
-.monitoring-device-mini-name {
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1.15;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.monitoring-device-mini-room {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.monitoring-device-mini-temp {
-  align-self: center;
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.monitoring-device-mini-status {
-  justify-self: start;
-  max-width: 100%;
-  overflow: hidden;
-  padding: 4px 7px;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 950;
-  line-height: 1;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.monitoring-device-mini-status.is-pass {
-  border: 1px solid rgba(16,185,129,.22);
-  background: rgba(16,185,129,.12);
-  color: var(--success);
-}
-
-.monitoring-device-mini-status.is-alert {
-  border: 1px solid rgba(239,68,68,.22);
-  background: rgba(239,68,68,.12);
-  color: var(--danger);
-}
-
-.monitoring-device-mini-status.is-warning {
-  border: 1px solid rgba(245,158,11,.24);
-  background: rgba(245,158,11,.13);
-  color: var(--warning);
-}
-
-.monitoring-device-mini-status.is-pending {
-  border: 1px solid rgba(100,116,139,.18);
-  background: rgba(100,116,139,.1);
-  color: var(--muted);
-}
-
-.monitor-room-group {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,.94);
-  box-shadow: var(--shadow);
-}
-
-.monitor-room-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 16px;
-  border: 0;
-  background: rgba(239,246,255,.72);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-}
-
-.monitor-room-toggle strong,
-.monitor-room-toggle small {
-  display: block;
-}
-
-.monitor-room-toggle strong {
-  font-size: 18px;
-}
-
-.monitor-room-toggle small {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.room-progress-inline {
-  min-width: 128px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.room-progress-inline .room-progress-track {
-  width: 92px;
-}
-
-.monitor-device-list {
-  display: grid;
-  gap: 0;
-}
-
-.monitor-device-list.is-collapsed {
-  display: none;
 }
 
 .device-card {
@@ -566,44 +242,6 @@
   background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(239,246,255,.82));
   box-shadow: var(--shadow);
   transition: transform .22s ease, border-color .22s ease;
-}
-
-.smart-device-card {
-  width: 100%;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(220px, 1.6fr) minmax(90px, .5fr) minmax(76px, .45fr) minmax(110px, .7fr) minmax(130px, .8fr);
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px 14px 26px;
-  border-width: 1px 0 0;
-  border-radius: 0;
-  box-shadow: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.smart-device-card:hover {
-  transform: none;
-  border-color: var(--border);
-  background: rgba(248,250,252,.94);
-}
-
-.smart-device-card::after,
-.smart-device-card::before {
-  content: none;
-}
-
-.smart-device-card.alert-required {
-  border-left: 4px solid var(--danger);
-  padding-left: 22px;
-}
-
-.device-main {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 11px;
 }
 
 .device-card:hover {
@@ -647,18 +285,18 @@
 }
 
 .device-status {
-  position: static;
+  position: absolute;
+  top: 16px;
+  right: 42px;
+  z-index: 1;
   padding: 6px 9px;
   font-size: 10px;
 }
 
 .device-name {
-  margin-top: 0;
+  margin-top: 14px;
   font-size: 17px;
   font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .device-target,
@@ -670,39 +308,9 @@
 }
 
 .device-temp {
-  margin-top: 0;
+  margin-top: 10px;
   font-size: clamp(32px, 10vw, 40px);
   font-weight: 900;
-}
-
-.device-slot-info,
-.device-input-info,
-.device-status-stack {
-  display: grid;
-  gap: 4px;
-}
-
-.device-slot-info span,
-.device-input-info span,
-.device-input-info small,
-.device-status-stack small {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.device-slot-info strong,
-.device-input-info strong {
-  font-size: 14px;
-  line-height: 1.1;
-}
-
-.photo-required {
-  color: var(--danger) !important;
-}
-
-.photo-optional {
-  color: var(--muted);
 }
 
 .health-bar {
@@ -728,21 +336,6 @@
   background:
     linear-gradient(135deg, transparent 0 18%, rgba(59,130,246,.9) 18% 21%, transparent 21% 38%, rgba(16,185,129,.9) 38% 41%, transparent 41% 58%, rgba(59,130,246,.9) 58% 61%, transparent 61% 78%, rgba(16,185,129,.9) 78% 81%, transparent 81%),
     rgba(239, 246, 255, .72);
-}
-
-.smart-device-card:hover {
-  transform: none;
-}
-
-.smart-device-card::after,
-.smart-device-card::before {
-  content: none;
-  display: none;
-}
-
-.smart-device-card .sparkline,
-.smart-device-card .health-bar {
-  display: none;
 }
 
 .bottom-sheet {
@@ -922,12 +515,12 @@ textarea {
     font-size: clamp(34px, 4vw, 42px);
   }
 
-  .input-grid {
-    grid-template-columns: 1fr 1fr;
+  .device-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .monitoring-device-mini-grid {
-    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  .input-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .bottom-sheet {
@@ -945,50 +538,18 @@ textarea {
 }
 
 @media (max-width: 520px) {
-  .monitor-hero {
-    min-height: 0;
-    padding: 10px 12px;
-  }
-
-  .monitor-hero h1 {
-    margin: 4px 0;
-    font-size: 20px;
-  }
-
-  .monitor-hero p,
-  .monitor-hero .eyebrow {
-    display: none;
-  }
-
-  .daily-schedule-card,
-  .next-device-section,
-  .room-progress-card,
-  .recent-log-card {
-    gap: 10px;
-    padding: 12px;
-  }
-
   .bottom-sheet {
     width: 96vw;
     max-height: 90vh;
-    padding: 8px 12px 0;
   }
 
   .sheet-footer {
     align-items: stretch;
-    flex-direction: row;
-    gap: 8px;
-    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+    flex-direction: column-reverse;
   }
+}
 
-  .sheet-footer .btn-primary,
-  .sheet-footer .btn-secondary {
-    min-height: 48px;
-    flex: 1;
-    border-radius: 13px;
-    padding-inline: 10px;
-  }
-
+@media (max-width: 520px) {
   .schedule-head {
     align-items: stretch;
   }
@@ -998,116 +559,6 @@ textarea {
   }
 
   .schedule-slot {
-    min-height: 68px;
-    padding: 10px;
-  }
-
-  .schedule-slot strong {
-    font-size: 18px;
-  }
-
-  .next-device-copy h3 {
-    font-size: 18px;
-  }
-
-  .next-device-meta {
-    padding: 10px;
-  }
-
-  .next-device-meta strong {
-    font-size: 17px;
-  }
-
-  .monitor-summary {
-    display: none;
-  }
-
-  .device-grid {
-    gap: 16px;
-  }
-
-  .monitoring-room-title h4 {
-    font-size: 15px;
-  }
-
-  .monitoring-device-mini-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px 12px;
-  }
-
-  .monitoring-device-mini-card {
-    min-height: 108px;
-    padding: 9px 8px;
-  }
-
-  .monitoring-device-mini-name {
-    font-size: 11px;
-  }
-
-  .monitoring-device-mini-room {
-    font-size: 9px;
-  }
-
-  .monitoring-device-mini-temp {
-    font-size: 19px;
-  }
-
-  .monitoring-device-mini-status {
-    padding: 4px 6px;
-    font-size: 8px;
-  }
-
-  .photo-placeholder,
-  .photo-preview {
-    min-height: 96px;
-  }
-}
-
-@media (max-width: 760px) {
-  .next-device-section {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .next-device-action {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .room-progress-item {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .room-progress-inline {
-    min-width: 90px;
-  }
-
-  .room-progress-inline .room-progress-track {
-    display: none;
-  }
-
-  .smart-device-card {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-    gap: 9px;
-    padding: 14px 16px;
-  }
-
-  .device-name {
-    white-space: normal;
-  }
-
-  .device-temp {
-    font-size: 34px;
-  }
-
-  .device-slot-info,
-  .device-input-info,
-  .device-status-stack {
-    grid-template-columns: auto 1fr;
-    align-items: center;
-  }
-
-  .device-status-stack small {
-    grid-column: 1 / -1;
+    min-height: 82px;
   }
 }

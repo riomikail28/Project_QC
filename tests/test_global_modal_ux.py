@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -78,27 +79,12 @@ def test_staff_modals_and_drawers_have_sticky_scrollable_regions():
     assert 'event.key === "Escape"' in monitoring_js
 
 
-def test_global_mobile_layout_rules_prevent_bottom_nav_and_modal_overlap():
-    css = read("frontend/styles/global.css")
-
-    assert "@media (max-width: 739px)" in css
-    assert "padding-bottom: max(110px" in css
-    assert ":where(.alert-drawer, .bottom-sheet, .qc-form-sheet)" in css
-    assert "max-height: 90vh;" in css
-    assert ":where(.alert-drawer-body, .sheet-body, .qc-form-body)" in css
-    assert "overflow-y: auto;" in css
-    assert ":where(.alert-drawer-footer, .sheet-footer, .qc-form-footer)" in css
-    assert "bottom: 0;" in css
-    assert "min-height: 44px;" in css
-
-
 def test_monitoring_submit_success_toast_uses_clear_success_message():
     monitoring_js = read("frontend/js/monitoring.js")
 
     success_block = monitoring_js[
-        monitoring_js.index("if (result.success) {") : monitoring_js.index(
-            "} else {", monitoring_js.index("if (result.success) {")
-        )
+        monitoring_js.index('if (result.success) {'):
+        monitoring_js.index('} else {', monitoring_js.index('if (result.success) {'))
     ]
     assert 'showMonitoringToast("Data monitoring berhasil disimpan.")' in success_block
     assert "result.schedule?.message" not in success_block

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -19,10 +20,7 @@ def test_monitoring_management_uses_grouped_room_row_list_layout():
     assert "monitoring-device-row" in js
     assert ".monitoring-room-group" in css
     assert ".monitoring-device-row" in css
-    assert (
-        "grid-template-columns: minmax(180px, 2fr) minmax(110px, 1fr) minmax(150px, 1.5fr) minmax(92px, auto) minmax(180px, auto);"
-        in css
-    )
+    assert "grid-template-columns: minmax(180px, 2fr) minmax(110px, 1fr) minmax(150px, 1.5fr) minmax(92px, auto) minmax(180px, auto);" in css
     assert 'id="monitoring-management-list"' in html
 
 
@@ -87,11 +85,9 @@ def test_existing_monitoring_grid_contract_is_unchanged():
     js = read("frontend/js/admin_app.js")
 
     assert 'id="monitoring-grid"' in html
-    assert "async loadMonitoring" in js
+    assert "async loadMonitoring()" in js
     assert "const grid = document.getElementById('monitoring-grid');" in js
-    assert "/monitoring/daily?date=" in js
-    assert "renderMonitoringDailyCard" in js
-    assert "monitoring-slot-row" in js
+    assert "grid.appendChild(card);" in js
 
 
 def test_monitoring_room_groups_are_full_width_not_two_column_cards():

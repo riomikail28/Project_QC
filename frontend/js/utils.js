@@ -34,13 +34,5 @@ const Utils = {
             case 'FAIL': return '#ef4444';
             default: return '#64748b';
         }
-    },
-
-    thumbnailUrl(url) {
-        const raw = String(url || '').split(';')[0].trim();
-        if (!raw) return '';
-        if (!/^https?:\/\//i.test(raw)) return raw;
-        const separator = raw.includes('?') ? '&' : '?';
-        return `${raw}${separator}width=180&quality=65`;
     }
 };

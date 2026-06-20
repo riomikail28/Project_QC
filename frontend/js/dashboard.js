@@ -4,161 +4,32 @@
 
 const Dashboard = {
     refreshTimer: null,
-    lazyRenderTimer: null,
 
     async init() {
-        const hasCache = this.restoreCache();
-        await this.loadAll({ silent: hasCache });
+        await this.loadAll();
         clearInterval(this.refreshTimer);
         this.refreshTimer = setInterval(() => this.loadAll({ silent: true }), 30000);
-
-        // Prefetch facility structure and inspection products for other pages
-        if (window.requestIdleCallback) {
-            requestIdleCallback(() => {
-                API.getCached('/facility/structure', 600000).catch(() => {});
-                API.getCached('/inspection/products', 1800000).catch(() => {});
-            });
-        } else {
-            setTimeout(() => {
-                API.getCached('/facility/structure', 600000).catch(() => {});
-                API.getCached('/inspection/products', 1800000).catch(() => {});
-            }, 1000);
-        }
-    },
-
-    saveCache() {
-        try {
-            const data = {
-                taskMonitoringCount: document.getElementById('taskMonitoringCount')?.textContent || '',
-                taskBatchCount: document.getElementById('taskBatchCount')?.textContent || '',
-                taskRecheckCount: document.getElementById('taskRecheckCount')?.textContent || '',
-                taskFindingCount: document.getElementById('taskFindingCount')?.textContent || '',
-                
-                staffMonitoringDone: document.getElementById('staffMonitoringDone')?.textContent || '',
-                staffBatchQcDone: document.getElementById('staffBatchQcDone')?.textContent || '',
-                staffFindingsToday: document.getElementById('staffFindingsToday')?.textContent || '',
-                staffPassRate: document.getElementById('staffPassRate')?.textContent || '',
-                
-                healthValue: document.getElementById('healthValue')?.textContent || '0',
-                healthLabel: document.getElementById('healthLabel')?.textContent || '',
-                healthProgressOffset: document.getElementById('healthProgress')?.style.strokeDashoffset || '',
-                healthProgressStroke: document.getElementById('healthProgress')?.style.stroke || '',
-                
-                totalBatches: document.getElementById('totalBatches')?.textContent || '0',
-                totalAlerts: document.getElementById('totalAlerts')?.textContent || '0',
-                qcSuccessRate: document.getElementById('qcSuccessRate')?.textContent || '--',
-                pendingApproval: document.getElementById('pendingApproval')?.textContent || '0',
-                avgFreezerTemp: document.getElementById('avgFreezerTemp')?.textContent || '--',
-                alertBadge: document.getElementById('alertBadge')?.textContent || '0',
-                alertBadgeStyle: document.getElementById('alertBadge')?.style.display || 'none',
-                
-                productionTrendChart: document.getElementById('productionTrendChart')?.innerHTML || '',
-                qcStatusPieBackground: document.getElementById('qcStatusPie')?.style.background || '',
-                qcStatusList: document.getElementById('qcStatusList')?.innerHTML || '',
-                realtimeMonitoringList: document.getElementById('realtimeMonitoringList')?.innerHTML || '',
-                criticalList: document.getElementById('criticalList')?.innerHTML || '',
-                todaySummaryList: document.getElementById('todaySummaryList')?.innerHTML || '',
-                
-                userInitial: document.getElementById('userInitial')?.textContent || 'QC',
-            };
-            localStorage.setItem('page_cache:staff_dashboard', JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save staff dashboard cache:', e);
-        }
-    },
-
-    restoreCache() {
-        try {
-            const dataStr = localStorage.getItem('page_cache:staff_dashboard');
-            if (!dataStr) return false;
-            const data = JSON.parse(dataStr);
-            
-            const setText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && val !== undefined) el.textContent = val;
-            };
-            const setHtml = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && val !== undefined) el.innerHTML = val;
-            };
-
-            setText('taskMonitoringCount', data.taskMonitoringCount);
-            setText('taskBatchCount', data.taskBatchCount);
-            setText('taskRecheckCount', data.taskRecheckCount);
-            setText('taskFindingCount', data.taskFindingCount);
-            
-            setText('staffMonitoringDone', data.staffMonitoringDone);
-            setText('staffBatchQcDone', data.staffBatchQcDone);
-            setText('staffFindingsToday', data.staffFindingsToday);
-            setText('staffPassRate', data.staffPassRate);
-            
-            setText('healthValue', data.healthValue);
-            setText('healthLabel', data.healthLabel);
-            const progress = document.getElementById('healthProgress');
-            if (progress) {
-                if (data.healthProgressOffset) progress.style.strokeDashoffset = data.healthProgressOffset;
-                if (data.healthProgressStroke) progress.style.stroke = data.healthProgressStroke;
-            }
-            
-            setText('totalBatches', data.totalBatches);
-            setText('totalAlerts', data.totalAlerts);
-            setText('qcSuccessRate', data.qcSuccessRate);
-            setText('pendingApproval', data.pendingApproval);
-            setText('avgFreezerTemp', data.avgFreezerTemp);
-            
-            const badge = document.getElementById('alertBadge');
-            if (badge) {
-                badge.textContent = data.alertBadge || '0';
-                badge.style.display = data.alertBadgeStyle || 'none';
-            }
-            
-            setHtml('productionTrendChart', data.productionTrendChart);
-            const pie = document.getElementById('qcStatusPie');
-            if (pie && data.qcStatusPieBackground) pie.style.background = data.qcStatusPieBackground;
-            
-            setHtml('qcStatusList', data.qcStatusList);
-            setHtml('realtimeMonitoringList', data.realtimeMonitoringList);
-            setHtml('criticalList', data.criticalList);
-            setHtml('todaySummaryList', data.todaySummaryList);
-            
-            setText('userInitial', data.userInitial);
-            
-            this.refreshIcons();
-            return true;
-        } catch (e) {
-            console.error('Failed to restore staff dashboard cache:', e);
-            return false;
-        }
     },
 
     async loadAll({ silent = false } = {}) {
-        const started = performance.now();
         if (!silent) this.setLoading();
         try {
-            // PERFORMANCE_OPTIMIZED: KPI data is rendered first; secondary panels follow after idle/visibility.
-            const [summary, trend, qcStatus, monitoring, alerts, todaySummary, schedule] = await Promise.all([
+            const [summary, trend, qcStatus, monitoring, alerts, todaySummary] = await Promise.all([
                 this.fetchEnvelope('/dashboard/summary'),
                 this.fetchEnvelope('/dashboard/production-trend'),
                 this.fetchEnvelope('/dashboard/qc-status'),
                 this.fetchEnvelope('/dashboard/realtime-monitoring'),
                 this.fetchEnvelope('/dashboard/alerts'),
                 this.fetchEnvelope('/dashboard/today-summary'),
-                this.fetchOptionalEnvelope('/facility/monitoring/schedule/today'),
             ]);
 
-            this.renderTaskNow(summary, todaySummary, schedule);
-            this.renderCompactToday(summary, todaySummary, schedule);
             this.renderSummary(summary);
-            this.deferSecondaryRender(() => {
-                this.renderProductionTrend(trend);
-                this.renderQcStatus(qcStatus);
-                this.renderMonitoring(monitoring);
-                this.renderCriticalIssues(alerts);
-                this.renderTodaySummary(todaySummary);
-                this.refreshIcons();
-                this.saveCache();
-            });
-            console.info(`[PERFORMANCE_OPTIMIZED] Dashboard load time: ${Math.round(performance.now() - started)}ms`);
+            this.renderProductionTrend(trend);
+            this.renderQcStatus(qcStatus);
+            this.renderMonitoring(monitoring);
+            this.renderCriticalIssues(alerts);
+            this.renderTodaySummary(todaySummary);
+            this.refreshIcons();
         } catch (error) {
             console.error('Failed to load real dashboard data:', error);
             this.renderError();
@@ -166,71 +37,15 @@ const Dashboard = {
     },
 
     async fetchEnvelope(endpoint) {
-        const response = await API.getSWR(endpoint, {
-            ttlMs: 60000,
-            onUpdate: data => this.renderEndpointUpdate(endpoint, data?.data)
-        });
+        const response = await API.get(endpoint);
         if (!response || response.success !== true) {
             throw new Error(response?.message || `Failed to load ${endpoint}`);
         }
         return response.data;
     },
 
-    async fetchOptionalEnvelope(endpoint) {
-        try {
-            const response = await API.getSWR(endpoint, {
-                ttlMs: 60000,
-                onUpdate: data => this.renderEndpointUpdate(endpoint, data?.data)
-            });
-            if (!response || response.success !== true) return null;
-            return response.data;
-        } catch (error) {
-            console.warn(`Optional dashboard data failed: ${endpoint}`, error);
-            return null;
-        }
-    },
-
-    deferSecondaryRender(callback) {
-        clearTimeout(this.lazyRenderTimer);
-        const run = () => {
-            if (document.visibilityState === 'hidden') {
-                this.lazyRenderTimer = setTimeout(run, 250);
-                return;
-            }
-            callback();
-        };
-        if (window.requestIdleCallback) {
-            requestIdleCallback(run, { timeout: 800 });
-        } else {
-            this.lazyRenderTimer = setTimeout(run, 0);
-        }
-    },
-
-    renderEndpointUpdate(endpoint, data) {
-        if (!data) return;
-        if (endpoint === '/dashboard/summary') {
-            this.renderSummary(data);
-        } else if (endpoint === '/dashboard/production-trend') {
-            this.renderProductionTrend(data);
-        } else if (endpoint === '/dashboard/qc-status') {
-            this.renderQcStatus(data);
-        } else if (endpoint === '/dashboard/realtime-monitoring') {
-            this.renderMonitoring(data);
-        } else if (endpoint === '/dashboard/alerts') {
-            this.renderCriticalIssues(data);
-        } else if (endpoint === '/dashboard/today-summary') {
-            this.renderTodaySummary(data);
-        }
-        this.refreshIcons();
-        this.saveCache();
-    },
-
     setLoading() {
-        [
-            'totalBatches', 'totalAlerts', 'qcSuccessRate', 'pendingApproval', 'avgFreezerTemp', 'healthValue',
-            'taskMonitoringCount', 'taskBatchCount', 'taskRecheckCount', 'taskFindingCount',
-            'staffMonitoringDone', 'staffBatchQcDone', 'staffFindingsToday', 'staffPassRate'
-        ].forEach(id => {
+        ['totalBatches', 'totalAlerts', 'qcSuccessRate', 'pendingApproval', 'avgFreezerTemp', 'healthValue'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '...';
         });
@@ -238,46 +53,6 @@ const Dashboard = {
         this.setHtml('realtimeMonitoringList', '<div class="skeleton skeleton-card"></div>');
         this.setHtml('todaySummaryList', '<div class="skeleton skeleton-card"></div>');
         this.setHtml('qcStatusList', '<span class="status-badge muted">Memuat...</span>');
-    },
-
-    renderTaskNow(summary = {}, todaySummary = {}, schedule = {}) {
-        const monitoringPending = this.pendingMonitoringDevices(schedule);
-        const pendingBatch = Number(
-            summary.batch_pending_qc ??
-            summary.pending_qc ??
-            Math.max(Number(summary.pending_approval || 0), Number(summary.total_batches_today || 0) - Number(todaySummary.qc_submitted || 0))
-        );
-        const recheckPending = Number(summary.recheck_pending ?? todaySummary.recheck_pending ?? 0);
-        const findingOpen = Number(summary.qc_findings_open ?? summary.open_findings ?? todaySummary.qc_findings_open ?? todaySummary.findings_open ?? 0);
-
-        this.text('taskMonitoringCount', `${monitoringPending} Device Belum Dicek`);
-        this.text('taskBatchCount', `${Math.max(0, pendingBatch)} Batch`);
-        this.text('taskRecheckCount', `${Math.max(0, recheckPending)} Re-check`);
-        this.text('taskFindingCount', `${Math.max(0, findingOpen)} Temuan`);
-    },
-
-    renderCompactToday(summary = {}, todaySummary = {}, schedule = {}) {
-        const completedMonitoring = schedule?.completed_count ?? todaySummary.temperature_logs ?? 0;
-        const findingsToday = todaySummary.qc_findings ?? todaySummary.findings ?? todaySummary.photo_findings ?? 0;
-        this.text('staffMonitoringDone', completedMonitoring);
-        this.text('staffBatchQcDone', todaySummary.qc_submitted ?? 0);
-        this.text('staffFindingsToday', findingsToday);
-        this.text('staffPassRate', summary.qc_success_rate === null || summary.qc_success_rate === undefined ? '--' : `${summary.qc_success_rate}%`);
-    },
-
-    pendingMonitoringDevices(schedule = {}) {
-        const statuses = Object.values(schedule?.device_statuses || {});
-        if (statuses.length) {
-            return statuses.filter(item => {
-                const active = item?.active_status;
-                return active && active.status !== 'completed';
-            }).length;
-        }
-        const currentSlot = schedule?.current_slot;
-        if (!currentSlot || currentSlot.status !== 'pending') return 0;
-        const total = Number(currentSlot.total_devices ?? schedule.total_devices ?? 0);
-        const completed = Number(currentSlot.completed_count ?? 0);
-        return Math.max(0, total - completed);
     },
 
     renderSummary(data = {}) {

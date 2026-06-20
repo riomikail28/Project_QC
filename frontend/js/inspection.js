@@ -7,8 +7,6 @@
  * Form fields appear progressively to minimize scroll on mobile.
  */
 
-let isAdvancedPanelOpen = false;
-
 const Inspection = {
     selectedStatus: null,
     selectedStage: null,
@@ -17,8 +15,6 @@ const Inspection = {
     selectedProduct: null,
     skuCards: [],
     skuBatchMap: {},
-    skuListQuery: '',
-    activeSkuDetailKey: null,
     manualMode: false,
     forceNewBatch: false,
     activeInspection: null,
@@ -34,17 +30,7 @@ const Inspection = {
         this.operationalDate = this.jakartaDateString();
         this.resetStaleOperationalState();
         this.renderOperationalDate();
-        
-        // Restore cache first
-        this.restoreCache();
-        
-        // Load products and today's batches in parallel
-        // Compatibility test comment: await this.loadTodaySkuCards()
-        await Promise.all([
-            this.loadProducts(),
-            this.loadTodaySkuCards()
-        ]);
-
+        await this.loadProducts();
         this.bindSkuWorkspace();
         this.bindProductSearch();
         this.bindManualSku();
@@ -61,20 +47,7 @@ const Inspection = {
         this.updateSubmitState();
         this.updateProgressiveFields();
         this.loadRecentSubmissions();
-
-        // Prefetch facility structure for Monitoring page
-        if (window.requestIdleCallback) {
-            requestIdleCallback(() => {
-                API.getCached('/facility/structure', 600000).catch(() => {});
-            });
-        } else {
-            setTimeout(() => {
-                API.getCached('/facility/structure', 600000).catch(() => {});
-            }, 1000);
-        }
-        
-        // Check for draft recovery
-        setTimeout(() => this.checkDraft(), 1000);
+        await this.loadTodaySkuCards();
     },
 
     bindSkuWorkspace() {
@@ -86,16 +59,6 @@ const Inspection = {
         document.getElementById('nextBatchCancelBtn')?.addEventListener('click', () => this.closeNextBatchSheet());
         document.getElementById('nextBatchBackdrop')?.addEventListener('click', () => this.closeNextBatchSheet());
         document.getElementById('saveNextBatchBtn')?.addEventListener('click', () => this.saveNextBatch());
-        document.getElementById('skuDetailCloseBtn')?.addEventListener('click', () => this.closeSkuDetail());
-        document.getElementById('skuDetailBackdrop')?.addEventListener('click', () => this.closeSkuDetail());
-        let searchDebounce = null;
-        document.getElementById('skuListSearch')?.addEventListener('input', event => {
-            clearTimeout(searchDebounce);
-            searchDebounce = setTimeout(() => {
-                this.skuListQuery = event.target.value || '';
-                this.renderSkuCards();
-            }, 150);
-        });
         document.addEventListener('click', event => {
             const panel = document.getElementById('skuSearchPanel');
             const trigger = document.getElementById('addSkuBtn');
@@ -112,9 +75,6 @@ const Inspection = {
             }
             if (event.key === 'Escape' && !document.getElementById('nextBatchSheet')?.hidden) {
                 this.closeNextBatchSheet();
-            }
-            if (event.key === 'Escape' && !document.getElementById('skuDetailDrawer')?.hidden) {
-                this.closeSkuDetail();
             }
         });
     },
@@ -148,8 +108,8 @@ const Inspection = {
 
     async loadProducts() {
         try {
-            const response = await API.getCached('/inspection/products', 1800000);
-            this.products = response?.data || response || [];
+            const response = await API.get('/inspection/products');
+            this.products = response?.data || [];
         } catch (error) {
             this.products = [];
             this.message('Gagal memuat produk. Gunakan input manual jika perlu.', true);
@@ -251,13 +211,8 @@ const Inspection = {
                 document.querySelectorAll('.qc-status-option').forEach(item => {
                     item.classList.toggle('active', item === button);
                 });
-                if (this.selectedStatus === 'hold' || this.selectedStatus === 'fail') {
-                    isAdvancedPanelOpen = true;
-                }
-                this.updateFastQcMode();
                 this.updateSubmitState();
                 this.updateSummary();
-                this.saveDraft();
             });
         });
     },
@@ -273,7 +228,6 @@ const Inspection = {
                 this.updateProgressiveFields();
                 this.updateSubmitState();
                 this.updateSummary();
-                this.saveDraft();
             });
         });
     },
@@ -337,9 +291,6 @@ const Inspection = {
             this.recheckParentInspection = this.lastInspection.id;
             this.activeInspection = null;
             this.message('Mode re-check aktif. Submit berikutnya akan menjadi ronde lanjutan.', false);
-            this.setText('qcFormTitle', 'RE-CHECK QC');
-            isAdvancedPanelOpen = true;
-            this.updateFastQcMode();
             this.updateSummary();
             this.updateSubmitState();
         });
@@ -352,69 +303,11 @@ const Inspection = {
     bindCompletionState() {
         ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', () => {
-                    this.updateFastQcMode();
-                    this.updateSubmitState();
-                    this.updateSummary();
-                    this.saveDraft();
-                });
-            }
-        });
-
-        // Keydown Enter listener for Fast PASS mode and autofocus
-        ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('keydown', event => {
-                    if (event.key === 'Enter') {
-                        if (id === 'qcNotes') {
-                            event.preventDefault();
-                            document.getElementById('submitQcBtn')?.focus();
-                            return;
-                        }
-                        
-                        event.preventDefault();
-                        
-                        let nextId = null;
-                        if (id === 'qcTemp') nextId = 'qcPh';
-                        else if (id === 'qcPh') nextId = 'qcBrix';
-                        else if (id === 'qcBrix') nextId = 'qcTds';
-                        else if (id === 'qcTds') nextId = 'qcNotes';
-                        
-                        let nextEl = nextId ? document.getElementById(nextId) : null;
-                        const isHoldFail = this.selectedStatus === 'hold' || this.selectedStatus === 'fail';
-                        
-                        while (nextEl) {
-                            const isPanelOpen = isAdvancedPanelOpen || document.getElementById('qcParameterPanel')?.open;
-                            const isFieldVisible = nextId === 'qcNotes' ? isHoldFail : isPanelOpen;
-                            if (isFieldVisible && !nextEl.disabled && !nextEl.closest('[hidden]')) {
-                                break;
-                            }
-                            if (nextId === 'qcPh') nextId = 'qcBrix';
-                            else if (nextId === 'qcBrix') nextId = 'qcTds';
-                            else if (nextId === 'qcTds') nextId = 'qcNotes';
-                            else nextId = null;
-                            
-                            nextEl = nextId ? document.getElementById(nextId) : null;
-                        }
-                        
-                        if (nextEl) {
-                            nextEl.focus();
-                        } else {
-                            document.getElementById('submitQcBtn')?.focus();
-                        }
-                    }
-                });
-            }
-        });
-
-        const parameterPanel = document.getElementById('qcParameterPanel');
-        if (parameterPanel) {
-            parameterPanel.addEventListener('toggle', () => {
-                isAdvancedPanelOpen = parameterPanel.open;
+            if (input) input.addEventListener('input', () => {
+                this.updateSubmitState();
+                this.updateSummary();
             });
-        }
+        });
     },
 
     /* ═══════════════════════════════════════════════
@@ -450,43 +343,11 @@ const Inspection = {
 
         if (stageField) stageField.hidden = true;
         if (statusField) statusField.hidden = !hasContext;
+        if (notesField) notesField.hidden = !hasContext;
         if (submitBtn) submitBtn.style.display = hasContext ? '' : 'none';
 
         // Update stage fields visibility
         this.updateStageFields(hasContext);
-        this.updateFastQcMode();
-    },
-
-    updateFastQcMode() {
-        const hasContext = this.hasProductContext();
-        const holdFail = this.requiresHoldFailEvidence();
-        const recheck = Boolean(this.recheckParentInspection);
-        const parameterPanel = document.getElementById('qcParameterPanel');
-        const notesField = document.getElementById('notesField');
-        const uploadCard = document.getElementById('cookingUploadCard');
-        const photoLabel = document.getElementById('cookingPhotoLabel');
-        const sheet = document.getElementById('qcFormSheet');
-        const standardDriven = this.productHasAdditionalStandards();
-
-        if (parameterPanel) {
-            if (isAdvancedPanelOpen) {
-                parameterPanel.classList.remove('collapsed');
-                parameterPanel.open = true;
-            } else {
-                parameterPanel.classList.add('collapsed');
-                parameterPanel.open = false;
-            }
-        }
-        if (notesField) notesField.hidden = !hasContext || (!holdFail && !recheck);
-        if (uploadCard) uploadCard.hidden = !hasContext || (!holdFail && !recheck);
-        if (photoLabel) photoLabel.textContent = holdFail ? 'Foto evidence wajib' : 'Foto evidence optional';
-        if (sheet) {
-            sheet.classList.toggle('fast-pass-mode', hasContext && this.selectedStatus === 'pass' && !recheck);
-            sheet.classList.toggle('hold-fail-mode', holdFail);
-            sheet.classList.toggle('recheck-mode', recheck);
-        }
-        this.renderRecheckBanner();
-        this.updateInlineValidation();
     },
 
     /* ═══════════════════════════════════════════════
@@ -507,16 +368,12 @@ const Inspection = {
                     this.photoFiles[id] = prepared;
                     this.renderPhotoPreview(id, prepared);
                     this.setPhotoCompressionStatus(id, `Foto siap dikirim (${ImageCompression.formatBytes(prepared.size)}).`);
-                    this.updateFastQcMode();
-                    this.updateSubmitState();
                     this.updateSummary();
                 } catch (err) {
                     this.message(err.message || 'Upload gagal', true);
                     input.value = '';
                     delete this.photoFiles[id];
                     this.clearPhotoPreview(id);
-                    this.updateFastQcMode();
-                    this.updateSubmitState();
                     this.updateSummary();
                 }
             });
@@ -563,20 +420,6 @@ const Inspection = {
             this.message('Suhu masak harus berupa angka.', true);
             return;
         }
-        if (this.requiresHoldFailEvidence()) {
-            if (!notes) {
-                this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
-                document.getElementById('qcNotes')?.focus();
-                this.updateSubmitState();
-                return;
-            }
-            if (!cookingPhoto) {
-                this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
-                document.getElementById('cookingUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                this.updateSubmitState();
-                return;
-            }
-        }
         try {
             [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
         } catch (err) {
@@ -622,12 +465,6 @@ const Inspection = {
                 created_at: new Date().toISOString()
             });
             const submittedProduct = this.selectedProduct;
-            const productKey = this.productKey(submittedProduct);
-            const currentBatchId = this.selectedBatch?.id || this.selectedBatch?.batch_code;
-            const nextBatch = currentBatchId && productKey ? this.skuBatchMap[productKey]?.batches?.find(b => String(b.id || b.batch_code) !== String(currentBatchId) && this.normalizeStatus(b.qc_status || b.status) === 'pending') : null;
-
-            localStorage.removeItem('inspection_draft');
-
             ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
                 localStorage.removeItem(id);
                 const el = document.getElementById(id);
@@ -665,17 +502,10 @@ const Inspection = {
             this.updateProgressiveFields();
             this.updateSubmitState();
             this.updateSummary();
-            
-            window.showToast('✓ QC berhasil', 'success', 1000);
+            this.message('QC berhasil disimpan', false);
             this.loadRecentSubmissions();
             this.closeQcSheet();
             if (submittedProduct) await this.addSkuCard(submittedProduct);
-
-            if (nextBatch) {
-                setTimeout(() => {
-                    this.openQcForm(submittedProduct, nextBatch, { recheck: false });
-                }, 1000);
-            }
         } catch (error) {
             this.message(`Gagal menyimpan QC: ${error.message || 'server tidak merespons'}`, true);
         } finally {
@@ -691,61 +521,12 @@ const Inspection = {
     updateSubmitState() {
         const button = document.getElementById('submitQcBtn');
         if (!button) return;
-        const isLocked = Boolean(this.activeInspection);
-        const validation = this.fastQcValidation();
-        button.disabled = isLocked || !validation.canSubmit;
-        button.innerHTML = `<i class="fas fa-paper-plane"></i>${this.submitButtonCopy()}`;
-        this.updateInlineValidation(validation);
-        this.updateStepState();
-        this.updateSummary();
-    },
-
-    fastQcValidation() {
         const hasProduct = this.hasProductContext();
         const hasStatus = Boolean(this.selectedStatus);
-        const temperature = document.getElementById('qcTemp')?.value;
-        const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
-        const hasTemperature = this.selectedStage !== 'cooking_check' || (temperatureValue != null && Number.isFinite(temperatureValue));
-        const notes = document.getElementById('qcNotes')?.value?.trim();
-        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
-        const needsEvidence = this.requiresHoldFailEvidence();
-        const hasHoldFailNotes = !needsEvidence || Boolean(notes);
-        const hasHoldFailPhoto = !needsEvidence || Boolean(cookingPhoto);
-        return {
-            hasProduct,
-            hasStatus,
-            hasTemperature,
-            needsEvidence,
-            hasHoldFailNotes,
-            hasHoldFailPhoto,
-            canSubmit: Boolean(hasProduct && hasStatus && hasTemperature && hasHoldFailNotes && hasHoldFailPhoto),
-        };
-    },
-
-    requiresHoldFailEvidence() {
-        return this.selectedStatus === 'hold' || this.selectedStatus === 'fail';
-    },
-
-    submitButtonCopy() {
-        if (this.recheckParentInspection) return 'Simpan Re-check';
-        if (this.selectedStatus === 'hold') return 'Simpan HOLD';
-        if (this.selectedStatus === 'fail') return 'Simpan FAIL';
-        if (this.selectedStatus === 'pass') return 'Simpan PASS';
-        return 'Simpan QC';
-    },
-
-    updateInlineValidation(validation = this.fastQcValidation()) {
-        const tempError = document.getElementById('qcTempError');
-        const notesError = document.getElementById('qcNotesError');
-        const photoError = document.getElementById('qcPhotoError');
-        if (tempError) tempError.hidden = !validation.hasProduct || validation.hasTemperature;
-        if (notesError) notesError.hidden = !validation.needsEvidence || validation.hasHoldFailNotes;
-        if (photoError) photoError.hidden = !validation.needsEvidence || validation.hasHoldFailPhoto;
-        if (validation.needsEvidence && (!validation.hasHoldFailNotes || !validation.hasHoldFailPhoto)) {
-            this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
-        } else if (document.getElementById('qcSubmitMessage')?.textContent === 'Catatan dan foto wajib untuk HOLD/FAIL.') {
-            this.message('', false);
-        }
+        const isLocked = Boolean(this.activeInspection);
+        button.disabled = isLocked || !(hasProduct && hasStatus);
+        this.updateStepState();
+        this.updateSummary();
     },
 
     /* ═══════════════════════════════════════════════
@@ -766,17 +547,13 @@ const Inspection = {
 
     updateSummary() {
         const panel = document.getElementById('qcSubmitSummary');
-        const mini = document.getElementById('qcMiniSummary');
         if (!panel) return;
         const hasContext = this.hasProductContext();
-        const showFullSummary = hasContext && (this.requiresHoldFailEvidence() || Boolean(this.recheckParentInspection));
-        panel.hidden = !showFullSummary;
-        if (mini) mini.hidden = !hasContext || showFullSummary;
+        panel.hidden = !hasContext;
         if (!hasContext) return;
         const manualSku = document.getElementById('qcSku')?.value?.trim();
         const productName = this.selectedProduct?.product_name || 'Manual SKU';
         const sku = this.selectedProduct?.product_code || manualSku || '-';
-        const temperature = document.getElementById('qcTemp')?.value || '-';
         const photos = ['cookingPhoto', 'barcodePhoto', 'labelPhoto']
             .reduce((total, id) => total + (this.photoFiles[id] ? 1 : (document.getElementById(id)?.files?.length || 0)), 0);
         this.setText('summaryProduct', `${productName} (${sku})`);
@@ -787,41 +564,6 @@ const Inspection = {
             : (this.selectedStatus ? this.selectedStatus.toUpperCase() : '-');
         this.setText('summaryStatus', statusText);
         this.setText('summaryEvidence', photos ? `${photos} foto terlampir` : 'Belum ada foto');
-        this.setText('miniSummaryBatch', this.selectedBatch?.batch_code || 'Batch baru');
-        this.setText('miniSummaryStatus', `Status ${this.selectedStatus ? this.selectedStatus.toUpperCase() : '-'}`);
-        this.setText('miniSummaryTemp', `Suhu ${temperature} C`);
-    },
-
-    productHasAdditionalStandards() {
-        const source = { ...(this.selectedProduct || {}), ...(this.selectedBatch || {}) };
-        return [
-            'ph_min', 'ph_max', 'standard_ph', 'target_ph',
-            'brix_min', 'brix_max', 'standard_brix', 'target_brix',
-            'tds_min', 'tds_max', 'standard_tds', 'target_tds',
-        ].some(key => source[key] !== undefined && source[key] !== null && source[key] !== '');
-    },
-
-    renderRecheckBanner() {
-        const banner = document.getElementById('qcRecheckBanner');
-        const round = document.getElementById('qcRecheckRound');
-        const previous = document.getElementById('qcRecheckPrevious');
-        if (!banner) return;
-        const active = Boolean(this.recheckParentInspection);
-        banner.hidden = !active;
-        if (!active) {
-            if (previous) previous.innerHTML = '';
-            return;
-        }
-        const last = this.lastInspection || this.selectedBatch?.last_qc || {};
-        const nextRound = Math.max(2, Number(last.inspection_round || 1) + 1);
-        if (round) round.textContent = `Re-check round: #${nextRound}`;
-        if (previous) {
-            previous.innerHTML = `
-                <div><span>Status sebelumnya</span><strong>${this.escapeHtml(String(last.status || '-').toUpperCase())}</strong></div>
-                <div><span>Suhu sebelumnya</span><strong>${this.escapeHtml(last.temperature || '-')}</strong></div>
-                <div><span>Catatan sebelumnya</span><strong>${this.escapeHtml(last.notes || '-')}</strong></div>
-            `;
-        }
     },
 
     setText(id, value) {
@@ -932,123 +674,50 @@ const Inspection = {
         this.skuBatchMap[productKey] = { loading: true, batches: [] };
         this.renderSkuCards();
         try {
-            const response = await API.getSWR(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`, {
-                ttlMs: 30000,
-                onUpdate: data => {
-                    this.skuBatchMap[productKey] = {
-                        loading: false,
-                        product: data?.data?.product || data?.product || product,
-                        batches: this.todayBatches(data?.data?.batches || data?.batches || []),
-                    };
-                    this.renderSkuCards();
-                    if (this.activeSkuDetailKey === productKey) this.renderSkuDetailDrawer(productKey);
-                    this.saveCache();
-                }
-            });
+            const response = await API.get(`/batch/by-product/${encodeURIComponent(product.id || product.product_code || productKey)}?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
             this.skuBatchMap[productKey] = {
                 loading: false,
-                product: response?.data?.product || response?.product || product,
-                batches: this.todayBatches(response?.data?.batches || response?.batches || []),
+                product: response?.data?.product || product,
+                batches: this.todayBatches(response?.data?.batches || []),
             };
         } catch (error) {
             const fallback = await this.fetchBatchesBySku(product.product_code || product.sku_code || product.barcode);
             this.skuBatchMap[productKey] = { loading: false, product, batches: this.todayBatches(fallback) };
         }
         this.renderSkuCards();
-        if (this.activeSkuDetailKey === productKey) this.renderSkuDetailDrawer(productKey);
-        this.saveCache();
     },
 
     async loadTodaySkuCards() {
         try {
-            const response = await API.getSWR(`/batch/today?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`, {
-                ttlMs: 30000,
-                onUpdate: data => {
-                    const products = data?.data?.products || data?.products || [];
-                    this.processSkuCardsResponse(products);
-                    this.renderSkuCards();
-                    this.saveCache();
+            const response = await API.get(`/batch/today?date=${encodeURIComponent(this.operationalDate || this.jakartaDateString())}`);
+            const products = response?.data?.products || [];
+            this.skuCards = [];
+            this.skuBatchMap = {};
+            products.forEach(group => {
+                const product = {
+                    id: group.product_id || group.sku,
+                    product_code: group.sku,
+                    sku_code: group.sku,
+                    product_name: group.product_name,
+                    category: group.category,
+                };
+                const key = this.productKey(product);
+                if (!this.skuCards.some(item => this.productKey(item) === key)) {
+                    this.skuCards.push(product);
                 }
+                this.skuBatchMap[key] = {
+                    loading: false,
+                    product,
+                    batches: this.todayBatches(group.batches || []),
+                    status_summary: group.status_summary || null,
+                };
             });
-            const products = response?.data?.products || response?.products || [];
-            this.processSkuCardsResponse(products);
         } catch (error) {
             this.skuCards = [];
             this.skuBatchMap = {};
             this.message('Gagal memuat batch hari ini. Tambahkan SKU manual jika perlu.', true);
         }
         this.renderSkuCards();
-        this.saveCache();
-    },
-
-    processSkuCardsResponse(products) {
-        this.skuCards = [];
-        this.skuBatchMap = {};
-        products.forEach(group => {
-            const product = {
-                id: group.product_id || group.sku,
-                product_code: group.sku,
-                sku_code: group.sku,
-                product_name: group.product_name,
-                category: group.category,
-            };
-            const key = this.productKey(product);
-            if (!this.skuCards.some(item => this.productKey(item) === key)) {
-                this.skuCards.push(product);
-            }
-            this.skuBatchMap[key] = {
-                loading: false,
-                product,
-                batches: this.todayBatches(group.batches || []),
-                status_summary: group.status_summary || null,
-            };
-        });
-    },
-
-    saveCache() {
-        try {
-            const data = {
-                skuCards: this.skuCards,
-                skuBatchMap: this.skuBatchMap,
-                skuTodayCount: document.getElementById('skuTodayCount')?.textContent || '0 SKU',
-                skuCardGrid: document.getElementById('skuCardGrid')?.innerHTML || '',
-                skuEmptyNoteHidden: document.getElementById('skuEmptyNote')?.hidden ?? false
-            };
-            localStorage.setItem('page_cache:staff_inspection', JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save inspection cache:', e);
-        }
-    },
-
-    restoreCache() {
-        try {
-            const dataStr = localStorage.getItem('page_cache:staff_inspection');
-            if (!dataStr) return false;
-            const data = JSON.parse(dataStr);
-            
-            this.skuCards = data.skuCards || [];
-            this.skuBatchMap = data.skuBatchMap || {};
-            
-            const count = document.getElementById('skuTodayCount');
-            if (count) count.textContent = data.skuTodayCount || '0 SKU';
-            
-            const grid = document.getElementById('skuCardGrid');
-            if (grid) grid.innerHTML = data.skuCardGrid || '';
-            
-            const empty = document.getElementById('skuEmptyNote');
-            if (empty) empty.hidden = data.skuEmptyNoteHidden;
-
-            // Re-bind click handlers for the restored cards
-            grid?.querySelectorAll('[data-sku-detail]').forEach(button => {
-                button.addEventListener('click', () => this.openSkuDetail(button.dataset.skuDetail));
-            });
-
-            if (window.lucide) lucide.createIcons();
-            return true;
-        } catch (e) {
-            console.error('Failed to restore inspection cache:', e);
-            return false;
-        }
     },
 
     async fetchBatchesBySku(sku) {
@@ -1064,22 +733,38 @@ const Inspection = {
     renderSkuCards() {
         const grid = document.getElementById('skuCardGrid');
         const empty = document.getElementById('skuEmptyNote');
-        const count = document.getElementById('skuTodayCount');
         if (!grid) return;
-        const filteredProducts = this.filteredSkuCards();
-        if (count) count.textContent = `${filteredProducts.length} SKU`;
         if (empty) empty.hidden = Boolean(this.skuCards.length);
         if (!this.skuCards.length) {
             grid.innerHTML = '';
             return;
         }
-        if (!filteredProducts.length) {
-            grid.innerHTML = '<p class="simple-qc-message sku-filter-empty">Belum ada SKU sesuai pencarian.</p>';
-            return;
-        }
-        grid.innerHTML = filteredProducts.map(product => this.skuCardTemplate(product)).join('');
-        grid.querySelectorAll('[data-sku-detail]').forEach(button => {
-            button.addEventListener('click', () => this.openSkuDetail(button.dataset.skuDetail));
+        grid.innerHTML = this.skuCards.map(product => this.skuCardTemplate(product)).join('');
+        grid.querySelectorAll('[data-qc-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.qcBatch);
+                this.openQcForm(product, batch, { recheck: false });
+            });
+        });
+        grid.querySelectorAll('[data-recheck-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.recheckBatch);
+                this.openQcForm(product, batch, { recheck: true });
+            });
+        });
+        grid.querySelectorAll('[data-detail-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.detailBatch);
+                this.showBatchDetail(batch);
+            });
+        });
+        grid.querySelectorAll('[data-next-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const product = this.findCardProduct(button.dataset.productKey);
+                this.openNextBatchSheet(product);
+            });
         });
     },
 
@@ -1089,151 +774,40 @@ const Inspection = {
         const batches = data.batches || [];
         const summary = this.batchStatusSummary(batches);
         return `
-            <button class="sku-card sku-summary-card" type="button" data-sku-detail="${this.escapeHtml(key)}" data-product-key="${this.escapeHtml(key)}">
+            <article class="sku-card" data-product-key="${this.escapeHtml(key)}">
                 <div class="sku-card-head">
                     <div>
+                        <span class="sku-code">${this.escapeHtml(product.product_code || product.sku_code || product.barcode || '-')}</span>
                         <h2>${this.escapeHtml(product.product_name || '-')}</h2>
-                        <p>${this.escapeHtml(product.product_code || product.sku_code || product.barcode || '-')}</p>
+                        <p>${this.escapeHtml(product.category || product.product_category || 'Kategori belum diisi')}</p>
                     </div>
-                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    <strong>${batches.length} batch</strong>
                 </div>
-                <p class="sku-summary-line">${data.loading ? 'Memuat batch...' : this.skuSummaryLine(batches, summary)}</p>
                 <div class="sku-status-strip">
                     ${this.statusChip('Pending', summary.pending)}
                     ${this.statusChip('PASS', summary.pass)}
                     ${this.statusChip('HOLD', summary.hold)}
                     ${this.statusChip('FAIL', summary.fail)}
                 </div>
-            </button>
+                <div class="sku-batch-list">
+                    ${data.loading ? '<p class="simple-qc-message">Memuat batch...</p>' : this.batchListTemplate(key, batches)}
+                </div>
+                <button class="btn-secondary sku-next-batch-btn" type="button" data-next-batch="${this.escapeHtml(key)}" data-product-key="${this.escapeHtml(key)}">
+                    ${batches.length ? '+ Tambah Pemasakan Berikutnya' : '+ Buat Pemasakan ke-1'}
+                </button>
+            </article>
         `;
-    },
-
-    filteredSkuCards() {
-        const query = String(this.skuListQuery || '').trim().toLowerCase();
-        if (!query) return this.skuCards;
-        return this.skuCards.filter(product => {
-            const name = String(product.product_name || '').toLowerCase();
-            const code = String(product.product_code || product.sku_code || product.barcode || '').toLowerCase();
-            return name.includes(query) || code.includes(query);
-        });
-    },
-
-    skuSummaryLine(batches, summary = this.batchStatusSummary(batches)) {
-        const parts = [`${batches.length} Batch`];
-        if (summary.pending) parts.push(`Pending ${summary.pending}`);
-        if (summary.pass) parts.push(`PASS ${summary.pass}`);
-        if (summary.hold) parts.push(`HOLD ${summary.hold}`);
-        if (summary.fail) parts.push(`FAIL ${summary.fail}`);
-        if (parts.length === 1) parts.push('Pending 0');
-        return parts.join(' • ');
-    },
-
-    openSkuDetail(productKey) {
-        this.activeSkuDetailKey = productKey;
-        this.renderSkuDetailDrawer(productKey);
-        const drawer = document.getElementById('skuDetailDrawer');
-        const backdrop = document.getElementById('skuDetailBackdrop');
-        if (drawer) {
-            drawer.hidden = false;
-            drawer.setAttribute('aria-hidden', 'false');
-            drawer.classList.add('open', 'active');
-        }
-        if (backdrop) {
-            backdrop.hidden = false;
-            backdrop.setAttribute('aria-hidden', 'false');
-            backdrop.classList.add('open', 'active');
-        }
-        document.body.classList.add('qc-sheet-open', 'modal-open');
-    },
-
-    closeSkuDetail() {
-        const drawer = document.getElementById('skuDetailDrawer');
-        const backdrop = document.getElementById('skuDetailBackdrop');
-        if (drawer) {
-            drawer.classList.remove('open', 'active');
-            drawer.setAttribute('aria-hidden', 'true');
-            drawer.hidden = true;
-        }
-        if (backdrop) {
-            backdrop.classList.remove('open', 'active');
-            backdrop.setAttribute('aria-hidden', 'true');
-            backdrop.hidden = true;
-        }
-        this.activeSkuDetailKey = null;
-        document.body.classList.remove('qc-sheet-open', 'modal-open');
-    },
-
-    renderSkuDetailDrawer(productKey) {
-        const product = this.findCardProduct(productKey);
-        if (!product) return;
-        const data = this.skuBatchMap[productKey] || { loading: false, batches: [] };
-        const batches = data.batches || [];
-        const summary = this.batchStatusSummary(batches);
-        this.setText('skuDetailTitle', product.product_name || '-');
-        this.setText('skuDetailCode', product.product_code || product.sku_code || product.barcode || '-');
-        this.setText('skuDetailCategory', product.category || product.product_category || 'Kategori belum diisi');
-        this.setText('skuDetailBatchCount', `${batches.length} Batch`);
-        const strip = document.getElementById('skuDetailStatusStrip');
-        if (strip) {
-            strip.innerHTML = `
-                ${this.statusChip('Pending', summary.pending)}
-                ${this.statusChip('PASS', summary.pass)}
-                ${this.statusChip('HOLD', summary.hold)}
-                ${this.statusChip('FAIL', summary.fail)}
-            `;
-        }
-        const list = document.getElementById('skuDetailBatchList');
-        if (list) {
-            list.innerHTML = data.loading
-                ? '<p class="simple-qc-message">Memuat batch...</p>'
-                : this.batchListTemplate(productKey, batches);
-        }
-        const next = document.getElementById('skuDetailNextBatchBtn');
-        if (next) {
-            next.textContent = batches.length ? '+ Tambah Pemasakan Berikutnya' : '+ Buat Pemasakan ke-1';
-            next.onclick = () => {
-                this.closeSkuDetail();
-                this.openNextBatchSheet(product);
-            };
-        }
-        this.bindBatchListActions(document.getElementById('skuDetailDrawer'));
-    },
-
-    bindBatchListActions(root) {
-        if (!root) return;
-        root.querySelectorAll('[data-qc-batch]').forEach(button => {
-            button.addEventListener('click', () => {
-                const product = this.findCardProduct(button.dataset.productKey);
-                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.qcBatch);
-                this.closeSkuDetail();
-                this.openQcForm(product, batch, { recheck: false });
-            });
-        });
-        root.querySelectorAll('[data-recheck-batch]').forEach(button => {
-            button.addEventListener('click', () => {
-                const product = this.findCardProduct(button.dataset.productKey);
-                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.recheckBatch);
-                this.closeSkuDetail();
-                this.openQcForm(product, batch, { recheck: true });
-            });
-        });
-        root.querySelectorAll('[data-detail-batch]').forEach(button => {
-            button.addEventListener('click', () => {
-                const batch = this.findCardBatch(button.dataset.productKey, button.dataset.detailBatch);
-                this.showBatchDetail(batch);
-            });
-        });
     },
 
     batchListTemplate(productKey, batches) {
         if (!batches.length) {
-            return '<p class="simple-qc-message">Belum ada batch produk ini untuk hari ini.</p>';
+            return '<p class="simple-qc-message">Belum ada batch produk ini untuk hari ini. Buat batch terlebih dahulu.</p>';
         }
         return batches.map((batch, index) => {
             const status = this.normalizeStatus(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || 'pending');
             const hasQc = ['pass', 'hold', 'fail'].includes(status);
             return `
-                <article class="batch-card batch-card-compact">
+                <article class="batch-card">
                     <div class="batch-card-main">
                         <div>
                             <strong>Batch #${index + 1}</strong>
@@ -1242,8 +816,13 @@ const Inspection = {
                         <span class="status-badge status-${this.statusClass(status)}">${this.escapeHtml(status.toUpperCase())}</span>
                     </div>
                     <dl class="batch-meta">
+                        <div><dt>Pemasakan</dt><dd>ke-${this.escapeHtml(batch.batch_sequence || index + 1)}</dd></div>
                         <div><dt>Cook</dt><dd>${this.escapeHtml(batch.cook_name || '-')}</dd></div>
+                        <div><dt>Qty</dt><dd>${this.escapeHtml(batch.quantity || '-')}</dd></div>
                         <div><dt>Jam</dt><dd>${this.escapeHtml(this.batchTime(batch))}</dd></div>
+                        <div><dt>pH</dt><dd>${this.escapeHtml(batch.ph_value || '-')}</dd></div>
+                        <div><dt>Brix</dt><dd>${this.escapeHtml(batch.brix_value || '-')}</dd></div>
+                        <div><dt>TDS</dt><dd>${this.escapeHtml(batch.tds_value || '-')}</dd></div>
                     </dl>
                     <div class="batch-actions">
                         ${hasQc
@@ -1532,9 +1111,8 @@ const Inspection = {
         this.activeInspection = null;
         this.lastInspection = batch.last_qc || null;
         this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
-        isAdvancedPanelOpen = Boolean(this.recheckParentInspection) || this.productHasAdditionalStandards();
         this.selectedStage = 'cooking_check';
-        this.selectedStatus = 'pass';
+        this.selectedStatus = null;
         ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -1544,15 +1122,10 @@ const Inspection = {
             if (input) input.value = '';
             this.clearPhotoPreview(id);
         });
-        
-        document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
-        document.querySelectorAll('.qc-status-option').forEach(item => {
-            item.classList.toggle('active', item.dataset.status === 'pass');
-        });
-        
+        document.querySelectorAll('.qc-stage-option, .qc-status-option').forEach(item => item.classList.remove('active'));
         this.renderBatchSummary(product, batch);
         this.renderQcConcurrency(null, batch.last_qc || null);
-        this.setText('qcFormTitle', this.recheckParentInspection ? 'RE-CHECK QC' : 'QC CHECK');
+        this.setText('qcFormTitle', 'QC CHECK');
         this.setText('qcFormSubtitle', `Batch #${batch.batch_sequence || '-'}`);
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
@@ -1569,11 +1142,9 @@ const Inspection = {
         document.body.classList.add('qc-sheet-open', 'modal-open');
         this.updateProgressiveFields();
         this.updateSubmitState();
-        window.setTimeout(() => document.getElementById('qcTemp')?.focus(), 60);
     },
 
     closeQcSheet() {
-        isAdvancedPanelOpen = false;
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
         if (sheet) {
@@ -1925,91 +1496,5 @@ const Inspection = {
             '"': '&quot;',
             "'": '&#39;'
         }[char]));
-    },
-
-    saveDraft() {
-        const temp = document.getElementById('qcTemp')?.value;
-        const ph = document.getElementById('qcPh')?.value;
-        const brix = document.getElementById('qcBrix')?.value;
-        const tds = document.getElementById('qcTds')?.value;
-        const notes = document.getElementById('qcNotes')?.value;
-        
-        if (this.selectedProduct && (temp || ph || brix || tds || notes || this.selectedStatus)) {
-            localStorage.setItem('inspection_draft', JSON.stringify({
-                product: this.selectedProduct,
-                batch: this.selectedBatch,
-                stage: this.selectedStage,
-                status: this.selectedStatus,
-                temp,
-                ph,
-                brix,
-                tds,
-                notes,
-                recheckParent: this.recheckParentInspection,
-                timestamp: Date.now()
-            }));
-        } else {
-            localStorage.removeItem('inspection_draft');
-        }
-    },
-
-    checkDraft() {
-        const draftStr = localStorage.getItem('inspection_draft');
-        if (!draftStr) return;
-        const draft = JSON.parse(draftStr);
-        
-        // Show draft recovery prompt
-        const container = document.createElement("div");
-        container.id = "draftRecoveryPrompt";
-        container.style.cssText = "position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 16px; display: flex; flex-direction: column; gap: 12px;";
-        container.innerHTML = `
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-color, #1e293b);">Lanjutkan input QC sebelumnya?</div>
-            <div style="display: flex; gap: 10px;">
-                <button id="btnRecoverDraft" class="btn-primary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: none; background: #2563eb; color: white;">Lanjutkan</button>
-                <button id="btnDiscardDraft" class="btn-secondary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;">Buang</button>
-            </div>
-        `;
-        document.body.appendChild(container);
-        
-        document.getElementById("btnRecoverDraft").onclick = () => {
-            container.remove();
-            
-            // Set context and open sheet
-            this.selectedProduct = draft.product;
-            this.selectedBatch = draft.batch;
-            this.selectedStage = draft.stage || 'cooking_check';
-            this.selectedStatus = draft.status;
-            this.recheckParentInspection = draft.recheckParent;
-            isAdvancedPanelOpen = Boolean(this.recheckParentInspection) || this.productHasAdditionalStandards();
-            
-            this.updateSelectedProductCard();
-            this.openQcForm(draft.product, draft.batch, { recheck: Boolean(draft.recheckParent) });
-            
-            // Fill draft values
-            if (document.getElementById('qcTemp')) document.getElementById('qcTemp').value = draft.temp || '';
-            if (document.getElementById('qcPh')) document.getElementById('qcPh').value = draft.ph || '';
-            if (document.getElementById('qcBrix')) document.getElementById('qcBrix').value = draft.brix || '';
-            if (document.getElementById('qcTds')) document.getElementById('qcTds').value = draft.tds || '';
-            if (document.getElementById('qcNotes')) document.getElementById('qcNotes').value = draft.notes || '';
-            
-            // Visually select status options
-            if (draft.status) {
-                document.querySelectorAll('.qc-status-option').forEach(item => {
-                    item.classList.toggle('active', item.dataset.status === draft.status);
-                });
-            }
-            
-            this.updateFastQcMode();
-            this.updateSubmitState();
-            this.updateSummary();
-            
-            // Focus qcTemp
-            setTimeout(() => document.getElementById('qcTemp')?.focus(), 100);
-        };
-        
-        document.getElementById("btnDiscardDraft").onclick = () => {
-            container.remove();
-            localStorage.removeItem('inspection_draft');
-        };
     }
 };

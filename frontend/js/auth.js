@@ -127,8 +127,7 @@ const Auth = {
         }
         this.applyRoleVisibility(this.role());
         try {
-            // Compatibility test comment: API.get('/profile/me')
-            const response = await API.getCached('/profile/me', 3600000);
+            const response = await API.get('/profile/me');
             const user = response?.data || response || {};
             this.persistUser(user);
             this.applyRoleVisibility(user.role);

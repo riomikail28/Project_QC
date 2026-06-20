@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 PHOTO_PAGES = [
     ROOT / "frontend" / "staff" / "dashboard.html",
@@ -60,9 +61,8 @@ def test_dashboard_renames_photo_quick_action_to_qc_temuan():
 
     assert 'data-quick-action="photo" type="button"><span>QC Temuan</span>' in html
     assert "<h3>QC Temuan</h3>" in html
-    assert "Laporkan temuan QC" in html
-    assert "Kategori Temuan" in html
-    assert "Catatan tambahan" in html
+    assert "Laporan temuan quality control" in html
+    assert "Jelaskan temuan QC (contoh: benda asing, kerusakan alat, suhu tidak sesuai, area kotor, label salah, kemasan rusak, dll)" in html
 
 
 def test_global_image_compression_helper_available_and_safe_fallback():
@@ -87,7 +87,7 @@ def test_staff_upload_flows_use_image_compression():
     assert "Foto akan dikompres otomatis sebelum dikirim." in dashboard_html
     assert "API.preparePhoto(file, { filePrefix: `qc-${id}` })" in inspection_js
     assert "this.photoFiles" in inspection_js
-    assert 'API.preparePhotos(incomingFiles, { filePrefix: "qc-monitoring" })' in monitoring_js
+    assert "API.preparePhotos(incomingFiles, { filePrefix: \"qc-monitoring\" })" in monitoring_js
     assert "API.preparePhotos(files, { filePrefix: 'qc-ccp' })" in ccp_js
 
 

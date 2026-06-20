@@ -123,10 +123,6 @@ const UI = {
     }
 };
 
-window.showToast = function showToast(message, type = 'info', duration = 3500) {
-    UI.toast(message, type, duration);
-};
-
 // Global feedback for clicks
 document.addEventListener('touchstart', (e) => {
     if (e.target.closest('button, .nav-item, .alert-card')) {

@@ -46,9 +46,8 @@ def main():
     env['PYTHONPATH'] = 'c:\\Users\\rio\\.gemini\\antigravity\\scratch\\Project_QC'
     env['FLASK_APP'] = 'backend:create_app'
     
-    # Start Flask process in workspace root using flask run (threaded by default)
     proc = subprocess.Popen(
-        [sys.executable, '-m', 'flask', 'run', '--port', '5000', '--no-debugger', '--no-reload'],
+        [sys.executable, 'backend/app.py'],
         cwd='c:\\Users\\rio\\.gemini\\antigravity\\scratch\\Project_QC',
         env=env,
         stdout=subprocess.PIPE,
@@ -78,7 +77,7 @@ def main():
     
     try:
         for page in pages:
-            page_url = f"http://localhost:5000{page}"
+            page_url = f"http://127.0.0.1:5000{page}"
             print(f"\nFetching page: {page_url}")
             status, content_len = test_url(page_url)
             print(f"Status: {status}, Length: {content_len}")

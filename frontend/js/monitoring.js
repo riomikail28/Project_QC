@@ -15,33 +15,12 @@ let selectedPhotoFiles = [];
 let latestTemperatureLogs = [];
 let activeUnitFilter = "all";
 let todaySchedule = null;
-const monitoringRoomOrder = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
 
 document.addEventListener("DOMContentLoaded", () => {
     bindUnitFilters();
-    restoreCache();
     loadTodaySchedule();
     loadFacilityStructure();
     loadRecentLogs();
-    
-    // Bind draft recovery input listeners
-    ["input-temp", "input-rh", "input-reason"].forEach(id => {
-        document.getElementById(id)?.addEventListener("input", saveMonitoringDraft);
-    });
-    
-    // Check for draft recovery
-    setTimeout(checkMonitoringDraft, 1000);
-
-    // Prefetch products for QC Check page
-    if (window.requestIdleCallback) {
-        requestIdleCallback(() => {
-            API.getCached('/inspection/products', 1800000).catch(() => {});
-        });
-    } else {
-        setTimeout(() => {
-            API.getCached('/inspection/products', 1800000).catch(() => {});
-        }, 1000);
-    }
 });
 
 function authHeaders() {
@@ -50,23 +29,17 @@ function authHeaders() {
 }
 
 async function loadFacilityStructure() {
-    const started = performance.now();
     try {
-        // PERFORMANCE_OPTIMIZED: reuse monitoring structure cache when returning to the page.
-        const envelope = await API.getSWR("/facility/structure", {
-            ttlMs: 600000,
-            onUpdate: data => {
-                const structure = Array.isArray(data) ? data : (data.data || []);
-                facilityStructure = normalizeFacilityStructure(structure);
-                renderRoomSelector();
-                selectRoom(selectedRoomId || "all");
-            }
-        });
+        const res = await fetch("/api/facility/structure", { headers: authHeaders() });
+        if (res.status === 401) {
+            window.location.href = "/login.html";
+            return;
+        }
+        const envelope = await res.json();
         const structure = Array.isArray(envelope) ? envelope : (envelope.data || []);
         facilityStructure = normalizeFacilityStructure(structure);
         renderRoomSelector();
         if (facilityStructure.length) selectRoom("all");
-        console.info(`[PERFORMANCE_OPTIMIZED] Monitoring load time: ${Math.round(performance.now() - started)}ms`);
     } catch (err) {
         console.error("Gagal memuat struktur fasilitas", err);
         facilityStructure = [];
@@ -125,128 +98,35 @@ function renderDevices(devices, options = {}) {
     deviceCountLabel.innerText = `${devices.length} Unit`;
     document.getElementById("summaryUnitCount").innerText = totalDevices || devices.length;
     document.getElementById("summaryStatus").innerText = totalDevices || devices.length ? "Aktif" : "Kosong";
-    renderNextDevice();
-    renderRoomProgress();
 
     if (!devices.length) {
         const hasLogs = options.hasLogs ?? latestTemperatureLogs.length > 0;
         deviceList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-temperature-half"></i>
-                <h4>Belum ada unit monitoring sesuai filter.</h4>
-                <p>${hasLogs ? "Log suhu sudah tersedia, tetapi data unit belum punya room/device yang cocok dengan filter saat ini." : "Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu."}</p>
+                <h4>${hasLogs ? "Unit belum terpetakan" : "Belum ada unit monitoring"}</h4>
+                <p>${hasLogs ? "Log suhu sudah tersedia, tetapi data unit belum punya room/device yang bisa ditampilkan." : "Tambahkan freezer, chiller, atau titik suhu ruangan dari panel admin agar staff bisa mulai mencatat suhu."}</p>
                 ${hasLogs ? "" : `<button class="btn-primary" type="button" onclick="window.location.href='dashboard.html'"><i class="fas fa-arrow-left"></i> Kembali Dashboard</button>`}
             </div>
         `;
-        triggerSaveCache();
         return;
     }
 
-    const visibleRooms = groupedRoomsForDevices(devices);
-    deviceList.innerHTML = visibleRooms.map(room => renderMonitoringRoomGroup(room)).join("");
-    triggerSaveCache();
-}
-
-function groupedRoomsForDevices(devices) {
-    const selectedIds = new Set(devices.map(device => device.id));
-    return facilityStructure
-        .map(room => ({
-            ...room,
-            devices: sortMonitoringDevices((room.devices || []).filter(device => selectedIds.has(device.id))),
-        }))
-        .filter(room => room.devices.length)
-        .sort((a, b) => monitoringRoomRank(a.name) - monitoringRoomRank(b.name) || String(a.name || "").localeCompare(String(b.name || "")));
-}
-
-function monitoringRoomRank(roomName) {
-    const index = monitoringRoomOrder.findIndex(item => item.toLowerCase() === String(roomName || "").toLowerCase());
-    return index === -1 ? monitoringRoomOrder.length : index;
-}
-
-function renderMonitoringRoomGroup(room) {
-    const progress = roomProgress(room);
-    return `
-        <article class="monitoring-room-grid-section" data-room-id="${room.id}" data-room-name="${room.name}">
-            <div class="monitoring-room-title">
-                <h4>${room.name}</h4>
-                <span>${progress.completed}/${progress.total} selesai</span>
-            </div>
-            <div class="monitoring-device-mini-grid">
-                ${room.devices.map(device => renderMonitoringDeviceMiniCard(device, room)).join("")}
-            </div>
-        </article>
+    deviceList.innerHTML = devices.map(device => {
+        const scheduleStatus = deviceScheduleStatus(device.id);
+        return `
+        <div class="device-card ${device.type}" onclick="openLogModal('${device.id}')">
+            <div class="device-icon"><i class="fas ${iconForType(device.type)}"></i></div>
+            <div class="status-badge ${scheduleStatus.className} device-status">${scheduleStatus.label}</div>
+            <div class="device-name">${device.display_name || device.name}</div>
+            <div class="device-target">Target: ${device.threshold_temp || 0}&deg;C</div>
+            <div class="device-temp">${device.last_temperature_c ?? "--"}&deg;C</div>
+            <div class="device-meta">${device.recorded_at ? `Update: ${new Date(device.recorded_at).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})} - Petugas: QC` : "Belum ada log"}</div>
+            <div class="sparkline"></div>
+            <div class="health-bar"><span></span></div>
+        </div>
     `;
-}
-
-function renderMonitoringDeviceMiniCard(device, room) {
-    const status = monitoringMiniCardStatus(device);
-    const temperature = monitoringMiniCardTemperature(device);
-    return `
-        <button class="monitoring-device-mini-card ${device.type} ${status.isAlert ? "alert-required" : ""}" type="button" onclick="openLogModal('${device.id}')">
-            <span class="monitoring-device-mini-name">${device.name || unitName(device.type)}</span>
-            <span class="monitoring-device-mini-room">${room.name}</span>
-            <strong class="monitoring-device-mini-temp">${temperature}</strong>
-            <span class="monitoring-device-mini-status ${status.className}">${status.label}</span>
-        </button>
-    `;
-}
-
-function monitoringMiniCardStatus(device) {
-    const scheduleStatus = deviceScheduleStatus(device.id);
-    const alert = isDeviceAlert(device);
-    if (alert) return { label: "ALERT", className: "is-alert", isAlert: true };
-    if (scheduleStatus.status === "completed") return { label: "PASS", className: "is-pass", isAlert: false };
-    if (scheduleStatus.status === "missed") return { label: "Terlewat", className: "is-warning", isAlert: false };
-    if (scheduleStatus.status === "pending") return { label: "Pending", className: "is-pending", isAlert: false };
-    return { label: "Belum Input", className: "is-pending", isAlert: false };
-}
-
-function monitoringMiniCardTemperature(device) {
-    const activeStatus = todaySchedule?.device_statuses?.[device.id]?.active_status;
-    const raw = activeStatus?.temperature_c ?? device.last_temperature_c ?? device.temperature_c;
-    const value = Number(raw);
-    if (!Number.isFinite(value)) return "--&deg;C";
-    return `${Number.isInteger(value) ? value : value.toFixed(1)}&deg;C`;
-}
-
-function setupModalForDevice(deviceId) {
-    const activeSlot = activeMonitoringSlot();
-    if (!activeSlot) return false;
-    const room = facilityStructure.find(item => (item.devices || []).some(device => device.id === deviceId));
-    const device = (room?.devices || []).find(item => item.id === deviceId);
-    if (!device) return false;
-
-    document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
-    document.getElementById("selected-device-id").value = deviceId;
-    document.getElementById("selected-room-id").value = device.room_id || room.id;
-    document.getElementById("selected-slot-time").value = activeSlot.time;
-    const slotContext = document.getElementById("slotContext");
-    if (slotContext) {
-        slotContext.innerHTML = `
-            <strong>Slot ${activeSlot.time}</strong>
-            <span>${activeSlot.label}${activeSlot.status === "pending" ? " - input akan dicatat pada jadwal ini" : ""}</span>
-        `;
-    }
-
-    const iconEl = document.getElementById("sheet-icon");
-    if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;
-
-    document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
-    
-    // Clear inputs
-    document.getElementById("input-temp").value = "";
-    const humidityInput = document.getElementById("input-rh");
-    if (humidityInput) humidityInput.value = "";
-    const reasonInput = document.getElementById("input-reason");
-    if (reasonInput) reasonInput.value = "";
-    removePhoto();
-    
-    // Auto focus (Requirement 6)
-    setTimeout(() => {
-        document.getElementById("input-temp")?.focus();
-    }, 100);
-
-    return true;
+    }).join("");
 }
 
 function openLogModal(deviceId) {
@@ -268,16 +148,22 @@ function openLogModal(deviceId) {
         return;
     }
 
-    // Reset finished state in modal if it was shown previously
-    const finishedState = modal.querySelector('.monitoring-finished-state');
-    if (finishedState) {
-        finishedState.remove();
+    document.getElementById("modal-title").innerText = `Log ${device.display_name || device.name}`;
+    document.getElementById("selected-device-id").value = deviceId;
+    document.getElementById("selected-room-id").value = device.room_id || room.id;
+    document.getElementById("selected-slot-time").value = activeSlot.time;
+    const slotContext = document.getElementById("slotContext");
+    if (slotContext) {
+        slotContext.innerHTML = `
+            <strong>Slot ${activeSlot.time}</strong>
+            <span>${activeSlot.label}${activeSlot.status === "pending" ? " - input akan dicatat pada jadwal ini" : ""}</span>
+        `;
     }
-    const formEl = document.getElementById("monitoring-form");
-    if (formEl) formEl.style.display = "";
 
-    setupModalForDevice(deviceId);
+    const iconEl = document.getElementById("sheet-icon");
+    if (iconEl) iconEl.className = `fas ${iconForType(device.type)}`;
 
+    document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
     modal.classList.add("active");
     overlay.classList.add("active");
     document.body.classList.add("modal-open");
@@ -287,14 +173,6 @@ function closeModal() {
     modal.classList.remove("active");
     overlay.classList.remove("active");
     document.body.classList.remove("modal-open");
-    
-    const finishedState = modal.querySelector('.monitoring-finished-state');
-    if (finishedState) {
-        finishedState.remove();
-    }
-    const formEl = document.getElementById("monitoring-form");
-    if (formEl) formEl.style.display = "";
-    
     document.getElementById("monitoring-form").reset();
     removePhoto();
 }
@@ -317,7 +195,7 @@ document.getElementById("photo-input").addEventListener("change", async event =>
     try {
         selectedPhotoFiles.forEach(file => API.validatePhoto(file));
     } catch (err) {
-        showMonitoringToast(err.message || "Upload foto gagal", true);
+        alert(err.message || "Upload gagal");
         removePhoto();
         return;
     }
@@ -367,7 +245,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     try {
         selectedPhotoFiles.forEach(file => API.validatePhoto(file));
     } catch (err) {
-        showMonitoringToast(err.message || "Upload foto gagal", true);
+        alert(err.message || "Upload gagal");
         return;
     }
 
@@ -399,39 +277,10 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
         const result = await API.upload("/facility/monitoring/submit", formData);
         if (result.success) {
-            // Success flow toast max 1s (Requirement 9)
-            showMonitoringToast("✓ Monitoring berhasil", false, 1000);
-            // showMonitoringToast("Data monitoring berhasil disimpan.")
-            
-            // Clear draft (Requirement 8)
-            localStorage.removeItem("monitoring_draft");
-
-            // Reload schedule and logs in background
+            showMonitoringToast("Data monitoring berhasil disimpan.");
+            closeModal();
             await loadTodaySchedule();
             loadRecentLogs();
-
-            // Auto advance (Requirement 2)
-            const next = nextDeviceToCheck();
-            if (next) {
-                setupModalForDevice(next.device.id);
-            } else {
-                // Device terakhir selesai
-                const formEl = document.getElementById("monitoring-form");
-                if (formEl) formEl.style.display = "none";
-                
-                let finishedState = modal.querySelector('.monitoring-finished-state');
-                if (!finishedState) {
-                    finishedState = document.createElement('div');
-                    finishedState.className = 'monitoring-finished-state';
-                    finishedState.style.cssText = 'text-align: center; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;';
-                    finishedState.innerHTML = `
-                        <i class="fas fa-check-circle" style="font-size: 64px; color: #10b981; margin-bottom: 8px;"></i>
-                        <h3 style="font-size: 20px; font-weight: 700; margin: 0; color: #1e293b;">Semua Monitoring Ruangan Selesai</h3>
-                        <button type="button" onclick="window.location.href='dashboard.html'" class="btn-primary" style="min-height: 48px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-radius: 12px; cursor: pointer; border: none; background: #2563eb; color: white;">Kembali ke Dashboard</button>
-                    `;
-                    modal.appendChild(finishedState);
-                }
-            }
         } else {
             showMonitoringToast(result.message || result.error || "Gagal menyimpan log suhu", true);
         }
@@ -448,18 +297,12 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
 
 async function loadRecentLogs() {
     try {
-        // PERFORMANCE_OPTIMIZED: stale logs render immediately, then background refresh updates this panel.
-        const logs = await API.getSWR("/monitoring/latest", {
-            ttlMs: 30000,
-            onUpdate: data => renderRecentLogsData(Array.isArray(data) ? data : [])
-        });
-        renderRecentLogsData(Array.isArray(logs) ? logs : []);
-    } catch (err) {
-        console.error("Gagal memuat log", err);
-    }
-}
-
-function renderRecentLogsData(logs) {
+        const res = await fetch("/api/monitoring/latest", { headers: authHeaders() });
+        if (res.status === 401) {
+            window.location.href = "/login.html";
+            return;
+        }
+        const logs = await res.json();
         latestTemperatureLogs = Array.isArray(logs) ? logs : [];
         renderRoomSelector();
         selectRoom(selectedRoomId || "all");
@@ -472,12 +315,11 @@ function renderRecentLogsData(logs) {
                     <i class="fas fa-clipboard-list"></i>
                     <h4>Belum ada log suhu</h4>
                     <p>Log terbaru akan muncul setelah staff menyimpan laporan suhu pertama.</p>
-                    <button class="btn-primary" type="button" onclick="document.querySelector('.monitoring-device-mini-card')?.click()">
+                    <button class="btn-primary" type="button" onclick="document.querySelector('.device-card')?.click()">
                         <i class="fas fa-plus"></i> Input Suhu
                     </button>
                 </div>
             `;
-            triggerSaveCache();
             return;
         }
 
@@ -492,19 +334,14 @@ function renderRecentLogsData(logs) {
                 </div>
             </div>
         `).join("");
-        triggerSaveCache();
+    } catch (err) {
+        console.error("Gagal memuat log", err);
+    }
 }
 
 async function loadTodaySchedule() {
     try {
-        // PERFORMANCE_OPTIMIZED: schedule uses 30s stale-while-revalidate cache for instant return navigation.
-        const response = await API.getSWR("/facility/monitoring/schedule/today", {
-            ttlMs: 30000,
-            onUpdate: data => {
-                todaySchedule = data.data || null;
-                renderTodaySchedule();
-            }
-        });
+        const response = await API.get("/facility/monitoring/schedule/today");
         todaySchedule = response.data || null;
         renderTodaySchedule();
     } catch (err) {
@@ -531,9 +368,6 @@ function renderTodaySchedule() {
                 <span>Belum waktunya</span>
             </article>
         `).join("");
-        renderNextDevice();
-        renderRoomProgress();
-        triggerSaveCache();
         return;
     }
 
@@ -549,9 +383,6 @@ function renderTodaySchedule() {
             ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
         </article>
     `).join("");
-    renderNextDevice();
-    renderRoomProgress();
-    triggerSaveCache();
 }
 
 function activeMonitoringSlot() {
@@ -586,140 +417,13 @@ function deviceScheduleStatus(deviceId) {
     return { status: "pending", label: "Belum input", className: "muted" };
 }
 
-function sortMonitoringDevices(devices) {
-    return [...devices].sort((a, b) => monitoringRank(a) - monitoringRank(b) || String(a.name || "").localeCompare(String(b.name || "")));
-}
-
-function monitoringRank(device) {
-    const scheduleStatus = deviceScheduleStatus(device.id).status;
-    if (scheduleStatus === "pending") return 1;
-    if (scheduleStatus === "missed" || scheduleStatus === "late") return 2;
-    if (isDeviceAlert(device)) return 3;
-    if (scheduleStatus === "completed") return 4;
-    return 5;
-}
-
-function isDeviceAlert(device) {
-    if (device.is_normal === false) return true;
-    const temp = Number(device.last_temperature_c ?? device.temperature_c);
-    if (!Number.isFinite(temp)) return false;
-    const min = Number(device.min_temperature ?? device.threshold_min ?? device.min_temp);
-    const max = Number(device.max_temperature ?? device.threshold_max ?? device.max_temp);
-    if (Number.isFinite(min) && temp < min) return true;
-    if (Number.isFinite(max) && temp > max) return true;
-    return false;
-}
-
-function nextDeviceToCheck() {
-    const candidates = facilityStructure.flatMap(room => (room.devices || []).map(device => ({ room, device })));
-    return candidates
-        .filter(item => ["pending", "missed", "late"].includes(deviceScheduleStatus(item.device.id).status))
-        .sort((a, b) => monitoringRank(a.device) - monitoringRank(b.device))[0] || null;
-}
-
-function renderNextDevice() {
-    const section = document.getElementById("nextDeviceSection");
-    if (!section) return;
-    const title = document.getElementById("nextDeviceTitle");
-    const status = document.getElementById("nextDeviceStatus");
-    const roomEl = document.getElementById("nextDeviceRoom");
-    const nameEl = document.getElementById("nextDeviceName");
-    const slotEl = document.getElementById("nextDeviceSlot");
-    const action = document.getElementById("nextDeviceAction");
-    const progressEl = document.getElementById("nextDeviceProgress");
-    const next = nextDeviceToCheck();
-    const activeSlot = activeMonitoringSlot();
-
-    if (!next) {
-        title.textContent = activeSlot ? "Semua device slot aktif sudah dicek" : "Belum ada slot aktif";
-        status.textContent = activeSlot ? "Lanjutkan tugas QC lain atau cek log terakhir." : scheduleUnavailableMessage();
-        roomEl.textContent = "--";
-        nameEl.textContent = "Tidak ada prioritas";
-        slotEl.textContent = `Slot: ${activeSlot?.time || "--"}`;
-        action.disabled = true;
-        action.onclick = null;
-        section.classList.toggle("is-clear", Boolean(activeSlot));
-        if (progressEl) progressEl.innerHTML = "";
-        return;
-    }
-
-    const deviceStatus = deviceScheduleStatus(next.device.id);
-    title.textContent = `${next.room.name}`;
-    status.textContent = `Status: ${deviceStatus.label}`;
-    roomEl.textContent = next.room.name;
-    nameEl.textContent = next.device.name || unitName(next.device.type);
-    slotEl.textContent = `Slot: ${activeSlot?.time || "--"}`;
-    action.disabled = false;
-    action.onclick = () => openLogModal(next.device.id);
-    section.classList.remove("is-clear");
-
-    if (progressEl) {
-        const progress = roomProgress(next.room);
-        const totalBlocks = 10;
-        const filledBlocks = Math.round((progress.completed / progress.total) * totalBlocks);
-        const emptyBlocks = totalBlocks - filledBlocks;
-        const barStr = "█".repeat(filledBlocks) + "░".repeat(emptyBlocks);
-        progressEl.innerHTML = `
-            <div style="font-size: 13px; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
-                <span>${next.room.name}</span>
-                <span style="font-family: monospace; letter-spacing: 1px; color: var(--primary);">${barStr}</span>
-                <span>${progress.completed} / ${progress.total} Device</span>
-            </div>
-            <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">
-                Device berikutnya: ${next.device.name || unitName(next.device.type)}
-            </div>
-        `;
-    }
-}
-
-function renderRoomProgress() {
-    const container = document.getElementById("roomProgressList");
-    if (!container) return;
-    if (!facilityStructure.length) {
-        container.innerHTML = '<div class="empty-state compact">Belum ada area monitoring</div>';
-        return;
-    }
-    container.innerHTML = facilityStructure.map(room => {
-        const progress = roomProgress(room);
-        return `
-            <div class="room-progress-item">
-                <div>
-                    <strong>${room.name}</strong>
-                    <span>${progress.completed}/${progress.total} device selesai</span>
-                </div>
-                <div class="room-progress-track"><span style="width:${progress.percent}%"></span></div>
-            </div>
-        `;
-    }).join("");
-}
-
-function roomProgress(room) {
-    const devices = room.devices || [];
-    const completed = devices.filter(device => deviceScheduleStatus(device.id).status === "completed").length;
-    const total = devices.length;
-    return {
-        completed,
-        total,
-        percent: total ? Math.round((completed / total) * 100) : 0,
-    };
-}
-
-function lastInputMeta(device) {
-    const recordedAt = device.recorded_at || device.last_recorded_at || device.created_at;
-    const staff = device.staff_name || device.staff || device.recorded_by || device.user_name || "Belum ada";
-    return {
-        staff: recordedAt ? staff : "Belum ada",
-        time: recordedAt ? new Date(recordedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "--",
-    };
-}
-
 function showMonitoringToast(message, isError = false) {
     const globalToast = window.showToast;
     if (typeof globalToast === "function" && globalToast !== showMonitoringToast) {
         globalToast(message, isError ? "error" : "success");
         return;
     }
-    console[isError ? "error" : "log"](message);
+    alert(message);
 }
 
 function bindUnitFilters() {
@@ -741,7 +445,7 @@ function filteredDevices(devices = null) {
     const source = devices || allDevices();
     if (activeUnitFilter === "chiller") return source.filter(device => device.type === "chiller" || device.type === "undercounter");
     if (activeUnitFilter === "freezer") return source.filter(device => device.type === "freezer");
-    if (activeUnitFilter === "critical") return source.filter(device => isDeviceAlert(device));
+    if (activeUnitFilter === "critical") return source.filter(device => device.is_normal === false);
     if (activeUnitFilter === "active") return source.filter(device => Boolean(device.recorded_at));
     return source;
 }
@@ -787,165 +491,4 @@ function normalizeFacilityStructure(structure) {
 
 function isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
-}
-
-let saveCacheDebounce = null;
-function triggerSaveCache() {
-    clearTimeout(saveCacheDebounce);
-    saveCacheDebounce = setTimeout(saveCache, 200);
-}
-
-function saveCache() {
-    try {
-        const data = {
-            currentRoomName: document.getElementById('currentRoomName')?.textContent || '',
-            scheduleMessage: document.getElementById('scheduleMessage')?.textContent || '',
-            scheduleProgressCount: document.getElementById('scheduleProgressCount')?.textContent || '',
-            scheduleProgressBarWidth: document.getElementById('scheduleProgressBar')?.style.width || '',
-            scheduleSlotGrid: document.getElementById('scheduleSlotGrid')?.innerHTML || '',
-            
-            nextDeviceSectionClass: document.getElementById('nextDeviceSection')?.className || '',
-            nextDeviceTitle: document.getElementById('nextDeviceTitle')?.textContent || '',
-            nextDeviceStatus: document.getElementById('nextDeviceStatus')?.textContent || '',
-            nextDeviceRoom: document.getElementById('nextDeviceRoom')?.textContent || '',
-            nextDeviceName: document.getElementById('nextDeviceName')?.textContent || '',
-            nextDeviceSlot: document.getElementById('nextDeviceSlot')?.textContent || '',
-            nextDeviceActionDisabled: document.getElementById('nextDeviceAction')?.disabled ?? true,
-            
-            summaryUnitCount: document.getElementById('summaryUnitCount')?.textContent || '0',
-            summaryStatus: document.getElementById('summaryStatus')?.textContent || '',
-            summaryLogCount: document.getElementById('summaryLogCount')?.textContent || '0',
-            deviceCount: document.getElementById('deviceCount')?.textContent || '0 Unit',
-            
-            deviceList: document.getElementById('device-list')?.innerHTML || '',
-            roomProgressList: document.getElementById('roomProgressList')?.innerHTML || '',
-            recentLogs: document.getElementById('recent-logs')?.innerHTML || '',
-            roomList: document.getElementById('room-list')?.innerHTML || '',
-            
-            selectedRoomId: selectedRoomId,
-            facilityStructure: facilityStructure,
-            todaySchedule: todaySchedule,
-            latestTemperatureLogs: latestTemperatureLogs
-        };
-        localStorage.setItem('page_cache:staff_monitoring', JSON.stringify(data));
-    } catch (e) {
-        console.error('Failed to save monitoring cache:', e);
-    }
-}
-
-function restoreCache() {
-    try {
-        const dataStr = localStorage.getItem('page_cache:staff_monitoring');
-        if (!dataStr) return false;
-        const data = JSON.parse(dataStr);
-        
-        const setText = (id, val) => {
-            const el = document.getElementById(id);
-            if (el && val !== undefined) el.textContent = val;
-        };
-        const setHtml = (id, val) => {
-            const el = document.getElementById(id);
-            if (el && val !== undefined) el.innerHTML = val;
-        };
-
-        setText('currentRoomName', data.currentRoomName);
-        setText('scheduleMessage', data.scheduleMessage);
-        setText('scheduleProgressCount', data.scheduleProgressCount);
-        const bar = document.getElementById('scheduleProgressBar');
-        if (bar) bar.style.width = data.scheduleProgressBarWidth || '0%';
-        setHtml('scheduleSlotGrid', data.scheduleSlotGrid);
-        
-        const nextSec = document.getElementById('nextDeviceSection');
-        if (nextSec && data.nextDeviceSectionClass) nextSec.className = data.nextDeviceSectionClass;
-        setText('nextDeviceTitle', data.nextDeviceTitle);
-        setText('nextDeviceStatus', data.nextDeviceStatus);
-        setText('nextDeviceRoom', data.nextDeviceRoom);
-        setText('nextDeviceName', data.nextDeviceName);
-        setText('nextDeviceSlot', data.nextDeviceSlot);
-        const action = document.getElementById('nextDeviceAction');
-        if (action) {
-            action.disabled = data.nextDeviceActionDisabled;
-        }
-        
-        setText('summaryUnitCount', data.summaryUnitCount);
-        setText('summaryStatus', data.summaryStatus);
-        setText('summaryLogCount', data.summaryLogCount);
-        setText('deviceCount', data.deviceCount);
-        
-        setHtml('device-list', data.deviceList);
-        setHtml('roomProgressList', data.roomProgressList);
-        setHtml('recent-logs', data.recentLogs);
-        setHtml('room-list', data.roomList);
-        
-        if (data.selectedRoomId !== undefined) selectedRoomId = data.selectedRoomId;
-        if (data.facilityStructure !== undefined) facilityStructure = data.facilityStructure;
-        if (data.todaySchedule !== undefined) todaySchedule = data.todaySchedule;
-        if (data.latestTemperatureLogs !== undefined) latestTemperatureLogs = data.latestTemperatureLogs;
-        
-        renderNextDevice();
-        if (window.lucide) lucide.createIcons();
-        return true;
-    } catch (e) {
-        console.error('Failed to restore monitoring cache:', e);
-        return false;
-    }
-}
-
-function saveMonitoringDraft() {
-    const deviceId = document.getElementById("selected-device-id").value;
-    const roomId = document.getElementById("selected-room-id").value;
-    const slotTime = document.getElementById("selected-slot-time").value;
-    const temp = document.getElementById("input-temp").value;
-    const rh = document.getElementById("input-rh").value;
-    const reason = document.getElementById("input-reason").value;
-
-    if (deviceId && (temp || rh || reason)) {
-        localStorage.setItem("monitoring_draft", JSON.stringify({
-            deviceId, roomId, slotTime, temp, rh, reason, timestamp: Date.now()
-        }));
-    } else {
-        localStorage.removeItem("monitoring_draft");
-    }
-}
-
-function checkMonitoringDraft() {
-    const draftStr = localStorage.getItem("monitoring_draft");
-    if (!draftStr) return;
-    const draft = JSON.parse(draftStr);
-    
-    // Check if slot time is still relevant
-    const activeSlot = activeMonitoringSlot();
-    if (!activeSlot || draft.slotTime !== activeSlot.time) {
-        localStorage.removeItem("monitoring_draft");
-        return;
-    }
-    
-    // Show draft recovery prompt
-    const container = document.createElement("div");
-    container.id = "draftRecoveryPrompt";
-    container.style.cssText = "position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 16px; display: flex; flex-direction: column; gap: 12px;";
-    container.innerHTML = `
-        <div style="font-size: 14px; font-weight: 600; color: var(--text-color, #1e293b);">Lanjutkan input monitoring sebelumnya?</div>
-        <div style="display: flex; gap: 10px;">
-            <button id="btnRecoverDraft" class="btn-primary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: none; background: #2563eb; color: white;">Lanjutkan</button>
-            <button id="btnDiscardDraft" class="btn-secondary" style="flex: 1; min-height: 48px; font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;">Buang</button>
-        </div>
-    `;
-    document.body.appendChild(container);
-    
-    document.getElementById("btnRecoverDraft").onclick = () => {
-        container.remove();
-        openLogModal(draft.deviceId);
-        // Fill draft values
-        document.getElementById("input-temp").value = draft.temp;
-        if (draft.rh) document.getElementById("input-rh").value = draft.rh;
-        document.getElementById("input-reason").value = draft.reason;
-        // Focus Suhu
-        setTimeout(() => document.getElementById("input-temp").focus(), 100);
-    };
-    
-    document.getElementById("btnDiscardDraft").onclick = () => {
-        container.remove();
-        localStorage.removeItem("monitoring_draft");
-    };
 }

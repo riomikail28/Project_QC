@@ -16,159 +16,7 @@ const adminApp = {
     currentApprovalId: null,
     productionBoardRows: [],
     monitoringHistoryRows: [],
-    monitoringDailyDevices: [],
-    currentFindingsRows: [],
-    findingsStatusFilter: 'all',
     monitoringManagementRooms: [],
-    activeSection: 'overview',
-    sectionRefreshTimers: {},
-    lastRefreshTimes: {},
-
-    savePageCache(target, date) {
-        const key = `page_cache:${target}:${date}`;
-        let data = {};
-        if (target === 'overview') {
-            data = {
-                onlineStaff: document.getElementById('hero-online-staff')?.innerText || '',
-                activeDate: document.getElementById('hero-active-date')?.innerText || '',
-                kpis: {
-                    monitoring: document.getElementById('metric-monitoring-today')?.innerText || '0',
-                    batches: document.getElementById('metric-batches')?.innerText || '0',
-                    passRate: document.getElementById('metric-pass-rate')?.innerText || '0%',
-                    findings: document.getElementById('metric-findings-open')?.innerText || '0',
-                    alerts: document.getElementById('metric-alerts')?.innerText || '0'
-                },
-                attention: document.getElementById('overview-need-attention')?.innerHTML || '',
-                activeStaff: document.getElementById('overview-active-staff')?.innerHTML || '',
-                topStaff: document.getElementById('overview-top-staff-body')?.innerHTML || '',
-                slotCompletion: document.getElementById('overview-slot-completion')?.innerHTML || '',
-                productionSnapshot: document.getElementById('overview-production-snapshot')?.innerHTML || '',
-                recentActivity: document.getElementById('overview-recent-activity')?.innerHTML || ''
-            };
-        } else if (target === 'monitoring') {
-            data = {
-                grid: document.getElementById('monitoring-grid')?.innerHTML || '',
-                label: document.getElementById('monitoring-date-label')?.innerText || ''
-            };
-        } else if (target === 'daily-reports') {
-            data = {
-                summary: document.getElementById('production-board-summary')?.innerHTML || '',
-                board: document.getElementById('production-qc-board')?.innerHTML || ''
-            };
-        } else if (target === 'findings') {
-            data = {
-                summary: document.getElementById('findings-summary-grid')?.innerHTML || '',
-                board: document.getElementById('findings-board')?.innerHTML || '',
-                count: document.getElementById('nav-findings-count')?.innerText || '0'
-            };
-        }
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save page cache', e);
-        }
-    },
-    
-    restorePageCache(target, date) {
-        const key = `page_cache:${target}:${date}`;
-        let dataStr;
-        try {
-            dataStr = localStorage.getItem(key);
-        } catch (e) {
-            return false;
-        }
-        if (!dataStr) return false;
-        
-        try {
-            const data = JSON.parse(dataStr);
-            if (target === 'overview') {
-                const onlineStaff = document.getElementById('hero-online-staff');
-                if (onlineStaff) onlineStaff.innerText = data.onlineStaff || '';
-                const activeDate = document.getElementById('hero-active-date');
-                if (activeDate) activeDate.innerText = data.activeDate || '';
-                
-                if (data.kpis) {
-                    this.setText('metric-monitoring-today', data.kpis.monitoring || '0');
-                    this.setText('metric-batches', data.kpis.batches || '0');
-                    this.setText('metric-pass-rate', data.kpis.passRate || '0%');
-                    this.setText('metric-findings-open', data.kpis.findings || '0');
-                    this.setText('metric-alerts', data.kpis.alerts || '0');
-                }
-                
-                this.setHtmlIfChanged(document.getElementById('overview-need-attention'), data.attention || '');
-                this.setHtmlIfChanged(document.getElementById('overview-active-staff'), data.activeStaff || '');
-                this.setHtmlIfChanged(document.getElementById('overview-top-staff-body'), data.topStaff || '');
-                this.setHtmlIfChanged(document.getElementById('overview-slot-completion'), data.slotCompletion || '');
-                this.setHtmlIfChanged(document.getElementById('overview-production-snapshot'), data.productionSnapshot || '');
-                this.setHtmlIfChanged(document.getElementById('overview-recent-activity'), data.recentActivity || '');
-            } else if (target === 'monitoring') {
-                this.setHtmlIfChanged(document.getElementById('monitoring-grid'), data.grid || '');
-                const label = document.getElementById('monitoring-date-label');
-                if (label) label.innerText = data.label || '';
-            } else if (target === 'daily-reports') {
-                this.setHtmlIfChanged(document.getElementById('production-board-summary'), data.summary || '');
-                this.setHtmlIfChanged(document.getElementById('production-qc-board'), data.board || '');
-            } else if (target === 'findings') {
-                this.setHtmlIfChanged(document.getElementById('findings-summary-grid'), data.summary || '');
-                this.setHtmlIfChanged(document.getElementById('findings-board'), data.board || '');
-                this.setText('nav-findings-count', data.count || '0');
-            }
-            this.refreshIcons();
-            return true;
-        } catch (e) {
-            console.error('Failed to restore page cache', e);
-            return false;
-        }
-    },
-
-    debounce(fn, delay) {
-        let timer = null;
-        return function (...args) {
-            clearTimeout(timer);
-            timer = setTimeout(() => fn.apply(this, args), delay);
-        };
-    },
-
-    throttle(fn, limit = 2000) {
-        let inThrottle = false;
-        return function (...args) {
-            if (!inThrottle) {
-                fn.apply(this, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        };
-    },
-
-    isThrottled(action, limit = 2000) {
-        const now = Date.now();
-        const last = this.lastRefreshTimes[action] || 0;
-        if (now - last < limit) {
-            console.log(`[PERFORMANCE_OPTIMIZED] Action ${action} throttled`);
-            return true;
-        }
-        this.lastRefreshTimes[action] = now;
-        return false;
-    },
-
-    async preloadTab(tab) {
-        try {
-            if (tab === 'monitoring') {
-                const date = this.monitoringDateValue();
-                const endpoint = `${this.apiBase}/monitoring/daily?date=${encodeURIComponent(date)}`;
-                await this.fetchAdminData(endpoint, { cache: true });
-            } else if (tab === 'findings') {
-                const endpoint = `${this.apiBase}/reports/findings?limit=200`;
-                await this.fetchAdminData(endpoint, { cache: true });
-            } else if (tab === 'daily-reports') {
-                const params = this.batchProductionQuery();
-                const endpoint = `${this.apiBase}/batches?${params.toString()}`;
-                await this.fetchAdminData(endpoint, { cache: true });
-            }
-        } catch (e) {
-            console.warn(`[PERFORMANCE_OPTIMIZED] Preload failed for ${tab}:`, e);
-        }
-    },
 
     init() {
         this.checkAuth();
@@ -180,9 +28,7 @@ const adminApp = {
         this.safeRun(() => this.setupModalBehavior(), 'modal behavior');
         this.safeRun(() => this.setupBatchProductionDefaults(), 'batch production');
         this.safeRun(() => this.setupMonitoringDefaults(), 'monitoring');
-        this.safeRun(() => this.setupFindingsDefaults(), 'findings');
         this.safeRun(() => this.setupDailyReportDefaults(), 'daily reports');
-        this.safeRun(() => this.setupGlobalDateDefaults(), 'global date');
         this.safeRun(() => this.setupTableFilters(), 'table filters');
         this.refreshIcons();
         
@@ -213,21 +59,6 @@ const adminApp = {
     },
 
     applyTableFilter(tbodyId) {
-        const isInputFocused = document.activeElement && document.activeElement.hasAttribute('data-table-filter') && document.activeElement.dataset.tableFilter === tbodyId;
-        if (isInputFocused) {
-            if (!this.debouncedTableFilters) {
-                this.debouncedTableFilters = {};
-            }
-            if (!this.debouncedTableFilters[tbodyId]) {
-                this.debouncedTableFilters[tbodyId] = this.debounce((id) => this._applyTableFilter(id), 300);
-            }
-            this.debouncedTableFilters[tbodyId](tbodyId);
-            return;
-        }
-        this._applyTableFilter(tbodyId);
-    },
-
-    _applyTableFilter(tbodyId) {
         const input = document.querySelector(`[data-table-filter="${tbodyId}"]`);
         const tbody = document.getElementById(tbodyId);
         if (!input || !tbody) return;
@@ -246,10 +77,6 @@ const adminApp = {
     updateTableMeta(id, count, noun) {
         const el = document.getElementById(id);
         if (el) el.textContent = `${count} ${noun}`;
-    },
-
-    setHtmlIfChanged(element, html) {
-        if (element && element.innerHTML !== html) element.innerHTML = html;
     },
 
     checkAuth() {
@@ -297,7 +124,6 @@ const adminApp = {
 
     navigateTo(target, activeItem = null) {
         if (!target) return;
-        this.activeSection = target;
         const item = activeItem || document.querySelector(`.sidebar-item[data-section="${target}"], .sidebar-item[data-target="${target}"]`);
         document.querySelectorAll('.sidebar-item[data-target]').forEach(link => link.classList.remove('active'));
         if (item) item.classList.add('active');
@@ -315,12 +141,7 @@ const adminApp = {
         if (section) {
             section.hidden = false;
             section.classList.add('active');
-            this.navigating = true;
-            try {
-                this.loadSectionData(target);
-            } finally {
-                this.navigating = false;
-            }
+            this.loadSectionData(target);
         }
         this.closeMobileDrawer();
         this.refreshIcons();
@@ -375,39 +196,14 @@ const adminApp = {
         });
     },
 
-    async fetchAdminData(endpoint, options = {}) {
+    async fetchAdminData(endpoint) {
         try {
-            const ttlMs = options.ttlMs ?? this.adminCacheTtl(endpoint);
-            if (options.cache === false) return await API.get(endpoint);
-            return await API.getSWR(endpoint, {
-                ttlMs,
-                force: options.force,
-                revalidate: options.revalidate,
-                onUpdate: options.onUpdate,
-                onError: error => console.warn(`[PERFORMANCE_OPTIMIZED] Background refresh failed: ${endpoint}`, error)
-            });
+            return await API.get(endpoint);
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
             this.notify(error.message || 'Gagal memuat data admin');
             return null;
         }
-    },
-
-    adminCacheTtl(endpoint) {
-        const value = String(endpoint || '');
-        if (value.includes('/products') || value.includes('/staff')) return 1800000; // 30 mins Product/Staff TTL
-        if (value.includes('/analytics') || value.includes('/reports/summary')) return 30000; // 30s Dashboard KPI TTL
-        if (value.includes('/monitoring/')) return 30000;
-        if (value.includes('/daily-reports')) return 60000;
-        if (value.includes('/reports/findings') || value.includes('/batches')) return 60000;
-        return 45000;
-    },
-
-    scheduleSectionRefresh(section, fn) {
-        clearTimeout(this.sectionRefreshTimers[section]);
-        this.sectionRefreshTimers[section] = setTimeout(() => {
-            if (this.activeSection === section) fn();
-        }, 100);
     },
 
     notify(message, type = 'error') {
@@ -713,37 +509,16 @@ const adminApp = {
         window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
     },
 
-    async loadOverview({ fromRevalidate = false } = {}) {
-        const started = performance.now();
-        const selectedDate = this.globalDateValue();
-        
-        if (!fromRevalidate && this.isThrottled('overview', 2000)) {
-            return;
-        }
-
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('overview', selectedDate);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: overview ${renderTime}ms (from cache)`);
-            }
-        }
-
-        const onUpdate = fromRevalidate ? null : () => this.scheduleSectionRefresh('overview', () => this.loadOverview({ fromRevalidate: true }));
-
-        const activeDateEl = document.getElementById('hero-active-date');
-        if (activeDateEl) {
-            activeDateEl.innerText = this.longDate(selectedDate);
-        }
-
+    async loadOverview() {
+        const today = this.jakartaDateString();
         const [res, reportSummary, findingsEnvelope, dailyEnvelope, batchEnvelope, monitoringEnvelope, realtimeEnvelope] = await Promise.all([
-            this.fetchAdminData(`${this.apiBase}/analytics/overview`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/reports/summary?date=${encodeURIComponent(selectedDate)}`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/daily-reports?date=${encodeURIComponent(selectedDate)}&limit=500`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/batches?date=${encodeURIComponent(selectedDate)}&limit=200`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(selectedDate)}&limit=500`, { onUpdate, revalidate: !fromRevalidate }),
-            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`, { onUpdate, revalidate: !fromRevalidate }),
+            this.fetchAdminData(`${this.apiBase}/analytics/overview`),
+            this.fetchAdminData(`${this.apiBase}/reports/summary`),
+            this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`),
+            this.fetchAdminData(`${this.apiBase}/daily-reports?date=${encodeURIComponent(today)}&limit=500`),
+            this.fetchAdminData(`${this.apiBase}/batches?date=${encodeURIComponent(today)}&limit=200`),
+            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(today)}&limit=500`),
+            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`),
         ]);
         const overview = res || {};
         const summary = reportSummary?.data || reportSummary || {};
@@ -760,7 +535,6 @@ const adminApp = {
         const pendingApproval = Number(overview.total_qc_pending || summary.pending_approval || 0);
         const deviceAlerts = Number(overview.total_open_alerts || summary.temperature_alerts || 0);
         const holdBatch = batchRows.filter(row => String(row.qc_status || row.status || '').toLowerCase().includes('hold')).length;
-        const failBatch = batchRows.filter(row => String(row.qc_status || row.status || '').toLowerCase().includes('fail')).length;
         const totalBatches = Number(overview.total_batches_today || batchRows.length || 0);
 
         this.setText('metric-monitoring-today', summary.total_monitoring_today || 0);
@@ -769,21 +543,12 @@ const adminApp = {
         this.setText('metric-findings-open', openFindings);
         this.setText('metric-pass-rate', `${passRate}%`);
         this.setText('metric-alerts', deviceAlerts);
-
-        const staff = this.activeStaffSummary(dailyRows);
-        const onlineCount = staff.filter(s => s.status === 'Online').length;
-        const onlineStaffEl = document.getElementById('hero-online-staff');
-        if (onlineStaffEl) {
-            onlineStaffEl.innerText = `Staf Online: ${onlineCount} Staf`;
-        }
-
-        this.renderNeedAttention({ pendingApproval, deviceAlerts, openFindings, holdBatch, failBatch });
+        this.renderNeedAttention({ pendingApproval, deviceAlerts, openFindings, holdBatch });
         this.renderActiveStaff(dailyRows);
-        this.renderTopStaff(staff);
         this.renderQcSummary({
             pass,
             hold: Number(summary.hold_warning || 0) || holdBatch,
-            fail: Number(summary.fail || 0) || failBatch,
+            fail: Number(summary.fail || 0) || batchRows.filter(row => String(row.qc_status || row.status || '').toLowerCase().includes('fail')).length,
             pending: pendingApproval,
         });
         this.renderMonitoringSlotCompletion(monitoringRows, realtimeDevices.length);
@@ -791,85 +556,38 @@ const adminApp = {
         this.renderRecentActivity({ dailyRows, findings, batchRows, monitoringRows });
         this.updateQueueCounts({ ...overview, total_qc_pending: pendingApproval, total_open_alerts: deviceAlerts, open_findings: openFindings });
         this.renderAlertsWorkflow({ ...overview, total_qc_pending: pendingApproval, total_open_alerts: deviceAlerts, open_findings: openFindings });
-        
-        this.savePageCache('overview', selectedDate);
-        const renderTime = Math.round(performance.now() - started);
-        console.log(`[METRIC] page_render_time: overview ${renderTime}ms`);
-        
-        // Preload next tabs
-        if (!fromRevalidate) {
-            Promise.all([
-                this.preloadTab('monitoring'),
-                this.preloadTab('findings')
-            ]).catch(err => console.warn('[PERFORMANCE_OPTIMIZED] Dashboard preload failed', err));
-        }
     },
 
-    renderNeedAttention({ pendingApproval = 0, deviceAlerts = 0, openFindings = 0, holdBatch = 0, failBatch = 0 } = {}) {
+    renderNeedAttention({ pendingApproval = 0, deviceAlerts = 0, openFindings = 0, holdBatch = 0 } = {}) {
         const target = document.getElementById('overview-need-attention');
         if (!target) return;
-        
-        const totalAlerts = pendingApproval + deviceAlerts + openFindings + holdBatch + failBatch;
-        
-        if (totalAlerts === 0) {
+        const items = [
+            { title: 'Pending Approval', count: pendingApproval, icon: 'clipboard-check', className: 'is-warning', cta: 'Review Batch', action: "adminApp.openProductionBoardFiltered('pending approval')" },
+            { title: 'Device Alert', count: deviceAlerts, icon: 'flame', className: 'is-danger', cta: 'Lihat Monitoring', action: "adminApp.navigateTo('monitoring')" },
+            { title: 'QC Temuan Open', count: openFindings, icon: 'clipboard-list', className: 'is-warning', cta: 'Lihat Temuan', action: "adminApp.navigateTo('findings')" },
+            { title: 'HOLD Batch', count: holdBatch, icon: 'octagon-alert', className: 'is-warning', cta: 'Lihat Batch', action: "adminApp.openProductionBoardFiltered('hold')" },
+        ];
+        if (items.every(item => Number(item.count || 0) === 0)) {
             target.innerHTML = `
-                <div class="attention-safe-card" style="display: flex; align-items: center; gap: 14px; padding: 20px; border: 1px solid rgba(16,185,129,.28); border-radius: 16px; background: rgba(236,253,245,.9); color: #065f46; box-shadow: var(--shadow-sm);">
-                    <span class="action-icon" style="color: #10b981; display: flex; align-items: center;"><i data-lucide="shield-check" style="width:24px;height:24px;"></i></span>
+                <div class="attention-safe-card">
+                    <span class="action-icon"><i data-lucide="shield-check"></i></span>
                     <div>
                         <strong>Semua aman</strong>
-                        <p style="margin: 4px 0 0; color: #047857;">Tidak ada item yang perlu ditindaklanjuti hari ini.</p>
+                        <p>Tidak ada item yang perlu ditindaklanjuti.</p>
                     </div>
                 </div>
             `;
             this.refreshIcons();
             return;
         }
-
-        target.innerHTML = `
-            <div class="attention-consolidated-card" style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(254, 242, 242, 0.6); box-shadow: var(--shadow-sm);">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: var(--danger-color); display: flex; align-items: center;"><i data-lucide="alert-triangle" style="width:24px;height:24px;"></i></span>
-                    <div style="font-weight: 600; font-size: 1.1rem; color: #991b1b;">Item yang Memerlukan Tindakan Segera</div>
-                </div>
-                <div class="attention-badge-row" style="display: flex; flex-wrap: wrap; gap: 12px;">
-                    <span class="status-badge status-warning" style="font-size: 0.95rem; padding: 6px 12px; border-radius: 8px;">[ ${holdBatch} Batch HOLD ]</span>
-                    <span class="status-badge status-fail" style="font-size: 0.95rem; padding: 6px 12px; border-radius: 8px;">[ ${failBatch} Batch FAIL ]</span>
-                    <span class="status-badge status-warning" style="font-size: 0.95rem; padding: 6px 12px; border-radius: 8px;">[ ${openFindings} QC Temuan OPEN ]</span>
-                    <span class="status-badge status-fail" style="font-size: 0.95rem; padding: 6px 12px; border-radius: 8px;">[ ${deviceAlerts} Device Alert ]</span>
-                    ${pendingApproval > 0 ? `<span class="status-badge status-pending" style="font-size: 0.95rem; padding: 6px 12px; border-radius: 8px;">[ ${pendingApproval} Pending Approval ]</span>` : ''}
-                </div>
-                <div style="margin-top: 4px;">
-                    <button class="btn-primary" onclick="adminApp.navigateTo('alerts')" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px;">
-                        <i data-lucide="eye" style="width:16px;height:16px;"></i> Tinjau Sekarang
-                    </button>
-                </div>
-            </div>
-        `;
-        this.refreshIcons();
-    },
-
-    renderTopStaff(staff = []) {
-        const body = document.getElementById('overview-top-staff-body');
-        if (!body) return;
-        if (!staff.length) {
-            body.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada staff aktif hari ini.</td></tr>';
-            return;
-        }
-        const ranked = [...staff].sort((a, b) => {
-            const actA = (a.qcCount || 0) + (a.monitoringCount || 0) + (a.findingCount || 0);
-            const actB = (b.qcCount || 0) + (b.monitoringCount || 0) + (b.findingCount || 0);
-            return actB - actA;
-        });
-        body.innerHTML = ranked.map((item, idx) => `
-            <tr>
-                <td data-label="Rank"><strong>#${idx + 1}</strong></td>
-                <td data-label="Nama"><strong>${this.escapeHtml(item.name)}</strong></td>
-                <td data-label="QC Check">${item.qcCount}</td>
-                <td data-label="Monitoring">${item.monitoringCount}</td>
-                <td data-label="Temuan">${item.findingCount}</td>
-                <td data-label="Status"><span class="status-badge status-${this.escapeAttr(item.statusClass)}">${this.escapeHtml(item.status)}</span></td>
-            </tr>
+        target.innerHTML = items.map(item => `
+            <button class="metric-card metric-action-card attention-card ${item.className}" type="button" onclick="${item.action}">
+                <div class="metric-header"><span>${this.escapeHtml(item.title)}</span><i data-lucide="${item.icon}" class="metric-icon"></i></div>
+                <div class="metric-value">${Number(item.count || 0)}</div>
+                <span class="btn-secondary btn-sm">${this.escapeHtml(item.cta)}</span>
+            </button>
         `).join('');
+        this.refreshIcons();
     },
 
     renderActiveStaff(rows = []) {
@@ -1055,21 +773,8 @@ const adminApp = {
     },
 
     openProductionBoardFiltered(status = '') {
-        // Fallback assertions for tests:
-        // openProductionBoardFiltered('pending approval')
-        // openProductionBoardFiltered('hold')
-        // openProductionBoardFiltered(status = '')
-        const normStatus = status ? status.toLowerCase() : 'all';
         const filter = document.getElementById('batch-production-status');
-        if (filter) filter.value = normStatus === 'all' ? '' : normStatus;
-        
-        document.querySelectorAll('#production-status-filter button').forEach(btn => {
-            if (btn.getAttribute('data-production-filter') === normStatus) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+        if (filter) filter.value = status;
         this.navigateTo('daily-reports');
     },
 
@@ -1241,331 +946,61 @@ const adminApp = {
         });
     },
 
-    async loadMonitoring({ fromRevalidate = false } = {}) {
-        const started = performance.now();
+    async loadMonitoring() {
         const grid = document.getElementById('monitoring-grid');
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
+        
         const date = this.monitoringDateValue();
-        
-        if (!fromRevalidate && this.isThrottled('monitoring', 2000)) {
+        const [res, historyEnvelope] = await Promise.all([
+            this.fetchAdminData(`${this.apiBase}/monitoring/realtime`),
+            this.fetchAdminData(`${this.apiBase}/reports/monitoring?date=${encodeURIComponent(date)}&limit=500`),
+        ]);
+        if (!res) return;
+        this.monitoringHistoryRows = this.reportRows(historyEnvelope);
+
+        grid.innerHTML = '';
+        if (res.length === 0) {
+            grid.innerHTML = this.emptyState('No data available yet', 'Data will appear after staff submit QC activity.');
             return;
         }
 
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('monitoring', date);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: monitoring ${renderTime}ms (from cache)`);
+        res.forEach(dev => {
+            const log = dev.latest_log;
+            let tempDisplay = log ? `${log.temperature_c} °C` : '-- °C';
+            let statusIcon = 'fa-check-circle';
+            let statusColor = 'var(--success-color)';
+            
+            if (log && !log.is_normal) {
+                statusIcon = 'fa-exclamation-triangle';
+                statusColor = 'var(--danger-color)';
+            } else if (!log) {
+                statusIcon = 'fa-question-circle';
+                statusColor = 'var(--text-secondary)';
             }
-        }
 
-        const endpoint = `${this.apiBase}/monitoring/daily?date=${encodeURIComponent(date)}`;
-        if (!API.hasFreshCache(endpoint) && (!grid || !grid.children.length)) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">Loading devices...</div>';
-        }
-
-        this.setText('monitoring-date-label', `Tanggal monitoring: ${this.longDate(date)}`);
-        const envelope = await this.fetchAdminData(endpoint, {
-            ttlMs: 30000,
-            revalidate: !fromRevalidate,
-            onUpdate: () => this.scheduleSectionRefresh('monitoring', () => this.loadMonitoring({ fromRevalidate: true }))
-        });
-        this.renderMonitoringDaily(envelope);
-        
-        this.savePageCache('monitoring', date);
-        const renderTime = Math.round(performance.now() - started);
-        console.log(`[METRIC] page_render_time: monitoring ${renderTime}ms`);
-        
-        // Preload next tab
-        if (!fromRevalidate) {
-            this.preloadTab('daily-reports').catch(err => console.warn('[PERFORMANCE_OPTIMIZED] Monitoring preload failed', err));
-        }
-    },
-
-    renderMonitoringDaily(envelope) {
-        const grid = document.getElementById('monitoring-grid');
-        if (!grid) return;
-        const data = envelope?.data || envelope || {};
-        const devices = Array.isArray(data.devices) ? data.devices : [];
-        this.monitoringDailyDevices = devices;
-
-        if (!devices.length) {
-            grid.innerHTML = this.emptyState('Belum ada unit monitoring.', 'Tambahkan room/device dari Kelola Unit untuk mulai tracking suhu.');
-            return;
-        }
-
-        // Group devices by Room
-        const roomsMap = new Map();
-        devices.forEach(device => {
-            const roomName = device.room || 'Ruang Lainnya';
-            if (!roomsMap.has(roomName)) {
-                roomsMap.set(roomName, []);
-            }
-            roomsMap.get(roomName).push(device);
-        });
-
-        // Generate Accordions HTML with placeholders
-        let html = '';
-        roomsMap.forEach((roomDevices, roomName) => {
-            const deviceCards = roomDevices.map(device => `
-                <div class="monitoring-card-placeholder" data-device-id="${this.escapeAttr(device.id || device.device_id || '')}" style="min-height: 120px; content-visibility: auto;">
-                    <div style="padding: 20px; text-align: center; color: var(--muted-color); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">Loading unit...</div>
+            const card = document.createElement('div');
+            card.className = 'metric-card metric-action-card';
+            card.tabIndex = 0;
+            card.role = 'button';
+            const evidence = log?.photo_url || '';
+            card.innerHTML = `
+                <div class="metric-header">
+                    <span>${dev.facility_rooms?.name || 'Unassigned'} - ${dev.name}</span>
+                    <i data-lucide="${log && !log.is_normal ? 'triangle-alert' : log ? 'circle-check' : 'circle-help'}" class="metric-icon" style="color: ${statusColor}"></i>
                 </div>
-            `).join('');
-            html += `
-                <div class="room-accordion-group" style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); margin-bottom: 12px; overflow: hidden;">
-                    <button class="room-accordion-header" type="button" onclick="adminApp.toggleRoomAccordion(this)" style="width: 100%; padding: 14px 20px; background: var(--bg-card); border: none; text-align: left; font-size: 1.05rem; color: var(--text-color); font-weight: 600; display: flex; align-items: center; justify-content: space-between; cursor: pointer; outline: none;">
-                        <span style="display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="chevron-down" class="accordion-arrow" style="transition: transform 0.2s ease;"></i>
-                            <strong>${this.escapeHtml(roomName)}</strong>
-                            <span style="font-size: 0.85rem; color: var(--muted-color); font-weight: 500;">(${roomDevices.length} Unit)</span>
-                        </span>
-                    </button>
-                    <div class="room-accordion-content" style="display: block; padding: 0 20px 20px; border-top: 1px solid var(--border-color);">
-                        <div class="monitoring-grid-inner" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">
-                            ${deviceCards}
-                        </div>
-                    </div>
+                <div class="metric-value">${tempDisplay}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px;">
+                    Ambang Batas: ${dev.threshold_temp} °C
                 </div>
+                ${evidence ? `<div style="margin-top:10px;">${this.renderEvidenceCell({ photo_url: evidence, storage_path: log?.storage_path || '' })}</div>` : ''}
             `;
-        });
-
-        const hasAnyInput = devices.some(device => (device.slots || []).some(slot => slot.temperature !== null && slot.temperature !== undefined));
-        const emptyBanner = hasAnyInput ? '' : this.emptyState('Belum ada input monitoring pada tanggal ini.', 'Semua slot device untuk tanggal ini masih Belum input.');
-        
-        this.setHtmlIfChanged(grid, emptyBanner + html);
-        this.refreshIcons();
-
-        // Setup IntersectionObserver for lazy rendering card contents
-        const placeholders = grid.querySelectorAll('.monitoring-card-placeholder');
-        if ('IntersectionObserver' in window && placeholders.length > 0) {
-            const observer = new IntersectionObserver((entries, obs) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const ph = entry.target;
-                        const devId = ph.dataset.deviceId;
-                        const deviceObj = devices.find(d => String(d.id || d.device_id || '') === String(devId));
-                        if (deviceObj) {
-                            ph.outerHTML = this.renderMonitoringDailyCard(deviceObj);
-                            this.refreshIcons();
-                        }
-                        obs.unobserve(ph);
-                    }
-                });
-            }, { rootMargin: '100px 0px' });
-            placeholders.forEach(ph => observer.observe(ph));
-        } else {
-            placeholders.forEach(ph => {
-                const devId = ph.dataset.deviceId;
-                const deviceObj = devices.find(d => String(d.id || d.device_id || '') === String(devId));
-                if (deviceObj) {
-                    ph.outerHTML = this.renderMonitoringDailyCard(deviceObj);
-                }
+            card.addEventListener('click', () => this.openMonitoringDevice(dev));
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') this.openMonitoringDevice(dev);
             });
-            this.refreshIcons();
-        }
-    },
-
-    toggleRoomAccordion(header) {
-        header.classList.toggle('collapsed');
-        const arrow = header.querySelector('.accordion-arrow');
-        if (arrow) {
-            arrow.style.transform = header.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0deg)';
-        }
-        const content = header.nextElementSibling;
-        if (content) {
-            content.style.display = header.classList.contains('collapsed') ? 'none' : 'block';
-        }
-    },
-
-    generateSparklineSvg(deviceId, baseDateStr) {
-        let seed = 0;
-        const key = `${deviceId}-${baseDateStr}`;
-        for (let i = 0; i < key.length; i++) {
-            seed = (seed << 5) - seed + key.charCodeAt(i);
-            seed |= 0;
-        }
-        
-        const points = [];
-        const width = 80;
-        const height = 16;
-        const numPoints = 7;
-        
-        const random = () => {
-            seed = (seed * 1664525 + 1013904223) | 0;
-            return (seed >>> 0) / 0xffffffff;
-        };
-        
-        for (let i = 0; i < numPoints; i++) {
-            const val = 2 + random() * (height - 4);
-            points.push(val);
-        }
-        
-        const dx = width / (numPoints - 1);
-        const pathCoords = points.map((y, i) => `${(i * dx).toFixed(1)},${y.toFixed(1)}`).join(' L ');
-        const pathD = `M ${pathCoords}`;
-        
-        return `
-            <svg class="device-sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; display: inline-block; vertical-align: middle;">
-                <path d="${pathD}" fill="none" stroke="var(--primary-color)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="${width}" cy="${points[points.length-1].toFixed(1)}" r="2" fill="var(--primary-color)" />
-            </svg>
-        `;
-    },
-
-    openSlotDetail(device, time) {
-        const slot = (device.slots || []).find(s => s.slot_time && s.slot_time.substring(0, 5) === time);
-        const title = `${device.room || 'Ruang Lainnya'} - ${device.device_name || '-'}`;
-        let html = '';
-        if (slot) {
-            const statusBadgeHtml = this.statusBadge(slot.status || 'BELUM_INPUT');
-            const tempVal = slot.temperature !== null && slot.temperature !== undefined ? `${slot.temperature}°C` : 'Belum input';
-            const notesVal = slot.notes || '-';
-            const submittedAt = slot.submitted_at ? this.dateTime(slot.submitted_at) : '-';
-            const photoUrl = slot.photo_url || '';
-            
-            html = `
-                <section class="review-section">
-                    <h4>Slot Detail: ${time}</h4>
-                    <div class="review-grid">
-                        <div class="review-field"><span>Slot Time</span><strong>${time}</strong></div>
-                        <div class="review-field"><span>Status</span>${statusBadgeHtml}</div>
-                        <div class="review-field"><span>Temperature</span><strong>${tempVal}</strong></div>
-                        <div class="review-field"><span>Staff</span><strong>${this.escapeHtml(slot.staff_name || '-')}</strong></div>
-                        <div class="review-field" style="grid-column: 1/-1;"><span>Submitted At</span><strong>${submittedAt}</strong></div>
-                    </div>
-                </section>
-                <section class="review-section">
-                    <h4>Notes</h4>
-                    <p style="background: var(--bg-body); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin: 4px 0 0;">${this.escapeHtml(notesVal)}</p>
-                </section>
-                <section class="review-section">
-                    <h4>Evidence Photo</h4>
-                    <div class="review-evidence">
-                        ${photoUrl ? `<img src="${this.escapeAttr(Utils.thumbnailUrl ? Utils.thumbnailUrl(photoUrl) : this.thumbnailUrl(photoUrl))}" alt="Slot evidence" loading="lazy" style="max-height: 200px; object-fit: contain; border-radius: 8px;"><button class="btn-secondary" onclick='adminApp.previewImage(${JSON.stringify(photoUrl)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada evidence photo.</p>'}
-                    </div>
-                </section>
-            `;
-        } else {
-            html = `
-                <section class="review-section">
-                    <h4>Slot Detail: ${time}</h4>
-                    <div class="review-grid">
-                        <div class="review-field"><span>Slot Time</span><strong>${time}</strong></div>
-                        <div class="review-field"><span>Status</span>${this.statusBadge('BELUM_INPUT')}</div>
-                    </div>
-                    <p class="admin-muted" style="margin-top: 12px;">Staff belum melakukan input monitoring suhu pada slot waktu ini.</p>
-                </section>
-            `;
-        }
-        
-        this.openQcDetailModal(title, `Detail Monitoring Slot ${time}`, html);
-    },
-
-    renderMonitoringDailyCard(device = {}) {
-        const latest = device.latest_temperature !== null && device.latest_temperature !== undefined ? `${device.latest_temperature}°C` : 'Belum input';
-        const status = device.daily_status || 'PENDING';
-        
-        const times = ['07:00', '13:00', '16:00', '19:00'];
-        const slotDots = times.map(time => {
-            const slot = (device.slots || []).find(s => s.slot_time && s.slot_time.substring(0, 5) === time);
-            let dotClass = 'pending';
-            let tempText = 'Belum input';
-            let statusText = 'BELUM_INPUT';
-            
-            if (slot) {
-                statusText = slot.status || 'PENDING';
-                const normStatus = statusText.toLowerCase();
-                if (normStatus === 'pass' || normStatus === 'normal') {
-                    dotClass = 'pass';
-                } else if (normStatus === 'fail' || normStatus === 'failed' || normStatus === 'abnormal' || normStatus === 'missed') {
-                    dotClass = 'fail';
-                } else if (normStatus === 'late' || normStatus === 'warning') {
-                    dotClass = 'warning';
-                } else {
-                    dotClass = 'pending';
-                }
-                tempText = slot.temperature !== null && slot.temperature !== undefined ? `${slot.temperature}°C` : 'Belum input';
-            }
-            
-            const escDevice = this.safeJson(device);
-            return `
-                <div class="heatmap-dot-wrapper" onclick="event.stopPropagation(); adminApp.openSlotDetail(${escDevice}, '${time}')" title="${time}: ${tempText} (${statusText.toUpperCase()})" style="display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;">
-                    <span class="heatmap-dot dot-${dotClass}" style="width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
-                    <span class="heatmap-label" style="font-size: 0.65rem; color: var(--muted-color); font-weight: 500;">${time}</span>
-                </div>
-            `;
-        }).join('');
-
-        const escDev = this.safeJson(device);
-        return `
-            <div class="metric-card metric-action-card monitoring-daily-card-v3" style="cursor: pointer; display: flex; flex-direction: column; gap: 12px; padding: 16px;" onclick='adminApp.openMonitoringDevice(${escDev})'>
-                <div class="metric-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                    <div>
-                        <strong style="font-size: 1rem; font-weight: 600; color: var(--text-color);">${this.escapeHtml(device.device_name || '-')}</strong>
-                        <p class="admin-muted" style="margin: 2px 0 0; font-size: 0.8rem;">Threshold: ${this.escapeHtml(this.formatRange(device.threshold_min, device.threshold_max, 'C') || `${device.threshold_temp ?? '-'} C`)}</p>
-                    </div>
-                    ${this.statusBadge(status)}
-                </div>
-                
-                <div style="margin: 8px 0; display: flex; align-items: baseline; gap: 6px;">
-                    <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">${this.escapeHtml(latest)}</span>
-                    <span style="font-size: 0.8rem; color: var(--muted-color);">Laporan Terakhir</span>
-                </div>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color);">
-                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                        <span style="font-size: 0.7rem; color: var(--muted-color); font-weight: 500;">Tren 7 Hari</span>
-                        ${this.generateSparklineSvg(device.id || device.device_id, this.monitoringDateValue())}
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                        <span style="font-size: 0.7rem; color: var(--muted-color); font-weight: 500;">Heatmap Slots</span>
-                        <div style="display: flex; gap: 6px;">
-                            ${slotDots}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-    setupGlobalDateDefaults() {
-        const input = document.getElementById('global-date');
-        if (input && !input.value) input.value = this.jakartaDateString();
-        const activeDateEl = document.getElementById('hero-active-date');
-        if (activeDateEl) {
-            activeDateEl.innerText = this.longDate(this.jakartaDateString());
-        }
-    },
-
-    globalDateValue() {
-        const mode = document.getElementById('global-date-mode')?.value || 'today';
-        if (mode === 'custom') return document.getElementById('global-date')?.value || this.jakartaDateString();
-        if (mode === 'yesterday') {
-            const date = new Date();
-            date.setDate(date.getDate() - 1);
-            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-        }
-        return this.jakartaDateString();
-    },
-
-    handleGlobalDateMode() {
-        const mode = document.getElementById('global-date-mode')?.value || 'today';
-        const input = document.getElementById('global-date');
-        if (input) {
-            input.hidden = mode !== 'custom';
-            input.style.display = mode === 'custom' ? 'inline-block' : 'none';
-            if (mode === 'today') input.value = this.jakartaDateString();
-            if (mode === 'yesterday') {
-                const date = new Date();
-                date.setDate(date.getDate() - 1);
-                input.value = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-            }
-        }
-        this.loadOverview();
-    },
-
-    handleGlobalDateChange() {
-        this.loadOverview();
+            grid.appendChild(card);
+        });
+        this.refreshIcons();
     },
 
     setupMonitoringDefaults() {
@@ -1598,61 +1033,28 @@ const adminApp = {
         return this.jakartaDateString();
     },
 
-    renderMonitoringDailyCard(device = {}) {
-        const latest = device.latest_temperature !== null && device.latest_temperature !== undefined ? `${device.latest_temperature} C` : 'Belum input';
-        const status = device.daily_status || 'PENDING';
-        const slots = (device.slots || []).map(slot => `
-            <div class="monitoring-slot-row">
-                <strong>${this.escapeHtml(slot.slot_time || '-')}</strong>
-                <span>${slot.temperature !== null && slot.temperature !== undefined ? `${this.escapeHtml(slot.temperature)} C` : 'Belum input'}</span>
-                <small>${this.escapeHtml(slot.staff_name || '-')}</small>
-            </div>
-        `).join('');
-        return `
-            <button class="metric-card metric-action-card monitoring-daily-card" type="button" onclick='adminApp.openMonitoringDevice(${this.safeJson(device)})'>
-                <div class="metric-header">
-                    <span>${this.escapeHtml(device.room || 'Unassigned')} - ${this.escapeHtml(device.device_name || '-')}</span>
-                    ${this.statusBadge(status)}
+    openMonitoringDevice(dev) {
+        const title = `${dev.facility_rooms?.name || 'Unassigned'} ${dev.name || ''}`.trim();
+        const rows = (this.monitoringHistoryRows || []).filter(row => {
+            const haystack = `${row.room || ''} ${row.device || ''} ${row.device_name || ''}`.toLowerCase();
+            return haystack.includes(String(dev.name || '').toLowerCase()) || haystack.includes(String(dev.facility_rooms?.name || '').toLowerCase());
+        });
+        const slots = ['07:00', '13:00', '16:00', '19:00'];
+        const slotHtml = slots.map(slot => {
+            const match = this.closestSlotRow(rows, slot);
+            return `
+                <div class="action-item">
+                    <span class="action-icon"><i data-lucide="clock-3"></i></span>
+                    <div>
+                        <strong>${slot}</strong>
+                        <p class="admin-muted">${match ? `${match.temperature ?? '-'} C / ${String(match.status || '-').toUpperCase()} / ${this.formatStaffDisplay(match).name}` : 'Belum ada input pada slot ini.'}</p>
+                    </div>
                 </div>
-                <div class="metric-value">${this.escapeHtml(latest)}</div>
-                <p class="admin-muted">Threshold: ${this.escapeHtml(this.formatRange(device.threshold_min, device.threshold_max, 'C') || `${device.threshold_temp ?? '-'} C`)}</p>
-                <div class="monitoring-slot-list">${slots}</div>
-            </button>
-        `;
+            `;
+        }).join('');
+        this.openQcDetailModal(title, `Histori suhu ${this.monitoringDateValue()}`, `<div class="action-list">${slotHtml}</div>`);
     },
 
-    openMonitoringDevice(dev) {
-        const title = `${dev.room || 'Unassigned'} - ${dev.device_name || ''}`.trim();
-        const slotHtml = (dev.slots || []).map(slot => `
-            <div class="action-item monitoring-detail-slot">
-                <span class="action-icon"><i data-lucide="clock-3"></i></span>
-                <div>
-                    <strong>${this.escapeHtml(slot.slot_time || '-')} ${this.statusBadge(slot.status || 'BELUM_INPUT')}</strong>
-                    <p class="admin-muted">${slot.temperature !== null && slot.temperature !== undefined ? `${this.escapeHtml(slot.temperature)} C` : 'Belum input'} / Staff: ${this.escapeHtml(slot.staff_name || '-')}</p>
-                    <p class="admin-muted">Submitted: ${this.dateTime(slot.submitted_at)}</p>
-                    ${slot.notes ? `<p>${this.escapeHtml(slot.notes)}</p>` : ''}
-                    ${slot.photo_url ? this.renderEvidenceCell({ photo_url: slot.photo_url }) : ''}
-                </div>
-            </div>
-        `).join('');
-        const html = `
-            <section class="review-section">
-                <h4>Device Info</h4>
-                <div class="review-grid">
-                    ${this.reviewField('Room', dev.room)}
-                    ${this.reviewField('Device', dev.device_name)}
-                    ${this.reviewField('Type', dev.type)}
-                    ${this.reviewField('Threshold', this.formatRange(dev.threshold_min, dev.threshold_max, 'C') || dev.threshold_temp)}
-                    <div class="review-field"><span>Status harian</span>${this.statusBadge(dev.daily_status || 'PENDING')}</div>
-                </div>
-            </section>
-            <section class="review-section">
-                <h4>Timeline Slot</h4>
-                <div class="action-list">${slotHtml}</div>
-            </section>
-        `;
-        this.openQcDetailModal(title, `Tanggal monitoring: ${this.longDate(this.monitoringDateValue())}`, html);
-    },
     closestSlotRow(rows, slot) {
         const target = Number(slot.slice(0, 2)) * 60 + Number(slot.slice(3));
         let best = null;
@@ -1682,24 +1084,17 @@ const adminApp = {
         `;
     },
 
-    async loadStaff({ fromRevalidate = false } = {}) {
+    async loadStaff() {
         const tbody = document.getElementById('table-staff');
         if (!tbody) return;
-        const endpoint = '/staff';
-        if (!API.hasFreshCache(endpoint)) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
-        }
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
         try {
-            const staff = await API.getSWR(endpoint, {
-                ttlMs: 60000,
-                revalidate: !fromRevalidate,
-                onUpdate: () => this.scheduleSectionRefresh('staff', () => this.loadStaff({ fromRevalidate: true }))
-            });
+            const staff = await API.get('/staff');
             if (!staff.length) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada staff.</td></tr>';
                 return;
             }
-            this.setHtmlIfChanged(tbody, staff.map(item => `
+            tbody.innerHTML = staff.map(item => `
                 <tr>
                     <td data-label="Nama"><strong>${item.full_name || item.username || '-'}</strong></td>
                     <td data-label="Username">${item.username || '-'}</td>
@@ -1711,7 +1106,7 @@ const adminApp = {
                         </span>
                     </td>
                 </tr>
-            `).join(''));
+            `).join('');
             this.applyTableFilter('table-staff');
             this.refreshIcons();
         } catch (error) {
@@ -2378,24 +1773,17 @@ const adminApp = {
         }
     },
 
-    async loadSku({ fromRevalidate = false } = {}) {
+    async loadSku() {
         const tbody = document.getElementById('table-sku');
         if (!tbody) return;
-        const endpoint = '/v1/admin/products';
-        if (!API.hasFreshCache(endpoint)) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
-        }
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
         try {
-            const products = await API.getSWR(endpoint, {
-                ttlMs: 60000,
-                revalidate: !fromRevalidate,
-                onUpdate: () => this.scheduleSectionRefresh('sku', () => this.loadSku({ fromRevalidate: true }))
-            });
+            const products = await API.get('/v1/admin/products');
             if (!products.length) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada SKU produk.</td></tr>';
                 return;
             }
-            this.setHtmlIfChanged(tbody, products.map(item => `
+            tbody.innerHTML = products.map(item => `
                 <tr>
                     <td data-label="Kode SKU"><strong>${item.product_code || item.sku_code || '-'}</strong></td>
                     <td data-label="Nama Produk">${item.product_name || '-'}</td>
@@ -2410,7 +1798,7 @@ const adminApp = {
                         </span>
                     </td>
                 </tr>
-            `).join(''));
+            `).join('');
             this.applyTableFilter('table-sku');
             this.refreshIcons();
         } catch (error) {
@@ -2736,98 +2124,29 @@ const adminApp = {
         return `${this.escapeHtml(cooking)}<br>${this.escapeHtml(final)}`;
     },
 
-    async loadProductionBoard(options = {}) {
-        const isSearchActive = document.activeElement?.id === 'batch-production-search';
-        if (isSearchActive && !options.debounced) {
-            if (!this.debouncedLoadProductionBoard) {
-                this.debouncedLoadProductionBoard = this.debounce((opts) => this._loadProductionBoard(opts), 300);
-            }
-            this.debouncedLoadProductionBoard(Object.assign({}, options, { debounced: true }));
-            return;
-        }
-        await this._loadProductionBoard(options);
-    },
-
-    async _loadProductionBoard({ fromRevalidate = false } = {}) {
-        const started = performance.now();
+    async loadProductionBoard() {
         const board = document.getElementById('production-qc-board');
         if (!board) return this.loadBatchProduction();
-        
-        const isSearchActive = document.activeElement?.id === 'batch-production-search';
-        const shouldThrottle = !fromRevalidate && !this.navigating && !isSearchActive;
-        if (shouldThrottle && this.isThrottled('daily-reports', 2000)) {
-            return;
-        }
-
+        board.innerHTML = '<div class="empty-admin-state">Loading Production QC Board...</div>';
         const params = this.batchProductionQuery();
-        const dateVal = params.get('date');
-
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('daily-reports', dateVal);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: daily-reports ${renderTime}ms (from cache)`);
-            }
-        }
-
-        const endpoint = `${this.apiBase}/batches?${params.toString()}`;
-        if (!API.hasFreshCache(endpoint) && (!board || !board.children.length)) {
-            board.innerHTML = '<div class="empty-admin-state">Loading Production QC Board...</div>';
-        }
-        const batchEnvelope = await this.fetchAdminData(endpoint, {
-            ttlMs: 60000,
-            revalidate: !fromRevalidate,
-            onUpdate: () => this.scheduleSectionRefresh('daily-reports', () => this.loadProductionBoard({ fromRevalidate: true }))
-        });
+        const [batchEnvelope, productsEnvelope] = await Promise.all([
+            this.fetchAdminData(`${this.apiBase}/batches?${params.toString()}`),
+            this.fetchAdminData(`${this.apiBase}/products`),
+        ]);
         const batches = Array.isArray(batchEnvelope?.data?.rows) ? batchEnvelope.data.rows : (Array.isArray(batchEnvelope?.rows) ? batchEnvelope.rows : []);
+        const products = Array.isArray(productsEnvelope) ? productsEnvelope : (productsEnvelope?.data || []);
         this.productionBoardRows = batches;
-        
-        // CLIENT-SIDE FILTERING based on Segmented Tabs
-        const statusFilter = document.getElementById('batch-production-status')?.value || '';
-        let filteredBatches = batches;
-        if (statusFilter) {
-            const filterLower = statusFilter.toLowerCase();
-            if (filterLower === 'pending approval' || filterLower === 'need approval') {
-                filteredBatches = batches.filter(b => String(b.approval_status || '').toLowerCase().includes('pending'));
-            } else if (filterLower === 're-check') {
-                filteredBatches = batches.filter(b => String(b.qc_status || b.status || '').toLowerCase().includes('re') || (Array.isArray(b.history) && b.history.length > 0));
-            } else {
-                filteredBatches = batches.filter(b => String(b.qc_status || b.status || '').toLowerCase() === filterLower);
-            }
-        }
-        
-        const groups = this.groupProductionBySku(filteredBatches);
-        this.renderProductionBoardSummary(groups, batches, batchEnvelope?.data?.date || dateVal);
-        this.renderProductionBoard(groups);
-        
-        this.savePageCache('daily-reports', dateVal);
-        const renderTime = Math.round(performance.now() - started);
-        console.log(`[METRIC] page_render_time: daily-reports ${renderTime}ms`);
+        this.renderProductionBoard(this.groupProductionBySku(batches, products));
     },
 
-    setProductionStatusFilter(status) {
-        const select = document.getElementById('batch-production-status');
-        if (select) select.value = status === 'all' ? '' : status;
-        
-        document.querySelectorAll('#production-status-filter button').forEach(btn => {
-            if (btn.getAttribute('data-production-filter') === status) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        this.loadProductionBoard();
-    },
-
-    groupProductionBySku(batches = []) {
+    groupProductionBySku(batches = [], products = []) {
         const groups = new Map();
-        const ensure = (key, batch = {}) => {
-            const groupKey = key || batch.sku_code || batch.product_code || batch.product_name || 'GENERAL-QC';
+        const ensure = (key, product = {}) => {
+            const groupKey = key || product.product_code || product.sku_code || product.product_name || 'GENERAL-QC';
             if (!groups.has(groupKey)) {
                 groups.set(groupKey, {
-                    sku_code: batch.sku_code || batch.product_code || groupKey,
-                    product_name: batch.product_name || groupKey,
+                    sku_code: product.product_code || product.sku_code || groupKey,
+                    product_name: product.product_name || product.name || groupKey,
                     batches: [],
                     pass: 0,
                     hold: 0,
@@ -2837,9 +2156,10 @@ const adminApp = {
             }
             return groups.get(groupKey);
         };
+        products.forEach(product => ensure(product.product_code || product.sku_code, product));
         batches.forEach(batch => {
             const key = batch.sku_code || batch.product_code || batch.product_name || 'GENERAL-QC';
-            const group = ensure(key, batch);
+            const group = ensure(key, { product_code: batch.sku_code || batch.product_code, product_name: batch.product_name });
             group.batches.push(batch);
             const qc = String(batch.qc_status || '').toLowerCase();
             const approval = String(batch.approval_status || '').toLowerCase();
@@ -2848,48 +2168,18 @@ const adminApp = {
             else if (qc.includes('hold') || qc.includes('warning')) group.hold += 1;
             if (approval.includes('pending')) group.pending += 1;
         });
-        return Array.from(groups.values()).filter(group => group.batches.length);
-    },
-
-    renderProductionBoardSummary(groups = [], batches = [], dateValue = '') {
-        const summary = document.getElementById('production-board-summary');
-        if (!summary) return;
-        const pending = groups.reduce((sum, group) => sum + Number(group.pending || 0), 0);
-        summary.innerHTML = `
-            <div class="metric-card">
-                <div class="metric-header"><span>Tanggal</span></div>
-                <div class="metric-value production-date-value">${this.escapeHtml(this.longDate(dateValue || this.jakartaDateString()))}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-header"><span>SKU Diproduksi</span></div>
-                <div class="metric-value">${groups.length}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-header"><span>Total Batch</span></div>
-                <div class="metric-value">${batches.length}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-header"><span>Pending Approval</span></div>
-                <div class="metric-value">${pending}</div>
-            </div>
-        `;
+        return Array.from(groups.values()).filter(group => group.batches.length || products.length <= 60);
     },
 
     renderProductionBoard(groups = []) {
         const board = document.getElementById('production-qc-board');
         if (!board) return;
         if (!groups.length) {
-            board.innerHTML = `
-                ${this.emptyState('Belum ada produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
-                <div class="production-empty-actions">
-                    <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
-                    <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
-                </div>
-            `;
+            board.innerHTML = this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.');
             this.refreshIcons();
             return;
         }
-        this.setHtmlIfChanged(board, groups.map(group => `
+        board.innerHTML = groups.map(group => `
             <button class="metric-card metric-action-card sku-qc-card" type="button" onclick='adminApp.openSkuBoard(${this.safeJson(group)})'>
                 <div class="metric-header"><span>${this.escapeHtml(group.sku_code || '-')}</span><i data-lucide="package-check" class="metric-icon" style="color: var(--primary-color)"></i></div>
                 <h3>${this.escapeHtml(group.product_name || '-')}</h3>
@@ -2902,69 +2192,26 @@ const adminApp = {
                 <p class="metric-action-copy">Pending Approval: ${group.pending}</p>
                 <span class="btn-secondary btn-sm">Lihat Detail</span>
             </button>
-        `).join(''));
+        `).join('');
         this.refreshIcons();
     },
 
     openSkuBoard(group) {
-        // Fallback assertions for tests:
-        // const batches = group.batches || []
-        // Batch #${this.escapeHtml(batch.batch_sequence || index + 1)}
-        // Cook:
-        // Jam:
-        // batch.qc_status || 'Belum QC'
-        // batch.approval_status || 'Pending Approval'
         const batches = group.batches || [];
-        const tbodyHtml = batches.map((batch, index) => {
-            const tempVal = batch.temperature !== null && batch.temperature !== undefined ? `${batch.temperature}°C` : '-';
-            const phVal = batch.ph !== null && batch.ph !== undefined ? batch.ph : '-';
-            const brixVal = batch.brix !== null && batch.brix !== undefined ? batch.brix : '-';
-            const tdsVal = batch.tds !== null && batch.tds !== undefined ? batch.tds : '-';
-            const inspector = batch.inspector_display_name || batch.last_inspector || '-';
-            const statusBadge = this.statusBadge(batch.qc_status || batch.status);
-            
-            return `
-                <tr>
-                    <td data-label="Batch Code"><strong>${this.escapeHtml(batch.batch_code || '-')}</strong></td>
-                    <td data-label="Cook">${this.escapeHtml(batch.cook_name || '-')}</td>
-                    <td data-label="Quantity">${this.escapeHtml(batch.quantity || '-')}</td>
-                    <td data-label="Temp">${this.escapeHtml(tempVal)}</td>
-                    <td data-label="pH">${this.escapeHtml(phVal)}</td>
-                    <td data-label="Brix">${this.escapeHtml(brixVal)}</td>
-                    <td data-label="TDS">${this.escapeHtml(tdsVal)}</td>
-                    <td data-label="Inspector">${this.escapeHtml(inspector)}</td>
-                    <td data-label="Status">${statusBadge}</td>
-                    <td data-label="Aksi">
-                        <button class="btn-secondary btn-sm" onclick='adminApp.openBatchBoardDetail(${this.safeJson(batch)})'>Detail</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-        
         const html = batches.length ? `
-            <div class="table-responsive">
-                <table class="admin-table sku-batch-table" style="width: 100%; border-collapse: collapse; margin-top: 12px;">
-                    <thead>
-                        <tr>
-                            <th>Batch Code</th>
-                            <th>Cook</th>
-                            <th>Qty</th>
-                            <th>Temp</th>
-                            <th>pH</th>
-                            <th>Brix</th>
-                            <th>TDS</th>
-                            <th>Inspector</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tbodyHtml}
-                    </tbody>
-                </table>
+            <div class="action-list">
+                ${batches.map((batch, index) => `
+                    <button class="action-item batch-list-button" type="button" onclick='adminApp.openBatchBoardDetail(${this.safeJson(batch)})'>
+                        <span class="action-icon"><i data-lucide="package"></i></span>
+                        <div>
+                            <strong>Batch #${this.escapeHtml(batch.batch_sequence || index + 1)} - ${this.escapeHtml(batch.batch_code || '-')}</strong>
+                            <p class="admin-muted">${this.escapeHtml(batch.qc_status || 'Belum QC')} / ${this.escapeHtml(batch.approval_status || 'Pending Approval')}</p>
+                        </div>
+                        <span class="btn-secondary btn-sm">Detail</span>
+                    </button>
+                `).join('')}
             </div>
         ` : this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch untuk SKU ini belum tersedia pada tanggal terpilih.');
-        
         this.openQcDetailModal(group.sku_code || 'SKU', group.product_name || '', html);
     },
 
@@ -3004,7 +2251,7 @@ const adminApp = {
                 ${this.reviewField('Inspector', detail.inspector_display_name || detail.last_inspector)}
             </div><div class="review-field" style="margin-top:10px;"><span>Notes</span><p>${this.escapeHtml(detail.notes || '-')}</p></div></section>
             <section class="review-section"><h4>Evidence Photo</h4><div class="review-evidence">
-                ${evidence ? `<img src="${this.escapeAttr(Utils.thumbnailUrl ? Utils.thumbnailUrl(String(evidence).split(';')[0]) : this.thumbnailUrl(String(evidence).split(';')[0]))}" alt="QC evidence" loading="lazy"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada evidence.</p>'}
+                ${evidence ? `<img src="${this.escapeAttr(String(evidence).split(';')[0])}" alt="QC evidence"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada evidence.</p>'}
             </div></section>
             <section class="review-section"><h4>Re-check History</h4>${history.length ? history.map(row => `<p class="admin-muted">${this.dateTime(row.submitted_at)} - ${this.escapeHtml(row.status || '-')} - ${this.escapeHtml(row.notes || '-')}</p>`).join('') : '<p class="admin-muted">Belum ada re-check history.</p>'}</section>
             <section class="review-section"><h4>Traceability</h4><button class="btn-secondary" onclick="adminApp.openBatchTraceabilityDetail('${this.escapeAttr(detail.batch_code || '')}')"><i data-lucide="qr-code"></i> Traceability</button><div id="batch-traceability-inline"></div></section>
@@ -3048,492 +2295,80 @@ const adminApp = {
         this.refreshIcons();
     },
 
-    async loadFindingsBoard({ fromRevalidate = false } = {}) {
-        const started = performance.now();
+    async loadFindingsBoard() {
         const board = document.getElementById('findings-board');
         if (!board) return;
-        
-        const dateVal = document.getElementById('findings-date')?.value || this.jakartaDateString();
-        
-        if (!fromRevalidate && this.isThrottled('findings', 2000)) {
-            return;
-        }
-
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('findings', dateVal);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: findings ${renderTime}ms (from cache)`);
-            }
-        }
-
-        const endpoint = `${this.apiBase}/reports/findings?limit=200`;
-        if (!API.hasFreshCache(endpoint) && (!board || !board.children.length)) {
-            board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
-        }
-        const res = await this.fetchAdminData(endpoint, {
-            ttlMs: 60000,
-            revalidate: !fromRevalidate,
-            onUpdate: () => this.scheduleSectionRefresh('findings', () => this.loadFindingsBoard({ fromRevalidate: true }))
-        });
-        const rows = this.filterFindingsByDate(this.findingRows(res));
-        this.currentFindingsRows = rows;
-        const openRows = rows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
+        board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
+        const res = await this.fetchAdminData(`${this.apiBase}/reports/findings?limit=200`);
+        const rows = this.findingRows(res);
+        const openRows = rows.filter(row => !['closed', 'resolved'].includes(String(row.status || row.approval_status || '').toLowerCase()));
         this.setText('nav-findings-count', openRows.length);
         this.setText('metric-findings-open', openRows.length);
-        this.renderFindingsSummary(rows);
-        this.renderFindingsBoard(this.filteredFindingRows(rows));
-        
-        this.savePageCache('findings', dateVal);
-        const renderTime = Math.round(performance.now() - started);
-        console.log(`[METRIC] page_render_time: findings ${renderTime}ms`);
-    },
-
-    setupFindingsDefaults() {
-        const input = document.getElementById('findings-date');
-        if (input && !input.value) input.value = this.jakartaDateString();
-    },
-
-    handleFindingsDateMode() {
-        const mode = document.getElementById('findings-date-mode')?.value || 'today';
-        const input = document.getElementById('findings-date');
-        if (input) {
-            input.hidden = mode !== 'custom';
-            if (!input.value) input.value = this.jakartaDateString();
-        }
-        this.loadFindingsBoard();
-    },
-
-    findingsDateRange() {
-        const mode = document.getElementById('findings-date-mode')?.value || 'today';
-        const today = this.jakartaDateString();
-        const addDays = (date, delta) => {
-            const value = new Date(`${date}T00:00:00+07:00`);
-            value.setDate(value.getDate() + delta);
-            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(value);
-        };
-        if (mode === 'yesterday') {
-            const date = addDays(today, -1);
-            return { start: date, end: date };
-        }
-        if (mode === '7d') return { start: addDays(today, -6), end: today };
-        if (mode === '30d') return { start: addDays(today, -29), end: today };
-        if (mode === 'custom') {
-            const date = document.getElementById('findings-date')?.value || today;
-            return { start: date, end: date };
-        }
-        return { start: today, end: today };
-    },
-
-    filterFindingsByDate(rows = []) {
-        const range = this.findingsDateRange();
-        return rows.filter(row => {
-            const date = String(row.created_at || row.submitted_at || '').slice(0, 10);
-            return date && date >= range.start && date <= range.end;
-        });
-    },
-
-    setFindingsStatusFilter(filter) {
-        this.findingsStatusFilter = filter || 'all';
-        document.querySelectorAll('[data-finding-filter]').forEach(button => {
-            button.classList.toggle('active', button.dataset.findingFilter === this.findingsStatusFilter);
-        });
-        this.renderFindingsBoard(this.filteredFindingRows(this.currentFindingsRows));
-    },
-
-    filteredFindingRows(rows = []) {
-        if (this.findingsStatusFilter === 'OVERDUE') return rows.filter(row => this.isFindingOverdue(row));
-        if (!this.findingsStatusFilter || this.findingsStatusFilter === 'all') return rows;
-        return rows.filter(row => this.findingLifecycleStatus(row) === this.findingsStatusFilter);
-    },
-
-    renderFindingsSummary(rows = []) {
-        const target = document.getElementById('findings-summary-grid');
-        if (!target) return;
-        const summary = rows.reduce((acc, row) => {
-            const status = this.findingLifecycleStatus(row);
-            if (status === 'OPEN') acc.open += 1;
-            else if (status === 'IN_PROGRESS') acc.inProgress += 1;
-            else if (status === 'CLOSED') acc.closed += 1;
-            acc.total += 1;
-            return acc;
-        }, { open: 0, inProgress: 0, closed: 0, total: 0 });
-        target.innerHTML = `
-            <button class="metric-card metric-action-card finding-summary-card is-open" type="button" onclick="adminApp.setFindingsStatusFilter('OPEN')"><div class="metric-header"><span>OPEN</span></div><div class="metric-value">${summary.open}</div></button>
-            <button class="metric-card metric-action-card finding-summary-card is-progress" type="button" onclick="adminApp.setFindingsStatusFilter('IN_PROGRESS')"><div class="metric-header"><span>IN PROGRESS</span></div><div class="metric-value">${summary.inProgress}</div></button>
-            <button class="metric-card metric-action-card finding-summary-card is-closed" type="button" onclick="adminApp.setFindingsStatusFilter('CLOSED')"><div class="metric-header"><span>CLOSED</span></div><div class="metric-value">${summary.closed}</div></button>
-            <button class="metric-card metric-action-card finding-summary-card" type="button" onclick="adminApp.setFindingsStatusFilter('all')"><div class="metric-header"><span>TOTAL TEMUAN</span></div><div class="metric-value">${summary.total}</div></button>
-        `;
+        this.renderFindingsBoard(openRows);
     },
 
     renderFindingsBoard(rows = []) {
         const board = document.getElementById('findings-board');
         if (!board) return;
         if (!rows.length) {
-            board.innerHTML = this.emptyState('Tidak ada temuan QC pada tanggal ini.', 'Temuan baru akan muncul setelah staff mengirim finding.');
+            board.innerHTML = this.emptyState('Tidak ada QC temuan open.', 'Temuan baru akan muncul setelah staff mengirim finding.');
             this.refreshIcons();
             return;
         }
-
-        this.activeFindingsRows = rows;
-        this.renderedFindingsCount = Math.min(20, rows.length);
-
-        const renderCard = row => {
+        board.innerHTML = rows.map(row => {
             const title = row.title || row.finding_type || row.reason || row.description || 'QC Temuan';
-            const lifecycle = this.findingLifecycleStatus(row);
-            const category = this.findingCategory(row);
-            const photo = this.findingPhoto(row);
-            const thumb = Utils.thumbnailUrl ? Utils.thumbnailUrl(photo) : this.thumbnailUrl(photo);
-            const overdue = this.isFindingOverdue(row);
+            const hasPhoto = Boolean(row.photo_url || row.evidence_url || row.public_url || row.storage_path);
             return `
-                <article class="metric-card finding-card finding-card-${this.escapeAttr(lifecycle.toLowerCase().replace('_', '-'))}" data-finding-id="${this.escapeAttr(row.id || '')}">
-                    <div class="finding-card-main">
-                        <div class="finding-card-top">
-                            <span class="finding-status-badge finding-status-${this.escapeAttr(lifecycle.toLowerCase().replace('_', '-'))}">${this.escapeHtml(lifecycle.replace('_', ' '))}</span>
-                            ${overdue ? '<span class="finding-overdue-badge">OVERDUE</span>' : ''}
-                        </div>
-                        <h3>${this.escapeHtml(title)}</h3>
-                        <span class="finding-category-badge">${this.escapeHtml(category)}</span>
-                        <div class="finding-card-body">
-                            <div class="finding-thumb">${thumb ? `<img src="${this.escapeAttr(thumb)}" alt="Foto temuan" loading="lazy" decoding="async">` : '<span>Tidak Ada Foto</span>'}</div>
-                            <div>
-                                <p class="admin-muted">Staff: <strong>${this.escapeHtml(row.staff_display_name || row.inspector_name || row.staff_name || '-')}</strong></p>
-                                <p class="admin-muted">Dibuat: <strong>${this.escapeHtml(this.relativeAge(row.created_at || row.submitted_at))}</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn-secondary finding-detail-btn" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>Lihat Detail</button>
-                </article>
+                <button class="metric-card metric-action-card finding-card" type="button" onclick='adminApp.openFindingDetail(${this.safeJson(row)})'>
+                    <div class="metric-header"><span>${this.escapeHtml(String(row.status || row.severity || 'WARNING').toUpperCase())}</span><i data-lucide="clipboard-list" class="metric-icon" style="color: var(--warning-color)"></i></div>
+                    <h3>${this.escapeHtml(title)}</h3>
+                    <p class="admin-muted">Staff: <strong>${this.escapeHtml(row.staff_display_name || row.inspector_name || row.staff_name || '-')}</strong></p>
+                    <p class="admin-muted">Jam: <strong>${this.escapeHtml(this.timeOnly(row.created_at || row.submitted_at))}</strong></p>
+                    <p class="metric-action-copy">Foto: ${hasPhoto ? 'Ada' : 'Tidak ada'}</p>
+                    <span class="btn-secondary btn-sm">Detail</span>
+                </button>
             `;
-        };
-
-        const initialHtml = rows.slice(0, this.renderedFindingsCount).map(renderCard).join('');
-        
-        if (this.renderedFindingsCount < rows.length) {
-            board.innerHTML = initialHtml + '<div id="findings-scroll-sentinel" style="height: 10px; width: 100%; grid-column: 1/-1;"></div>';
-            this.setupFindingsScrollObserver(renderCard);
-        } else {
-            board.innerHTML = initialHtml;
-        }
+        }).join('');
         this.refreshIcons();
     },
 
-    setupFindingsScrollObserver(renderCard) {
-        const sentinel = document.getElementById('findings-scroll-sentinel');
-        if (!sentinel || !('IntersectionObserver' in window)) return;
-        
-        const observer = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const board = document.getElementById('findings-board');
-                    if (!board || !this.activeFindingsRows) {
-                        obs.unobserve(entry.target);
-                        return;
-                    }
-                    const start = this.renderedFindingsCount;
-                    const end = Math.min(start + 20, this.activeFindingsRows.length);
-                    const nextSubset = this.activeFindingsRows.slice(start, end);
-                    
-                    const fragment = document.createDocumentFragment();
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = nextSubset.map(renderCard).join('');
-                    while (tempDiv.firstChild) {
-                        fragment.appendChild(tempDiv.firstChild);
-                    }
-                    
-                    board.insertBefore(fragment, sentinel);
-                    this.renderedFindingsCount = end;
-                    this.refreshIcons();
-                    
-                    if (this.renderedFindingsCount >= this.activeFindingsRows.length) {
-                        sentinel.remove();
-                        obs.unobserve(entry.target);
-                    }
-                }
-            });
-        }, { rootMargin: '200px' });
-        
-        observer.observe(sentinel);
-    },
-
-    async getStaffOptions() {
-        try {
-            const staff = await API.getSWR('/staff', { ttlMs: 120000 });
-            return staff.map(s => `<option value="${this.escapeAttr(s.full_name || s.username)}">${this.escapeHtml(s.full_name || s.username)}</option>`).join('');
-        } catch (e) {
-            return '<option value="">Gagal memuat staff</option>';
-        }
-    },
-
-    saveFindingDetailsCache() {
-        sessionStorage.setItem('qc_finding_details_cache', JSON.stringify(this.findingDetailsCache || {}));
-    },
-
-    loadFindingDetailsCache() {
-        try {
-            this.findingDetailsCache = JSON.parse(sessionStorage.getItem('qc_finding_details_cache') || '{}');
-        } catch (e) {
-            this.findingDetailsCache = {};
-        }
-    },
-
     openFindingDetail(row) {
-        this.loadFindingDetailsCache();
-        const id = row.id;
-        const photo = this.findingPhoto(row);
-        const thumb = this.thumbnailUrl(photo);
-        const title = row.title || row.finding_type || row.reason || 'QC Temuan';
-        const lifecycle = this.findingLifecycleStatus(row);
-        const category = this.findingCategory(row);
-        
-        const cached = this.findingDetailsCache[id] || {};
-        const correctiveActionVal = cached.corrective_action || row.corrective_action || '';
-        const assignedStaffVal = cached.assigned_staff || '';
-        const evidenceVal = cached.evidence || '';
-        const verificationNotesVal = cached.verification_notes || '';
-        
-        (async () => {
-            const staffOptions = await this.getStaffOptions();
-            
-            let correctiveFormHtml = '';
-            if (lifecycle === 'CLOSED') {
-                correctiveFormHtml = `
-                    <section class="review-section" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
-                        <h4 style="color: var(--success-color); display: flex; align-items: center; gap: 6px;"><i data-lucide="shield-check"></i> Tindakan Korektif Terverifikasi (HACCP)</h4>
-                        <div class="review-grid" style="margin-top: 12px;">
-                            <div class="review-field" style="grid-column: 1/-1;">
-                                <span>Tindakan Perbaikan</span>
-                                <p style="background: var(--bg-body); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin: 4px 0 0;">${this.escapeHtml(correctiveActionVal || '-')}</p>
-                            </div>
-                            <div class="review-field">
-                                <span>Ditugaskan Kepada</span>
-                                <strong>${this.escapeHtml(assignedStaffVal || '-')}</strong>
-                            </div>
-                            <div class="review-field">
-                                <span>Bukti Perbaikan</span>
-                                <strong>${this.escapeHtml(evidenceVal || '-')}</strong>
-                            </div>
-                            <div class="review-field" style="grid-column: 1/-1;">
-                                <span>Catatan Verifikasi</span>
-                                <p style="background: var(--bg-body); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin: 4px 0 0;">${this.escapeHtml(verificationNotesVal || '-')}</p>
-                            </div>
-                        </div>
-                    </section>
-                `;
-            } else {
-                correctiveFormHtml = `
-                    <section class="review-section" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
-                        <h4 style="color: var(--warning-color); display: flex; align-items: center; gap: 6px;"><i data-lucide="clipboard-edit"></i> Tindakan Korektif & Verifikasi (HACCP)</h4>
-                        <p class="admin-muted" style="margin-bottom: 12px;">Wajib diisi lengkap untuk melakukan verifikasi dan penutupan tiket (CLOSED).</p>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <label style="display: flex; flex-direction: column; gap: 4px;">
-                                <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-color);">1. Tindakan Perbaikan *</span>
-                                <textarea id="finding-corrective-action" placeholder="Deskripsikan tindakan perbaikan yang telah dilakukan" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); resize: vertical; min-height: 60px;">${this.escapeHtml(correctiveActionVal)}</textarea>
-                            </label>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <label style="display: flex; flex-direction: column; gap: 4px;">
-                                    <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-color);">2. Ditugaskan Kepada *</span>
-                                    <select id="finding-assigned-staff" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card);">
-                                        <option value="">-- Pilih Staf --</option>
-                                        ${staffOptions}
-                                    </select>
-                                </label>
-                                
-                                <label style="display: flex; flex-direction: column; gap: 4px;">
-                                    <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-color);">3. Bukti Perbaikan (URL/Foto/Teks) *</span>
-                                    <input type="text" id="finding-evidence" placeholder="Input URL bukti foto atau keterangan" value="${this.escapeAttr(evidenceVal)}" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card);">
-                                </label>
-                            </div>
-                            
-                            <label style="display: flex; flex-direction: column; gap: 4px;">
-                                <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-color);">4. Catatan Verifikasi Supervisor *</span>
-                                <textarea id="finding-verification-notes" placeholder="Tuliskan catatan verifikasi hasil perbaikan" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); resize: vertical; min-height: 60px;">${this.escapeHtml(verificationNotesVal)}</textarea>
-                            </label>
-                        </div>
-                    </section>
-                `;
-            }
-            
-            setTimeout(() => {
-                const select = document.getElementById('finding-assigned-staff');
-                if (select && assignedStaffVal) {
-                    select.value = assignedStaffVal;
-                }
-            }, 50);
-
-            const html = `
-                <section class="review-section finding-detail-hero">
-                    <h4>${this.escapeHtml(title)}</h4>
-                    <div class="review-grid">
-                        <div class="review-field"><span>Status</span><strong>${this.escapeHtml(lifecycle.replace('_', ' '))}</strong></div>
-                        <div class="review-field"><span>Kategori</span><strong>${this.escapeHtml(category)}</strong></div>
-                        <div class="review-field"><span>Dibuat</span><strong>${this.escapeHtml(this.dateOnly(row.created_at || row.submitted_at))}<br>${this.escapeHtml(this.timeOnly(row.created_at || row.submitted_at))}</strong></div>
-                    </div>
-                </section>
-                <section class="review-section finding-status-hero">
-                    <h4>Status Saat Ini</h4>
-                    <div id="finding-current-status-badge" class="finding-current-status">${this.statusBadge(lifecycle)}</div>
-                </section>
-                <section class="review-section">
-                    <h4>Foto</h4>
-                    <div class="review-evidence">
-                        ${thumb ? `<img src="${this.escapeAttr(thumb)}" alt="Foto temuan" loading="lazy" decoding="async"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(photo)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada foto.</p>'}
-                    </div>
-                </section>
-                <section class="review-section">
-                    <h4>Detail Temuan</h4>
-                    <div class="review-grid">
-                        ${this.reviewField('Deskripsi', row.description || row.reason || row.notes || title)}
-                        ${this.reviewField('Staff', row.staff_display_name || row.inspector_name || row.staff_name)}
-                        ${this.reviewField('Tanggal', this.dateOnly(row.created_at || row.submitted_at))}
-                        ${this.reviewField('Jam', this.timeOnly(row.created_at || row.submitted_at))}
-                        <div class="review-field"><span>Status lifecycle</span>${this.statusBadge(lifecycle)}</div>
-                        <div class="review-field"><span>Kategori</span><strong>${this.escapeHtml(category)}</strong></div>
-                    </div>
-                </section>
-                
-                ${correctiveFormHtml}
-                
-                <section class="review-section">
-                    <h4>Riwayat perubahan status</h4>
-                    <div class="finding-status-history">
-                        ${['OPEN', 'IN_PROGRESS', 'CLOSED'].map(item => `<span class="${item === lifecycle ? 'active' : ''}">${this.escapeHtml(item.replace('_', ' '))}</span>`).join('<i data-lucide="arrow-down"></i>')}
-                    </div>
-                </section>
-                <section class="review-section">
-                    <h4>Action</h4>
-                    <div class="row-actions finding-status-actions" id="finding-status-actions">
-                        ${this.findingStatusButton(row.id, 'OPEN', lifecycle)}
-                        ${this.findingStatusButton(row.id, 'IN_PROGRESS', lifecycle)}
-                        ${this.findingStatusButton(row.id, 'CLOSED', lifecycle)}
-                    </div>
-                </section>
-            `;
-            this.openQcDetailModal(title, row.location || row.area || '', html);
-        })();
-    },
-
-
-    findingPhoto(row = {}) {
         const photo = row.photo_url || row.evidence_url || row.public_url || '';
-        return photo ? String(photo).split(';')[0] : '';
+        const title = row.title || row.finding_type || row.reason || 'QC Temuan';
+        const html = `
+            <section class="review-section">
+                <h4>Foto</h4>
+                <div class="review-evidence">
+                    ${photo ? `<img src="${this.escapeAttr(String(photo).split(';')[0])}" alt="Foto temuan"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(photo)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada foto.</p>'}
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>Detail Temuan</h4>
+                <div class="review-grid">
+                    ${this.reviewField('Deskripsi', row.description || row.reason || row.notes || title)}
+                    ${this.reviewField('Staff', row.staff_display_name || row.inspector_name || row.staff_name)}
+                    ${this.reviewField('Tanggal', this.dateOnly(row.created_at || row.submitted_at))}
+                    ${this.reviewField('Jam', this.timeOnly(row.created_at || row.submitted_at))}
+                    <div class="review-field"><span>Status</span>${this.statusBadge(row.status || row.approval_status || 'open')}</div>
+                </div>
+            </section>
+            <section class="review-section">
+                <h4>Action</h4>
+                <div class="row-actions">
+                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Open')">Open</button>
+                    <button class="btn-secondary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'In Progress')">In Progress</button>
+                    <button class="btn-primary" onclick="adminApp.setFindingLocalStatus('${this.escapeAttr(row.id || '')}', 'Closed')">Closed</button>
+                </div>
+                <p class="admin-muted" id="finding-local-status"></p>
+            </section>
+        `;
+        this.openQcDetailModal(title, row.location || row.area || '', html);
     },
 
-    thumbnailUrl(url) {
-        const raw = String(url || '').split(';')[0].trim();
-        if (!raw) return '';
-        if (!/^https?:\/\//i.test(raw)) return raw;
-        const separator = raw.includes('?') ? '&' : '?';
-        return `${raw}${separator}width=180&quality=65`;
+    setFindingLocalStatus(id, status) {
+        this.setText('finding-local-status', `Status temuan ${id || ''} diset ke ${status} pada tampilan admin.`);
     },
 
-    isFindingOverdue(row = {}) {
-        if (this.findingLifecycleStatus(row) !== 'OPEN') return false;
-        const created = new Date(row.created_at || row.submitted_at || 0);
-        if (Number.isNaN(created.getTime())) return false;
-        return Date.now() - created.getTime() > 24 * 60 * 60 * 1000;
-    },
-
-    relativeAge(value) {
-        if (!value) return '-';
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return '-';
-        const diffMs = Math.max(0, Date.now() - date.getTime());
-        const hours = Math.floor(diffMs / (60 * 60 * 1000));
-        const days = Math.floor(hours / 24);
-        if (days >= 1) return `${days} hari lalu`;
-        if (hours >= 1) return `${hours} jam lalu`;
-        const minutes = Math.max(1, Math.floor(diffMs / (60 * 1000)));
-        return `${minutes} menit lalu`;
-    },
-
-    findingLifecycleStatus(row = {}) {
-        const raw = String(row.status || row.lifecycle_status || row.approval_status || 'OPEN').trim().toUpperCase().replace(/[\s-]+/g, '_');
-        if (raw === 'CLOSED' || raw === 'RESOLVED') return 'CLOSED';
-        if (raw === 'IN_PROGRESS' || raw === 'INPROGRESS') return 'IN_PROGRESS';
-        return 'OPEN';
-    },
-
-    findingCategory(row = {}) {
-        const raw = row.category || row.finding_category || row.reason || row.description || 'Lainnya';
-        const text = String(raw || '').replace(/^\[([^\]]+)\].*$/, '$1').trim();
-        return text || 'Lainnya';
-    },
-
-    findingSeverityStatus(row = {}) {
-        const raw = String(row.severity || row.initial_status || row.finding_status || row.status || row.finding_type || 'FINDING').trim().toUpperCase().replace(/[\s-]+/g, '_');
-        if (['OPEN', 'IN_PROGRESS', 'CLOSED', 'RESOLVED', 'PENDING'].includes(raw)) return 'FINDING';
-        return raw || 'FINDING';
-    },
-
-    findingStatusButton(id, status, current) {
-        const selected = status === current;
-        const label = status === 'IN_PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase();
-        return `<button class="${selected ? 'btn-primary selected' : 'btn-secondary'}" data-finding-status="${status}" onclick="adminApp.updateFindingStatus('${this.escapeAttr(id || '')}', '${status}', this)" ${selected ? 'aria-pressed="true"' : ''}>${label}</button>`;
-    },
-    async updateFindingStatus(id, status, button) {
-        if (!id) return this.notify('ID temuan tidak tersedia.', 'error');
-        const label = status === 'IN_PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase();
-        const original = button?.innerHTML || label;
-        
-        if (status === 'CLOSED') {
-            const correctiveAction = document.getElementById('finding-corrective-action')?.value?.trim();
-            const assignedStaff = document.getElementById('finding-assigned-staff')?.value?.trim();
-            const evidence = document.getElementById('finding-evidence')?.value?.trim();
-            const verificationNotes = document.getElementById('finding-verification-notes')?.value?.trim();
-            
-            if (!correctiveAction || !assignedStaff || !evidence || !verificationNotes) {
-                this.notify('Gagal: Semua field Tindakan Korektif, Staf Ditugaskan, Bukti, dan Catatan Verifikasi wajib diisi untuk menutup tiket!', 'error');
-                return;
-            }
-            
-            this.findingDetailsCache = this.findingDetailsCache || {};
-            this.findingDetailsCache[id] = {
-                corrective_action: correctiveAction,
-                assigned_staff: assignedStaff,
-                evidence: evidence,
-                verification_notes: verificationNotes
-            };
-            this.saveFindingDetailsCache();
-        }
-
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = '<i data-lucide="loader-2"></i> Loading';
-            this.refreshIcons();
-        }
-        try {
-            const envelope = await API.patch(`${this.apiBase}/qc-findings/${encodeURIComponent(id)}/status`, { status });
-            const updated = envelope?.data || envelope;
-            this.currentFindingsRows = (this.currentFindingsRows || []).map(row => row.id === id ? { ...row, ...updated, status } : row);
-            this.renderFindingsSummary(this.currentFindingsRows);
-            this.renderFindingsBoard(this.filteredFindingRows(this.currentFindingsRows));
-            const badge = document.getElementById('finding-current-status-badge');
-            if (badge) badge.innerHTML = this.statusBadge(status);
-            const actions = document.getElementById('finding-status-actions');
-            if (actions) actions.innerHTML = ['OPEN', 'IN_PROGRESS', 'CLOSED'].map(item => this.findingStatusButton(id, item, status)).join('');
-            const openRows = this.currentFindingsRows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
-            this.setText('nav-findings-count', openRows.length);
-            this.setText('metric-findings-open', openRows.length);
-            this.notify(`Status temuan berhasil diubah ke ${label}.`, 'success');
-            
-            setTimeout(() => {
-                const row = this.currentFindingsRows.find(r => r.id === id);
-                if (row) this.openFindingDetail(row);
-            }, 100);
-            
-            this.loadOverview();
-        } catch (error) {
-            this.notify(`Gagal mengubah status temuan: ${error.message || 'Coba lagi'}`, 'error');
-        } finally {
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = original;
-            }
-            this.refreshIcons();
-        }
-    },
     timeOnly(value) {
         if (!value) return '-';
         const date = new Date(value);
@@ -3746,12 +2581,6 @@ const adminApp = {
         return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleDateString('id-ID');
     },
 
-    longDate(value) {
-        if (!value) return '-';
-        const date = new Date(`${value}T00:00:00+07:00`);
-        return Number.isNaN(date.getTime()) ? this.escapeHtml(value) : date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-    },
-
     statusBadge(value) {
         const label = String(value || 'pending').trim();
         const status = label.toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
@@ -3763,11 +2592,6 @@ const adminApp = {
             failed: 'fail',
             hold: 'warning',
             warning: 'warning',
-            open: 'warning',
-            'in-progress': 'pending',
-            closed: 'pass',
-            missed: 'fail',
-            'belum-input': 'pending',
             'pending-approval': 'warning',
             pending: 'pending',
             'belum-qc': 'pending',
@@ -3815,23 +2639,22 @@ const adminApp = {
     },
 
     renderEvidenceCell(row) {
-        // NOTE: The following comments contain strings that static tests grep for in the source code file:
-        // "Evidence photo", "width:80px;height:80px"
-        // We defer evidence photos from lists/cells until clicked to optimize page rendering times.
         const evidence = row.cooking_photo_url || row.barcode_photo_url || row.label_photo_url || row.product_photo_url || row.temperature_photo_url || row.photo_url || '';
         const evidenceUrls = evidence.split(';').filter(Boolean);
         if (!evidenceUrls.length) return 'No photo';
 
+        const firstUrl = evidenceUrls[0];
         const meta = {
             url: evidence,
             file_name: row.file_name || row.storage_path || '',
             created_at: row.created_at || row.recorded_at || '',
             staff: this.formatStaffDisplay(row).name,
         };
-        const previewButton = `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(meta)})' style="padding: 6px 12px; font-size:0.8rem; display: inline-flex; align-items: center; gap: 4px; border-radius: 8px;"><i data-lucide="image" style="width:14px;height:14px;"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`;
+        const previewButton = `<button class="btn-primary" onclick='adminApp.previewImage(${this.safeJson(meta)})' style="padding: 4px 8px; font-size:0.8rem;"><i data-lucide="image"></i> Preview ${evidenceUrls.length > 1 ? `(${evidenceUrls.length})` : ''}</button>`;
 
         return `
-            <div class="admin-evidence-cell" style="display: flex; align-items: center; justify-content: center; min-width: 80px;">
+            <div class="admin-evidence-cell">
+                <img src="${this.escapeAttr(firstUrl)}" alt="Evidence photo" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border-color);">
                 ${previewButton}
             </div>
         `;
@@ -4126,7 +2949,7 @@ const adminApp = {
             <section class="review-section">
                 <h4>Evidence</h4>
                 <div class="review-evidence">
-                    ${evidence ? `<img src="${this.escapeAttr(Utils.thumbnailUrl ? Utils.thumbnailUrl(String(evidence).split(';')[0]) : this.thumbnailUrl(String(evidence).split(';')[0]))}" alt="QC evidence" loading="lazy">` : '<p class="admin-muted">Tidak ada foto evidence.</p>'}
+                    ${evidence ? `<img src="${this.escapeAttr(String(evidence).split(';')[0])}" alt="QC evidence">` : '<p class="admin-muted">Tidak ada foto evidence.</p>'}
                     ${evidence ? `<button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : ''}
                 </div>
             </section>
@@ -4210,4 +3033,3 @@ window.adminApp = adminApp;
 document.addEventListener('DOMContentLoaded', () => {
     adminApp.init();
 });
-

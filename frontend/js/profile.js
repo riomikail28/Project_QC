@@ -5,114 +5,26 @@ const ProfilePage = {
             window.location.href = 'login.html';
             return;
         }
-        const hasCache = this.restoreCache();
-        if (hasCache) {
-            document.body.classList.remove('is-loading');
-        }
-        await this.load({ silent: hasCache });
+        await this.load();
     },
 
-    async load({ silent = false } = {}) {
-        if (!silent) document.body.classList.add('is-loading');
+    async load() {
+        document.body.classList.add('is-loading');
         try {
             const [me, summary] = await Promise.all([
-                API.getSWR('/profile/me', {
-                    ttlMs: 3600000,
-                    onUpdate: data => {
-                        const user = data?.data || data || {};
-                        Auth.persistUser(user);
-                        this.renderIdentity(user);
-                        this.saveCache();
-                    }
-                }),
-                API.getSWR('/profile/activity-summary', {
-                    ttlMs: 30000,
-                    onUpdate: data => {
-                        this.renderSummary(data?.data || data || {});
-                        this.saveCache();
-                    }
-                }),
+                API.get('/profile/me'),
+                API.get('/profile/activity-summary'),
             ]);
-            const user = me?.data || me || Auth.user() || {};
+            const user = me.data || Auth.user() || {};
             Auth.persistUser(user);
             this.renderIdentity(user);
-            this.renderSummary(summary?.data || summary || {});
-            this.saveCache();
+            this.renderSummary(summary.data || {});
         } catch (error) {
             this.renderIdentity(Auth.user() || {});
             this.renderError(error);
         } finally {
             document.body.classList.remove('is-loading');
             if (window.lucide) lucide.createIcons();
-        }
-    },
-
-    saveCache() {
-        try {
-            const data = {
-                displayUsername: document.getElementById('displayUsername')?.textContent || '',
-                roleSubtitle: document.getElementById('roleSubtitle')?.textContent || '',
-                displayRoleText: document.getElementById('displayRole')?.innerText || 'STAFF',
-                displayRoleClass: document.getElementById('displayRole')?.className || 'role-pill staff',
-                displayShift: document.getElementById('displayShift')?.textContent || 'No shift data',
-                fullName: document.getElementById('fullName')?.textContent || '-',
-                roleInfo: document.getElementById('roleInfo')?.textContent || '-',
-                departmentInfo: document.getElementById('departmentInfo')?.textContent || '-',
-                statusInfo: document.getElementById('statusInfo')?.textContent || 'Active',
-                lastLogin: document.getElementById('lastLogin')?.textContent || 'No login record',
-                avatarSmall: document.getElementById('avatarSmall')?.textContent || 'QC',
-                avatarInitials: document.getElementById('avatarInitials')?.textContent || 'QC',
-                performanceGrid: document.getElementById('performanceGrid')?.innerHTML || '',
-                emptyActivityHidden: document.getElementById('emptyActivity')?.hidden ?? true,
-                bodyClassAdmin: document.body.classList.contains('admin-profile')
-            };
-            localStorage.setItem('page_cache:staff_profile', JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save profile cache:', e);
-        }
-    },
-
-    restoreCache() {
-        try {
-            const dataStr = localStorage.getItem('page_cache:staff_profile');
-            if (!dataStr) return false;
-            const data = JSON.parse(dataStr);
-            
-            const setText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && val !== undefined) el.textContent = val;
-            };
-            const setHtml = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && val !== undefined) el.innerHTML = val;
-            };
-
-            setText('displayUsername', data.displayUsername);
-            setText('roleSubtitle', data.roleSubtitle);
-            const roleEl = document.getElementById('displayRole');
-            if (roleEl) {
-                roleEl.innerText = data.displayRoleText || 'STAFF';
-                roleEl.className = data.displayRoleClass || 'role-pill staff';
-            }
-            setText('displayShift', data.displayShift);
-            setText('fullName', data.fullName);
-            setText('roleInfo', data.roleInfo);
-            setText('departmentInfo', data.departmentInfo);
-            setText('statusInfo', data.statusInfo);
-            setText('lastLogin', data.lastLogin);
-            setText('avatarSmall', data.avatarSmall);
-            setText('avatarInitials', data.avatarInitials);
-            setHtml('performanceGrid', data.performanceGrid);
-            const empty = document.getElementById('emptyActivity');
-            if (empty) empty.hidden = data.emptyActivityHidden;
-            
-            document.body.classList.toggle('admin-profile', data.bodyClassAdmin);
-            
-            if (window.lucide) lucide.createIcons();
-            return true;
-        } catch (e) {
-            console.error('Failed to restore profile cache:', e);
-            return false;
         }
     },
 

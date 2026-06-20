@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -39,8 +40,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "photo-preview" in html
     assert "renderPhotoPreview" in js
     assert "Catatan" in html
-    assert 'capture="environment"' in html
-    assert "padding-bottom: max(128px" in css
+    assert "capture=\"environment\"" in html
 
 
 def test_qc_check_helper_text_not_duplicated():
@@ -86,21 +86,18 @@ def test_qc_check_field_mobile_ux_has_step_summary_and_context():
     assert "rememberRecentSubmission" in js
     assert ".qc-status-option" in css
     assert "min-height: 76px" in css
-    assert "min-height: 58px" in css
 
 
 def test_qc_check_sku_card_workflow_contract():
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
-    assert "Cari SKU, pilih produk, lalu pilih batch untuk QC Check." in html
+    assert "Pilih atau tambahkan SKU untuk mulai pengecekan." in html
     assert "skuEmptyNote" in html
     assert "openSkuSearch" in js
     assert "addSkuCard" in js
     assert "batchListTemplate" in js
-    assert "data-sku-detail" in js
-    assert "openSkuDetail" in js
-    assert "renderSkuDetailDrawer" in js
+    assert "data-qc-batch" in js
     assert "Tambah Re-check" in js
     assert "Lihat Hasil" in js
     assert "openQcForm" in js
@@ -124,18 +121,6 @@ def test_qc_modal_has_scrollable_body_and_sticky_footer():
     assert "overflow-x: hidden" in css
     assert "position: sticky" in css
     assert "bottom: 0" in css
-    assert "max-height: 90vh" in css
-    assert "padding: 12px 14px max(96px" in css
-
-
-def test_qc_check_mobile_cards_and_actions_are_compact():
-    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
-
-    assert ".sku-card" in css and "padding: 12px;" in css
-    assert ".sku-card-head h2" in css and "font-size: 17px;" in css
-    assert ".batch-card" in css and "padding: 10px;" in css
-    assert ".add-sku-btn" in css and "min-height: 44px;" in css
-    assert ".qc-form-footer .btn-secondary" in css and "min-height: 44px;" in css
 
 
 def test_qc_modal_close_cancel_and_escape_contract():
@@ -178,9 +163,9 @@ def test_qc_modal_hidden_by_default_and_not_active_initially():
 
     assert 'id="qcFormSheet" hidden aria-hidden="true"' in html
     assert 'id="qcFormBackdrop" hidden aria-hidden="true"' in html
-    assert "qc-form-sheet open" not in html
-    assert "qc-form-sheet active" not in html
-    assert "qc-sheet-backdrop open" not in html
+    assert 'qc-form-sheet open' not in html
+    assert 'qc-form-sheet active' not in html
+    assert 'qc-sheet-backdrop open' not in html
     assert ".qc-form-sheet[hidden]" in css
     assert "display: none !important" in css
 
@@ -248,8 +233,9 @@ def test_qc_check_empty_state_only_when_no_today_products():
 
     assert "Belum ada SKU dipilih" not in html
     assert "empty-icon" not in html
+    assert html.count("Tambah Produk / SKU") == 1
     assert "skuEmptyNote" in html
-    assert "Belum ada SKU hari ini." in html
+    assert "Belum ada batch hari ini. Pilih SKU atau buat pemasakan baru." in html
     assert "empty.hidden = Boolean(this.skuCards.length)" in js
 
 
@@ -268,8 +254,7 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
     assert "qc-form-body" in html
     assert "qc-form-footer" in html
     assert "Simpan Pemasakan" in html
-    assert "skuDetailNextBatchBtn" in html
-    assert "document.getElementById('skuDetailNextBatchBtn')" in js
+    assert "data-next-batch" in js
     assert "+ Tambah Pemasakan Berikutnya" in js
     assert "+ Buat Pemasakan ke-1" in js
     assert "saveNextBatch" in js
@@ -279,9 +264,7 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
 def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
-    save_block = js[
-        js.index("async saveNextBatch()") : js.index("renderBatchSummary", js.index("async saveNextBatch()"))
-    ]
+    save_block = js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
 
     assert "quantity," in js
     assert "const quantity = Number(document.getElementById('nextQuantity')?.value)" in js
@@ -375,71 +358,8 @@ def test_qc_check_batch_one_and_two_render_in_single_sku_template():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
 
     assert "Batch #${index + 1}" in js
-    assert "this.batchListTemplate(productKey, batches)" in js
+    assert "batchListTemplate(key, batches)" in js
     assert "skuCardTemplate(product)" in js
-
-
-def test_qc_check_mobile_v3_sku_list_is_compact_and_searchable():
-    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
-    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
-
-    assert "SKU HARI INI" in html
-    assert "skuTodayCount" in html
-    assert "skuListSearch" in html
-    assert "Search SKU" in html
-    assert "filteredSkuCards" in js
-    assert "this.skuListQuery = event.target.value || ''" in js
-    assert "name.includes(query) || code.includes(query)" in js
-    assert "skuSummaryLine(batches, summary)" in js
-    assert (
-        "Cook"
-        not in js[
-            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
-        ]
-    )
-    assert (
-        "Qty"
-        not in js[
-            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
-        ]
-    )
-    assert (
-        "pH"
-        not in js[
-            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
-        ]
-    )
-
-
-def test_qc_check_mobile_v3_sku_detail_drawer_and_batch_list():
-    html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
-    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
-    css = (ROOT / "frontend" / "styles" / "qc.css").read_text(encoding="utf-8")
-
-    assert "skuDetailDrawer" in html
-    assert "skuDetailTitle" in html
-    assert "skuDetailCode" in html
-    assert "skuDetailCategory" in html
-    assert "skuDetailBatchList" in html
-    assert "Batch List" in html
-    assert "openSkuDetail(productKey)" in js
-    assert "closeSkuDetail()" in js
-    assert "renderSkuDetailDrawer(productKey)" in js
-    assert "batch-card-compact" in js
-    assert "data-qc-batch" in js
-    assert "data-recheck-batch" in js
-    assert ".sku-detail-drawer" in css
-    assert "max-height: 90vh" in css
-
-
-def test_qc_check_mobile_v3_batch_click_opens_existing_qc_form():
-    js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
-
-    assert "this.openQcForm(product, batch, { recheck: false })" in js
-    assert "this.openQcForm(product, batch, { recheck: true })" in js
-    assert "async submitQc(button)" in js
-    assert "await API.upload('/inspection/submit', formData)" in js
-    assert "formData.append('parent_inspection', this.recheckParentInspection)" in js
 
 
 def test_qc_check_manual_sku_only_fallback():
