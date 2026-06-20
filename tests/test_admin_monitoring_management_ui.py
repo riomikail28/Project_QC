@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -20,7 +19,10 @@ def test_monitoring_management_uses_grouped_room_row_list_layout():
     assert "monitoring-device-row" in js
     assert ".monitoring-room-group" in css
     assert ".monitoring-device-row" in css
-    assert "grid-template-columns: minmax(180px, 2fr) minmax(110px, 1fr) minmax(150px, 1.5fr) minmax(92px, auto) minmax(180px, auto);" in css
+    assert (
+        "grid-template-columns: minmax(180px, 2fr) minmax(110px, 1fr) minmax(150px, 1.5fr) minmax(92px, auto) minmax(180px, auto);"
+        in css
+    )
     assert 'id="monitoring-management-list"' in html
 
 

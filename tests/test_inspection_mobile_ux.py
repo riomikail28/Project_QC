@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -40,7 +39,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "photo-preview" in html
     assert "renderPhotoPreview" in js
     assert "Catatan" in html
-    assert "capture=\"environment\"" in html
+    assert 'capture="environment"' in html
 
 
 def test_qc_check_helper_text_not_duplicated():
@@ -163,9 +162,9 @@ def test_qc_modal_hidden_by_default_and_not_active_initially():
 
     assert 'id="qcFormSheet" hidden aria-hidden="true"' in html
     assert 'id="qcFormBackdrop" hidden aria-hidden="true"' in html
-    assert 'qc-form-sheet open' not in html
-    assert 'qc-form-sheet active' not in html
-    assert 'qc-sheet-backdrop open' not in html
+    assert "qc-form-sheet open" not in html
+    assert "qc-form-sheet active" not in html
+    assert "qc-sheet-backdrop open" not in html
     assert ".qc-form-sheet[hidden]" in css
     assert "display: none !important" in css
 
@@ -264,7 +263,9 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
 def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
-    save_block = js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
+    save_block = js[
+        js.index("async saveNextBatch()") : js.index("renderBatchSummary", js.index("async saveNextBatch()"))
+    ]
 
     assert "quantity," in js
     assert "const quantity = Number(document.getElementById('nextQuantity')?.value)" in js

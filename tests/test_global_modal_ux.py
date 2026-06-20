@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -83,8 +82,9 @@ def test_monitoring_submit_success_toast_uses_clear_success_message():
     monitoring_js = read("frontend/js/monitoring.js")
 
     success_block = monitoring_js[
-        monitoring_js.index('if (result.success) {'):
-        monitoring_js.index('} else {', monitoring_js.index('if (result.success) {'))
+        monitoring_js.index("if (result.success) {") : monitoring_js.index(
+            "} else {", monitoring_js.index("if (result.success) {")
+        )
     ]
     assert 'showMonitoringToast("Data monitoring berhasil disimpan.")' in success_block
     assert "result.schedule?.message" not in success_block

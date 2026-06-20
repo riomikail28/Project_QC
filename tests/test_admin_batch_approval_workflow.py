@@ -3,40 +3,47 @@ from unittest.mock import patch
 
 from tests.conftest import FakeSupabase
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_batch_production_endpoint_returns_production_batches(client, admin_headers):
-    fake_db = FakeSupabase({
-        "production_batches": [{
-            "id": "batch-1",
-            "batch_code": "BATCH-001",
-            "product_code": "SKU-001",
-            "product_name": "Chicken Teriyaki",
-            "batch_sequence": 2,
-            "cook_name": "Andi",
-            "quantity": 120,
-            "production_date": "2026-06-07",
-            "created_at": "2026-06-07T02:30:00Z",
-        }],
-        "qc_reports": [{
-            "id": "qc-1",
-            "batch_id": "batch-1",
-            "batch_code": "BATCH-001",
-            "status": "pass",
-            "staff_id": "staff-1",
-            "created_at": "2026-06-07T03:00:00Z",
-        }],
-        "approvals": [{
-            "id": "approval-1",
-            "related_type": "qc_report",
-            "related_id": "qc-1",
-            "status": "pending",
-            "batch_code": "BATCH-001",
-            "created_at": "2026-06-07T03:02:00Z",
-        }],
-    })
+    fake_db = FakeSupabase(
+        {
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "BATCH-001",
+                    "product_code": "SKU-001",
+                    "product_name": "Chicken Teriyaki",
+                    "batch_sequence": 2,
+                    "cook_name": "Andi",
+                    "quantity": 120,
+                    "production_date": "2026-06-07",
+                    "created_at": "2026-06-07T02:30:00Z",
+                }
+            ],
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "batch_id": "batch-1",
+                    "batch_code": "BATCH-001",
+                    "status": "pass",
+                    "staff_id": "staff-1",
+                    "created_at": "2026-06-07T03:00:00Z",
+                }
+            ],
+            "approvals": [
+                {
+                    "id": "approval-1",
+                    "related_type": "qc_report",
+                    "related_id": "qc-1",
+                    "status": "pending",
+                    "batch_code": "BATCH-001",
+                    "created_at": "2026-06-07T03:02:00Z",
+                }
+            ],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/batches?date=2026-06-07", headers=admin_headers)
@@ -74,40 +81,48 @@ def test_approvals_list_has_review_button_not_direct_decision():
 
 
 def test_approval_detail_endpoint_returns_qc_fields(client, admin_headers):
-    fake_db = FakeSupabase({
-        "approvals": [{
-            "id": "approval-1",
-            "related_type": "qc_report",
-            "related_id": "qc-1",
-            "status": "pending",
-            "created_at": "2026-06-07T03:02:00Z",
-        }],
-        "qc_reports": [{
-            "id": "qc-1",
-            "batch_id": "batch-1",
-            "batch_code": "BATCH-001",
-            "product_name": "Chicken Teriyaki",
-            "status": "hold",
-            "qc_stage": "cooking_check",
-            "temperature": 72,
-            "ph_value": 6.1,
-            "brix_value": 12,
-            "tds_value": 90,
-            "notes": "Need recheck",
-            "product_photo_url": "https://img/evidence.jpg",
-            "staff_id": "staff-1",
-            "created_at": "2026-06-07T03:00:00Z",
-        }],
-        "production_batches": [{
-            "id": "batch-1",
-            "batch_code": "BATCH-001",
-            "product_name": "Chicken Teriyaki",
-            "batch_sequence": 2,
-            "cook_name": "Andi",
-            "quantity": 120,
-            "created_at": "2026-06-07T02:30:00Z",
-        }],
-    })
+    fake_db = FakeSupabase(
+        {
+            "approvals": [
+                {
+                    "id": "approval-1",
+                    "related_type": "qc_report",
+                    "related_id": "qc-1",
+                    "status": "pending",
+                    "created_at": "2026-06-07T03:02:00Z",
+                }
+            ],
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "batch_id": "batch-1",
+                    "batch_code": "BATCH-001",
+                    "product_name": "Chicken Teriyaki",
+                    "status": "hold",
+                    "qc_stage": "cooking_check",
+                    "temperature": 72,
+                    "ph_value": 6.1,
+                    "brix_value": 12,
+                    "tds_value": 90,
+                    "notes": "Need recheck",
+                    "product_photo_url": "https://img/evidence.jpg",
+                    "staff_id": "staff-1",
+                    "created_at": "2026-06-07T03:00:00Z",
+                }
+            ],
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "BATCH-001",
+                    "product_name": "Chicken Teriyaki",
+                    "batch_sequence": 2,
+                    "cook_name": "Andi",
+                    "quantity": 120,
+                    "created_at": "2026-06-07T02:30:00Z",
+                }
+            ],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/approvals/approval-1", headers=admin_headers)
