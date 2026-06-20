@@ -53,7 +53,7 @@ pip install -r requirements-dev.txt
 
 ## 3. Code Quality & Code Style (Ruff)
 
-We use **Ruff** for high-speed Python linting and formatting. Ruff rules are configured globally in [pyproject.toml](file:///c:/Users/rio/.gemini/antigravity/scratch/Project_QC/pyproject.toml).
+We use **Ruff** for high-speed Python linting and formatting. Ruff rules are configured globally in [ruff.toml](file:///c:/Users/rio/.gemini/antigravity/scratch/Project_QC/ruff.toml).
 
 ### Run Lint Checks
 ```bash
