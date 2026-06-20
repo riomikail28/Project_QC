@@ -19,6 +19,14 @@ class LearningRepository:
         if not self.sb:
             return []
         try:
+            table_columns = {
+                "learning_modules": "id,slug,title,description,content,published,best_actions,created_at,updated_at",
+                "itdv_progress": "id,user_id,module_slug,status,quiz_score,quiz_passed,simulation_score,simulation_passed,completed_at,updated_at,created_at",
+                "itdv_attempts": "id,user_id,module_slug,score,passed,created_at",
+                "itdv_certificates": "id,user_id,program_code,certificate_number,issued_at,created_at",
+            }
+            if select == "*":
+                select = table_columns.get(table, "*")
             query = self.sb.table(table).select(select)
             for method, field, value in filters or []:
                 query = getattr(query, method)(field, value)
@@ -36,10 +44,15 @@ class LearningRepository:
             return None
         try:
             data = {**payload, "updated_at": _now()}
-            return self.sb.table("itdv_progress").upsert(
-                data,
-                on_conflict="user_id,module_slug",
-            ).execute().data
+            return (
+                self.sb.table("itdv_progress")
+                .upsert(
+                    data,
+                    on_conflict="user_id,module_slug",
+                )
+                .execute()
+                .data
+            )
         except Exception as exc:
             logger.warning("Learning progress upsert skipped: %s", exc)
             return None
@@ -58,10 +71,15 @@ class LearningRepository:
             return None
         try:
             data = {**payload, "issued_at": _now()}
-            return self.sb.table("itdv_certificates").upsert(
-                data,
-                on_conflict="user_id,program_code",
-            ).execute().data
+            return (
+                self.sb.table("itdv_certificates")
+                .upsert(
+                    data,
+                    on_conflict="user_id,program_code",
+                )
+                .execute()
+                .data
+            )
         except Exception as exc:
             logger.warning("Certificate upsert skipped: %s", exc)
             return None

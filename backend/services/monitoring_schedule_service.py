@@ -6,16 +6,21 @@ import logging
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from backend.utils.cache import monitoring_schedule_cache
+
 logger = logging.getLogger("qc.services.monitoring_schedule")
 
 MONITORING_SLOTS = ("07:00", "13:00", "16:00", "19:00")
 LOCAL_TZ = ZoneInfo("Asia/Jakarta")
+SCHEDULE_CACHE_TTL_SECONDS = 5
 
 
 class MonitoringScheduleService:
     def __init__(self, supabase_client, now: datetime | None = None):
         self.sb = supabase_client
         self.now = (now or datetime.now(LOCAL_TZ)).astimezone(LOCAL_TZ)
+        self._last_schedule = None
+        self._last_completed_by_device_slot = {}
 
     def today(self):
         monitoring_date = self.now.date().isoformat()
@@ -24,6 +29,7 @@ class MonitoringScheduleService:
         total_devices = len(devices)
         completed_by_slot = self._completed_by_slot(rows)
         completed_by_device_slot = self._completed_by_device_slot(rows)
+        self._last_completed_by_device_slot = completed_by_device_slot
         slots = []
 
         for index, slot in enumerate(MONITORING_SLOTS):
@@ -47,20 +53,24 @@ class MonitoringScheduleService:
                 status = "pending"
                 label = "Menunggu input"
 
-            slots.append({
-                "time": slot,
-                "status": status,
-                "label": label,
-                "completed": slot_complete,
-                "completed_count": completed_count,
-                "total_devices": total_devices,
-                "unit_progress_text": f"{completed_count}/{total_devices} unit selesai",
-                "late": late,
-                "submitted_at": completed_rows[-1].get("submitted_at") or completed_rows[-1].get("recorded_at") if completed_rows else None,
-                "room_id": completed_rows[-1].get("room_id") if completed_rows else None,
-                "device_id": completed_rows[-1].get("device_id") if completed_rows else None,
-                "temperature_c": completed_rows[-1].get("temperature_c") if completed_rows else None,
-            })
+            slots.append(
+                {
+                    "time": slot,
+                    "status": status,
+                    "label": label,
+                    "completed": slot_complete,
+                    "completed_count": completed_count,
+                    "total_devices": total_devices,
+                    "unit_progress_text": f"{completed_count}/{total_devices} unit selesai",
+                    "late": late,
+                    "submitted_at": completed_rows[-1].get("submitted_at") or completed_rows[-1].get("recorded_at")
+                    if completed_rows
+                    else None,
+                    "room_id": completed_rows[-1].get("room_id") if completed_rows else None,
+                    "device_id": completed_rows[-1].get("device_id") if completed_rows else None,
+                    "temperature_c": completed_rows[-1].get("temperature_c") if completed_rows else None,
+                }
+            )
 
         total_completed = sum(item["completed_count"] for item in slots)
         total_required = total_devices * len(MONITORING_SLOTS)
@@ -69,7 +79,7 @@ class MonitoringScheduleService:
         all_done = total_required > 0 and total_completed >= total_required
         active_slot_time = (current_slot or {}).get("time")
 
-        return {
+        result = {
             "success": True,
             "data": {
                 "date": monitoring_date,
@@ -88,13 +98,22 @@ class MonitoringScheduleService:
                 "device_statuses": self._device_statuses(devices, completed_by_device_slot, active_slot_time),
                 "message": (
                     "Monitoring hari ini selesai. Tugas berikutnya besok pukul 07:00."
-                    if all_done else self._active_message(next_slot)
+                    if all_done
+                    else self._active_message(next_slot)
                 ),
             },
             "message": "OK",
         }
+        self._last_schedule = result["data"]
+        return result
 
-    def resolve_submission(self, slot_time: str | None = None, device_id: str | None = None, room_id: str | None = None, allow_duplicate: bool = False):
+    def resolve_submission(
+        self,
+        slot_time: str | None = None,
+        device_id: str | None = None,
+        room_id: str | None = None,
+        allow_duplicate: bool = False,
+    ):
         schedule = self.today()["data"]
         active_slot = schedule.get("current_slot")
         next_slot = schedule.get("next_slot")
@@ -105,7 +124,9 @@ class MonitoringScheduleService:
                 "status": 400,
                 "message": "Slot monitoring tidak valid",
             }
-        if schedule.get("total_required", 0) > 0 and schedule.get("total_completed", 0) >= schedule.get("total_required", 0):
+        if schedule.get("total_required", 0) > 0 and schedule.get("total_completed", 0) >= schedule.get(
+            "total_required", 0
+        ):
             return {
                 "success": False,
                 "status": 409,
@@ -135,7 +156,7 @@ class MonitoringScheduleService:
                 "message": f"Slot {slot} belum waktunya.",
                 "schedule": schedule,
             }
-        if not allow_duplicate and self._has_device_log(schedule["date"], slot, device_id, room_id):
+        if not allow_duplicate and self._has_device_log(slot, device_id, room_id):
             return {
                 "success": False,
                 "status": 409,
@@ -163,13 +184,21 @@ class MonitoringScheduleService:
         try:
             if not self.sb:
                 return []
+            cache_key = ("monitoring_logs", id(self.sb), monitoring_date)
+            cached = monitoring_schedule_cache.get(cache_key)
+            if cached is not None:
+                return cached
             res = (
                 self.sb.table("facility_logs")
-                .select("*")
+                .select(
+                    "id,monitoring_date,slot_time,device_id,room_id,schedule_status,submitted_at,recorded_at,temperature_c"
+                )
                 .eq("monitoring_date", monitoring_date)
                 .execute()
             )
-            return res.data or []
+            rows = res.data or []
+            monitoring_schedule_cache.set(cache_key, rows, SCHEDULE_CACHE_TTL_SECONDS)
+            return rows
         except Exception:
             logger.warning("Daily monitoring schedule query failed", exc_info=True)
             return []
@@ -178,13 +207,19 @@ class MonitoringScheduleService:
         try:
             if not self.sb:
                 return []
+            cache_key = ("active_devices", id(self.sb))
+            cached = monitoring_schedule_cache.get(cache_key)
+            if cached is not None:
+                return cached
             rows = (
                 self.sb.table("facility_devices")
                 .select("id, room_id, name, type, device_type, is_active, facility_rooms(name)")
                 .eq("is_active", True)
                 .execute()
             ).data or []
-            return [row for row in rows if row.get("id")]
+            devices = [row for row in rows if row.get("id")]
+            monitoring_schedule_cache.set(cache_key, devices, SCHEDULE_CACHE_TTL_SECONDS)
+            return devices
         except Exception:
             logger.warning("Active monitoring device query failed", exc_info=True)
             return []
@@ -196,7 +231,9 @@ class MonitoringScheduleService:
             if not slot:
                 continue
             completed.setdefault(slot, {})
-            device_key = row.get("device_id") or row.get("room_id") or row.get("id") or f"legacy-{slot}-{len(completed[slot])}"
+            device_key = (
+                row.get("device_id") or row.get("room_id") or row.get("id") or f"legacy-{slot}-{len(completed[slot])}"
+            )
             if device_key and device_key not in completed[slot]:
                 completed[slot][device_key] = row
         return {slot: list(items.values()) for slot, items in completed.items()}
@@ -210,14 +247,9 @@ class MonitoringScheduleService:
                 completed[(str(device_key), slot)] = row
         return completed
 
-    def _has_device_log(self, monitoring_date, slot, device_id, room_id):
-        rows = self._logs_for_date(monitoring_date)
+    def _has_device_log(self, slot, device_id, room_id):
         key = str(device_id or room_id or "")
-        for row in rows:
-            row_key = str(row.get("device_id") or row.get("room_id") or "")
-            if row_key == key and self._normalize_slot(row.get("slot_time")) == slot:
-                return True
-        return False
+        return bool(key and self._last_completed_by_device_slot.get((key, slot)))
 
     def _device_statuses(self, devices, completed_by_device_slot, active_slot_time):
         statuses = {}
@@ -228,7 +260,9 @@ class MonitoringScheduleService:
                 completed = completed_by_device_slot.get((device_id, slot))
                 slot_dt = self._slot_datetime(slot)
                 next_index = MONITORING_SLOTS.index(slot) + 1
-                next_dt = self._slot_datetime(MONITORING_SLOTS[next_index]) if next_index < len(MONITORING_SLOTS) else None
+                next_dt = (
+                    self._slot_datetime(MONITORING_SLOTS[next_index]) if next_index < len(MONITORING_SLOTS) else None
+                )
                 if completed:
                     status = "completed"
                     label = "Selesai"
@@ -244,7 +278,9 @@ class MonitoringScheduleService:
                 slot_statuses[slot] = {
                     "status": status,
                     "label": label,
-                    "submitted_at": completed.get("submitted_at") or completed.get("recorded_at") if completed else None,
+                    "submitted_at": completed.get("submitted_at") or completed.get("recorded_at")
+                    if completed
+                    else None,
                     "temperature_c": completed.get("temperature_c") if completed else None,
                 }
             active_status = slot_statuses.get(active_slot_time) if active_slot_time else None

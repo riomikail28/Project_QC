@@ -46,7 +46,9 @@ class AdminLearningService:
         return self._update("itdv_modules", "slug", module_id, {"published": False, "archived": True})
 
     def list_mini_quiz(self, module_id):
-        rows = self._fetch("itdv_module_mini_quizzes", filters=[("eq", "module_slug", module_id)], order_by="created_at")
+        rows = self._fetch(
+            "itdv_module_mini_quizzes", filters=[("eq", "module_slug", module_id)], order_by="created_at"
+        )
         return self._ok(rows)
 
     def create_mini_quiz(self, module_id, payload):
@@ -108,7 +110,9 @@ class AdminLearningService:
         certificates = self._fetch("itdv_certificates", order_by="issued_at", desc=True, limit=500)
         users = {}
         for row in progress:
-            users.setdefault(row.get("user_id"), {"user_id": row.get("user_id")})["learning_progress"] = row.get("status")
+            users.setdefault(row.get("user_id"), {"user_id": row.get("user_id")})["learning_progress"] = row.get(
+                "status"
+            )
         for row in sim_attempts:
             users.setdefault(row.get("user_id"), {"user_id": row.get("user_id")})["simulation_score"] = max(
                 int(users.setdefault(row.get("user_id"), {"user_id": row.get("user_id")}).get("simulation_score") or 0),
@@ -146,7 +150,11 @@ class AdminLearningService:
             data["category"] = self._str(payload.get("category")) or "ITDV"
         elif not partial:
             data["category"] = "ITDV"
-        for source, target in (("learning_material", "learning_material"), ("case_study", "case_study"), ("difficulty", "difficulty")):
+        for source, target in (
+            ("learning_material", "learning_material"),
+            ("case_study", "case_study"),
+            ("difficulty", "difficulty"),
+        ):
             if source in payload:
                 data[target] = self._str(payload.get(source))
         if "competencies" in payload:
@@ -216,7 +224,15 @@ class AdminLearningService:
             return None, "Title wajib diisi"
         if not partial and not scenario:
             return None, "Scenario wajib diisi"
-        for field in ("title", "scenario", "risk", "ideal_action", "haccp_reason", "corrective_action", "documentation_required"):
+        for field in (
+            "title",
+            "scenario",
+            "risk",
+            "ideal_action",
+            "haccp_reason",
+            "corrective_action",
+            "documentation_required",
+        ):
             if field in payload:
                 data[field] = self._str(payload.get(field))
         if "area" in payload:
@@ -231,7 +247,13 @@ class AdminLearningService:
         for key in ("A", "B", "C"):
             value = self._str(payload.get(f"option_{key.lower()}"))
             if value:
-                options.append({"key": key, "label": value, "score": 100 if self._str(payload.get("correct_answer")).upper() == key else 0})
+                options.append(
+                    {
+                        "key": key,
+                        "label": value,
+                        "score": 100 if self._str(payload.get("correct_answer")).upper() == key else 0,
+                    }
+                )
         if options:
             data["options"] = options
         elif not partial:
@@ -253,7 +275,14 @@ class AdminLearningService:
     def _fetch(self, table, filters=None, order_by=None, desc=False, limit=None):
         if not self.sb:
             return []
-        query = self.sb.table(table).select("*")
+        table_columns = {
+            "learning_modules": "id,slug,title,description,content,published,best_actions,created_at,updated_at",
+            "itdv_progress": "id,user_id,module_slug,status,quiz_score,quiz_passed,simulation_score,simulation_passed,completed_at,updated_at,created_at",
+            "itdv_attempts": "id,user_id,module_slug,score,passed,created_at",
+            "itdv_certificates": "id,user_id,program_code,certificate_number,issued_at,created_at",
+        }
+        select_cols = table_columns.get(table, "*")
+        query = self.sb.table(table).select(select_cols)
         for method, field, value in filters or []:
             query = getattr(query, method)(field, value)
         if order_by:

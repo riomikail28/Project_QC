@@ -1,4 +1,5 @@
 """Repository layer for QC-related DB operations."""
+
 from typing import Any, Dict, Optional
 
 
@@ -10,4 +11,4 @@ class QCRepository:
         if not self.sb:
             return None
         res = self.sb.table("qc_findings").insert(payload).execute()
-        return (res.data[0] if getattr(res, "data", None) else None)
+        return res.data[0] if getattr(res, "data", None) else None

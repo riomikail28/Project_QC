@@ -5,19 +5,23 @@ from tests.conftest import FakeSupabase
 
 
 def test_admin_temperature_report_uses_staff_logs(client, admin_headers):
-    db = FakeSupabase({
-        "facility_logs": [{
-            "id": "log-1",
-            "staff_id": "staff-1",
-            "room_id": "room-1",
-            "device_id": "device-1",
-            "temperature_c": 3.5,
-            "is_normal": True,
-            "photo_url": "https://example.test/photo.jpg",
-            "storage_path": "staff/staff-1/temperature/photo.jpg",
-            "recorded_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    "id": "log-1",
+                    "staff_id": "staff-1",
+                    "room_id": "room-1",
+                    "device_id": "device-1",
+                    "temperature_c": 3.5,
+                    "is_normal": True,
+                    "photo_url": "https://example.test/photo.jpg",
+                    "storage_path": "staff/staff-1/temperature/photo.jpg",
+                    "recorded_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/temperature", headers=admin_headers)
 
@@ -30,16 +34,20 @@ def test_admin_temperature_report_uses_staff_logs(client, admin_headers):
 
 def test_admin_monitoring_report_returns_staff_display_name(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "facility_logs": [{
-            "id": "log-1",
-            "staff_id": staff_uuid,
-            "staff_accounts": {"full_name": "Rio Mikail", "username": "rio.qc"},
-            "temperature_c": 3.5,
-            "is_normal": True,
-            "recorded_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    "id": "log-1",
+                    "staff_id": staff_uuid,
+                    "staff_accounts": {"full_name": "Rio Mikail", "username": "rio.qc"},
+                    "temperature_c": 3.5,
+                    "is_normal": True,
+                    "recorded_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/monitoring", headers=admin_headers)
 
@@ -50,17 +58,21 @@ def test_admin_monitoring_report_returns_staff_display_name(client, admin_header
 
 
 def test_admin_inspection_report_uses_qc_reports(client, admin_headers):
-    db = FakeSupabase({
-        "qc_reports": [{
-            "id": "qc-1",
-            "batch_code": "BATCH-001",
-            "product_name": "Soup",
-            "staff_id": "staff-1",
-            "status": "pass",
-            "product_photo_url": "https://example.test/evidence.jpg",
-            "created_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "batch_code": "BATCH-001",
+                    "product_name": "Soup",
+                    "staff_id": "staff-1",
+                    "status": "pass",
+                    "product_photo_url": "https://example.test/evidence.jpg",
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/inspection", headers=admin_headers)
 
@@ -73,17 +85,21 @@ def test_admin_inspection_report_uses_qc_reports(client, admin_headers):
 
 def test_admin_qc_report_staff_display_name_falls_back_to_username(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "qc_reports": [{
-            "id": "qc-1",
-            "batch_code": "BATCH-001",
-            "product_name": "Soup",
-            "staff_id": staff_uuid,
-            "staff_accounts": {"username": "staff.qc@company.id"},
-            "status": "pass",
-            "created_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "batch_code": "BATCH-001",
+                    "product_name": "Soup",
+                    "staff_id": staff_uuid,
+                    "staff_accounts": {"username": "staff.qc@company.id"},
+                    "status": "pass",
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/qc", headers=admin_headers)
 
@@ -95,15 +111,19 @@ def test_admin_qc_report_staff_display_name_falls_back_to_username(client, admin
 
 def test_admin_alert_report_staff_display_name_falls_back_to_uuid(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "facility_alerts": [{
-            "id": "alert-1",
-            "staff_id": staff_uuid,
-            "temperature": 12,
-            "severity": "warning",
-            "created_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "facility_alerts": [
+                {
+                    "id": "alert-1",
+                    "staff_id": staff_uuid,
+                    "temperature": 12,
+                    "severity": "warning",
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/alerts", headers=admin_headers)
 
@@ -115,17 +135,21 @@ def test_admin_alert_report_staff_display_name_falls_back_to_uuid(client, admin_
 
 def test_admin_audit_trail_returns_human_actor_display_name(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "audit_logs": [{
-            "id": "audit-1",
-            "actor_id": staff_uuid,
-            "action": "INPUT_TEMPERATURE",
-            "entity_type": "facility_log",
-            "entity_id": "log-1",
-            "staff_accounts": {"full_name": "Admin QC", "username": "admin.qc", "role": "admin"},
-            "created_at": "2026-05-16T01:00:00Z",
-        }]
-    })
+    db = FakeSupabase(
+        {
+            "audit_logs": [
+                {
+                    "id": "audit-1",
+                    "actor_id": staff_uuid,
+                    "action": "INPUT_TEMPERATURE",
+                    "entity_type": "facility_log",
+                    "entity_id": "log-1",
+                    "staff_accounts": {"full_name": "Admin QC", "username": "admin.qc", "role": "admin"},
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ]
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
 
@@ -138,28 +162,36 @@ def test_admin_audit_trail_returns_human_actor_display_name(client, admin_header
 
 def test_admin_audit_trail_resolves_actor_from_user_profile(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "audit_logs": [{
-            "id": "audit-1",
-            "actor_id": staff_uuid,
-            "action": "CREATE_BATCH",
-            "entity_type": "production_batch",
-            "entity_id": "batch-1",
-            "created_at": "2026-05-16T01:00:00Z",
-        }],
-        "staff_accounts": [{
-            "id": staff_uuid,
-            "username": "rio.qc",
-            "role": "admin",
-        }],
-        "users": [{
-            "id": "user-1",
-            "staff_account_id": staff_uuid,
-            "full_name": "Rio Mikail",
-            "email": "rio.qc@company.id",
-            "role": "admin",
-        }],
-    })
+    db = FakeSupabase(
+        {
+            "audit_logs": [
+                {
+                    "id": "audit-1",
+                    "actor_id": staff_uuid,
+                    "action": "CREATE_BATCH",
+                    "entity_type": "production_batch",
+                    "entity_id": "batch-1",
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ],
+            "staff_accounts": [
+                {
+                    "id": staff_uuid,
+                    "username": "rio.qc",
+                    "role": "admin",
+                }
+            ],
+            "users": [
+                {
+                    "id": "user-1",
+                    "staff_account_id": staff_uuid,
+                    "full_name": "Rio Mikail",
+                    "email": "rio.qc@company.id",
+                    "role": "admin",
+                }
+            ],
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
 
@@ -173,15 +205,19 @@ def test_admin_audit_trail_resolves_actor_from_user_profile(client, admin_header
 
 def test_admin_audit_trail_without_profile_keeps_id_but_role_falls_back(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "audit_logs": [{
-            "id": "audit-1",
-            "actor_id": staff_uuid,
-            "action": "DELETE",
-            "entity_type": "facility_log",
-            "created_at": "2026-05-16T01:00:00Z",
-        }],
-    })
+    db = FakeSupabase(
+        {
+            "audit_logs": [
+                {
+                    "id": "audit-1",
+                    "actor_id": staff_uuid,
+                    "action": "DELETE",
+                    "entity_type": "facility_log",
+                    "created_at": "2026-05-16T01:00:00Z",
+                }
+            ],
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/audit-logs", headers=admin_headers)
 
@@ -194,26 +230,34 @@ def test_admin_audit_trail_without_profile_keeps_id_but_role_falls_back(client, 
 
 def test_admin_monitoring_report_resolves_staff_profile_from_users(client, admin_headers):
     staff_uuid = "c0f183b8-813a-4d9a-89bf-eb098f63060e"
-    db = FakeSupabase({
-        "facility_logs": [{
-            "id": "log-1",
-            "staff_id": staff_uuid,
-            "temperature_c": 3.2,
-            "is_normal": True,
-            "recorded_at": "2026-05-16T01:00:00Z",
-        }],
-        "staff_accounts": [{
-            "id": staff_uuid,
-            "username": "rio.qc",
-            "role": "staff",
-        }],
-        "users": [{
-            "staff_account_id": staff_uuid,
-            "full_name": "Rio Mikail",
-            "email": "rio.qc@company.id",
-            "role": "staff",
-        }],
-    })
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    "id": "log-1",
+                    "staff_id": staff_uuid,
+                    "temperature_c": 3.2,
+                    "is_normal": True,
+                    "recorded_at": "2026-05-16T01:00:00Z",
+                }
+            ],
+            "staff_accounts": [
+                {
+                    "id": staff_uuid,
+                    "username": "rio.qc",
+                    "role": "staff",
+                }
+            ],
+            "users": [
+                {
+                    "staff_account_id": staff_uuid,
+                    "full_name": "Rio Mikail",
+                    "email": "rio.qc@company.id",
+                    "role": "staff",
+                }
+            ],
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/monitoring", headers=admin_headers)
 

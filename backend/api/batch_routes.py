@@ -7,35 +7,89 @@ Handles batch CRUD, QC scoring, and dashboard analytics.
 Supabase tables: production_batches, production_batch_logs, products
 """
 
-from flask import Blueprint, g, request, jsonify
 import logging
 from datetime import datetime, timedelta, timezone
 
+from flask import Blueprint, g, jsonify, request
+
+from backend.database.supabase_client import get_client
+from backend.middleware.security_middleware import require_auth
+from backend.services.audit_service import write_audit
 from backend.services.batch_service import (
-    determine_batch_status,
     calculate_qc_score,
-    get_batches,
-    get_batch_detail,
     create_batch,
+    determine_batch_status,
     generate_batch_code,
     generate_product_batch_code,
-    preview_next_batch_code,
+    get_batch_detail,
+    get_batches,
     get_daily_summary,
     is_duplicate_batch_code_error,
+    preview_next_batch_code,
 )
-from backend.database.supabase_client import get_client
-from backend.services.storage_service import delete_photo, upload_file_storage
-from backend.middleware.security_middleware import require_auth, require_role
-from backend.services.audit_service import write_audit
 from backend.services.request_validation import BatchCreateRequest, request_payload, validate_model
+from backend.services.storage_service import delete_photo, upload_file_storage
 
 logger = logging.getLogger("qc.routes.batch")
 
 batch_bp = Blueprint("batch_bp", __name__)
+PRODUCT_SELECT = (
+    "id,product_code,sku_code,product_name,category,is_active,ph_min,ph_max,brix_min,brix_max,tds_min,tds_max"
+)
+BATCH_CARD_SELECT = (
+    "id,batch_code,batch_sequence,cook_name,quantity,production_shift,shift,production_date,"
+    "production_time,created_at,product_id,product_code,sku_code,barcode,product_name,category,"
+    "product_category,final_qc_status,status"
+)
+QC_REPORT_CARD_SELECT = "id,batch_id,batch_code,status,final_qc_status,inspection_round,created_at"
 
 
 def _jakarta_today():
     return datetime.now(timezone(timedelta(hours=7))).date().isoformat()
+
+
+def _unique_present(values):
+    seen = set()
+    result = []
+    for value in values:
+        if value in (None, ""):
+            continue
+        key = str(value)
+        if key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def _fetch_rows_by_values(sb, table, column, values, select, order_by=None, desc=True):
+    values = _unique_present(values)
+    if not values:
+        return []
+    try:
+        query = sb.table(table).select(select)
+        if hasattr(query, "in_"):
+            query = query.in_(column, values)
+            if order_by:
+                query = query.order(order_by, desc=desc)
+            return query.execute().data or []
+    except Exception as exc:
+        logger.warning("Bulk fetch failed for %s.%s, retrying individually: %s", table, column, exc)
+
+    rows = []
+    by_id = {}
+    for value in values:
+        try:
+            query = sb.table(table).select(select).eq(column, value)
+            if order_by:
+                query = query.order(order_by, desc=desc)
+            for row in query.execute().data or []:
+                dedupe_key = row.get("id") or f"{column}:{value}:{len(rows)}"
+                if dedupe_key not in by_id:
+                    by_id[dedupe_key] = row
+                    rows.append(row)
+        except Exception as exc:
+            logger.warning("Fetch skipped for %s.%s=%s: %s", table, column, value, exc)
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -62,12 +116,14 @@ def batch_status():
     passed = results.count("PASS")
     score = calculate_qc_score(total, passed)
 
-    return jsonify({
-        "batch_status": status,
-        "qc_score": score,
-        "total_checks": total,
-        "passed_checks": passed,
-    })
+    return jsonify(
+        {
+            "batch_status": status,
+            "qc_score": score,
+            "total_checks": total,
+            "passed_checks": passed,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -142,10 +198,16 @@ def create_next_batch():
         ph_value = optional_number("ph", 0, 14) if "ph" in data else optional_number("ph_value", 0, 14)
         brix_value = optional_number("brix", 0, 100) if "brix" in data else optional_number("brix_value", 0, 100)
         tds_value = optional_number("tds", 0, 1000000) if "tds" in data else optional_number("tds_value", 0, 1000000)
-        product_rows = sb.table("products").select("*").eq("id", product_id).limit(1).execute().data or []
+        product_rows = sb.table("products").select(PRODUCT_SELECT).eq("id", product_id).limit(1).execute().data or []
         if not product_rows:
-            product_rows = sb.table("products").select("*").eq("product_code", product_id).limit(1).execute().data or []
-        product = product_rows[0] if product_rows else {"id": product_id, "product_code": product_id, "product_name": data.get("product_name")}
+            product_rows = (
+                sb.table("products").select(PRODUCT_SELECT).eq("product_code", product_id).limit(1).execute().data or []
+            )
+        product = (
+            product_rows[0]
+            if product_rows
+            else {"id": product_id, "product_code": product_id, "product_name": data.get("product_name")}
+        )
         sku = product.get("product_code") or product.get("sku_code") or product_id
         existing = (
             sb.table("production_batches")
@@ -175,7 +237,13 @@ def create_next_batch():
             "status": "in_progress",
             "created_by": (getattr(g, "current_user", {}) or {}).get("id"),
         }
-        row = (sb.table("production_batches").insert({k: v for k, v in payload.items() if v not in (None, "")}).execute().data or [payload])[0]
+        row = (
+            sb.table("production_batches")
+            .insert({k: v for k, v in payload.items() if v not in (None, "")})
+            .execute()
+            .data
+            or [payload]
+        )[0]
         write_audit("create_next_batch", "production_batch", str(row.get("id") or batch_code), after=row)
         return jsonify({"success": True, "data": row, "batch": row, "message": "Pemasakan berhasil disimpan"}), 201
     except ValueError as exc:
@@ -194,31 +262,17 @@ def batches_by_product(product_id):
     if not sb:
         return jsonify({"success": True, "data": {"date": operational_date, "product": None, "batches": []}})
     try:
-        product_rows = (
-            sb.table("products")
-            .select("*")
-            .eq("id", product_id)
-            .limit(1)
-            .execute()
-            .data
-            or []
-        )
+        product_rows = sb.table("products").select(PRODUCT_SELECT).eq("id", product_id).limit(1).execute().data or []
         if not product_rows:
             product_rows = (
-                sb.table("products")
-                .select("*")
-                .eq("product_code", product_id)
-                .limit(1)
-                .execute()
-                .data
-                or []
+                sb.table("products").select(PRODUCT_SELECT).eq("product_code", product_id).limit(1).execute().data or []
             )
         product = product_rows[0] if product_rows else {"id": product_id, "product_code": product_id}
         product_code = product.get("product_code") or product.get("sku_code") or product_id
 
         batch_rows = (
             sb.table("production_batches")
-            .select("*")
+            .select(BATCH_CARD_SELECT)
             .eq("product_id", product.get("id") or product_id)
             .eq("production_date", operational_date)
             .order("created_at", desc=True)
@@ -230,7 +284,7 @@ def batches_by_product(product_id):
         if not batch_rows and product_code:
             batch_rows = (
                 sb.table("production_batches")
-                .select("*")
+                .select(BATCH_CARD_SELECT)
                 .eq("product_code", product_code)
                 .eq("production_date", operational_date)
                 .order("created_at", desc=True)
@@ -240,7 +294,22 @@ def batches_by_product(product_id):
                 or []
             )
 
-        reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(500).execute().data or []
+        batch_ids = _unique_present(row.get("id") for row in batch_rows)
+        batch_codes = _unique_present(row.get("batch_code") for row in batch_rows)
+        reports = []
+        seen_report_ids = set()
+        related_reports = _fetch_rows_by_values(
+            sb, "qc_reports", "batch_id", batch_ids, select=QC_REPORT_CARD_SELECT, order_by="created_at"
+        ) + _fetch_rows_by_values(
+            sb, "qc_reports", "batch_code", batch_codes, select=QC_REPORT_CARD_SELECT, order_by="created_at"
+        )
+        for report in related_reports:
+            report_key = (
+                report.get("id") or f"{report.get('batch_id')}:{report.get('batch_code')}:{report.get('created_at')}"
+            )
+            if report_key not in seen_report_ids:
+                seen_report_ids.add(report_key)
+                reports.append(report)
         report_map = {}
         for report in reports:
             keys = [report.get("batch_id"), report.get("batch_code")]
@@ -252,18 +321,20 @@ def batches_by_product(product_id):
         for row in batch_rows:
             last_qc = report_map.get(row.get("id")) or report_map.get(row.get("batch_code")) or {}
             qc_status = last_qc.get("status") or row.get("final_qc_status") or row.get("status") or "pending"
-            batches.append({
-                "id": row.get("id"),
-                "batch_code": row.get("batch_code"),
-                "batch_sequence": row.get("batch_sequence"),
-                "cook_name": row.get("cook_name"),
-                "quantity": row.get("quantity"),
-                "production_shift": row.get("production_shift") or row.get("shift"),
-                "production_time": row.get("production_time") or row.get("created_at"),
-                "qc_status": qc_status,
-                "last_qc": last_qc or None,
-                "inspection_round": last_qc.get("inspection_round") or 0,
-            })
+            batches.append(
+                {
+                    "id": row.get("id"),
+                    "batch_code": row.get("batch_code"),
+                    "batch_sequence": row.get("batch_sequence"),
+                    "cook_name": row.get("cook_name"),
+                    "quantity": row.get("quantity"),
+                    "production_shift": row.get("production_shift") or row.get("shift"),
+                    "production_time": row.get("production_time") or row.get("created_at"),
+                    "qc_status": qc_status,
+                    "last_qc": last_qc or None,
+                    "inspection_round": last_qc.get("inspection_round") or 0,
+                }
+            )
 
         return jsonify({"success": True, "data": {"date": operational_date, "product": product, "batches": batches}})
     except Exception as exc:
@@ -285,7 +356,7 @@ def today_batches():
     try:
         batch_rows = (
             sb.table("production_batches")
-            .select("*")
+            .select(BATCH_CARD_SELECT)
             .eq("production_date", operational_date)
             .order("created_at", desc=True)
             .limit(500)
@@ -293,9 +364,26 @@ def today_batches():
             .data
             or []
         )
-        product_rows = sb.table("products").select("*").limit(1000).execute().data or []
+        product_ids = _unique_present(row.get("product_id") for row in batch_rows)
+        batch_ids = _unique_present(row.get("id") for row in batch_rows)
+        batch_codes = _unique_present(row.get("batch_code") for row in batch_rows)
+
+        product_rows = _fetch_rows_by_values(sb, "products", "id", product_ids, select=PRODUCT_SELECT)
         product_map = {row.get("id"): row for row in product_rows if row.get("id")}
-        reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(1000).execute().data or []
+        reports = []
+        seen_report_ids = set()
+        related_reports = _fetch_rows_by_values(
+            sb, "qc_reports", "batch_id", batch_ids, select=QC_REPORT_CARD_SELECT, order_by="created_at"
+        ) + _fetch_rows_by_values(
+            sb, "qc_reports", "batch_code", batch_codes, select=QC_REPORT_CARD_SELECT, order_by="created_at"
+        )
+        for report in related_reports:
+            report_key = (
+                report.get("id") or f"{report.get('batch_id')}:{report.get('batch_code')}:{report.get('created_at')}"
+            )
+            if report_key not in seen_report_ids:
+                seen_report_ids.add(report_key)
+                reports.append(report)
         report_map = {}
         for report in reports:
             for key in (report.get("batch_id"), report.get("batch_code")):
@@ -306,17 +394,27 @@ def today_batches():
         for row in batch_rows:
             product = product_map.get(row.get("product_id")) or {}
             product_id = row.get("product_id") or product.get("id") or row.get("product_code") or row.get("sku_code")
-            sku = product.get("product_code") or product.get("sku_code") or row.get("product_code") or row.get("sku_code") or row.get("barcode") or product_id
+            sku = (
+                product.get("product_code")
+                or product.get("sku_code")
+                or row.get("product_code")
+                or row.get("sku_code")
+                or row.get("barcode")
+                or product_id
+            )
             key = str(product_id or sku)
-            group = grouped.setdefault(key, {
-                "product_id": product_id,
-                "sku": sku,
-                "product_name": product.get("product_name") or row.get("product_name") or "Produk",
-                "category": product.get("category") or row.get("category") or row.get("product_category"),
-                "batch_count": 0,
-                "status_summary": {"pending": 0, "pass": 0, "hold": 0, "fail": 0},
-                "batches": [],
-            })
+            group = grouped.setdefault(
+                key,
+                {
+                    "product_id": product_id,
+                    "sku": sku,
+                    "product_name": product.get("product_name") or row.get("product_name") or "Produk",
+                    "category": product.get("category") or row.get("category") or row.get("product_category"),
+                    "batch_count": 0,
+                    "status_summary": {"pending": 0, "pass": 0, "hold": 0, "fail": 0},
+                    "batches": [],
+                },
+            )
             last_qc = report_map.get(row.get("id")) or report_map.get(row.get("batch_code")) or {}
             qc_status = last_qc.get("status") or row.get("final_qc_status") or row.get("status") or "pending"
             normalized = str(qc_status or "pending").lower()
@@ -330,19 +428,21 @@ def today_batches():
                 normalized = "pending"
             group["batch_count"] += 1
             group["status_summary"][normalized] += 1
-            group["batches"].append({
-                "id": row.get("id"),
-                "batch_code": row.get("batch_code"),
-                "batch_sequence": row.get("batch_sequence"),
-                "cook_name": row.get("cook_name"),
-                "quantity": row.get("quantity"),
-                "production_shift": row.get("production_shift") or row.get("shift"),
-                "production_date": row.get("production_date"),
-                "production_time": row.get("production_time") or row.get("created_at"),
-                "qc_status": qc_status,
-                "last_qc": last_qc or None,
-                "inspection_round": last_qc.get("inspection_round") or 0,
-            })
+            group["batches"].append(
+                {
+                    "id": row.get("id"),
+                    "batch_code": row.get("batch_code"),
+                    "batch_sequence": row.get("batch_sequence"),
+                    "cook_name": row.get("cook_name"),
+                    "quantity": row.get("quantity"),
+                    "production_shift": row.get("production_shift") or row.get("shift"),
+                    "production_date": row.get("production_date"),
+                    "production_time": row.get("production_time") or row.get("created_at"),
+                    "qc_status": qc_status,
+                    "last_qc": last_qc or None,
+                    "inspection_round": last_qc.get("inspection_round") or 0,
+                }
+            )
 
         return jsonify({"success": True, "data": {"date": operational_date, "products": list(grouped.values())}})
     except Exception as exc:
@@ -442,7 +542,9 @@ def create_new_batch():
             if uploaded:
                 delete_photo(uploaded.storage_path)
             return jsonify({"success": False, "message": batch["error"], "db_detail": batch.get("db_detail")}), 503
-        write_audit("create_batch", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch)
+        write_audit(
+            "create_batch", "production_batch", str(batch.get("id")) if isinstance(batch, dict) else None, after=batch
+        )
         if any(value is not None for value in (data.ph_value, data.brix_value, data.tds_value)):
             write_audit(
                 "batch_parameter_check",
@@ -461,23 +563,27 @@ def create_new_batch():
                 after=batch,
             )
 
-        return jsonify({
-            "success": True,
-            "batch": batch,
-            "message": "Batch created. Proceed to inspection.",
-            "photo_url": photo_url,
-            "storage_path": storage_path,
-        }), 201
+        return jsonify(
+            {
+                "success": True,
+                "batch": batch,
+                "message": "Batch created. Proceed to inspection.",
+                "photo_url": photo_url,
+                "storage_path": storage_path,
+            }
+        ), 201
     except ValueError as e:
         logger.error("Batch photo validation failed: %s", e)
         return jsonify({"success": False, "error": f"Upload gagal: {str(e)}"}), 400
     except Exception as e:
         if is_duplicate_batch_code_error(e):
-            return jsonify({
-                "success": False,
-                "error_code": "DUPLICATE_BATCH_CODE",
-                "message": "Kode batch sudah digunakan. Gunakan kode lain atau kosongkan agar sistem membuat otomatis.",
-            }), 409
+            return jsonify(
+                {
+                    "success": False,
+                    "error_code": "DUPLICATE_BATCH_CODE",
+                    "message": "Kode batch sudah digunakan. Gunakan kode lain atau kosongkan agar sistem membuat otomatis.",
+                }
+            ), 409
         logger.error("Failed to create batch: %s", e)
         return jsonify({"success": False, "message": f"Gagal membuat batch: {str(e)}"}), 503
 
@@ -517,13 +623,7 @@ def list_products():
     sb = get_client()
     if sb:
         try:
-            res = (
-                sb.table("products")
-                .select("*")
-                .eq("is_active", True)
-                .order("product_code")
-                .execute()
-            )
+            res = sb.table("products").select(PRODUCT_SELECT).eq("is_active", True).order("product_code").execute()
             if res.data:
                 for item in res.data:
                     if "product_code" not in item and item.get("sku_code"):
@@ -534,4 +634,5 @@ def list_products():
 
     # Fallback to local catalog
     from backend.qc.product_catalog import CENTRAL_KITCHEN_PRODUCTS
+
     return jsonify(CENTRAL_KITCHEN_PRODUCTS)

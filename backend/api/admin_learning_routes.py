@@ -26,11 +26,13 @@ def _safe(handler):
         return _json(handler())
     except Exception as exc:
         logger.exception("Admin learning route failed: %s", exc)
-        return jsonify({
-            "success": False,
-            "message": "Learning admin request failed",
-            "error_code": "LEARNING_ADMIN_ERROR",
-        }), 500
+        return jsonify(
+            {
+                "success": False,
+                "message": "Learning admin request failed",
+                "error_code": "LEARNING_ADMIN_ERROR",
+            }
+        ), 500
 
 
 @admin_learning_bp.route("/modules", methods=["GET"])

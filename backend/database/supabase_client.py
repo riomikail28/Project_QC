@@ -5,14 +5,16 @@ Manages the connection to the Supabase database.
 Ensures only one client instance exists throughout the application.
 """
 
-import os
-import logging
 import base64
 import json
+import logging
+import os
 import re
 from dataclasses import dataclass
+from urllib.parse import quote, unquote
+
 try:
-    from supabase import create_client, Client
+    from supabase import Client, create_client
 except ImportError:
     create_client = None
     Client = None
@@ -32,7 +34,9 @@ _last_error: str = ""
 INVALID_KEY_MESSAGE = "Invalid Supabase API key. Check Vercel SUPABASE_SERVICE_ROLE_KEY."
 CONNECTION_FAILED_MESSAGE = "Supabase connection failed. Please check production environment variables."
 SUPABASE_URL_MESSAGE = "SUPABASE_URL must be a valid https://<project-ref>.supabase.co URL."
-SERVICE_ROLE_JWT_MESSAGE = "SUPABASE_SERVICE_ROLE_KEY must be the service_role JWT from Supabase Dashboard Settings > API, not a CLI secret."
+SERVICE_ROLE_JWT_MESSAGE = (
+    "SUPABASE_SERVICE_ROLE_KEY must be the service_role JWT from Supabase Dashboard Settings > API, not a CLI secret."
+)
 ANON_KEY_MESSAGE = "SUPABASE_ANON_KEY must be configured with the public anon JWT."
 STORAGE_BUCKET_MESSAGE = "SUPABASE_STORAGE_BUCKET must be a valid bucket name."
 
@@ -53,11 +57,8 @@ class SupabaseEnvStatus:
 
 
 def _supabase_key() -> str:
-    return (
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        or os.getenv("SUPABASE_KEY")
-        or ""
-    ).strip()
+    return (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
+
 
 def _anon_key() -> str:
     return (os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY") or "").strip()
@@ -72,13 +73,14 @@ def _is_placeholder(value: str) -> bool:
     return (
         not raw
         or raw.startswith("your-")
-        or raw in {
-            "test-key", 
-            "service-role-key", 
-            "replace-me", 
-            "your-supabase-anon-key", 
+        or raw
+        in {
+            "test-key",
+            "service-role-key",
+            "replace-me",
+            "your-supabase-anon-key",
             "your-supabase-service-role-key",
-            "anon-key"
+            "anon-key",
         }
         or "your-project-ref" in raw
     )
@@ -138,8 +140,15 @@ def validate_supabase_env(require_service_role: bool = True) -> SupabaseEnvStatu
     service_configured = bool(service_key) and not _is_placeholder(service_key)
     anon_configured = bool(anon_key) and not _is_placeholder(anon_key)
     url_valid = url_configured and _is_valid_supabase_url(url)
-    service_valid = service_configured and not _is_cli_secret(service_key) and _is_jwt(service_key) and _jwt_role(service_key) == "service_role"
-    anon_valid = anon_configured and not _is_cli_secret(anon_key) and _is_jwt(anon_key) and _jwt_role(anon_key) != "service_role"
+    service_valid = (
+        service_configured
+        and not _is_cli_secret(service_key)
+        and _is_jwt(service_key)
+        and _jwt_role(service_key) == "service_role"
+    )
+    anon_valid = (
+        anon_configured and not _is_cli_secret(anon_key) and _is_jwt(anon_key) and _jwt_role(anon_key) != "service_role"
+    )
     bucket_valid = _is_valid_bucket_name(bucket)
 
     def status(success, message, error_code):
@@ -214,12 +223,12 @@ def _client_with_key(key: str, key_name: str):
         _last_error = f"{key_name} is not configured"
         logger.warning(_last_error)
         return None
-    
+
     if _is_placeholder(key):
         _last_error = INVALID_KEY_MESSAGE if "SERVICE_ROLE" in key_name else "Invalid Supabase API key"
         logger.warning(_last_error)
         return None
-        
+
     if _is_cli_secret(key):
         _last_error = f"Invalid {key_name} format. Detected Supabase CLI Secret (sb_secret_...) instead of a JWT. Please use the 'service_role' (secret) or 'anon' (public) key from Supabase Dashboard -> Settings -> API."
         logger.error(_last_error)
@@ -255,7 +264,7 @@ def _client_with_key(key: str, key_name: str):
 def get_client():
     """Get or initialize the Supabase client singleton."""
     global _client, _failed, _last_error
-    
+
     if _client is not None:
         return _client
     env = validate_supabase_env(require_service_role=False)
@@ -343,11 +352,14 @@ def validate_supabase_connection() -> dict:
         if _is_invalid_key_error(error_text):
             message = INVALID_KEY_MESSAGE
             if _is_cli_secret(_service_key()):
-                 message = "Invalid Supabase API key format (CLI Secret detected). Use the Service Role JWT from Supabase Dashboard."
+                message = "Invalid Supabase API key format (CLI Secret detected). Use the Service Role JWT from Supabase Dashboard."
         else:
             message = f"Supabase connection failed: {error_text}"
         base["checks"]["database"] = {"success": False, "message": message}
-        base["checks"]["schema"] = {"success": False, "message": "Could not verify facility_rooms schema because database check failed"}
+        base["checks"]["schema"] = {
+            "success": False,
+            "message": "Could not verify facility_rooms schema because database check failed",
+        }
         return {"success": False, "message": message, "error_code": "SUPABASE_DATABASE_OR_SCHEMA_FAILED", **base}
 
     storage_check = _validate_storage_bucket(client, env.storage_bucket)
@@ -368,7 +380,11 @@ def _validate_storage_bucket(client, bucket: str) -> dict:
         return {"success": False, "message": STORAGE_BUCKET_MESSAGE, "error_code": "SUPABASE_STORAGE_BUCKET_INVALID"}
     storage = getattr(client, "storage", None)
     if storage is None:
-        return {"success": False, "message": "Supabase storage client is unavailable", "error_code": "SUPABASE_STORAGE_CLIENT_UNAVAILABLE"}
+        return {
+            "success": False,
+            "message": "Supabase storage client is unavailable",
+            "error_code": "SUPABASE_STORAGE_CLIENT_UNAVAILABLE",
+        }
     try:
         if hasattr(storage, "get_bucket"):
             storage.get_bucket(bucket)
@@ -383,7 +399,11 @@ def _validate_storage_bucket(client, bucket: str) -> dict:
                     names.append(getattr(item, "name", None) or getattr(item, "id", None))
             if bucket in names:
                 return {"success": True, "message": f"Storage bucket '{bucket}' exists"}
-            return {"success": False, "message": f"Storage bucket '{bucket}' was not found", "error_code": "SUPABASE_STORAGE_BUCKET_NOT_FOUND"}
+            return {
+                "success": False,
+                "message": f"Storage bucket '{bucket}' was not found",
+                "error_code": "SUPABASE_STORAGE_BUCKET_NOT_FOUND",
+            }
         if hasattr(storage, "from_"):
             storage.from_(bucket)
             return {"success": True, "message": f"Storage bucket '{bucket}' client can be created"}
@@ -395,12 +415,18 @@ def _validate_storage_bucket(client, bucket: str) -> dict:
             "message": f"Storage bucket '{bucket}' check failed: {text}",
             "error_code": "SUPABASE_STORAGE_BUCKET_NOT_FOUND" if not_found else "SUPABASE_STORAGE_BUCKET_FAILED",
         }
-    return {"success": False, "message": "Supabase storage bucket could not be verified", "error_code": "SUPABASE_STORAGE_BUCKET_UNVERIFIED"}
+    return {
+        "success": False,
+        "message": "Supabase storage bucket could not be verified",
+        "error_code": "SUPABASE_STORAGE_BUCKET_UNVERIFIED",
+    }
+
 
 def get_last_db_error():
     """Return the last encountered database error message."""
     global _last_error
     return _last_error
+
 
 def reset_client():
     """Reset the singleton instance (useful for testing or reconnecting)."""
@@ -409,33 +435,121 @@ def reset_client():
     _admin_client = None
     _failed = False
 
+
+# PostgREST control parameters that are NOT column filters.
+_POSTGREST_CONTROL_PARAMS = frozenset(
+    {
+        "select",
+        "order",
+        "limit",
+        "offset",
+        "on_conflict",
+    }
+)
+
+# Allowed characters for PostgREST column/key names (letters, digits, underscore, dot for joins).
+_SAFE_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.()]*$")
+
+# Allowed characters for table names.
+_SAFE_TABLE_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+# Allowed PostgREST operators, for example eq, gte, lte, in, is, ilike.
+_SAFE_OPERATOR_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
+
+
+def _sanitize_postgrest_filters(raw_filters: str) -> str:
+    """Parse and re-encode a PostgREST query string to prevent injection.
+
+    Each ``&``-separated segment is validated:
+    - The key (column name or control param) must match ``[a-zA-Z_][a-zA-Z0-9_.()]*``.
+    - Filter *values* (the part after ``=eq.``, ``=gte.`` etc.) are URL-encoded so
+      that user-supplied data can never break out of the value position.
+    - Control params (``select``, ``order``, ``limit``, ``offset``, ``on_conflict``)
+      are passed through after key validation.
+    - Segments containing fragment identifiers (``#``) or semicolons are rejected.
+    """
+    if not raw_filters:
+        return ""
+    # Reject obvious injection attempts early.
+    if "#" in raw_filters or ";" in raw_filters:
+        raise ValueError("Illegal characters in query filter")
+
+    safe_parts: list[str] = []
+    for segment in raw_filters.split("&"):
+        if not segment:
+            continue
+        eq_pos = segment.find("=")
+        if eq_pos == -1:
+            # Bare key with no value - skip silently.
+            continue
+        key = segment[:eq_pos]
+        value = segment[eq_pos + 1 :]
+
+        if not _SAFE_KEY_RE.match(key):
+            raise ValueError(f"Unsafe filter key rejected: {key!r}")
+
+        if key in _POSTGREST_CONTROL_PARAMS:
+            # Control params: encode the value but keep the key verbatim.
+            safe_parts.append(f"{key}={quote(unquote(value), safe='*,.:()!-')}")
+        else:
+            # Column filter - value has the form ``operator.actual_value``.
+            dot_pos = value.find(".")
+            if dot_pos == -1:
+                # Operator-less value (unusual but harmless).
+                safe_parts.append(f"{key}={quote(unquote(value), safe='')}")
+            else:
+                operator = value[:dot_pos]
+                actual_value = value[dot_pos + 1 :]
+                if not _SAFE_OPERATOR_RE.match(operator):
+                    raise ValueError(f"Unsafe filter operator rejected: {operator!r}")
+                safe_parts.append(f"{key}={operator}.{quote(unquote(actual_value), safe=',():-:+T')}")
+    return "&".join(safe_parts)
+
+
 def direct_db_query(table: str, method: str = "GET", payload: dict = None, filters: str = ""):
-    """Perform a direct HTTP query to Supabase (bypass library validation)."""
+    """Perform a direct HTTP query to Supabase (bypass library validation).
+
+    Parameters
+    ----------
+    table : str
+        PostgREST table name - validated to contain only safe characters.
+    method : str
+        HTTP method (GET, POST, PATCH, DELETE).
+    payload : dict | None
+        JSON body for POST/PATCH requests.
+    filters : str
+        Raw PostgREST query string. Each segment is sanitized and values
+        are URL-encoded before being appended to the URL.
+    """
     import json
-    from urllib import request, error
-    
+    from urllib import error, request
+
+    # --- Validate table name ---
+    if not _SAFE_TABLE_RE.match(table):
+        raise ValueError(f"Invalid table name: {table!r}")
+
     url = os.getenv("SUPABASE_URL", "").strip().strip("/")
     key = _supabase_key()
     env = validate_supabase_env(require_service_role=True)
     if not env.success:
         raise ValueError(env.message)
-    
+
     api_url = f"{url}/rest/v1/{table}"
     if filters:
-        api_url += f"?{filters}"
-        
+        api_url += f"?{_sanitize_postgrest_filters(filters)}"
+
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
-        "Prefer": "return=representation"
+        "Prefer": "return=representation",
     }
-    
+
     data = json.dumps(payload).encode() if payload else None
     req = request.Request(api_url, headers=headers, data=data, method=method)
-    
+
     try:
-        with request.urlopen(req) as response:
+        with request.urlopen(req) as response:  # nosec B310
             res_body = response.read().decode()
             return json.loads(res_body) if res_body else []
     except error.HTTPError as e:

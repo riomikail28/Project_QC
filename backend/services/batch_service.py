@@ -6,10 +6,11 @@ Handles batch creation, status determination, and QC scoring.
 """
 
 import logging
-import secrets
 import re
+import secrets
 from datetime import date, datetime, timezone
 from uuid import UUID
+
 from backend.database.supabase_client import direct_db_query, get_client, get_last_db_error
 
 logger = logging.getLogger("qc.batch")
@@ -39,13 +40,17 @@ def generate_product_batch_code(sku: str, production_date: str, batch_sequence: 
 
 def is_duplicate_batch_code_error(exc: Exception) -> bool:
     code = str(getattr(exc, "code", "") or getattr(exc, "status_code", ""))
-    message = " ".join(str(part) for part in (
-        code,
-        getattr(exc, "message", ""),
-        getattr(exc, "details", ""),
-        getattr(exc, "hint", ""),
-        exc,
-    ) if part)
+    message = " ".join(
+        str(part)
+        for part in (
+            code,
+            getattr(exc, "message", ""),
+            getattr(exc, "details", ""),
+            getattr(exc, "hint", ""),
+            exc,
+        )
+        if part
+    )
     message = message.lower()
     return (
         "23505" in message
@@ -78,7 +83,7 @@ def calculate_qc_score(total_checks: int, passed_checks: int) -> float:
         passed_checks: Number of checks that passed
 
     Returns:
-        Score as a percentage (0–100), rounded to 2 decimal places
+        Score as a percentage (0-100), rounded to 2 decimal places
     """
     if total_checks == 0:
         return 0.0
@@ -100,7 +105,7 @@ def get_batches(limit: int = 50) -> list:
             .select(
                 "id, batch_code, production_date, shift, status, "
                 "final_qc_status, report_url, batch_sequence, cook_name, quantity, production_shift, created_at, "
-                "products(*)"
+                "products(id,product_code,sku_code,product_name)"
             )
             .order("created_at", desc=True)
             .limit(limit)
@@ -122,13 +127,23 @@ def get_batch_detail(batch_id: str) -> dict:
         return {"batch": None, "ccp_logs": []}
 
     try:
-        batch_res = sb.table("production_batches").select("*").eq("id", batch_id).execute()
+        batch_columns = (
+            "id,product_id,product_name,batch_code,batch_sequence,production_date,expired_date,status,created_by,"
+            "cook_name,quantity,production_shift,ph_value,brix_value,tds_value,ph_status,brix_status,tds_status,"
+            "parameter_notes,parameter_checked_by,parameter_checked_at,shift,operator_id,qc_officer_id,photo_url,"
+            "storage_path,created_at,updated_at"
+        )
+        batch_res = sb.table("production_batches").select(batch_columns).eq("id", batch_id).execute()
         if not batch_res.data:
             return {"batch": None, "ccp_logs": []}
 
+        log_columns = (
+            "id,batch_id,stage,operator_id,photo_url,stage_qc_status,metrics,recorded_at,storage_path,"
+            "raw_temp_c,core_temp_c,ph_value_extracted,brix_value_extracted,tds_value,room_temp_c"
+        )
         logs = (
             sb.table("production_batch_logs")
-            .select("*")
+            .select(log_columns)
             .eq("batch_id", batch_id)
             .order("recorded_at")
             .execute()
@@ -177,7 +192,9 @@ def create_batch(
         try:
             product_res = (
                 sb.table("products")
-                .select("id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
+                .select(
+                    "id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max"
+                )
                 .eq("id", product_id)
                 .limit(1)
                 .execute()
@@ -192,7 +209,9 @@ def create_batch(
             try:
                 product_res = (
                     sb.table("products")
-                    .select("id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max")
+                    .select(
+                        "id, product_code, sku_code, product_name, ph_min, ph_max, brix_min, brix_max, tds_min, tds_max"
+                    )
                     .eq(code_column, product_id)
                     .limit(1)
                     .execute()
@@ -212,7 +231,9 @@ def create_batch(
         default_product = _ensure_default_product(sb)
         product_row = default_product
         resolved_product_id = default_product.get("id") if default_product else None
-        resolved_product_name = resolved_product_name or (default_product or {}).get("product_name") or "General QC Product"
+        resolved_product_name = (
+            resolved_product_name or (default_product or {}).get("product_name") or "General QC Product"
+        )
 
     production_date = production_date or date.today().isoformat()
     sku_for_code = _sku_for_batch_code(code_product_row or product_row, requested_product_ref, resolved_product_name)
@@ -431,28 +452,21 @@ def get_daily_summary(day: str = None) -> dict:
         # Batch stats for the day
         batches = (
             sb.table("production_batches")
-            .select(
-                "id, batch_code, production_date, shift, status, "
-                "final_qc_status, created_at, "
-                "products(*)"
-            )
+            .select("id, batch_code, production_date, shift, status, final_qc_status, created_at, products(*)")
             .eq("production_date", selected_day)
             .order("created_at", desc=True)
             .execute()
         ).data or []
 
         # Open alerts count
-        alerts = (
-            sb.table("facility_alerts")
-            .select("id")
-            .eq("status", "open")
-            .execute()
-        ).data or []
+        alerts = (sb.table("facility_alerts").select("id").eq("status", "open").execute()).data or []
 
         # Latest facility readings
         facility_logs = (
             sb.table("facility_logs")
-            .select("temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+            .select(
+                "temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)"
+            )
             .order("recorded_at", desc=True)
             .limit(50)
             .execute()
@@ -464,13 +478,16 @@ def get_daily_summary(day: str = None) -> dict:
             room_name = (row.get("facility_rooms") or {}).get("name") or "Unknown"
             device = row.get("facility_devices") or {}
             zone = f"{room_name} - {device.get('name', 'Suhu Ruangan')}"
-            latest_by_zone.setdefault(zone, {
-                "zone": zone,
-                "temperature_c": row.get("temperature_c"),
-                "threshold_c": device.get("threshold_temp", 25.0),
-                "is_normal": row.get("is_normal", True),
-                "recorded_at": row.get("recorded_at"),
-            })
+            latest_by_zone.setdefault(
+                zone,
+                {
+                    "zone": zone,
+                    "temperature_c": row.get("temperature_c"),
+                    "threshold_c": device.get("threshold_temp", 25.0),
+                    "is_normal": row.get("is_normal", True),
+                    "recorded_at": row.get("recorded_at"),
+                },
+            )
 
         return {
             "date": selected_day,

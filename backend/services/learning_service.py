@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 import base64
+import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -20,7 +20,11 @@ MODULES = [
         "objectives": ["Memahami risiko food safety", "Mengenali sumber kontaminasi", "Menjaga hygiene area kerja"],
         "learning_material": "Food safety berfokus pada pengendalian bahaya yang dapat membuat produk tidak aman dikonsumsi. Staff QC perlu membaca kondisi area, hygiene pekerja, alur bahan, suhu, dan kebersihan alat sebelum produk dilepas.",
         "case_study": "Area preparation menerima bahan dingin dengan kemasan basah. Staff QC menilai kebersihan kemasan, suhu penerimaan, dan risiko kontaminasi silang sebelum bahan masuk proses.",
-        "competencies": ["Menilai risiko keamanan pangan dasar", "Mencatat temuan hygiene", "Menentukan tindakan pencegahan awal"],
+        "competencies": [
+            "Menilai risiko keamanan pangan dasar",
+            "Mencatat temuan hygiene",
+            "Menentukan tindakan pencegahan awal",
+        ],
     },
     {
         "slug": "gmp-personal-hygiene",
@@ -31,7 +35,11 @@ MODULES = [
         "objectives": ["Memahami GMP", "Mengecek personal hygiene", "Mencegah kontaminasi silang"],
         "learning_material": "GMP mengatur praktik produksi yang konsisten dan higienis. Pemeriksaan meliputi APD, cuci tangan, kondisi alat, pemisahan area bersih/kotor, dan perilaku pekerja di area produksi.",
         "case_study": "Operator masuk area packing tanpa hairnet lengkap. QC perlu melakukan hold sementara pada proses, koreksi APD, dan mencatat temuan hygiene.",
-        "competencies": ["Melakukan checklist GMP", "Mengidentifikasi pelanggaran hygiene", "Memberi rekomendasi perbaikan area"],
+        "competencies": [
+            "Melakukan checklist GMP",
+            "Mengidentifikasi pelanggaran hygiene",
+            "Memberi rekomendasi perbaikan area",
+        ],
     },
     {
         "slug": "haccp-principles",
@@ -42,7 +50,11 @@ MODULES = [
         "objectives": ["Memahami alur HACCP", "Menghubungkan bahaya dengan CCP", "Membaca dokumen monitoring"],
         "learning_material": "HACCP adalah pendekatan sistematis untuk mengidentifikasi, mengevaluasi, dan mengendalikan bahaya signifikan dalam proses pangan. Di central kitchen, HACCP membantu QC membuat keputusan berbasis risiko.",
         "case_study": "Suhu chiller naik ke 11°C saat produk menunggu rilis. QC menentukan apakah titik tersebut termasuk kontrol kritis dan bagaimana produk ditahan.",
-        "competencies": ["Menjelaskan prinsip HACCP", "Membaca alur proses", "Menghubungkan deviasi dengan risiko produk"],
+        "competencies": [
+            "Menjelaskan prinsip HACCP",
+            "Membaca alur proses",
+            "Menghubungkan deviasi dengan risiko produk",
+        ],
     },
     {
         "slug": "hazard-identification",
@@ -53,7 +65,11 @@ MODULES = [
         "objectives": ["Mengenali bahaya biologis", "Mengenali bahaya kimia/fisik", "Mengenali risiko alergen"],
         "learning_material": "Bahaya biologis mencakup mikroba, kimia mencakup residu bahan pembersih, fisik mencakup serpihan benda asing, dan alergen mencakup kontaminasi silang bahan pemicu alergi.",
         "case_study": "Produk seafood diproses dekat menu non-seafood. QC menilai risiko alergen, alat yang dipakai, dan label pemisahan bahan.",
-        "competencies": ["Mengklasifikasi bahaya pangan", "Menentukan sumber risiko", "Menulis temuan bahaya dalam checklist"],
+        "competencies": [
+            "Mengklasifikasi bahaya pangan",
+            "Menentukan sumber risiko",
+            "Menulis temuan bahaya dalam checklist",
+        ],
     },
     {
         "slug": "ccp-determination",
@@ -97,7 +113,11 @@ MODULES = [
         "objectives": ["Menahan produk terdampak", "Investigasi penyebab", "Menentukan tindakan perbaikan"],
         "learning_material": "Corrective action harus mengendalikan produk terdampak dan memperbaiki penyebab deviasi. Tindakan dicatat agar keputusan rilis/reject dapat diaudit.",
         "case_study": "Saat suhu chiller 11°C, QC menahan produk, memindahkan ke chiller aman, memeriksa pintu/sensor, dan meminta maintenance mengecek unit.",
-        "competencies": ["Menentukan hold product", "Menyusun tindakan korektif", "Mencatat eskalasi dan hasil verifikasi"],
+        "competencies": [
+            "Menentukan hold product",
+            "Menyusun tindakan korektif",
+            "Mencatat eskalasi dan hasil verifikasi",
+        ],
     },
     {
         "slug": "verification-documentation",
@@ -108,7 +128,11 @@ MODULES = [
         "objectives": ["Memverifikasi catatan QC", "Mengecek kelengkapan evidence", "Membaca audit trail"],
         "learning_material": "Verification memastikan sistem kontrol berjalan efektif. Dokumentasi menjadi bukti bahwa monitoring, deviasi, dan corrective action dilakukan secara konsisten.",
         "case_study": "Supervisor mereview log suhu, foto evidence, jam input, dan catatan corrective action sebelum menutup deviasi.",
-        "competencies": ["Melakukan review dokumen", "Menilai kelengkapan evidence", "Menyiapkan data untuk audit internal"],
+        "competencies": [
+            "Melakukan review dokumen",
+            "Menilai kelengkapan evidence",
+            "Menyiapkan data untuk audit internal",
+        ],
     },
     {
         "slug": "traceability-recall",
@@ -130,7 +154,11 @@ MODULES = [
         "objectives": ["Membaca suhu chiller/freezer", "Menilai deviasi cold chain", "Mengambil tindakan cepat"],
         "learning_material": "Cold chain menjaga produk tetap pada suhu aman. Deviasi harus dilihat dari suhu aktual, durasi, produk terdampak, dan kondisi unit penyimpanan.",
         "case_study": "Freezer menunjukkan -9°C dari target -18°C. QC mengecek durasi, kondisi produk, pintu, dan eskalasi maintenance.",
-        "competencies": ["Menginterpretasi suhu cold chain", "Menentukan prioritas eskalasi", "Mencatat log suhu harian"],
+        "competencies": [
+            "Menginterpretasi suhu cold chain",
+            "Menentukan prioritas eskalasi",
+            "Mencatat log suhu harian",
+        ],
     },
     {
         "slug": "central-kitchen-case",
@@ -141,7 +169,11 @@ MODULES = [
         "objectives": ["Menganalisis kasus nyata", "Menggabungkan HACCP dan GMP", "Membuat keputusan QC"],
         "learning_material": "Studi kasus menggabungkan food safety, GMP, HACCP, monitoring suhu, corrective action, dokumentasi, dan traceability dalam satu alur kerja QC.",
         "case_study": "Produk ready meal melewati cooking, chilling, packing, dan penyimpanan. Peserta menentukan titik risiko dan tindakan QC di setiap tahap.",
-        "competencies": ["Membuat analisis kasus QC", "Menyusun keputusan berbasis risiko", "Menentukan evidence yang wajib dicatat"],
+        "competencies": [
+            "Membuat analisis kasus QC",
+            "Menyusun keputusan berbasis risiko",
+            "Menentukan evidence yang wajib dicatat",
+        ],
     },
 ]
 
@@ -154,9 +186,24 @@ SIMULATIONS = [
         "actual_c": 11,
         "scenario": "Saat monitoring pagi, PPIC Chiller tercatat 11°C dari target 5°C. Produk ready meal masih menunggu rilis produksi.",
         "options": [
-            {"key": "A", "label": "Investigasi dan tahan produk", "score": 85, "feedback": "Tepat: tahan produk terdampak, cek durasi deviasi, sensor, pintu, dan kondisi produk."},
-            {"key": "B", "label": "Corrective action", "score": 100, "feedback": "Paling tepat jika disertai hold product, pindah chiller cadangan, eskalasi maintenance, dan dokumentasi deviasi."},
-            {"key": "C", "label": "Lanjut produksi", "score": 0, "feedback": "Tidak aman. Deviasi suhu harus dikendalikan sebelum produksi dilanjutkan."},
+            {
+                "key": "A",
+                "label": "Investigasi dan tahan produk",
+                "score": 85,
+                "feedback": "Tepat: tahan produk terdampak, cek durasi deviasi, sensor, pintu, dan kondisi produk.",
+            },
+            {
+                "key": "B",
+                "label": "Corrective action",
+                "score": 100,
+                "feedback": "Paling tepat jika disertai hold product, pindah chiller cadangan, eskalasi maintenance, dan dokumentasi deviasi.",
+            },
+            {
+                "key": "C",
+                "label": "Lanjut produksi",
+                "score": 0,
+                "feedback": "Tidak aman. Deviasi suhu harus dikendalikan sebelum produksi dilanjutkan.",
+            },
         ],
         "best_actions": ["A", "B"],
     }
@@ -241,14 +288,16 @@ class LearningService:
 
     def modules(self, user_id):
         progress = self._progress_map(user_id)
-        return self._ok([
-            {
-                **module,
-                "completed": progress.get(module["slug"], {}).get("status") == "completed",
-                "mini_quiz_passed": self._module_quiz_passed(user_id, module["slug"]),
-            }
-            for module in self._modules()
-        ])
+        return self._ok(
+            [
+                {
+                    **module,
+                    "completed": progress.get(module["slug"], {}).get("status") == "completed",
+                    "mini_quiz_passed": self._module_quiz_passed(user_id, module["slug"]),
+                }
+                for module in self._modules()
+            ]
+        )
 
     def module_detail(self, user_id, module_slug):
         module = self._module(module_slug)
@@ -256,17 +305,19 @@ class LearningService:
             return self._fail("Modul tidak ditemukan", 404)
         progress = self._progress_map(user_id)
         best_score = self._best_module_quiz_score(user_id, module_slug)
-        return self._ok({
-            **module,
-            "completed": progress.get(module_slug, {}).get("status") == "completed",
-            "mini_quiz_passed": best_score >= 70,
-            "mini_quiz_score": best_score,
-            "mini_quiz": [
-                {key: value for key, value in question.items() if key != "answer"}
-                for question in self._module_mini_quiz(module)
-            ],
-            "key_points": self._module_key_points(module),
-        })
+        return self._ok(
+            {
+                **module,
+                "completed": progress.get(module_slug, {}).get("status") == "completed",
+                "mini_quiz_passed": best_score >= 70,
+                "mini_quiz_score": best_score,
+                "mini_quiz": [
+                    {key: value for key, value in question.items() if key != "answer"}
+                    for question in self._module_mini_quiz(module)
+                ],
+                "key_points": self._module_key_points(module),
+            }
+        )
 
     def submit_module_mini_quiz(self, user_id, module_slug, answers):
         module = self._module(module_slug)
@@ -280,13 +331,15 @@ class LearningService:
             selected = answers.get(question["id"])
             is_correct = selected == question["answer"]
             correct += 1 if is_correct else 0
-            items.append({
-                "question_id": question["id"],
-                "selected": selected,
-                "correct_answer": question["answer"],
-                "is_correct": is_correct,
-                "explanation": question.get("explanation"),
-            })
+            items.append(
+                {
+                    "question_id": question["id"],
+                    "selected": selected,
+                    "correct_answer": question["answer"],
+                    "is_correct": is_correct,
+                    "explanation": question.get("explanation"),
+                }
+            )
         score = round((correct / len(questions)) * 100) if questions else 0
         payload = {
             "user_id": user_id,
@@ -299,15 +352,19 @@ class LearningService:
         if not saved:
             self._log_persistence_fallback("module mini quiz attempt", user_id)
             LOCAL_MODULE_QUIZ_ATTEMPTS.append(payload)
-        return self._ok({
-            "module_slug": module_slug,
-            "score": score,
-            "correct": correct,
-            "total": len(questions),
-            "passed": score >= 70,
-            "items": items,
-            "message": "Mini quiz lulus" if score >= 70 else "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul.",
-        })
+        return self._ok(
+            {
+                "module_slug": module_slug,
+                "score": score,
+                "correct": correct,
+                "total": len(questions),
+                "passed": score >= 70,
+                "items": items,
+                "message": "Mini quiz lulus"
+                if score >= 70
+                else "Selesaikan mini quiz minimal 70 untuk menyelesaikan modul.",
+            }
+        )
 
     def complete_module(self, user_id, module_slug):
         module = self._module(module_slug)
@@ -351,16 +408,18 @@ class LearningService:
             minimum_score=75,
         )
         certificate_percent = 100 if self._has_certificate(user_id) else 0
-        return self._ok({
-            "completed_modules": len(completed),
-            "total_modules": len(modules),
-            "percent": learning_percent,
-            "learning_percent": learning_percent,
-            "simulation_percent": simulation_percent,
-            "quiz_percent": quiz_percent,
-            "certificate_percent": certificate_percent,
-            "module_slugs": sorted(completed),
-        })
+        return self._ok(
+            {
+                "completed_modules": len(completed),
+                "total_modules": len(modules),
+                "percent": learning_percent,
+                "learning_percent": learning_percent,
+                "simulation_percent": simulation_percent,
+                "quiz_percent": quiz_percent,
+                "certificate_percent": certificate_percent,
+                "module_slugs": sorted(completed),
+            }
+        )
 
     def simulations(self):
         return self._ok(self._simulations())
@@ -385,25 +444,29 @@ class LearningService:
         if not saved:
             self._log_persistence_fallback("simulation attempt", user_id)
             LOCAL_SIMULATION_ATTEMPTS.append(payload)
-        return self._ok({
-            "simulation_id": simulation_id,
-            "selected_action": selected_action,
-            "score": score,
-            "passed": score >= 70,
-            "feedback": feedback,
-            "best_actions": simulation["best_actions"],
-        })
+        return self._ok(
+            {
+                "simulation_id": simulation_id,
+                "selected_action": selected_action,
+                "score": score,
+                "passed": score >= 70,
+                "feedback": feedback,
+                "best_actions": simulation["best_actions"],
+            }
+        )
 
     def quizzes(self):
         public_quizzes = []
         for quiz in self._quizzes():
-            public_quizzes.append({
-                **quiz,
-                "questions": [
-                    {key: value for key, value in question.items() if key != "answer"}
-                    for question in quiz["questions"]
-                ],
-            })
+            public_quizzes.append(
+                {
+                    **quiz,
+                    "questions": [
+                        {key: value for key, value in question.items() if key != "answer"}
+                        for question in quiz["questions"]
+                    ],
+                }
+            )
         return self._ok(public_quizzes)
 
     def submit_quiz(self, user_id, quiz_id, answers):
@@ -417,12 +480,14 @@ class LearningService:
             selected = answers.get(question["id"])
             is_correct = selected == question["answer"]
             correct += 1 if is_correct else 0
-            items.append({
-                "question_id": question["id"],
-                "selected": selected,
-                "correct_answer": question["answer"],
-                "is_correct": is_correct,
-            })
+            items.append(
+                {
+                    "question_id": question["id"],
+                    "selected": selected,
+                    "correct_answer": question["answer"],
+                    "is_correct": is_correct,
+                }
+            )
         score = round((correct / len(quiz["questions"])) * 100) if quiz["questions"] else 0
         payload = {
             "user_id": user_id,
@@ -434,14 +499,16 @@ class LearningService:
         if not saved:
             self._log_persistence_fallback("quiz attempt", user_id)
             LOCAL_QUIZ_ATTEMPTS.append(payload)
-        return self._ok({
-            "quiz_id": quiz_id,
-            "score": score,
-            "correct": correct,
-            "total": len(quiz["questions"]),
-            "passed": score >= 75,
-            "items": items,
-        })
+        return self._ok(
+            {
+                "quiz_id": quiz_id,
+                "score": score,
+                "correct": correct,
+                "total": len(quiz["questions"]),
+                "passed": score >= 75,
+                "items": items,
+            }
+        )
 
     def certificate(self, user):
         progress = self.progress(user["id"])["data"]
@@ -474,7 +541,9 @@ class LearningService:
             "issued_at": _now(),
         }
         certificate_data["pdf_filename"] = f"{cert_id}.pdf"
-        certificate_data["pdf_base64"] = base64.b64encode(self._simple_certificate_pdf(certificate_data)).decode("ascii")
+        certificate_data["pdf_base64"] = base64.b64encode(self._simple_certificate_pdf(certificate_data)).decode(
+            "ascii"
+        )
         return self._ok(certificate_data)
 
     def certificate_pdf(self, user):
@@ -487,11 +556,13 @@ class LearningService:
                 {"progress": progress},
             )
         pdf = self._simple_certificate_pdf(data)
-        return self._ok({
-            "filename": f"{data['certificate_id']}.pdf",
-            "content_type": "application/pdf",
-            "bytes": pdf,
-        })
+        return self._ok(
+            {
+                "filename": f"{data['certificate_id']}.pdf",
+                "content_type": "application/pdf",
+                "bytes": pdf,
+            }
+        )
 
     def career_recommendation(self, user_id):
         progress = self.progress(user_id)["data"]
@@ -504,41 +575,83 @@ class LearningService:
             return all(slug in modules for slug in slugs)
 
         recommendations = [
-            self._career("QC Staff", self._average(learning_score, simulation_score, quiz_score), [
-                "Cocok untuk inspeksi proses, sampling, monitoring suhu, dan keputusan pass/fail.",
-                "Skor simulation dan quiz menunjukkan kesiapan membaca kasus operasional QC.",
-            ]),
-            self._career("QA Staff", self._average(learning_score, quiz_score, 85 if has("haccp-principles", "verification-documentation") else 45), [
-                "Cocok untuk dokumentasi mutu, verifikasi SOP, CAPA, dan kontrol sistem kualitas.",
-                "Progress modul dan pemahaman quiz menjadi indikator kesiapan QA.",
-            ]),
-            self._career("Food Safety Officer", self._average(quiz_score, 90 if has("haccp-principles", "food-safety-hygiene", "hazard-identification") else 45, simulation_score), [
-                "Cocok untuk HACCP, hygiene, pencegahan kontaminasi, dan food safety compliance.",
-                "Materi HACCP/Food Safety dan skor kasus suhu menjadi dasar rekomendasi.",
-            ]),
-            self._career("Production Control", self._average(simulation_score, learning_score, 85 if has("ccp-monitoring", "corrective-action") else 45), [
-                "Cocok untuk koordinasi proses, monitoring jadwal produksi, dan eskalasi deviasi operasional.",
-                "Kemampuan membaca kasus dan mengambil tindakan cepat mendukung jalur produksi.",
-            ]),
-            self._career("Warehouse QC", self._average(simulation_score, 90 if has("traceability-recall", "chiller-freezer-monitoring") else 45, learning_score), [
-                "Cocok untuk kontrol penerimaan, penyimpanan, cold chain, dan traceability gudang.",
-                "Pemahaman suhu dan batch membantu menjaga mutu bahan serta produk jadi.",
-            ]),
-            self._career("Auditor Internal", self._average(learning_score, quiz_score, 90 if has("haccp-principles", "traceability-recall", "verification-documentation") else 40), [
-                "Cocok untuk audit internal, audit trail, traceability, dan pemeriksaan evidence.",
-                "Kesiapan auditor meningkat saat modul traceability dan HACCP selesai.",
-            ]),
+            self._career(
+                "QC Staff",
+                self._average(learning_score, simulation_score, quiz_score),
+                [
+                    "Cocok untuk inspeksi proses, sampling, monitoring suhu, dan keputusan pass/fail.",
+                    "Skor simulation dan quiz menunjukkan kesiapan membaca kasus operasional QC.",
+                ],
+            ),
+            self._career(
+                "QA Staff",
+                self._average(
+                    learning_score, quiz_score, 85 if has("haccp-principles", "verification-documentation") else 45
+                ),
+                [
+                    "Cocok untuk dokumentasi mutu, verifikasi SOP, CAPA, dan kontrol sistem kualitas.",
+                    "Progress modul dan pemahaman quiz menjadi indikator kesiapan QA.",
+                ],
+            ),
+            self._career(
+                "Food Safety Officer",
+                self._average(
+                    quiz_score,
+                    90 if has("haccp-principles", "food-safety-hygiene", "hazard-identification") else 45,
+                    simulation_score,
+                ),
+                [
+                    "Cocok untuk HACCP, hygiene, pencegahan kontaminasi, dan food safety compliance.",
+                    "Materi HACCP/Food Safety dan skor kasus suhu menjadi dasar rekomendasi.",
+                ],
+            ),
+            self._career(
+                "Production Control",
+                self._average(
+                    simulation_score, learning_score, 85 if has("ccp-monitoring", "corrective-action") else 45
+                ),
+                [
+                    "Cocok untuk koordinasi proses, monitoring jadwal produksi, dan eskalasi deviasi operasional.",
+                    "Kemampuan membaca kasus dan mengambil tindakan cepat mendukung jalur produksi.",
+                ],
+            ),
+            self._career(
+                "Warehouse QC",
+                self._average(
+                    simulation_score,
+                    90 if has("traceability-recall", "chiller-freezer-monitoring") else 45,
+                    learning_score,
+                ),
+                [
+                    "Cocok untuk kontrol penerimaan, penyimpanan, cold chain, dan traceability gudang.",
+                    "Pemahaman suhu dan batch membantu menjaga mutu bahan serta produk jadi.",
+                ],
+            ),
+            self._career(
+                "Auditor Internal",
+                self._average(
+                    learning_score,
+                    quiz_score,
+                    90 if has("haccp-principles", "traceability-recall", "verification-documentation") else 40,
+                ),
+                [
+                    "Cocok untuk audit internal, audit trail, traceability, dan pemeriksaan evidence.",
+                    "Kesiapan auditor meningkat saat modul traceability dan HACCP selesai.",
+                ],
+            ),
         ]
         recommendations.sort(key=lambda item: item["match_percent"], reverse=True)
-        return self._ok({
-            "primary": recommendations[0],
-            "recommendations": recommendations,
-            "scores": {
-                "learning": learning_score,
-                "simulation": simulation_score,
-                "quiz": quiz_score,
-            },
-        })
+        return self._ok(
+            {
+                "primary": recommendations[0],
+                "recommendations": recommendations,
+                "scores": {
+                    "learning": learning_score,
+                    "simulation": simulation_score,
+                    "quiz": quiz_score,
+                },
+            }
+        )
 
     def mentor_answer(self, user_id, question):
         question = str(question or "").strip()
@@ -558,48 +671,67 @@ class LearningService:
         return self._ok(payload)
 
     def mentor_history(self, user_id):
-        rows = self.repo.fetch_table(
-            "itdv_mentor_history",
-            filters=[("eq", "user_id", user_id)],
-            order_by="created_at",
-            desc=True,
-            limit=20,
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_mentor_history",
+                filters=[("eq", "user_id", user_id)],
+                order_by="created_at",
+                desc=True,
+                limit=20,
+            )
+            if self.repo.available()
+            else []
+        )
         if not rows:
-            rows = [
-                row for row in reversed(LOCAL_MENTOR_HISTORY)
-                if row.get("user_id") == user_id
-            ][:20]
+            rows = [row for row in reversed(LOCAL_MENTOR_HISTORY) if row.get("user_id") == user_id][:20]
         return self._ok(rows)
 
     def _modules(self):
         rows = self.repo.fetch_table("itdv_modules", order_by="sort_order") if self.repo.available() else []
-        rows = [self._module_public(row) for row in rows if not row.get("archived") and row.get("published", True) is not False]
+        rows = [
+            self._module_public(row)
+            for row in rows
+            if not row.get("archived") and row.get("published", True) is not False
+        ]
         return rows or MODULES
 
     def _simulations(self):
         rows = self.repo.fetch_table("itdv_simulations", order_by="created_at") if self.repo.available() else []
-        rows = [self._simulation_public(row) for row in rows if not row.get("archived") and row.get("published", True) is not False]
+        rows = [
+            self._simulation_public(row)
+            for row in rows
+            if not row.get("archived") and row.get("published", True) is not False
+        ]
         return rows or SIMULATIONS
 
     def _quizzes(self):
-        question_rows = self.repo.fetch_table("itdv_quiz_questions", order_by="created_at") if self.repo.available() else []
-        question_rows = [row for row in question_rows if not row.get("archived") and row.get("published", True) is not False]
+        question_rows = (
+            self.repo.fetch_table("itdv_quiz_questions", order_by="created_at") if self.repo.available() else []
+        )
+        question_rows = [
+            row for row in question_rows if not row.get("archived") and row.get("published", True) is not False
+        ]
         if question_rows:
-            return [{
-                "id": "itdv-main-quiz",
-                "title": "Quiz ITDV Learning Center",
-                "module_slug": None,
-                "questions": [self._question_public(row) for row in question_rows],
-            }]
+            return [
+                {
+                    "id": "itdv-main-quiz",
+                    "title": "Quiz ITDV Learning Center",
+                    "module_slug": None,
+                    "questions": [self._question_public(row) for row in question_rows],
+                }
+            ]
         rows = self.repo.fetch_table("itdv_quizzes", order_by="created_at") if self.repo.available() else []
         return rows or QUIZZES
 
     def _progress_map(self, user_id):
-        rows = self.repo.fetch_table(
-            "itdv_progress",
-            filters=[("eq", "user_id", user_id), ("eq", "status", "completed")],
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_progress",
+                filters=[("eq", "user_id", user_id), ("eq", "status", "completed")],
+            )
+            if self.repo.available()
+            else []
+        )
         progress = {row.get("module_slug"): row for row in rows if row.get("module_slug")}
         for slug in LOCAL_PROGRESS.get(user_id, set()):
             progress.setdefault(slug, {"module_slug": slug, "status": "completed"})
@@ -609,10 +741,14 @@ class LearningService:
         return self._best_module_quiz_score(user_id, module_slug) >= 70
 
     def _best_module_quiz_score(self, user_id, module_slug):
-        rows = self.repo.fetch_table(
-            "itdv_module_quiz_attempts",
-            filters=[("eq", "user_id", user_id), ("eq", "module_slug", module_slug)],
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_module_quiz_attempts",
+                filters=[("eq", "user_id", user_id), ("eq", "module_slug", module_slug)],
+            )
+            if self.repo.available()
+            else []
+        )
         scores = [int(row.get("score") or 0) for row in rows]
         scores.extend(
             int(row.get("score") or 0)
@@ -623,11 +759,15 @@ class LearningService:
 
     def _module_mini_quiz(self, module):
         slug = module.get("slug")
-        rows = self.repo.fetch_table(
-            "itdv_module_mini_quizzes",
-            filters=[("eq", "module_slug", slug)],
-            order_by="created_at",
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_module_mini_quizzes",
+                filters=[("eq", "module_slug", slug)],
+                order_by="created_at",
+            )
+            if self.repo.available()
+            else []
+        )
         rows = [row for row in rows if not row.get("archived") and row.get("published", True) is not False]
         if rows:
             return [self._question_public(row) for row in rows]
@@ -724,37 +864,53 @@ class LearningService:
         expected = {item for item in total_ids if item}
         if not expected:
             return 0
-        rows = self.repo.fetch_table(
-            table,
-            filters=[("eq", "user_id", user_id), ("gte", "score", minimum_score)],
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                table,
+                filters=[("eq", "user_id", user_id), ("gte", "score", minimum_score)],
+            )
+            if self.repo.available()
+            else []
+        )
         passed = {
             row.get(id_field)
             for row in rows
             if row.get(id_field) in expected and int(row.get("score") or 0) >= minimum_score
         }
         for row in local_rows:
-            if row.get("user_id") == user_id and int(row.get("score") or 0) >= minimum_score and row.get(id_field) in expected:
+            if (
+                row.get("user_id") == user_id
+                and int(row.get("score") or 0) >= minimum_score
+                and row.get(id_field) in expected
+            ):
                 passed.add(row.get(id_field))
         return self._percent(len(passed), len(expected))
 
     def _has_certificate(self, user_id):
-        rows = self.repo.fetch_table(
-            "itdv_certificates",
-            filters=[("eq", "user_id", user_id), ("eq", "program_code", "ITDV-QC-FOOD")],
-            limit=1,
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_certificates",
+                filters=[("eq", "user_id", user_id), ("eq", "program_code", "ITDV-QC-FOOD")],
+                limit=1,
+            )
+            if self.repo.available()
+            else []
+        )
         return bool(rows or LOCAL_CERTIFICATES.get((user_id, "ITDV-QC-FOOD")))
 
     def _certificate_record(self, user):
         user_id = user["id"]
-        rows = self.repo.fetch_table(
-            "itdv_certificates",
-            filters=[("eq", "user_id", user_id), ("eq", "program_code", "ITDV-QC-FOOD")],
-            order_by="issued_at",
-            desc=True,
-            limit=1,
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                "itdv_certificates",
+                filters=[("eq", "user_id", user_id), ("eq", "program_code", "ITDV-QC-FOOD")],
+                order_by="issued_at",
+                desc=True,
+                limit=1,
+            )
+            if self.repo.available()
+            else []
+        )
         row = (rows or [LOCAL_CERTIFICATES.get((user_id, "ITDV-QC-FOOD"))])[0]
         if not row:
             return None
@@ -768,10 +924,14 @@ class LearningService:
         }
 
     def _best_attempt_score(self, user_id, table, local_rows):
-        rows = self.repo.fetch_table(
-            table,
-            filters=[("eq", "user_id", user_id)],
-        ) if self.repo.available() else []
+        rows = (
+            self.repo.fetch_table(
+                table,
+                filters=[("eq", "user_id", user_id)],
+            )
+            if self.repo.available()
+            else []
+        )
         scores = [int(row.get("score") or 0) for row in rows]
         scores.extend(int(row.get("score") or 0) for row in local_rows if row.get("user_id") == user_id)
         return max(scores or [0])
@@ -821,11 +981,14 @@ class LearningService:
         }
 
     def _certificate_unlocked(self, progress):
-        return all(int(progress.get(key) or 0) >= 100 for key in (
-            "learning_percent",
-            "simulation_percent",
-            "quiz_percent",
-        ))
+        return all(
+            int(progress.get(key) or 0) >= 100
+            for key in (
+                "learning_percent",
+                "simulation_percent",
+                "quiz_percent",
+            )
+        )
 
     def _simulation_feedback(self, simulation, action):
         target = simulation.get("target_c")

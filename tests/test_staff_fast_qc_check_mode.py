@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -57,7 +56,10 @@ def test_summary_fast_pass_is_mini_and_hold_fail_full_summary():
 
     assert "qcMiniSummary" in html
     assert "miniSummaryBatch" in html
-    assert "const showFullSummary = hasContext && (this.requiresHoldFailEvidence() || Boolean(this.recheckParentInspection))" in js
+    assert (
+        "const showFullSummary = hasContext && (this.requiresHoldFailEvidence() || Boolean(this.recheckParentInspection))"
+        in js
+    )
     assert "panel.hidden = !showFullSummary" in js
 
 
@@ -82,7 +84,7 @@ def test_submit_button_copy_changes_by_status_and_recheck():
     assert "return 'Simpan HOLD'" in js
     assert "return 'Simpan FAIL'" in js
     assert "return 'Simpan PASS'" in js
-    assert "button.innerHTML = `<i class=\"fas fa-paper-plane\"></i>${this.submitButtonCopy()}`" in js
+    assert 'button.innerHTML = `<i class="fas fa-paper-plane"></i>${this.submitButtonCopy()}`' in js
 
 
 def test_qc_parameter_panel_stays_open_after_input_change():

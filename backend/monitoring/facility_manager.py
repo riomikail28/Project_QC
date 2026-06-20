@@ -6,8 +6,10 @@ Used by Admin for kitchen configuration.
 """
 
 import logging
-from uuid import UUID
 from datetime import datetime, timezone
+from urllib.parse import quote as _uri_encode
+from uuid import UUID
+
 from backend.database.supabase_client import direct_db_query, get_client
 
 logger = logging.getLogger("qc.facility")
@@ -19,17 +21,21 @@ DEFAULT_MONITORING_UNITS = (
     ("freezer", "Freezer", -18.0),
 )
 
+
 def list_rooms():
     """List all monitoring rooms."""
     sb = get_client()
     try:
         if not sb:
-            return direct_db_query("facility_rooms", "GET", None, "select=*&order=name.asc")
-        res = sb.table("facility_rooms").select("*").order("name").execute()
+            return direct_db_query(
+                "facility_rooms", "GET", None, "select=id,name,slug,description,is_active&order=name.asc"
+            )
+        res = sb.table("facility_rooms").select("id,name,slug,description,is_active").order("name").execute()
         return res.data or []
     except Exception as e:
         logger.error("List rooms error: %s", e)
         return []
+
 
 def add_room(name: str, description: str = "", is_active: bool = True):
     """Add a new monitoring room."""
@@ -53,6 +59,7 @@ def add_room(name: str, description: str = "", is_active: bool = True):
         logger.error("Add room error: %s", e)
         return None
 
+
 def delete_room(room_id: str):
     """Delete a room and all its devices."""
     if _is_synthetic_id(room_id):
@@ -61,7 +68,7 @@ def delete_room(room_id: str):
     try:
         sb = get_client()
         if not sb:
-            direct_db_query("facility_rooms", "DELETE", None, f"id=eq.{room_id}")
+            direct_db_query("facility_rooms", "DELETE", None, f"id=eq.{_uri_encode(str(room_id), safe='')}")
             return True
         sb.table("facility_rooms").delete().eq("id", room_id).execute()
         return True
@@ -69,16 +76,19 @@ def delete_room(room_id: str):
         logger.error("Delete room error: %s", e)
         return False
 
+
 def list_devices(room_id: str = None):
     """List devices, optionally filtered by room."""
     sb = get_client()
     try:
         if not sb:
-            filters = "select=*,facility_rooms(name)&order=name.asc"
+            filters = "select=id,room_id,name,slug,device_type,type,target_temperature,threshold_temp,min_temperature,max_temperature,is_default,is_active,facility_rooms(name)&order=name.asc"
             if room_id:
-                filters = f"room_id=eq.{room_id}&{filters}"
+                filters = f"room_id=eq.{_uri_encode(str(room_id), safe='')}&{filters}"
             return direct_db_query("facility_devices", "GET", None, filters)
-        query = sb.table("facility_devices").select("*, facility_rooms(name)")
+        query = sb.table("facility_devices").select(
+            "id,room_id,name,slug,device_type,type,target_temperature,threshold_temp,min_temperature,max_temperature,is_default,is_active,facility_rooms(name)"
+        )
         if room_id:
             query = query.eq("room_id", room_id)
         res = query.order("name").execute()
@@ -86,6 +96,7 @@ def list_devices(room_id: str = None):
     except Exception as e:
         logger.error("List devices error: %s", e)
         return []
+
 
 def add_device(
     room_id: str,
@@ -129,6 +140,7 @@ def add_device(
         logger.error("Add device error: %s", e)
         return None
 
+
 def delete_device(device_id: str):
     """Delete a specific persisted device with clear API-level failure reasons."""
     device_id = str(device_id or "").strip()
@@ -146,23 +158,45 @@ def delete_device(device_id: str):
         )
     if _is_synthetic_id(device_id):
         logger.info("Rejecting delete for synthetic device id: %s", device_id)
-        return _delete_result(False, {"id": device_id}, "device_id must be a valid UUID. Received synthetic id: " + device_id, "INVALID_DEVICE_ID", 400)
+        return _delete_result(
+            False,
+            {"id": device_id},
+            "device_id must be a valid UUID. Received synthetic id: " + device_id,
+            "INVALID_DEVICE_ID",
+            400,
+        )
     try:
         sb = get_client()
         if not sb:
-            existing = direct_db_query("facility_devices", "GET", None, f"id=eq.{device_id}&limit=1")
+            existing = direct_db_query(
+                "facility_devices", "GET", None, f"id=eq.{_uri_encode(str(device_id), safe='')}&limit=1"
+            )
             logger.info("Direct device lookup response: device_id=%s response=%s", device_id, _safe_log(existing))
             if not existing:
                 return _delete_result(False, {"id": device_id}, "Device not found", "FACILITY_DEVICE_NOT_FOUND", 404)
             conflict = _direct_device_log_conflict(device_id)
             if conflict:
                 return conflict
-            deleted = direct_db_query("facility_devices", "DELETE", None, f"id=eq.{device_id}")
+            deleted = direct_db_query(
+                "facility_devices", "DELETE", None, f"id=eq.{_uri_encode(str(device_id), safe='')}"
+            )
             logger.info("Direct device delete response: device_id=%s response=%s", device_id, _safe_log(deleted))
             return _delete_result(True, {"id": device_id}, None, None, 200)
 
-        lookup = sb.table("facility_devices").select("*").eq("id", device_id).limit(1).execute()
-        logger.info("Supabase device lookup response: device_id=%s response=%s", device_id, _safe_log(getattr(lookup, "data", None)))
+        lookup = (
+            sb.table("facility_devices")
+            .select(
+                "id,room_id,name,slug,device_type,type,target_temperature,threshold_temp,min_temperature,max_temperature,is_default,is_active"
+            )
+            .eq("id", device_id)
+            .limit(1)
+            .execute()
+        )
+        logger.info(
+            "Supabase device lookup response: device_id=%s response=%s",
+            device_id,
+            _safe_log(getattr(lookup, "data", None)),
+        )
         device = (lookup.data or [None])[0]
         if not device:
             return _delete_result(False, {"id": device_id}, "Device not found", "FACILITY_DEVICE_NOT_FOUND", 404)
@@ -172,7 +206,11 @@ def delete_device(device_id: str):
             return conflict
 
         res = sb.table("facility_devices").delete().eq("id", device_id).execute()
-        logger.info("Supabase device delete response: device_id=%s response=%s", device_id, _safe_log(getattr(res, "data", None)))
+        logger.info(
+            "Supabase device delete response: device_id=%s response=%s",
+            device_id,
+            _safe_log(getattr(res, "data", None)),
+        )
         return _delete_result(True, {"id": device_id, **device}, None, None, 200)
     except Exception as e:
         logger.exception("Delete device exception: device_id=%s exception=%s", device_id, e)
@@ -201,7 +239,12 @@ def _supabase_device_log_conflict(sb, device_id: str):
     for table in ("facility_logs", "temperature_logs"):
         try:
             res = sb.table(table).select("id").eq("device_id", device_id).limit(1).execute()
-            logger.info("Supabase device relation check: device_id=%s table=%s response=%s", device_id, table, _safe_log(getattr(res, "data", None)))
+            logger.info(
+                "Supabase device relation check: device_id=%s table=%s response=%s",
+                device_id,
+                table,
+                _safe_log(getattr(res, "data", None)),
+            )
             if res.data:
                 return _delete_result(
                     False,
@@ -218,8 +261,10 @@ def _supabase_device_log_conflict(sb, device_id: str):
 def _direct_device_log_conflict(device_id: str):
     for table in ("facility_logs", "temperature_logs"):
         try:
-            rows = direct_db_query(table, "GET", None, f"device_id=eq.{device_id}&limit=1")
-            logger.info("Direct device relation check: device_id=%s table=%s response=%s", device_id, table, _safe_log(rows))
+            rows = direct_db_query(table, "GET", None, f"device_id=eq.{_uri_encode(str(device_id), safe='')}&limit=1")
+            logger.info(
+                "Direct device relation check: device_id=%s table=%s response=%s", device_id, table, _safe_log(rows)
+            )
             if rows:
                 return _delete_result(
                     False,
@@ -229,7 +274,9 @@ def _direct_device_log_conflict(device_id: str):
                     409,
                 )
         except Exception as exc:
-            logger.warning("Direct device relation check skipped: device_id=%s table=%s exception=%s", device_id, table, exc)
+            logger.warning(
+                "Direct device relation check skipped: device_id=%s table=%s exception=%s", device_id, table, exc
+            )
     return None
 
 
@@ -258,6 +305,7 @@ def is_uuid(value: str | None) -> bool:
 def _is_synthetic_id(value: str) -> bool:
     raw = str(value or "")
     return raw.startswith(("default-", "default-room-", "log-room-", "log-device-"))
+
 
 def get_monitoring_structure():
     """Return persisted facility rooms/devices only.
@@ -317,17 +365,18 @@ def _normalize_device(device, room_name, device_type):
 
 
 def _log_room_name(row):
-    return (
-        row.get("zone")
-        or (row.get("facility_rooms") or {}).get("name")
-        or row.get("room_name")
-        or "QC Area"
-    )
+    return row.get("zone") or (row.get("facility_rooms") or {}).get("name") or row.get("room_name") or "QC Area"
 
 
 def _log_device_type(row):
     facility_device = row.get("facility_devices") or {}
-    device_type = row.get("device_type") or row.get("type") or facility_device.get("device_type") or facility_device.get("type") or "room_temp"
+    device_type = (
+        row.get("device_type")
+        or row.get("type")
+        or facility_device.get("device_type")
+        or facility_device.get("type")
+        or "room_temp"
+    )
     if device_type in {"ambient", "room"}:
         return "room_temp"
     return device_type
@@ -391,6 +440,7 @@ def _coerce_float(value, default):
     except (TypeError, ValueError):
         return default
 
+
 def update_room(room_id: str, data: dict):
     """Update a monitoring room."""
     payload = {}
@@ -407,13 +457,14 @@ def update_room(room_id: str, data: dict):
     try:
         sb = get_client()
         if not sb:
-            rows = direct_db_query("facility_rooms", "PATCH", payload, f"id=eq.{room_id}")
+            rows = direct_db_query("facility_rooms", "PATCH", payload, f"id=eq.{_uri_encode(str(room_id), safe='')}")
             return rows[0] if rows else {"id": room_id, **payload}
         res = sb.table("facility_rooms").update(payload).eq("id", room_id).execute()
         return res.data[0] if res.data else {"id": room_id, **payload}
     except Exception as e:
         logger.error("Update room error: %s", e)
         return None
+
 
 def update_device(device_id: str, data: dict):
     """Update a facility device."""
@@ -448,7 +499,9 @@ def update_device(device_id: str, data: dict):
     try:
         sb = get_client()
         if not sb:
-            rows = direct_db_query("facility_devices", "PATCH", payload, f"id=eq.{device_id}")
+            rows = direct_db_query(
+                "facility_devices", "PATCH", payload, f"id=eq.{_uri_encode(str(device_id), safe='')}"
+            )
             return rows[0] if rows else {"id": device_id, **payload}
         res = sb.table("facility_devices").update(payload).eq("id", device_id).execute()
         return res.data[0] if res.data else {"id": device_id, **payload}

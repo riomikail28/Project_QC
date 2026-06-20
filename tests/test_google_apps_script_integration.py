@@ -2,11 +2,17 @@ from unittest.mock import patch
 
 import httpx
 
-from backend.services.google_apps_script_service import build_qc_finding_payload, google_sheets_status, send_monitoring_log, send_qc_finding, send_qc_report
-from tests.test_qc_check_cooking_final_flow import FlowDb
+from backend.services.google_apps_script_service import (
+    build_qc_finding_payload,
+    google_sheets_status,
+    send_monitoring_log,
+    send_qc_finding,
+    send_qc_report,
+)
+from tests.conftest import FakeSupabase
 from tests.test_inspection_submit import InsertDb
 from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
-from tests.conftest import FakeSupabase
+from tests.test_qc_check_cooking_final_flow import FlowDb
 
 
 def test_google_apps_script_skips_when_env_empty(monkeypatch):
@@ -42,7 +48,9 @@ def test_google_sheets_status_records_webhook_failure(client, admin_headers, mon
     monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/exec")
 
     with patch("backend.services.google_apps_script_service.httpx.post") as post:
-        post.return_value = httpx.Response(500, text="apps script exploded", request=httpx.Request("POST", "https://script.test"))
+        post.return_value = httpx.Response(
+            500, text="apps script exploded", request=httpx.Request("POST", "https://script.test")
+        )
         response = client.post("/api/admin/google-sheets/test", headers=admin_headers, json={})
 
     assert response.status_code == 502
@@ -70,9 +78,10 @@ def test_google_apps_script_follows_302_redirect_and_treats_final_success(monkey
         request=httpx.Request("POST", "https://script.googleusercontent.com/macros/echo?user_content_key=abc"),
     )
 
-    with patch("backend.services.google_apps_script_service.httpx.post", return_value=first) as post, patch(
-        "backend.services.google_apps_script_service.httpx.get", return_value=final
-    ) as get:
+    with (
+        patch("backend.services.google_apps_script_service.httpx.post", return_value=first) as post,
+        patch("backend.services.google_apps_script_service.httpx.get", return_value=final) as get,
+    ):
         assert send_qc_report({"status": "pass"}) is True
 
     post.assert_called_once()
@@ -99,9 +108,10 @@ def test_google_apps_script_does_not_post_to_302_redirect_location(monkeypatch):
         request=httpx.Request("GET", "https://script.googleusercontent.com/macros/echo?user_content_key=abc"),
     )
 
-    with patch("backend.services.google_apps_script_service.httpx.post", return_value=redirect) as post, patch(
-        "backend.services.google_apps_script_service.httpx.get", return_value=success
-    ) as get:
+    with (
+        patch("backend.services.google_apps_script_service.httpx.post", return_value=redirect) as post,
+        patch("backend.services.google_apps_script_service.httpx.get", return_value=success) as get,
+    ):
         assert send_monitoring_log({"temperature": 4.0}) is True
 
     post.assert_called_once()
@@ -130,11 +140,13 @@ def test_monitoring_submit_still_succeeds_when_google_apps_script_fails(client, 
     monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/exec")
     db = RecordingSupabase()
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.api.temperature_routes.write_audit"
-    ), patch(
-        "backend.services.google_apps_script_service.httpx.post",
-        side_effect=httpx.ConnectError("webhook unavailable"),
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.api.temperature_routes.write_audit"),
+        patch(
+            "backend.services.google_apps_script_service.httpx.post",
+            side_effect=httpx.ConnectError("webhook unavailable"),
+        ),
     ):
         response = client.post(
             "/api/monitoring/log",
@@ -159,9 +171,12 @@ def test_inspection_submit_still_succeeds_when_google_apps_script_fails(client, 
     monkeypatch.setenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "https://script.google.com/macros/s/test/exec")
     db = InsertDb()
 
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.google_apps_script_service.httpx.post",
-        side_effect=httpx.ReadTimeout("timeout"),
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch(
+            "backend.services.google_apps_script_service.httpx.post",
+            side_effect=httpx.ReadTimeout("timeout"),
+        ),
     ):
         response = client.post(
             "/api/inspection/submit",
@@ -182,9 +197,11 @@ def test_inspection_submit_still_succeeds_when_google_apps_script_fails(client, 
 def test_monitoring_google_apps_script_payload_is_correct(client, staff_headers):
     db = RecordingSupabase()
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.api.temperature_routes.write_audit"
-    ), patch("backend.services.monitoring_service.send_monitoring_log") as send:
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.api.temperature_routes.write_audit"),
+        patch("backend.services.monitoring_service.send_monitoring_log") as send,
+    ):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,
@@ -218,9 +235,10 @@ def test_monitoring_google_apps_script_payload_is_correct(client, staff_headers)
 def test_qc_google_apps_script_payload_is_correct(client, staff_headers):
     db = InsertDb()
 
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.inspection_service.send_qc_report"
-    ) as send:
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch("backend.services.inspection_service.send_qc_report") as send,
+    ):
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
@@ -264,19 +282,22 @@ def test_qc_google_apps_script_payload_is_correct(client, staff_headers):
 def test_qc_google_apps_script_payload_marks_recheck_round(client, staff_headers):
     db = FlowDb()
     db.fixtures["production_batches"][0].update({"cook_name": "Andi", "quantity": 50})
-    db.fixtures["qc_reports"] = [{
-        "id": "parent-qc",
-        "batch_id": "batch-1",
-        "batch_code": "QC-20260517-001",
-        "qc_stage": "cooking_check",
-        "status": "hold",
-        "inspection_round": 1,
-        "created_at": "2026-05-17T03:00:00Z",
-    }]
+    db.fixtures["qc_reports"] = [
+        {
+            "id": "parent-qc",
+            "batch_id": "batch-1",
+            "batch_code": "QC-20260517-001",
+            "qc_stage": "cooking_check",
+            "status": "hold",
+            "inspection_round": 1,
+            "created_at": "2026-05-17T03:00:00Z",
+        }
+    ]
 
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.inspection_service.send_qc_report"
-    ) as send:
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch("backend.services.inspection_service.send_qc_report") as send,
+    ):
         response = client.post(
             "/api/inspection/submit",
             headers=staff_headers,
@@ -309,28 +330,38 @@ def test_google_apps_script_webhook_payloads_are_flat_with_type(monkeypatch):
 
     with patch("backend.services.google_apps_script_service.httpx.post") as post:
         post.return_value = httpx.Response(200, text="ok", request=httpx.Request("POST", "https://script.test"))
-        assert send_monitoring_log({
-            "date": "2026-05-27",
-            "slot_time": "07:00",
-            "room": "Chiller",
-            "device": "Unit 1",
-            "temperature": 3.2,
-            "status": "PASS",
-            "staff_name": "Siti",
-            "submitted_at": "2026-05-27T00:05:00Z",
-            "notes": "normal",
-        }) is True
-        assert send_qc_report({
-            "batch_id": "batch-1",
-            "batch_code": "SAL-20260527-001",
-            "product_name": "Salad",
-            "qc_stage": "cooking_check",
-            "status": "pass",
-            "temperature": 82,
-            "staff_name": "Budi",
-            "created_at": "2026-05-27T00:05:00Z",
-            "notes": "ok",
-        }) is True
+        assert (
+            send_monitoring_log(
+                {
+                    "date": "2026-05-27",
+                    "slot_time": "07:00",
+                    "room": "Chiller",
+                    "device": "Unit 1",
+                    "temperature": 3.2,
+                    "status": "PASS",
+                    "staff_name": "Siti",
+                    "submitted_at": "2026-05-27T00:05:00Z",
+                    "notes": "normal",
+                }
+            )
+            is True
+        )
+        assert (
+            send_qc_report(
+                {
+                    "batch_id": "batch-1",
+                    "batch_code": "SAL-20260527-001",
+                    "product_name": "Salad",
+                    "qc_stage": "cooking_check",
+                    "status": "pass",
+                    "temperature": 82,
+                    "staff_name": "Budi",
+                    "created_at": "2026-05-27T00:05:00Z",
+                    "notes": "ok",
+                }
+            )
+            is True
+        )
 
     monitoring_payload = post.call_args_list[0].kwargs["json"]
     qc_payload = post.call_args_list[1].kwargs["json"]
@@ -343,15 +374,34 @@ def test_google_apps_script_webhook_payloads_are_flat_with_type(monkeypatch):
 
 
 def test_admin_export_monitoring_without_date_exports_all(client, admin_headers):
-    db = FakeSupabase({
-        "facility_logs": [
-            {"id": "log-1", "zone": "Chiller", "device_id": "dev-1", "temperature_c": 3.2, "is_normal": True, "staff_name": "Siti", "recorded_at": "2026-05-01T07:05:00Z"},
-            {"id": "log-2", "zone": "Freezer", "device_id": "dev-2", "temperature_c": -18, "is_normal": True, "staff_name": "Budi", "recorded_at": "2026-05-02T07:05:00Z"},
-        ]
-    })
-    with patch("backend.services.admin_service.get_client", return_value=db), patch(
-        "backend.services.admin_service.send_monitoring_log", return_value=True
-    ) as send:
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    "id": "log-1",
+                    "zone": "Chiller",
+                    "device_id": "dev-1",
+                    "temperature_c": 3.2,
+                    "is_normal": True,
+                    "staff_name": "Siti",
+                    "recorded_at": "2026-05-01T07:05:00Z",
+                },
+                {
+                    "id": "log-2",
+                    "zone": "Freezer",
+                    "device_id": "dev-2",
+                    "temperature_c": -18,
+                    "is_normal": True,
+                    "staff_name": "Budi",
+                    "recorded_at": "2026-05-02T07:05:00Z",
+                },
+            ]
+        }
+    )
+    with (
+        patch("backend.services.admin_service.get_client", return_value=db),
+        patch("backend.services.admin_service.send_monitoring_log", return_value=True) as send,
+    ):
         response = client.post("/api/admin/google-sheets/export/monitoring", headers=admin_headers, json={})
 
     body = response.get_json()
@@ -366,15 +416,18 @@ def test_admin_export_monitoring_without_date_exports_all(client, admin_headers)
 
 
 def test_admin_export_monitoring_with_date_range_filters_rows(client, admin_headers):
-    db = FakeSupabase({
-        "facility_logs": [
-            {"id": "log-old", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-04-30T07:05:00Z"},
-            {"id": "log-in", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-10T07:05:00Z"},
-        ]
-    })
-    with patch("backend.services.admin_service.get_client", return_value=db), patch(
-        "backend.services.admin_service.send_monitoring_log", return_value=True
-    ) as send:
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {"id": "log-old", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-04-30T07:05:00Z"},
+                {"id": "log-in", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-10T07:05:00Z"},
+            ]
+        }
+    )
+    with (
+        patch("backend.services.admin_service.get_client", return_value=db),
+        patch("backend.services.admin_service.send_monitoring_log", return_value=True) as send,
+    ):
         response = client.post(
             "/api/admin/google-sheets/export/monitoring",
             headers=admin_headers,
@@ -389,39 +442,46 @@ def test_admin_export_monitoring_with_date_range_filters_rows(client, admin_head
 
 
 def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
-    db = FakeSupabase({
-        "qc_reports": [{
-            "id": "qc-1",
-            "batch_id": "batch-1",
-            "batch_code": "SAL-20260501-001",
-            "product_name": "Salad",
-            "qc_stage": "cooking_check",
-            "status": "pass",
-            "temperature": 75,
-            "ph_value": 4.2,
-            "brix_value": 10,
-            "tds_value": 150,
-            "photo_url": "https://example.test/qc.jpg",
-            "notes": "ok",
-            "inspection_round": 2,
-            "parent_inspection": "qc-0",
-            "staff_name": "Rio",
-            "created_at": "2026-05-01T08:00:00Z",
-        }],
-        "production_batches": [{
-            "id": "batch-1",
-            "batch_code": "SAL-20260501-001",
-            "batch_sequence": 3,
-            "cook_name": "Andi",
-            "quantity": 50,
-            "product_name": "Salad",
-            "created_at": "2026-05-01T07:00:00Z",
-        }],
-        "qc_findings": [],
-    })
-    with patch("backend.services.admin_service.get_client", return_value=db), patch(
-        "backend.services.admin_service.send_qc_report", return_value=True
-    ) as send:
+    db = FakeSupabase(
+        {
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "batch_id": "batch-1",
+                    "batch_code": "SAL-20260501-001",
+                    "product_name": "Salad",
+                    "qc_stage": "cooking_check",
+                    "status": "pass",
+                    "temperature": 75,
+                    "ph_value": 4.2,
+                    "brix_value": 10,
+                    "tds_value": 150,
+                    "photo_url": "https://example.test/qc.jpg",
+                    "notes": "ok",
+                    "inspection_round": 2,
+                    "parent_inspection": "qc-0",
+                    "staff_name": "Rio",
+                    "created_at": "2026-05-01T08:00:00Z",
+                }
+            ],
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "SAL-20260501-001",
+                    "batch_sequence": 3,
+                    "cook_name": "Andi",
+                    "quantity": 50,
+                    "product_name": "Salad",
+                    "created_at": "2026-05-01T07:00:00Z",
+                }
+            ],
+            "qc_findings": [],
+        }
+    )
+    with (
+        patch("backend.services.admin_service.get_client", return_value=db),
+        patch("backend.services.admin_service.send_qc_report", return_value=True) as send,
+    ):
         response = client.post("/api/admin/google-sheets/export/qc", headers=admin_headers, json={})
 
     body = response.get_json()
@@ -449,15 +509,17 @@ def test_admin_export_qc_without_date_exports_reports(client, admin_headers):
 
 
 def test_qc_finding_payload_targets_qc_temuan_sheet():
-    payload = build_qc_finding_payload({
-        "id": "finding-1",
-        "staff_display_name": "Rio Mikail",
-        "reason": "Label salah",
-        "photo_url": "https://example.test/finding.jpg",
-        "status": "warning",
-        "finding_date": "2026-05-01",
-        "created_at": "2026-05-01T09:00:00Z",
-    })
+    payload = build_qc_finding_payload(
+        {
+            "id": "finding-1",
+            "staff_display_name": "Rio Mikail",
+            "reason": "Label salah",
+            "photo_url": "https://example.test/finding.jpg",
+            "status": "warning",
+            "finding_date": "2026-05-01",
+            "created_at": "2026-05-01T09:00:00Z",
+        }
+    )
 
     assert payload == {
         "timestamp": "2026-05-01T09:00:00Z",
@@ -484,23 +546,27 @@ def test_qc_finding_staff_name_fallback_priority():
 
 
 def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_headers):
-    db = FakeSupabase({
-        "qc_reports": [],
-        "production_batches": [],
-        "qc_findings": [{
-            "id": "finding-1",
-            "staff_name": "Rio",
-            "reason": "Area kotor",
-            "photo_url": "https://example.test/finding.jpg",
-            "status": "warning",
-            "created_at": "2026-05-01T08:30:00Z",
-        }],
-    })
-    with patch("backend.services.admin_service.get_client", return_value=db), patch(
-        "backend.services.admin_service.send_qc_report", return_value=True
-    ) as send_report, patch(
-        "backend.services.admin_service.send_qc_finding", return_value=True
-    ) as send_finding:
+    db = FakeSupabase(
+        {
+            "qc_reports": [],
+            "production_batches": [],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_name": "Rio",
+                    "reason": "Area kotor",
+                    "photo_url": "https://example.test/finding.jpg",
+                    "status": "warning",
+                    "created_at": "2026-05-01T08:30:00Z",
+                }
+            ],
+        }
+    )
+    with (
+        patch("backend.services.admin_service.get_client", return_value=db),
+        patch("backend.services.admin_service.send_qc_report", return_value=True) as send_report,
+        patch("backend.services.admin_service.send_qc_finding", return_value=True) as send_finding,
+    ):
         response = client.post("/api/admin/google-sheets/export/qc", headers=admin_headers, json={})
 
     body = response.get_json()
@@ -524,14 +590,17 @@ def test_admin_export_qc_findings_routes_to_qc_temuan_payload(client, admin_head
 
 
 def test_admin_export_monitoring_reports_partial_failure(client, admin_headers):
-    db = FakeSupabase({
-        "facility_logs": [
-            {"id": "log-1", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-05-01T07:05:00Z"},
-            {"id": "log-2", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-01T08:05:00Z"},
-        ]
-    })
-    with patch("backend.services.admin_service.get_client", return_value=db), patch(
-        "backend.services.admin_service.send_monitoring_log", side_effect=[True, False]
+    db = FakeSupabase(
+        {
+            "facility_logs": [
+                {"id": "log-1", "temperature_c": 3.2, "is_normal": True, "recorded_at": "2026-05-01T07:05:00Z"},
+                {"id": "log-2", "temperature_c": 3.4, "is_normal": True, "recorded_at": "2026-05-01T08:05:00Z"},
+            ]
+        }
+    )
+    with (
+        patch("backend.services.admin_service.get_client", return_value=db),
+        patch("backend.services.admin_service.send_monitoring_log", side_effect=[True, False]),
     ):
         response = client.post("/api/admin/google-sheets/export/monitoring", headers=admin_headers, json={})
 

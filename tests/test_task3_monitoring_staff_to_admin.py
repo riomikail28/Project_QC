@@ -2,8 +2,8 @@ from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
 from tests.conftest import FakeSupabase
+from tests.test_monitoring import DEVICE_ID, ROOM_ID, RecordingSupabase
 
 
 def test_task3_staff_submit_monitoring_with_photo_then_admin_reads_report(client, staff_headers, admin_headers):
@@ -17,9 +17,11 @@ def test_task3_staff_submit_monitoring_with_photo_then_admin_reads_report(client
         bucket="qc-evidence",
     )
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage", return_value=uploaded
-    ), patch("backend.api.temperature_routes.write_audit"):
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage", return_value=uploaded),
+        patch("backend.api.temperature_routes.write_audit"),
+    ):
         submit = client.post(
             "/api/monitoring/log",
             headers=staff_headers,
@@ -34,14 +36,18 @@ def test_task3_staff_submit_monitoring_with_photo_then_admin_reads_report(client
         )
 
     assert submit.status_code == 200
-    admin_db = FakeSupabase({
-        "facility_logs": [{
-            **db.inserted["facility_logs"],
-            "id": "facility_logs-1",
-            "facility_rooms": {"name": "Chiller Room"},
-            "facility_devices": {"name": "Chiller", "type": "chiller"},
-        }],
-    })
+    admin_db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    **db.inserted["facility_logs"],
+                    "id": "facility_logs-1",
+                    "facility_rooms": {"name": "Chiller Room"},
+                    "facility_devices": {"name": "Chiller", "type": "chiller"},
+                }
+            ],
+        }
+    )
     with patch("backend.services.admin_service.get_client", return_value=admin_db):
         report = client.get("/api/admin/reports/temperature", headers=admin_headers)
 

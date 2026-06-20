@@ -1,5 +1,6 @@
-from tests.test_facility_rooms_devices import FacilityDb
 from unittest.mock import patch
+
+from tests.test_facility_rooms_devices import FacilityDb
 
 
 def test_facility_crud_admin_endpoints_roundtrip(client, admin_headers):

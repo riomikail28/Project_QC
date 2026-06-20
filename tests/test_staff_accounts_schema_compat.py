@@ -20,12 +20,14 @@ def test_create_staff_does_not_send_full_name_to_staff_accounts():
         return []
 
     with patch("backend.database.supabase_client.direct_db_query", side_effect=fake_direct):
-        created = staff_manager.create_staff({
-            "username": "lala",
-            "password": "secret123",
-            "role": "staff",
-            "full_name": "Lala",
-        })
+        created = staff_manager.create_staff(
+            {
+                "username": "lala",
+                "password": "secret123",
+                "role": "staff",
+                "full_name": "Lala",
+            }
+        )
 
     assert created["id"] == "staff-1"
     assert created["full_name"] == "Lala"

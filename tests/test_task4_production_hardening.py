@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -39,7 +38,7 @@ def test_task4_admin_mobile_tables_have_card_list_contract():
 
     assert "@media (max-width: 860px)" in css
     assert ".enterprise-table td::before" in css
-    assert 'content: attr(data-label)' in css
+    assert "content: attr(data-label)" in css
     for label in ["Tanggal", "Foto Evidence", "Action", "Waktu", "Barcode"]:
         assert f'data-label="{label}"' in admin_js
 

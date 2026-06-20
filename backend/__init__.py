@@ -12,18 +12,20 @@ Architecture:
 """
 
 import json
+import os
 
 from flask import Flask, Response, send_from_directory
 from flask_cors import CORS
-import os
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except Exception:
     pass
 
 import logging
+
 logger = logging.getLogger("qc.backend")
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -41,32 +43,34 @@ def create_app() -> Flask:
 
     from backend.middleware.security_middleware import SecurityMiddleware
     from backend.services.error_handlers import register_error_handlers
+
     SecurityMiddleware(app)
     register_error_handlers(app)
 
     # Init metrics middleware
     try:
         from backend.middleware.metrics_middleware import init_metrics, metrics_bp
+
         init_metrics(app)
         app.register_blueprint(metrics_bp)
     except Exception as e:
         logger.warning("Metrics middleware not initialized: %s", e)
 
     # Register route blueprints
-    from backend.api.temperature_routes import monitoring_bp
-    from backend.api.batch_routes import batch_bp
-    from backend.api.qc_routes import qc_bp
-    from backend.api.ccp_routes import ccp_bp
+    from backend.api.admin_learning_routes import admin_learning_bp
     from backend.api.admin_routes import admin_bp, admin_legacy_bp
+    from backend.api.batch_routes import batch_bp
+    from backend.api.ccp_routes import ccp_bp
     from backend.api.dashboard_routes import dashboard_bp
-    from backend.api.storage_routes import storage_alias_bp, storage_bp
-    from backend.api.inspection_routes import inspection_bp
-    from backend.api.profile_routes import profile_bp
-    from backend.api.staff_routes import staff_bp
     from backend.api.facility_routes import facility_bp
     from backend.api.health_routes import health_bp
+    from backend.api.inspection_routes import inspection_bp
     from backend.api.learning_routes import learning_bp
-    from backend.api.admin_learning_routes import admin_learning_bp
+    from backend.api.profile_routes import profile_bp
+    from backend.api.qc_routes import qc_bp
+    from backend.api.staff_routes import staff_bp
+    from backend.api.storage_routes import storage_alias_bp, storage_bp
+    from backend.api.temperature_routes import monitoring_bp
 
     # Register DI services (repository + service) for use by routes
     try:
@@ -88,8 +92,12 @@ def create_app() -> Flask:
                 class _StorageWrap:
                     def upload_photo(self, data, filename):
                         return _upload_fn(data, filename)
+
                     def upload_file_storage(self, file_storage, staff_id="system", category=None, related_id=None):
-                        return _upload_file_fn(file_storage, staff_id=staff_id, category=category, related_id=related_id)
+                        return _upload_file_fn(
+                            file_storage, staff_id=staff_id, category=category, related_id=related_id
+                        )
+
                     def delete_photo(self, storage_path):
                         return _delete_fn(storage_path)
 
@@ -192,11 +200,7 @@ def create_app() -> Flask:
             "maxUploadBytes": int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))),
             "googleAppsScriptConnected": bool(os.getenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "").strip()),
         }
-        body = (
-            "window.QC_CONFIG = Object.freeze("
-            + json.dumps(config, separators=(",", ":"))
-            + ");\n"
-        )
+        body = "window.QC_CONFIG = Object.freeze(" + json.dumps(config, separators=(",", ":")) + ");\n"
         response = Response(body, mimetype="application/javascript")
         response.headers["Cache-Control"] = "no-store, max-age=0"
         return response

@@ -45,7 +45,11 @@ class ProfileService:
         data = {
             "id": user_id,
             "username": (account or {}).get("username") or user.get("username"),
-            "full_name": (account or {}).get("full_name") or (account or {}).get("name") or user.get("full_name") or user.get("name") or user.get("username"),
+            "full_name": (account or {}).get("full_name")
+            or (account or {}).get("name")
+            or user.get("full_name")
+            or user.get("name")
+            or user.get("username"),
             "role": (account or {}).get("role") or user.get("role", "staff"),
             "department": (account or {}).get("department"),
             "shift": (account or {}).get("shift"),
@@ -63,16 +67,25 @@ class ProfileService:
         if not temp_logs:
             temp_logs = self._fetch("facility_logs", filters=filters, limit=1000)
         labels = self._fetch("barcode_labels", filters=filters, limit=1000)
-        audits = self._fetch("audit_logs", filters=[("eq", "actor_id", user_id)] if user_id else [], order_by="created_at", limit=5)
+        audits = self._fetch(
+            "audit_logs", filters=[("eq", "actor_id", user_id)] if user_id else [], order_by="created_at", limit=5
+        )
 
         evidence_count = 0
         for row in reports:
-            if row.get("product_photo_url") or row.get("temperature_photo_url") or row.get("barcode_photo_url") or row.get("photo_url"):
+            if (
+                row.get("product_photo_url")
+                or row.get("temperature_photo_url")
+                or row.get("barcode_photo_url")
+                or row.get("photo_url")
+            ):
                 evidence_count += 1
         evidence_count += sum(1 for row in temp_logs if row.get("photo_url"))
         evidence_count += sum(1 for row in labels if row.get("barcode_photo_url"))
 
-        pass_count = sum(1 for row in reports if self._norm_status(row.get("status") or row.get("final_qc_status")) == "pass")
+        pass_count = sum(
+            1 for row in reports if self._norm_status(row.get("status") or row.get("final_qc_status")) == "pass"
+        )
         accuracy = round((pass_count / len(reports)) * 100, 1) if reports else None
         data = {
             "qc_submitted": len(reports),

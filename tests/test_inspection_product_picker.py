@@ -5,12 +5,14 @@ from tests.test_qc_check_cooking_final_flow import FlowDb
 
 def test_inspection_products_returns_active_products_from_admin_catalog(client, staff_headers):
     db = FlowDb()
-    db.fixtures["products"].append({
-        "id": "product-2",
-        "product_code": "SKU-BEEF-001",
-        "product_name": "Finish Goods - Original beef 90gr",
-        "is_active": True,
-    })
+    db.fixtures["products"].append(
+        {
+            "id": "product-2",
+            "product_code": "SKU-BEEF-001",
+            "product_name": "Finish Goods - Original beef 90gr",
+            "is_active": True,
+        }
+    )
 
     with patch("backend.services.inspection_service.get_client", return_value=db):
         response = client.get("/api/inspection/products", headers=staff_headers)
@@ -23,12 +25,14 @@ def test_inspection_products_returns_active_products_from_admin_catalog(client, 
 
 def test_inspection_products_hides_inactive_products(client, staff_headers):
     db = FlowDb()
-    db.fixtures["products"].append({
-        "id": "inactive-1",
-        "product_code": "SKU-OFF-001",
-        "product_name": "Inactive product",
-        "is_active": False,
-    })
+    db.fixtures["products"].append(
+        {
+            "id": "inactive-1",
+            "product_code": "SKU-OFF-001",
+            "product_name": "Inactive product",
+            "is_active": False,
+        }
+    )
 
     with patch("backend.services.inspection_service.get_client", return_value=db):
         response = client.get("/api/inspection/products", headers=staff_headers)
@@ -98,12 +102,14 @@ def test_submit_without_product_and_without_manual_sku_fails(client, staff_heade
 
 def test_new_admin_product_is_returned_to_staff_picker(client, staff_headers):
     db = FlowDb()
-    db.fixtures["products"].append({
-        "id": "product-new",
-        "product_code": "SKU-CHKN-001",
-        "product_name": "Finish Goods - Chilled/Frozen Teriyaki chicken 90gr - AK",
-        "is_active": True,
-    })
+    db.fixtures["products"].append(
+        {
+            "id": "product-new",
+            "product_code": "SKU-CHKN-001",
+            "product_name": "Finish Goods - Chilled/Frozen Teriyaki chicken 90gr - AK",
+            "is_active": True,
+        }
+    )
 
     with patch("backend.services.inspection_service.get_client", return_value=db):
         response = client.get("/api/inspection/products", headers=staff_headers)
@@ -114,16 +120,18 @@ def test_new_admin_product_is_returned_to_staff_picker(client, staff_headers):
 
 def test_admin_report_exposes_product_code_and_name(client, admin_headers):
     db = FlowDb()
-    db.fixtures["qc_reports"] = [{
-        "id": "report-1",
-        "batch_code": "QC-20260517-001",
-        "barcode": "SKU-CHKN-001",
-        "product_name": "Chicken Katsu",
-        "qc_stage": "final_check",
-        "status": "pass",
-        "approval_status": "pending",
-        "created_at": "2026-05-17T06:00:00Z",
-    }]
+    db.fixtures["qc_reports"] = [
+        {
+            "id": "report-1",
+            "batch_code": "QC-20260517-001",
+            "barcode": "SKU-CHKN-001",
+            "product_name": "Chicken Katsu",
+            "qc_stage": "final_check",
+            "status": "pass",
+            "approval_status": "pending",
+            "created_at": "2026-05-17T06:00:00Z",
+        }
+    ]
 
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/admin/reports/inspection?date=2026-05-17", headers=admin_headers)

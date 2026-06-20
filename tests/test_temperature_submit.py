@@ -11,8 +11,9 @@ DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 def test_submit_temperature_without_photo_succeeds(client, staff_headers):
     db = RecordingSupabase()
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.api.temperature_routes.write_audit"
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.api.temperature_routes.write_audit"),
     ):
         response = client.post(
             "/api/monitoring/log",
@@ -34,9 +35,11 @@ def test_submit_temperature_with_photo_succeeds(client, staff_headers):
         storage_path="staff/staff-1/temperature/photo.jpg",
     )
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage", return_value=uploaded
-    ), patch("backend.api.temperature_routes.write_audit"):
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage", return_value=uploaded),
+        patch("backend.api.temperature_routes.write_audit"),
+    ):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,

@@ -98,19 +98,34 @@ def client(app):
 
 @pytest.fixture()
 def staff_headers(app):
-    token = app.extensions["security"].generate_token({
-        "id": "staff-1",
-        "username": "staff",
-        "role": "staff",
-    })
+    token = app.extensions["security"].generate_token(
+        {
+            "id": "staff-1",
+            "username": "staff",
+            "role": "staff",
+        }
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture()
 def admin_headers(app):
-    token = app.extensions["security"].generate_token({
-        "id": "admin-1",
-        "username": "admin",
-        "role": "admin",
-    })
+    token = app.extensions["security"].generate_token(
+        {
+            "id": "admin-1",
+            "username": "admin",
+            "role": "admin",
+        }
+    )
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(autouse=True)
+def clear_caches():
+    from backend.utils.cache import dashboard_cache, monitoring_schedule_cache
+
+    dashboard_cache.clear()
+    monitoring_schedule_cache.clear()
+    yield
+    dashboard_cache.clear()
+    monitoring_schedule_cache.clear()

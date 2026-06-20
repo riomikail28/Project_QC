@@ -1,2 +1,0 @@
-from tests.test_facility_rooms_devices import test_admin_device_crud_allows_default_device_delete
-from tests.test_facility_rooms_devices import test_admin_room_crud

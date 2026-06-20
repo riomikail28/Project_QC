@@ -34,10 +34,12 @@ def _safe(handler):
         return _json(handler())
     except Exception as exc:
         logger.exception("Learning API error on %s: %s", request.path, exc)
-        return jsonify({
-            "success": False,
-            "message": "Learning request failed",
-        }), 500
+        return jsonify(
+            {
+                "success": False,
+                "message": "Learning request failed",
+            }
+        ), 500
 
 
 @learning_bp.route("/modules", methods=["GET"])
@@ -100,11 +102,13 @@ def simulations():
 @require_auth
 def submit_simulation(simulation_id):
     payload = request.get_json(silent=True) or {}
-    return _safe(lambda: _service().submit_simulation(
-        _user()["id"],
-        simulation_id,
-        str(payload.get("selected_action") or "").upper(),
-    ))
+    return _safe(
+        lambda: _service().submit_simulation(
+            _user()["id"],
+            simulation_id,
+            str(payload.get("selected_action") or "").upper(),
+        )
+    )
 
 
 @learning_bp.route("/quizzes", methods=["GET"])
@@ -143,7 +147,9 @@ def certificate_pdf():
         )
     except Exception as exc:
         logger.exception("Learning certificate PDF error on %s: %s", request.path, exc)
-        return jsonify({
-            "success": False,
-            "message": "Learning certificate PDF failed",
-        }), 500
+        return jsonify(
+            {
+                "success": False,
+                "message": "Learning certificate PDF failed",
+            }
+        ), 500

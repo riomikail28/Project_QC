@@ -17,18 +17,20 @@ def test_inspection_summary_empty_database(client, staff_headers):
 
 
 def test_inspection_summary_uses_real_tables(client, staff_headers):
-    fake_db = FakeSupabase({
-        "production_batches": [
-            {"id": "batch-1", "batch_code": "B-1", "status": "pending"},
-            {"id": "batch-2", "batch_code": "B-2", "status": "done"},
-        ],
-        "qc_reports": [
-            {"id": "qc-1", "status": "pass"},
-            {"id": "qc-2", "status": "warning"},
-        ],
-        "approvals": [{"id": "approval-1", "status": "pending"}],
-        "barcode_labels": [{"id": "label-1"}],
-    })
+    fake_db = FakeSupabase(
+        {
+            "production_batches": [
+                {"id": "batch-1", "batch_code": "B-1", "status": "pending"},
+                {"id": "batch-2", "batch_code": "B-2", "status": "done"},
+            ],
+            "qc_reports": [
+                {"id": "qc-1", "status": "pass"},
+                {"id": "qc-2", "status": "warning"},
+            ],
+            "approvals": [{"id": "approval-1", "status": "pending"}],
+            "barcode_labels": [{"id": "label-1"}],
+        }
+    )
 
     with patch("backend.services.inspection_service.get_client", return_value=fake_db):
         response = client.get("/api/inspection/summary", headers=staff_headers)
@@ -41,12 +43,14 @@ def test_inspection_summary_uses_real_tables(client, staff_headers):
 
 
 def test_inspection_product_shortcuts(client, staff_headers):
-    fake_db = FakeSupabase({
-        "products": [
-            {"id": "p1", "product_code": "SKU-1", "product_name": "Product 1", "is_active": True},
-            {"id": "p2", "product_code": "SKU-2", "product_name": "Product 2", "is_active": False},
-        ]
-    })
+    fake_db = FakeSupabase(
+        {
+            "products": [
+                {"id": "p1", "product_code": "SKU-1", "product_name": "Product 1", "is_active": True},
+                {"id": "p2", "product_code": "SKU-2", "product_name": "Product 2", "is_active": False},
+            ]
+        }
+    )
 
     with patch("backend.services.inspection_service.get_client", return_value=fake_db):
         response = client.get("/api/inspection/product-shortcuts", headers=staff_headers)

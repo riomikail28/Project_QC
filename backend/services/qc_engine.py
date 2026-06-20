@@ -53,11 +53,7 @@ def validate_temperature(unit_type: str, temperature: float) -> str:
     return "UNKNOWN"
 
 
-def calculate_health_score(
-    total_checks: int,
-    passed_checks: int,
-    warning_checks: int = 0
-) -> float:
+def calculate_health_score(total_checks: int, passed_checks: int, warning_checks: int = 0) -> float:
     """Calculate overall QC health score as percentage.
 
     Warnings count as half-weight against the score.

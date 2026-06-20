@@ -1,33 +1,42 @@
 from unittest.mock import patch
 
-from tests.test_batch_create import BatchDb
 from tests.conftest import FakeSupabase
+from tests.test_batch_create import BatchDb
 
 
 def _db_with_standards():
     db = BatchDb()
-    db.rows["products"] = [{
-        "id": "11111111-1111-4111-8111-111111111111",
-        "product_code": "SKU-1",
-        "product_name": "Soup",
-        "ph_min": 4.5,
-        "ph_max": 7,
-        "brix_min": 11,
-        "brix_max": 14,
-        "tds_min": 100,
-        "tds_max": 150,
-    }]
+    db.rows["products"] = [
+        {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "product_code": "SKU-1",
+            "product_name": "Soup",
+            "ph_min": 4.5,
+            "ph_max": 7,
+            "brix_min": 11,
+            "brix_max": 14,
+            "tds_min": 100,
+            "tds_max": 150,
+        }
+    ]
     return db
 
 
 def _create(client, staff_headers, payload):
     db = _db_with_standards()
-    with patch("backend.services.batch_service.get_client", return_value=db), patch("backend.api.batch_routes.write_audit"):
-        response = client.post("/api/batch/create", headers=staff_headers, json={
-            "product_id": "SKU-1",
-            "production_date": "2026-05-17",
-            **payload,
-        })
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
+    ):
+        response = client.post(
+            "/api/batch/create",
+            headers=staff_headers,
+            json={
+                "product_id": "SKU-1",
+                "production_date": "2026-05-17",
+                **payload,
+            },
+        )
     return response, db
 
 
@@ -108,21 +117,27 @@ def test_tds_out_of_range_is_warning(client, staff_headers):
 
 
 def test_admin_batch_report_displays_ph_brix_tds(client, admin_headers):
-    db = FakeSupabase({"production_batches": [{
-        "id": "batch-1",
-        "batch_code": "QC-20260517-001",
-        "product_name": "Soup",
-        "ph_value": 5.1,
-        "ph_status": "pass",
-        "brix_value": 12,
-        "brix_status": "pass",
-        "tds_value": 170,
-        "tds_status": "warning",
-        "parameter_notes": "Brix OK",
-        "parameter_checked_by": "staff-1",
-        "parameter_checked_at": "2026-05-17T01:00:00Z",
-        "created_at": "2026-05-17T01:00:00Z",
-    }]})
+    db = FakeSupabase(
+        {
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "QC-20260517-001",
+                    "product_name": "Soup",
+                    "ph_value": 5.1,
+                    "ph_status": "pass",
+                    "brix_value": 12,
+                    "brix_status": "pass",
+                    "tds_value": 170,
+                    "tds_status": "warning",
+                    "parameter_notes": "Brix OK",
+                    "parameter_checked_by": "staff-1",
+                    "parameter_checked_at": "2026-05-17T01:00:00Z",
+                    "created_at": "2026-05-17T01:00:00Z",
+                }
+            ]
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/batches", headers=admin_headers)
@@ -136,12 +151,18 @@ def test_admin_batch_report_displays_ph_brix_tds(client, admin_headers):
 
 
 def test_admin_batch_report_empty_parameters_are_not_checked_not_zero(client, admin_headers):
-    db = FakeSupabase({"production_batches": [{
-        "id": "batch-1",
-        "batch_code": "QC-20260517-002",
-        "product_name": "Soup",
-        "created_at": "2026-05-17T01:00:00Z",
-    }]})
+    db = FakeSupabase(
+        {
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "QC-20260517-002",
+                    "product_name": "Soup",
+                    "created_at": "2026-05-17T01:00:00Z",
+                }
+            ]
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/v1/admin/reports/batches", headers=admin_headers)

@@ -7,6 +7,7 @@ Compiles CCP data, violations, and status into structured output.
 
 import logging
 from datetime import datetime
+
 from backend.database.supabase_client import get_client
 
 logger = logging.getLogger("qc.reporter")
@@ -27,9 +28,13 @@ def generate_batch_report(batch_id: str) -> dict:
 
     try:
         # Fetch batch details
-        batch_res = sb.table("production_batches").select(
-            "*, products(product_code, product_name)"
-        ).eq("id", batch_id).execute()
+        batch_columns = (
+            "id,product_id,product_name,batch_code,batch_sequence,production_date,expired_date,status,created_by,"
+            "cook_name,quantity,production_shift,ph_value,brix_value,tds_value,ph_status,brix_status,tds_status,"
+            "parameter_notes,parameter_checked_by,parameter_checked_at,shift,operator_id,qc_officer_id,photo_url,"
+            "storage_path,created_at,updated_at,products(product_code, product_name)"
+        )
+        batch_res = sb.table("production_batches").select(batch_columns).eq("id", batch_id).execute()
 
         if not batch_res.data:
             return {"error": "Batch not found", "batch_id": batch_id}
@@ -37,9 +42,14 @@ def generate_batch_report(batch_id: str) -> dict:
         batch = batch_res.data[0]
 
         # Fetch CCP logs
+        log_columns = (
+            "id,batch_id,stage,operator_id,photo_url,stage_qc_status,metrics,recorded_at,storage_path,"
+            "raw_temp_c,core_temp_c,ph_value_extracted,brix_value_extracted,tds_value,room_temp_c,"
+            "raw_temp_status,core_temp_status,ph_value_status,brix_value_status,tds_value_status,room_temp_status"
+        )
         logs_res = (
             sb.table("production_batch_logs")
-            .select("*")
+            .select(log_columns)
             .eq("batch_id", batch_id)
             .order("recorded_at")
             .execute()
@@ -56,11 +66,13 @@ def generate_batch_report(batch_id: str) -> dict:
             stages_status[stage] = stage_status
 
             if stage_status == "fail":
-                violations.append({
-                    "stage": stage,
-                    "recorded_at": log.get("recorded_at"),
-                    "details": _extract_violation_details(log),
-                })
+                violations.append(
+                    {
+                        "stage": stage,
+                        "recorded_at": log.get("recorded_at"),
+                        "details": _extract_violation_details(log),
+                    }
+                )
 
         # Determine final status
         if any(s == "fail" for s in stages_status.values()):
@@ -72,10 +84,12 @@ def generate_batch_report(batch_id: str) -> dict:
 
         # Update batch final status
         if final_status in ("PASS", "FAIL"):
-            sb.table("production_batches").update({
-                "final_qc_status": final_status.lower(),
-                "status": "completed",
-            }).eq("id", batch_id).execute()
+            sb.table("production_batches").update(
+                {
+                    "final_qc_status": final_status.lower(),
+                    "status": "completed",
+                }
+            ).eq("id", batch_id).execute()
 
         product = batch.get("products", {})
 

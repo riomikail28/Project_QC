@@ -14,25 +14,27 @@ def test_dashboard_returns_empty_fallback_when_supabase_offline(client, staff_he
 
 
 def test_dashboard_aggregates_temperature_and_alerts(client, staff_headers):
-    fake_db = FakeSupabase({
-        "facility_logs": [
-            {
-                "temperature_c": 3.0,
-                "is_normal": True,
-                "recorded_at": "2026-05-14T08:00:00Z",
-                "facility_rooms": {"name": "Chiller A"},
-                "facility_devices": {"name": "Unit 1", "type": "chiller", "threshold_temp": 4},
-            },
-            {
-                "temperature_c": -10.0,
-                "is_normal": False,
-                "recorded_at": "2026-05-14T08:05:00Z",
-                "facility_rooms": {"name": "Freezer B"},
-                "facility_devices": {"name": "Unit 2", "type": "freezer", "threshold_temp": -18},
-            },
-        ],
-        "facility_alerts": [{"id": "alert-1", "status": "open"}],
-    })
+    fake_db = FakeSupabase(
+        {
+            "facility_logs": [
+                {
+                    "temperature_c": 3.0,
+                    "is_normal": True,
+                    "recorded_at": "2026-05-14T08:00:00Z",
+                    "facility_rooms": {"name": "Chiller A"},
+                    "facility_devices": {"name": "Unit 1", "type": "chiller", "threshold_temp": 4},
+                },
+                {
+                    "temperature_c": -10.0,
+                    "is_normal": False,
+                    "recorded_at": "2026-05-14T08:05:00Z",
+                    "facility_rooms": {"name": "Freezer B"},
+                    "facility_devices": {"name": "Unit 2", "type": "freezer", "threshold_temp": -18},
+                },
+            ],
+            "facility_alerts": [{"id": "alert-1", "status": "open"}],
+        }
+    )
 
     with patch("backend.api.qc_routes.get_client", return_value=fake_db):
         response = client.get("/api/qc/dashboard", headers=staff_headers)

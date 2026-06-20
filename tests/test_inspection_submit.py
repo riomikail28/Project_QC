@@ -41,12 +41,14 @@ class InsertDb:
 class MissingColumnInsertQuery(InsertQuery):
     def execute(self):
         if self.payload is not None and self.table == "qc_reports" and "staff_name" in self.payload:
-            raise Exception({
-                "code": "PGRST204",
-                "details": None,
-                "hint": None,
-                "message": "Could not find the 'staff_name' column of 'qc_reports' in the schema cache",
-            })
+            raise Exception(
+                {
+                    "code": "PGRST204",
+                    "details": None,
+                    "hint": None,
+                    "message": "Could not find the 'staff_name' column of 'qc_reports' in the schema cache",
+                }
+            )
         return super().execute()
 
 
@@ -101,8 +103,9 @@ def test_submit_inspection_with_photo_succeeds(client, staff_headers):
         file_size=10,
         bucket="qc-evidence",
     )
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.inspection_service.upload_file_storage", return_value=upload
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch("backend.services.inspection_service.upload_file_storage", return_value=upload),
     ):
         response = client.post(
             "/api/inspection/submit",

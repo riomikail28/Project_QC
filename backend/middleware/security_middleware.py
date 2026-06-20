@@ -1,6 +1,7 @@
 """
 Authentication, authorization, and request hardening.
 """
+
 from __future__ import annotations
 
 import logging

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -64,7 +63,11 @@ def test_qc_temuan_drawer_has_no_qc_check_cta():
 
 
 def test_qc_temuan_does_not_use_blocking_alerts():
-    drawer_script = read("frontend/staff/dashboard.html").split("function openQcFinding", 1)[1].split("async function resolveAlertInDrawer", 1)[0]
+    drawer_script = (
+        read("frontend/staff/dashboard.html")
+        .split("function openQcFinding", 1)[1]
+        .split("async function resolveAlertInDrawer", 1)[0]
+    )
 
     assert "alert(" not in drawer_script
     assert "staffToast(" in drawer_script
@@ -161,5 +164,5 @@ def test_qc_temuan_category_textarea_and_submit_still_work():
 def test_monitoring_toast_cleanup_has_no_alert_fallback():
     js = read("frontend/js/monitoring.js")
 
-    assert "showMonitoringToast(err.message || \"Upload foto gagal\", true)" in js
+    assert 'showMonitoringToast(err.message || "Upload foto gagal", true)' in js
     assert "alert(message)" not in js

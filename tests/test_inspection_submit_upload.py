@@ -1,2 +1,0 @@
-from tests.test_inspection_submit import test_submit_inspection_with_photo_succeeds
-from tests.test_inspection_submit import test_submit_inspection_without_photo_succeeds

@@ -2,9 +2,9 @@
 
 from flask import Blueprint, current_app, g, jsonify, request
 
+from backend.database.supabase_client import get_client, supabase_error_response
 from backend.middleware.security_middleware import require_auth
 from backend.services.inspection_service import InspectionService
-from backend.database.supabase_client import get_client, supabase_error_response
 
 inspection_bp = Blueprint("inspection_bp", __name__, url_prefix="/api/inspection")
 

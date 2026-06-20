@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1C5OVfOEYQuLRWXoyiUtKYybxb6MztDfK5mSroJlUYTI/edit?gid=0#gid=0"
 

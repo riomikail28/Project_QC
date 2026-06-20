@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PHOTO_PAGES = [
     ROOT / "frontend" / "staff" / "dashboard.html",
@@ -88,7 +87,7 @@ def test_staff_upload_flows_use_image_compression():
     assert "Foto akan dikompres otomatis sebelum dikirim." in dashboard_html
     assert "API.preparePhoto(file, { filePrefix: `qc-${id}` })" in inspection_js
     assert "this.photoFiles" in inspection_js
-    assert "API.preparePhotos(incomingFiles, { filePrefix: \"qc-monitoring\" })" in monitoring_js
+    assert 'API.preparePhotos(incomingFiles, { filePrefix: "qc-monitoring" })' in monitoring_js
     assert "API.preparePhotos(files, { filePrefix: 'qc-ccp' })" in ccp_js
 
 

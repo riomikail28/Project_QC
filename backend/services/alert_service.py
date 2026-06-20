@@ -6,6 +6,7 @@ Writes alerts to the facility_alerts table when thresholds are violated.
 """
 
 import logging
+
 from backend.database.supabase_client import get_client
 
 logger = logging.getLogger("qc.alerts")

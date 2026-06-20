@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-
 ROOM_ID = "11111111-1111-4111-8111-111111111111"
 DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
@@ -35,13 +34,16 @@ def test_monitoring_submit_rejects_synthetic_device_id(client, staff_headers):
 def test_monitoring_submit_with_uuid_valid_succeeds(client, staff_headers):
     from tests.conftest import FakeSupabase
 
-    fake_db = FakeSupabase({
-        "facility_rooms": [{"id": ROOM_ID, "name": "Kitchen"}],
-        "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 5}],
-    })
+    fake_db = FakeSupabase(
+        {
+            "facility_rooms": [{"id": ROOM_ID, "name": "Kitchen"}],
+            "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 5}],
+        }
+    )
 
-    with patch("backend.api.temperature_routes.get_client", return_value=fake_db), patch(
-        "backend.api.temperature_routes.write_audit"
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=fake_db),
+        patch("backend.api.temperature_routes.write_audit"),
     ):
         response = client.post(
             "/api/monitoring/log",

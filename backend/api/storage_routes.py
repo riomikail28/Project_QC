@@ -1,10 +1,12 @@
-from flask import Blueprint, g, request, jsonify
+from flask import Blueprint, g, jsonify, request
+
 from backend.database.supabase_client import get_client
-from backend.services.storage_service import upload_file_storage
 from backend.middleware.security_middleware import require_auth
+from backend.services.storage_service import upload_file_storage
 
 storage_bp = Blueprint("storage", __name__)
 storage_alias_bp = Blueprint("storage_alias", __name__)
+
 
 @storage_bp.route("/upload", methods=["POST"])
 @require_auth
@@ -12,7 +14,7 @@ def upload_standalone():
     """Generic photo upload endpoint for standalone use."""
     if "photo" not in request.files:
         return jsonify({"error": "No photo provided"}), 400
-    
+
     file = request.files["photo"]
     try:
         current_user = getattr(g, "current_user", {}) or {}
@@ -21,21 +23,23 @@ def upload_standalone():
         related_id = request.form.get("related_id")
         uploaded = upload_file_storage(file, staff_id=staff_id, category=related_type, related_id=related_id)
         evidence = _record_evidence(uploaded, staff_id, related_type, related_id)
-        return jsonify({
-            "success": True,
-            "data": {
+        return jsonify(
+            {
+                "success": True,
+                "data": {
+                    "url": uploaded.url,
+                    "public_url": uploaded.url,
+                    "storage_path": uploaded.storage_path,
+                    "bucket": uploaded.bucket,
+                    "evidence": evidence,
+                },
                 "url": uploaded.url,
                 "public_url": uploaded.url,
                 "storage_path": uploaded.storage_path,
                 "bucket": uploaded.bucket,
-                "evidence": evidence,
-            },
-            "url": uploaded.url,
-            "public_url": uploaded.url,
-            "storage_path": uploaded.storage_path,
-            "bucket": uploaded.bucket,
-            "message": "OK",
-        })
+                "message": "OK",
+            }
+        )
     except ValueError as e:
         return jsonify({"success": False, "message": str(e), "error": str(e)}), 400
     except Exception as e:

@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 from backend.services.monitoring_schedule_service import MonitoringScheduleService
 from tests.test_monitoring import DEVICE_ID, ROOM_ID
 
-
 JAKARTA = ZoneInfo("Asia/Jakarta")
 
 
@@ -25,11 +24,14 @@ def test_submit_slot_0700_succeeds_and_progress_becomes_one_of_four(client, staf
     db = ScheduleDb()
     frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         response = client.post(
             "/api/facility/monitoring/submit",
@@ -57,9 +59,12 @@ def test_submit_slot_0700_before_0700_returns_409(client, staff_headers):
     db = ScheduleDb()
     frozen_now = datetime(2026, 5, 27, 6, 45, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         response = client.post(
             "/api/facility/monitoring/submit",
@@ -83,11 +88,14 @@ def test_submit_slot_0700_after_0700_succeeds(client, staff_headers):
     db = ScheduleDb()
     frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         response = client.post(
             "/api/facility/monitoring/submit",
@@ -111,11 +119,14 @@ def test_one_of_sixteen_devices_keeps_0700_active_and_progress_one_of_sixty_four
     db = ScheduleDb(device_count=16)
     frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         first = client.post(
             "/api/facility/monitoring/submit",
@@ -144,11 +155,14 @@ def test_same_device_cannot_submit_same_slot_twice(client, staff_headers):
     db = ScheduleDb(device_count=16)
     frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         first = client.post(
             "/api/facility/monitoring/submit",
@@ -170,11 +184,14 @@ def test_three_devices_can_submit_active_0700_then_duplicate_and_future_slot_rej
     db = ScheduleDb(device_count=3)
     frozen_now = datetime(2026, 5, 27, 7, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         first = client.post(
             "/api/facility/monitoring/submit",
@@ -251,9 +268,12 @@ def test_submit_1300_before_1300_returns_409_after_0700_complete(client, staff_h
     ]
     frozen_now = datetime(2026, 5, 27, 12, 30, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         response = client.post(
             "/api/facility/monitoring/submit",
@@ -280,11 +300,14 @@ def test_submit_1300_after_1300_succeeds_after_0700_complete(client, staff_heade
     ]
     frozen_now = datetime(2026, 5, 27, 13, 15, tzinfo=JAKARTA)
 
-    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage"
-    ), patch("backend.api.facility_routes.write_audit"), patch(
-        "backend.api.facility_routes.MonitoringScheduleService",
-        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    with (
+        patch("backend.api.facility_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage"),
+        patch("backend.api.facility_routes.write_audit"),
+        patch(
+            "backend.api.facility_routes.MonitoringScheduleService",
+            side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+        ),
     ):
         response = client.post(
             "/api/facility/monitoring/submit",
@@ -365,13 +388,19 @@ class ScheduleQuery:
 class ScheduleDb:
     def __init__(self, device_count=1):
         self.device_ids = [DEVICE_ID] + [
-            f"22222222-2222-4222-8222-{index:012d}"
-            for index in range(2, device_count + 1)
+            f"22222222-2222-4222-8222-{index:012d}" for index in range(2, device_count + 1)
         ]
         self.rows = {
             "facility_rooms": [{"id": ROOM_ID, "name": "Chiller Room"}],
             "facility_devices": [
-                {"id": device_id, "room_id": ROOM_ID, "type": "chiller", "device_type": "chiller", "threshold_temp": 5, "is_active": True}
+                {
+                    "id": device_id,
+                    "room_id": ROOM_ID,
+                    "type": "chiller",
+                    "device_type": "chiller",
+                    "threshold_temp": 5,
+                    "is_active": True,
+                }
                 for device_id in self.device_ids
             ],
             "facility_logs": [],

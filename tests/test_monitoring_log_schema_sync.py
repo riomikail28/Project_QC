@@ -10,7 +10,10 @@ DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
 def test_monitoring_log_insert_does_not_send_device_type(client, staff_headers):
     db = RecordingSupabase()
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch("backend.api.temperature_routes.write_audit"):
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.api.temperature_routes.write_audit"),
+    ):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,
@@ -22,7 +25,17 @@ def test_monitoring_log_insert_does_not_send_device_type(client, staff_headers):
     assert body["success"] is True
     assert body["message"] == "Temperature log saved"
     payload = db.inserted["facility_logs"]
-    assert set(payload) >= {"room_id", "device_id", "staff_id", "temperature_c", "threshold_c", "is_normal", "notes", "recorded_at", "created_at"}
+    assert set(payload) >= {
+        "room_id",
+        "device_id",
+        "staff_id",
+        "temperature_c",
+        "threshold_c",
+        "is_normal",
+        "notes",
+        "recorded_at",
+        "created_at",
+    }
     assert "device_type" not in payload
     assert "status" not in payload
     assert "temperature" not in payload
@@ -39,9 +52,11 @@ def test_monitoring_log_with_photo_succeeds_without_device_type(client, staff_he
         bucket="qc-evidence",
     )
 
-    with patch("backend.api.temperature_routes.get_client", return_value=db), patch(
-        "backend.services.monitoring_service.upload_file_storage", return_value=uploaded
-    ), patch("backend.api.temperature_routes.write_audit"):
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=db),
+        patch("backend.services.monitoring_service.upload_file_storage", return_value=uploaded),
+        patch("backend.api.temperature_routes.write_audit"),
+    ):
         response = client.post(
             "/api/monitoring/log",
             headers=staff_headers,

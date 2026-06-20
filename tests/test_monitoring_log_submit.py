@@ -1,6 +1,2 @@
-from tests.test_monitoring import test_temperature_log_saves_normal_reading as test_submit_monitoring_chiller_success
-from tests.test_monitoring import test_temperature_log_saves_preuploaded_photo_metadata as test_submit_monitoring_with_photo_success
-
-
 def test_monitoring_room_temp_freezer_contract_present():
     assert True

@@ -35,7 +35,9 @@ class InspectionService:
     def _fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
         try:
             if not self.sb:
-                return self._direct_fetch(table, select=select, order_by=order_by, desc=desc, limit=limit, filters=filters)
+                return self._direct_fetch(
+                    table, select=select, order_by=order_by, desc=desc, limit=limit, filters=filters
+                )
             query = self.sb.table(table).select(select)
             for method, field, value in filters or []:
                 query = getattr(query, method)(field, value)
@@ -70,9 +72,20 @@ class InspectionService:
             reports = self._fetch("qc_reports", limit=1000)
             approvals = self._fetch("approvals", filters=[("eq", "status", "pending")])
             labels = self._fetch("barcode_labels", limit=1000)
-            status_counts = Counter(self._norm_status(row.get("status") or row.get("final_qc_status")) for row in reports)
-            active_batches = [row for row in batches if self._norm_status(row.get("status") or row.get("final_qc_status")) in {"pending", "hold", "warning", ""}]
-            pending = len(approvals) if approvals else status_counts["pending"] + status_counts["hold"] + status_counts["warning"]
+            status_counts = Counter(
+                self._norm_status(row.get("status") or row.get("final_qc_status")) for row in reports
+            )
+            active_batches = [
+                row
+                for row in batches
+                if self._norm_status(row.get("status") or row.get("final_qc_status"))
+                in {"pending", "hold", "warning", ""}
+            ]
+            pending = (
+                len(approvals)
+                if approvals
+                else status_counts["pending"] + status_counts["hold"] + status_counts["warning"]
+            )
             data = {
                 "pass": status_counts["pass"],
                 "hold_pending": pending,
@@ -136,17 +149,26 @@ class InspectionService:
         return self._ok({"active_batches": candidates[:limit]})
 
     def product_shortcuts(self, limit=8):
-        rows = self._fetch("products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)])
+        rows = self._fetch(
+            "products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)]
+        )
         if not rows:
             rows = self._fetch("products", order_by="product_code", desc=False, limit=limit)
-        return self._ok([{
-            "id": row.get("id"),
-            "product_code": row.get("product_code") or row.get("sku_code") or "-",
-            "product_name": row.get("product_name") or "Unnamed product",
-        } for row in rows])
+        return self._ok(
+            [
+                {
+                    "id": row.get("id"),
+                    "product_code": row.get("product_code") or row.get("sku_code") or "-",
+                    "product_name": row.get("product_name") or "Unnamed product",
+                }
+                for row in rows
+            ]
+        )
 
     def products(self, limit=1000):
-        rows = self._fetch("products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)])
+        rows = self._fetch(
+            "products", order_by="product_code", desc=False, limit=limit, filters=[("eq", "is_active", True)]
+        )
         return self._ok([self._product_picker_item(row) for row in rows])
 
     def recent_submissions(self, limit=10):
@@ -164,8 +186,12 @@ class InspectionService:
         sku_code = str(payload.get("sku_code") or barcode or "").strip()
         batch_id = payload.get("batch_id") or None
         batch_code = str(payload.get("batch_code") or "").strip()
-        operational_date = str(payload.get("operational_date") or payload.get("production_date") or self._jakarta_today()).strip()
-        parent_inspection = str(payload.get("parent_inspection") or payload.get("parent_inspection_id") or "").strip() or None
+        operational_date = str(
+            payload.get("operational_date") or payload.get("production_date") or self._jakarta_today()
+        ).strip()
+        parent_inspection = (
+            str(payload.get("parent_inspection") or payload.get("parent_inspection_id") or "").strip() or None
+        )
         if not staff_id:
             return self._fail("staff_id wajib tersedia dari sesi login")
         if not sku_code:
@@ -203,11 +229,18 @@ class InspectionService:
         batch_row = self._batch_by_id_or_code(batch_id, batch_code)
         batch_date = str((batch_row or {}).get("production_date") or "")[:10]
         if batch_row and batch_date and batch_date != operational_date:
-            return self._fail("Batch ini berasal dari tanggal berbeda. Pilih batch hari ini atau buat batch baru.", status_code=409)
+            return self._fail(
+                "Batch ini berasal dari tanggal berbeda. Pilih batch hari ini atau buat batch baru.", status_code=409
+            )
 
         active_lock = self._active_inspection_for_batch(batch_id, batch_code)
         if active_lock and not is_admin:
-            locker = active_lock.get("staff_name") or active_lock.get("inspector_name") or active_lock.get("staff_id") or "staff lain"
+            locker = (
+                active_lock.get("staff_name")
+                or active_lock.get("inspector_name")
+                or active_lock.get("staff_id")
+                or "staff lain"
+            )
             return self._fail(f"Sedang diperiksa oleh {locker}", status_code=409)
 
         inspection_round = 1
@@ -233,7 +266,11 @@ class InspectionService:
                         uploads["cooking"]["urls"].append(uploaded.url)
                         uploads["cooking"]["paths"].append(uploaded.storage_path)
             elif qc_stage == "final_check":
-                for field_name, bucket_key in (("barcode_photo", "barcode"), ("label_photo", "label"), ("photo", "generic")):
+                for field_name, bucket_key in (
+                    ("barcode_photo", "barcode"),
+                    ("label_photo", "label"),
+                    ("photo", "generic"),
+                ):
                     for photo_file in file_map.get(field_name) or []:
                         uploaded = self._upload_if_present(photo_file, staff_id, bucket_key, batch_id or batch_code)
                         if uploaded:
@@ -302,42 +339,54 @@ class InspectionService:
             report = self._insert("qc_reports", report_payload)
 
             if barcode:
-                self._insert("barcode_labels", {
-                    "batch_id": batch_id,
-                    "batch_code": batch_code or str(batch_id),
-                    "product_id": product_id or None,
-                    "product_name": product_name,
-                    "barcode_value": barcode,
-                    "barcode_photo_url": report_payload.get("product_photo_url"),
-                    "staff_id": staff_id,
-                    "staff_name": payload.get("staff_name") or payload.get("inspector_name"),
-                }, required=False)
+                self._insert(
+                    "barcode_labels",
+                    {
+                        "batch_id": batch_id,
+                        "batch_code": batch_code or str(batch_id),
+                        "product_id": product_id or None,
+                        "product_name": product_name,
+                        "barcode_value": barcode,
+                        "barcode_photo_url": report_payload.get("product_photo_url"),
+                        "staff_id": staff_id,
+                        "staff_name": payload.get("staff_name") or payload.get("inspector_name"),
+                    },
+                    required=False,
+                )
 
             report_id = report.get("id") if isinstance(report, dict) else None
             for evidence_type, uploaded in uploaded_files:
-                self._insert("qc_evidence", {
-                    "file_name": uploaded.file_name,
-                    "file_type": uploaded.file_type,
-                    "mime_type": uploaded.file_type,
-                    "file_size": uploaded.file_size,
-                    "bucket": uploaded.bucket,
-                    "storage_path": uploaded.storage_path,
-                    "public_url": uploaded.url,
-                    "uploaded_by": staff_id,
-                    "related_type": "qc_report",
-                    "related_id": report_id or batch_id or batch_code,
-                    "metadata": {"qc_stage": qc_stage, "evidence_type": evidence_type},
-                }, required=False)
+                self._insert(
+                    "qc_evidence",
+                    {
+                        "file_name": uploaded.file_name,
+                        "file_type": uploaded.file_type,
+                        "mime_type": uploaded.file_type,
+                        "file_size": uploaded.file_size,
+                        "bucket": uploaded.bucket,
+                        "storage_path": uploaded.storage_path,
+                        "public_url": uploaded.url,
+                        "uploaded_by": staff_id,
+                        "related_type": "qc_report",
+                        "related_id": report_id or batch_id or batch_code,
+                        "metadata": {"qc_stage": qc_stage, "evidence_type": evidence_type},
+                    },
+                    required=False,
+                )
 
             if report_id:
-                self._insert("approvals", {
-                    "related_type": "qc_report",
-                    "related_id": report_id,
-                    "status": "pending",
-                    "requested_by": staff_id,
-                    "requester_id": staff_id,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                }, required=False)
+                self._insert(
+                    "approvals",
+                    {
+                        "related_type": "qc_report",
+                        "related_id": report_id,
+                        "status": "pending",
+                        "requested_by": staff_id,
+                        "requester_id": staff_id,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    required=False,
+                )
             self._update_batch_status(batch_id, batch_code, report or report_payload)
 
             try:
@@ -347,36 +396,46 @@ class InspectionService:
                         "upload_inspection_photo",
                         "qc_report",
                         str(report_id),
-                        metadata={"storage_paths": [item.storage_path for _, item in uploaded_files], "qc_stage": qc_stage},
+                        metadata={
+                            "storage_paths": [item.storage_path for _, item in uploaded_files],
+                            "qc_stage": qc_stage,
+                        },
                     )
             except Exception:
                 pass
             created_at = (report or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
-            send_qc_report(build_qc_report_payload({
-                **report_payload,
-                **(report or {}),
-                "batch_sequence": (batch_row or {}).get("batch_sequence"),
-                "cook_name": (batch_row or {}).get("cook_name"),
-                "quantity": (batch_row or {}).get("quantity"),
-                "production_shift": (batch_row or {}).get("production_shift") or (batch_row or {}).get("shift"),
-                "ph_value": payload.get("ph_value") or payload.get("ph"),
-                "brix_value": payload.get("brix_value") or payload.get("brix"),
-                "tds_value": payload.get("tds_value") or payload.get("tds"),
-                "created_at": created_at,
-                "source_type": "qc_report",
-                "source_id": report_id,
-            }))
-            return self._ok({
-                "report_id": report_id,
-                "batch_id": batch_id,
-                "batch_code": batch_code,
-                "qc_stage": qc_stage,
-                "inspection_round": inspection_round,
-                "parent_inspection": parent_inspection,
-                "approval_status": "pending",
-                "photo_url": report_payload.get("photo_url"),
-                **(report or report_payload),
-            }, "QC check submitted")
+            send_qc_report(
+                build_qc_report_payload(
+                    {
+                        **report_payload,
+                        **(report or {}),
+                        "batch_sequence": (batch_row or {}).get("batch_sequence"),
+                        "cook_name": (batch_row or {}).get("cook_name"),
+                        "quantity": (batch_row or {}).get("quantity"),
+                        "production_shift": (batch_row or {}).get("production_shift") or (batch_row or {}).get("shift"),
+                        "ph_value": payload.get("ph_value") or payload.get("ph"),
+                        "brix_value": payload.get("brix_value") or payload.get("brix"),
+                        "tds_value": payload.get("tds_value") or payload.get("tds"),
+                        "created_at": created_at,
+                        "source_type": "qc_report",
+                        "source_id": report_id,
+                    }
+                )
+            )
+            return self._ok(
+                {
+                    "report_id": report_id,
+                    "batch_id": batch_id,
+                    "batch_code": batch_code,
+                    "qc_stage": qc_stage,
+                    "inspection_round": inspection_round,
+                    "parent_inspection": parent_inspection,
+                    "approval_status": "pending",
+                    "photo_url": report_payload.get("photo_url"),
+                    **(report or report_payload),
+                },
+                "QC check submitted",
+            )
         except Exception as exc:
             for _, uploaded in uploaded_files:
                 delete_photo(uploaded.storage_path)
@@ -476,7 +535,9 @@ class InspectionService:
             filters.append(("eq", "batch_id", batch_id))
         rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=filters) if filters else []
         if not rows and batch_code:
-            rows = self._fetch("qc_reports", order_by="created_at", limit=20, filters=[("eq", "batch_code", batch_code)])
+            rows = self._fetch(
+                "qc_reports", order_by="created_at", limit=20, filters=[("eq", "batch_code", batch_code)]
+            )
         return rows[0] if rows else None
 
     def _active_inspection_for_batch(self, batch_id, batch_code):
@@ -507,9 +568,13 @@ class InspectionService:
         if not batch_id or not self.sb:
             return
         try:
-            reports = self._fetch("qc_reports", order_by="created_at", limit=100, filters=[("eq", "batch_id", batch_id)])
+            reports = self._fetch(
+                "qc_reports", order_by="created_at", limit=100, filters=[("eq", "batch_id", batch_id)]
+            )
             reports.append(current_report)
-            stages = {row.get("qc_stage") or row.get("ccp_stage"): self._norm_status(row.get("status")) for row in reports}
+            stages = {
+                row.get("qc_stage") or row.get("ccp_stage"): self._norm_status(row.get("status")) for row in reports
+            }
             statuses = set(stages.values())
             payload = {"updated_at": datetime.now(timezone.utc).isoformat()}
             if "fail" in statuses:
@@ -579,7 +644,10 @@ class InspectionService:
             "product_name": row.get("product_name") or "QC report",
             "status": self._norm_status(row.get("status") or row.get("final_qc_status")) or "pending",
             "created_at": row.get("created_at"),
-            "photo_url": row.get("product_photo_url") or row.get("temperature_photo_url") or row.get("barcode_photo_url") or row.get("photo_url"),
+            "photo_url": row.get("product_photo_url")
+            or row.get("temperature_photo_url")
+            or row.get("barcode_photo_url")
+            or row.get("photo_url"),
         }
 
     def _log_view(self, row):

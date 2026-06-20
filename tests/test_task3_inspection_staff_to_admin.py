@@ -6,7 +6,9 @@ from tests.conftest import FakeSupabase
 from tests.test_monitoring import RecordingSupabase
 
 
-def test_task3_staff_submit_inspection_with_photo_admin_report_and_pending_approval(client, staff_headers, admin_headers):
+def test_task3_staff_submit_inspection_with_photo_admin_report_and_pending_approval(
+    client, staff_headers, admin_headers
+):
     db = RecordingSupabase()
     db.fixtures["products"] = []
     uploaded = SimpleNamespace(
@@ -18,9 +20,11 @@ def test_task3_staff_submit_inspection_with_photo_admin_report_and_pending_appro
         bucket="qc-evidence",
     )
 
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.inspection_service.upload_file_storage", return_value=uploaded
-    ), patch("backend.services.inspection_service.write_audit"):
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch("backend.services.inspection_service.upload_file_storage", return_value=uploaded),
+        patch("backend.services.inspection_service.write_audit"),
+    ):
         submit = client.post(
             "/api/inspection/submit",
             headers=staff_headers,

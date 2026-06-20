@@ -4,11 +4,12 @@ Storage Service
 Handles file uploads to Supabase Storage.
 """
 
+import logging
 import os
 import uuid
-import logging
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
+
 from backend.database.supabase_client import STORAGE_BUCKET, get_supabase_admin_client
 
 logger = logging.getLogger("qc.service.storage")
@@ -17,6 +18,7 @@ logger = logging.getLogger("qc.service.storage")
 def get_client():
     """Backend storage client hook kept patchable for tests."""
     return get_supabase_admin_client()
+
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 ALLOWED_IMAGE_TYPES = {
@@ -41,7 +43,7 @@ def _detect_image_ext(file_bytes: bytes, content_type: str | None = None) -> str
     if not file_bytes:
         raise ValueError("Photo is empty")
     if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise ValueError(f"Photo exceeds maximum size of {MAX_UPLOAD_BYTES // (1024*1024)}MB")
+        raise ValueError(f"Photo exceeds maximum size of {MAX_UPLOAD_BYTES // (1024 * 1024)}MB")
     if content_type and content_type not in ALLOWED_MIME_TYPES:
         raise ValueError("Unsupported photo type. Gunakan JPG, PNG, atau WEBP.")
     if file_bytes.startswith(ALLOWED_IMAGE_TYPES["jpg"]):
@@ -59,6 +61,7 @@ def _content_type(ext: str) -> str:
         ".png": "image/png",
         ".webp": "image/webp",
     }.get(ext, "application/octet-stream")
+
 
 def _safe_path_part(value: str | None, default: str = "unknown") -> str:
     safe = str(value or default).strip().replace("\\", "_").replace("/", "_")
@@ -96,12 +99,12 @@ def upload_photo_result(
     related_id: str | None = None,
 ) -> UploadedPhoto:
     """Upload a photo and return URL plus storage path metadata.
-    
+
     Args:
         file_bytes: The raw file content.
         filename: Original filename.
         staff_id: ID of the staff uploading the file.
-        
+
     Returns:
         UploadedPhoto with public URL and storage path.
     """
@@ -126,11 +129,9 @@ def upload_photo_result(
 
     try:
         sb.storage.from_(STORAGE_BUCKET).upload(
-            path=storage_path,
-            file=file_bytes,
-            file_options={"content-type": _content_type(ext), "upsert": "false"}
+            path=storage_path, file=file_bytes, file_options={"content-type": _content_type(ext), "upsert": "false"}
         )
-        
+
         public_url = sb.storage.from_(STORAGE_BUCKET).get_public_url(storage_path)
         if not public_url:
             delete_photo(storage_path)
@@ -189,4 +190,3 @@ def delete_photo(storage_path: str) -> bool:
     except Exception as e:
         logger.warning("Storage rollback delete failed for %s: %s", storage_path, e)
         return False
-

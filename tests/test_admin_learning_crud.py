@@ -2,7 +2,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -42,7 +41,9 @@ class LearningQuery:
     def execute(self):
         if self.payload is not None:
             payload = self.payload[0] if isinstance(self.payload, list) else self.payload
-            if self.table == "itdv_modules" and any(row.get("slug") == payload.get("slug") for row in self.db.rows[self.table]):
+            if self.table == "itdv_modules" and any(
+                row.get("slug") == payload.get("slug") for row in self.db.rows[self.table]
+            ):
                 raise Exception('duplicate key value violates unique constraint "itdv_modules_pkey" 23505')
             row = {"id": f"{self.table}-{len(self.db.rows.setdefault(self.table, [])) + 1}", **payload}
             self.db.rows.setdefault(self.table, []).append(row)
@@ -69,16 +70,18 @@ class LearningQuery:
 class LearningDb:
     def __init__(self):
         self.rows = {
-            "itdv_modules": [{
-                "slug": "haccp",
-                "title": "HACCP",
-                "description": "Food safety",
-                "summary": "Food safety",
-                "duration_minutes": 20,
-                "sort_order": 1,
-                "published": True,
-                "archived": False,
-            }],
+            "itdv_modules": [
+                {
+                    "slug": "haccp",
+                    "title": "HACCP",
+                    "description": "Food safety",
+                    "summary": "Food safety",
+                    "duration_minutes": 20,
+                    "sort_order": 1,
+                    "published": True,
+                    "archived": False,
+                }
+            ],
             "itdv_module_mini_quizzes": [],
             "itdv_simulations": [],
             "itdv_quiz_questions": [],
@@ -165,7 +168,9 @@ def test_admin_learning_invalid_payload_returns_400(client, admin_headers):
 def test_admin_learning_duplicate_slug_returns_409(client, admin_headers):
     db = LearningDb()
     with patch("backend.services.admin_learning_service.get_client", return_value=db):
-        response = client.post("/api/admin/learning/modules", headers=admin_headers, json={"title": "HACCP", "slug": "haccp"})
+        response = client.post(
+            "/api/admin/learning/modules", headers=admin_headers, json={"title": "HACCP", "slug": "haccp"}
+        )
 
     body = response.get_json()
     assert response.status_code == 409
@@ -179,10 +184,10 @@ def test_admin_ui_has_learning_itdv_section():
 
     assert "Learning ITDV" in html
     assert "Admin Learning Management" in html
-    assert "data-learning-tab=\"modules\"" in html
-    assert "data-learning-tab=\"mini-quiz\"" in html
-    assert "data-learning-tab=\"simulation\"" in html
-    assert "data-learning-tab=\"quiz\"" in html
+    assert 'data-learning-tab="modules"' in html
+    assert 'data-learning-tab="mini-quiz"' in html
+    assert 'data-learning-tab="simulation"' in html
+    assert 'data-learning-tab="quiz"' in html
     assert "Certificates/Progress" in html
     assert "/admin/learning/modules" in js
 

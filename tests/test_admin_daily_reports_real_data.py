@@ -4,81 +4,83 @@ from tests.conftest import FakeSupabase
 
 
 def _daily_report_db():
-    return FakeSupabase({
-        "staff_accounts": [
-            {"id": "staff-1", "full_name": "Rio Mikail", "email": "rio@example.com"},
-            {"id": "staff-2", "full_name": "Dina QC", "email": "dina@example.com"},
-        ],
-        "users": [],
-        "facility_logs": [
-            {
-                "id": "temp-1",
-                "staff_id": "staff-1",
-                "room_id": "PPIC",
-                "device_id": "Chiller",
-                "temperature_c": 4.1,
-                "status": "PASS",
-                "photo_url": "https://example.com/temp.jpg",
-                "notes": "Pagi",
-                "recorded_at": "2026-05-31T00:14:00Z",
-                "monitoring_date": "2026-05-31",
-            },
-            {
-                "id": "temp-old",
-                "staff_id": "staff-1",
-                "room_id": "PPIC",
-                "device_id": "Freezer",
-                "temperature_c": -18,
-                "status": "PASS",
-                "recorded_at": "2026-05-30T00:14:00Z",
-                "monitoring_date": "2026-05-30",
-            },
-        ],
-        "temperature_logs": [
-            {
-                "id": "fallback-temp-1",
-                "staff_id": "staff-1",
-                "room_id": "Fallback",
-                "device_id": "Fallback Device",
-                "temperature": 5.1,
-                "status": "PASS",
-                "recorded_at": "2026-05-31T00:20:00Z",
-                "monitoring_date": "2026-05-31",
-            }
-        ],
-        "qc_reports": [
-            {
-                "id": "qc-1",
-                "staff_id": "staff-1",
-                "batch_code": "SKU-20260531-001",
-                "product_name": "Sauce",
-                "status": "HOLD",
-                "notes": "Need re-check",
-                "photo_url": "https://example.com/qc.jpg",
-                "created_at": "2026-05-31T01:00:00Z",
-            },
-            {
-                "id": "qc-2",
-                "staff_id": "staff-2",
-                "batch_code": "SKU-20260531-002",
-                "product_name": "Rice",
-                "status": "PASS",
-                "created_at": "2026-05-31T02:00:00Z",
-            },
-        ],
-        "qc_findings": [
-            {
-                "id": "finding-1",
-                "staff_id": "staff-2",
-                "batch_code": "SKU-20260531-002",
-                "status": "WARNING",
-                "reason": "Label kurang jelas",
-                "evidence_url": "https://example.com/finding.jpg",
-                "created_at": "2026-05-31T03:00:00Z",
-            }
-        ],
-        "approvals": [],
-    })
+    return FakeSupabase(
+        {
+            "staff_accounts": [
+                {"id": "staff-1", "full_name": "Rio Mikail", "email": "rio@example.com"},
+                {"id": "staff-2", "full_name": "Dina QC", "email": "dina@example.com"},
+            ],
+            "users": [],
+            "facility_logs": [
+                {
+                    "id": "temp-1",
+                    "staff_id": "staff-1",
+                    "room_id": "PPIC",
+                    "device_id": "Chiller",
+                    "temperature_c": 4.1,
+                    "status": "PASS",
+                    "photo_url": "https://example.com/temp.jpg",
+                    "notes": "Pagi",
+                    "recorded_at": "2026-05-31T00:14:00Z",
+                    "monitoring_date": "2026-05-31",
+                },
+                {
+                    "id": "temp-old",
+                    "staff_id": "staff-1",
+                    "room_id": "PPIC",
+                    "device_id": "Freezer",
+                    "temperature_c": -18,
+                    "status": "PASS",
+                    "recorded_at": "2026-05-30T00:14:00Z",
+                    "monitoring_date": "2026-05-30",
+                },
+            ],
+            "temperature_logs": [
+                {
+                    "id": "fallback-temp-1",
+                    "staff_id": "staff-1",
+                    "room_id": "Fallback",
+                    "device_id": "Fallback Device",
+                    "temperature": 5.1,
+                    "status": "PASS",
+                    "recorded_at": "2026-05-31T00:20:00Z",
+                    "monitoring_date": "2026-05-31",
+                }
+            ],
+            "qc_reports": [
+                {
+                    "id": "qc-1",
+                    "staff_id": "staff-1",
+                    "batch_code": "SKU-20260531-001",
+                    "product_name": "Sauce",
+                    "status": "HOLD",
+                    "notes": "Need re-check",
+                    "photo_url": "https://example.com/qc.jpg",
+                    "created_at": "2026-05-31T01:00:00Z",
+                },
+                {
+                    "id": "qc-2",
+                    "staff_id": "staff-2",
+                    "batch_code": "SKU-20260531-002",
+                    "product_name": "Rice",
+                    "status": "PASS",
+                    "created_at": "2026-05-31T02:00:00Z",
+                },
+            ],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_id": "staff-2",
+                    "batch_code": "SKU-20260531-002",
+                    "status": "WARNING",
+                    "reason": "Label kurang jelas",
+                    "evidence_url": "https://example.com/finding.jpg",
+                    "created_at": "2026-05-31T03:00:00Z",
+                }
+            ],
+            "approvals": [],
+        }
+    )
 
 
 def test_daily_reports_reads_facility_logs(client, admin_headers):

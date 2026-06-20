@@ -1,8 +1,7 @@
-from unittest.mock import patch
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from backend.database import supabase_client
-
 
 SERVICE_ROLE_JWT = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."

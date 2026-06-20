@@ -1,5 +1,5 @@
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
 
 from tests.conftest import FakeSupabase
 
@@ -7,16 +7,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_admin_can_list_products(client, admin_headers):
-    fake_db = FakeSupabase({
-        "products": [
-            {
-                "id": "product-1",
-                "product_code": "SKU-TEST-001",
-                "product_name": "Test Product",
-                "is_active": True,
-            }
-        ]
-    })
+    fake_db = FakeSupabase(
+        {
+            "products": [
+                {
+                    "id": "product-1",
+                    "product_code": "SKU-TEST-001",
+                    "product_name": "Test Product",
+                    "is_active": True,
+                }
+            ]
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/products", headers=admin_headers)
@@ -59,26 +61,28 @@ def test_admin_can_create_product(client, admin_headers):
 
 
 def test_admin_qc_reports_include_staff_dashboard_findings(client, admin_headers):
-    fake_db = FakeSupabase({
-        "qc_reports": [
-            {
-                "id": "report-1",
-                "batch_code": "BATCH-001",
-                "status": "pass",
-                "created_at": "2026-05-16T08:00:00Z",
-            }
-        ],
-        "qc_findings": [
-            {
-                "id": "finding-1",
-                "staff_id": "staff-1",
-                "reason": "Foreign object found",
-                "photo_url": "https://example.supabase.co/storage/v1/object/public/qc-evidence/staff/finding.jpg",
-                "storage_path": "staff/2026-05-16/finding.jpg",
-                "created_at": "2026-05-16T09:00:00Z",
-            }
-        ],
-    })
+    fake_db = FakeSupabase(
+        {
+            "qc_reports": [
+                {
+                    "id": "report-1",
+                    "batch_code": "BATCH-001",
+                    "status": "pass",
+                    "created_at": "2026-05-16T08:00:00Z",
+                }
+            ],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_id": "staff-1",
+                    "reason": "Foreign object found",
+                    "photo_url": "https://example.supabase.co/storage/v1/object/public/qc-evidence/staff/finding.jpg",
+                    "storage_path": "staff/2026-05-16/finding.jpg",
+                    "created_at": "2026-05-16T09:00:00Z",
+                }
+            ],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/qc-reports", headers=admin_headers)
@@ -148,42 +152,44 @@ def test_admin_approval_action_refreshes_and_uses_success_toast():
 
 
 def test_admin_approvals_fallback_includes_staff_submissions(client, admin_headers):
-    fake_db = FakeSupabase({
-        "approvals": [],
-        "qc_reports": [
-            {
-                "id": "report-1",
-                "batch_code": "BATCH-001",
-                "approval_status": "pending",
-                "status": "warning",
-                "staff_id": "staff-1",
-                "product_photo_url": "https://img/report.jpg",
-                "created_at": "2026-05-16T08:00:00Z",
-            }
-        ],
-        "qc_findings": [
-            {
-                "id": "finding-1",
-                "staff_id": "staff-2",
-                "reason": "Foreign object",
-                "photo_url": "https://img/finding.jpg",
-                "storage_path": "staff/finding.jpg",
-                "created_at": "2026-05-16T09:00:00Z",
-            }
-        ],
-        "facility_logs": [
-            {
-                "id": "temp-1",
-                "room_id": "room-1",
-                "device_id": "device-1",
-                "staff_id": "staff-3",
-                "temperature_c": 9,
-                "is_normal": False,
-                "photo_url": "https://img/temp.jpg",
-                "recorded_at": "2026-05-16T10:00:00Z",
-            }
-        ],
-    })
+    fake_db = FakeSupabase(
+        {
+            "approvals": [],
+            "qc_reports": [
+                {
+                    "id": "report-1",
+                    "batch_code": "BATCH-001",
+                    "approval_status": "pending",
+                    "status": "warning",
+                    "staff_id": "staff-1",
+                    "product_photo_url": "https://img/report.jpg",
+                    "created_at": "2026-05-16T08:00:00Z",
+                }
+            ],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_id": "staff-2",
+                    "reason": "Foreign object",
+                    "photo_url": "https://img/finding.jpg",
+                    "storage_path": "staff/finding.jpg",
+                    "created_at": "2026-05-16T09:00:00Z",
+                }
+            ],
+            "facility_logs": [
+                {
+                    "id": "temp-1",
+                    "room_id": "room-1",
+                    "device_id": "device-1",
+                    "staff_id": "staff-3",
+                    "temperature_c": 9,
+                    "is_normal": False,
+                    "photo_url": "https://img/temp.jpg",
+                    "recorded_at": "2026-05-16T10:00:00Z",
+                }
+            ],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/approvals", headers=admin_headers)
@@ -196,19 +202,15 @@ def test_admin_approvals_fallback_includes_staff_submissions(client, admin_heade
 
 
 def test_admin_audit_trail_fallback_from_staff_activity(client, admin_headers):
-    fake_db = FakeSupabase({
-        "audit_logs": [],
-        "qc_findings": [
-            {"id": "finding-1", "staff_id": "staff-1", "created_at": "2026-05-16T09:00:00Z"}
-        ],
-        "facility_logs": [
-            {"id": "temp-1", "staff_id": "staff-2", "recorded_at": "2026-05-16T10:00:00Z"}
-        ],
-        "qc_reports": [
-            {"id": "report-1", "staff_id": "staff-3", "created_at": "2026-05-16T08:00:00Z"}
-        ],
-        "production_batch_logs": [],
-    })
+    fake_db = FakeSupabase(
+        {
+            "audit_logs": [],
+            "qc_findings": [{"id": "finding-1", "staff_id": "staff-1", "created_at": "2026-05-16T09:00:00Z"}],
+            "facility_logs": [{"id": "temp-1", "staff_id": "staff-2", "recorded_at": "2026-05-16T10:00:00Z"}],
+            "qc_reports": [{"id": "report-1", "staff_id": "staff-3", "created_at": "2026-05-16T08:00:00Z"}],
+            "production_batch_logs": [],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/audit-trail", headers=admin_headers)
@@ -221,47 +223,49 @@ def test_admin_audit_trail_fallback_from_staff_activity(client, admin_headers):
 
 
 def test_admin_traceability_fallback_from_staff_submissions(client, admin_headers):
-    fake_db = FakeSupabase({
-        "barcode_labels": [],
-        "production_batches": [
-            {
-                "id": "batch-1",
-                "batch_code": "BATCH-001",
-                "product_id": "product-1",
-                "products": {"product_name": "Chicken Soup"},
-                "created_at": "2026-05-16T07:00:00Z",
-            }
-        ],
-        "qc_reports": [
-            {
-                "id": "report-1",
-                "batch_id": "batch-1",
-                "staff_id": "staff-1",
-                "temperature_photo_url": "https://img/report.jpg",
-                "created_at": "2026-05-16T08:00:00Z",
-            }
-        ],
-        "facility_logs": [
-            {
-                "id": "temp-1",
-                "room_id": "PPIC",
-                "device_id": "Chiller",
-                "staff_id": "staff-2",
-                "photo_url": "https://img/temp.jpg",
-                "recorded_at": "2026-05-16T10:00:00Z",
-            }
-        ],
-        "qc_findings": [
-            {
-                "id": "finding-1",
-                "staff_id": "staff-3",
-                "reason": "Dirty area",
-                "photo_url": "https://img/finding.jpg",
-                "created_at": "2026-05-16T09:00:00Z",
-            }
-        ],
-        "production_batch_logs": [],
-    })
+    fake_db = FakeSupabase(
+        {
+            "barcode_labels": [],
+            "production_batches": [
+                {
+                    "id": "batch-1",
+                    "batch_code": "BATCH-001",
+                    "product_id": "product-1",
+                    "products": {"product_name": "Chicken Soup"},
+                    "created_at": "2026-05-16T07:00:00Z",
+                }
+            ],
+            "qc_reports": [
+                {
+                    "id": "report-1",
+                    "batch_id": "batch-1",
+                    "staff_id": "staff-1",
+                    "temperature_photo_url": "https://img/report.jpg",
+                    "created_at": "2026-05-16T08:00:00Z",
+                }
+            ],
+            "facility_logs": [
+                {
+                    "id": "temp-1",
+                    "room_id": "PPIC",
+                    "device_id": "Chiller",
+                    "staff_id": "staff-2",
+                    "photo_url": "https://img/temp.jpg",
+                    "recorded_at": "2026-05-16T10:00:00Z",
+                }
+            ],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_id": "staff-3",
+                    "reason": "Dirty area",
+                    "photo_url": "https://img/finding.jpg",
+                    "created_at": "2026-05-16T09:00:00Z",
+                }
+            ],
+            "production_batch_logs": [],
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=fake_db):
         response = client.get("/api/v1/admin/traceability", headers=admin_headers)

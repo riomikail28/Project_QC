@@ -11,15 +11,13 @@ Stages:
   4. Packaging (Brix, pH, TDS)
 """
 
-from flask import Blueprint, request, jsonify
 import logging
 
-from backend.services.ccp_service import upload_photo, submit_ccp_log, process_ocr
-from backend.qc.parameter_checker import check_temperature, check_product_parameters
-from backend.qc.product_catalog import product_by_code
-from backend.database.supabase_client import get_client
+from flask import Blueprint, jsonify, request
+
 from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
+from backend.services.ccp_service import process_ocr, submit_ccp_log
 from backend.services.request_validation import RequestValidationError, parse_form_json
 from backend.services.storage_service import delete_photo, upload_file_storage
 
@@ -47,7 +45,7 @@ def submit_stage():
     batch_id = request.form.get("batch_id") or body.get("batch_id")
     stage = request.form.get("stage") or body.get("stage")
     operator_id = request.form.get("operator_id") or body.get("operator_id") or current_actor_id()
-    
+
     if not batch_id or not stage:
         return jsonify({"error": "batch_id and stage are required"}), 400
 
@@ -55,10 +53,10 @@ def submit_stage():
     photo_urls = []
     storage_paths = []
     uploaded_files = []
-    
+
     if "photo_url" in body and body["photo_url"]:
         photo_urls.append(body["photo_url"])
-    
+
     # Check for files in multipart request
     photo_files = request.files.getlist("photo")
     for p_file in photo_files:
@@ -67,7 +65,7 @@ def submit_stage():
             uploaded_files.append(uploaded)
             photo_urls.append(uploaded.url)
             storage_paths.append(uploaded.storage_path)
-    
+
     photo_url = ";".join(photo_urls) if photo_urls else None
     storage_path = ";".join(storage_paths) if storage_paths else None
 
@@ -75,11 +73,11 @@ def submit_stage():
     metrics_raw = body.get("metrics") if isinstance(body.get("metrics"), dict) else parse_form_json("metrics", {})
     if not isinstance(metrics_raw, dict):
         raise RequestValidationError({"metrics": "metrics must be a JSON object"})
-    
+
     # 3. Validate Metrics based on stage
     # (Simplified for the blueprint, delegating to skills)
     # This would involve looking up the product and checking SOPs
-    
+
     # 4. Persist Log
     try:
         log = submit_ccp_log(
@@ -113,7 +111,7 @@ def run_ocr():
     """Run OCR on an uploaded image and return extracted text."""
     if "photo" not in request.files:
         return jsonify({"error": "No photo provided"}), 400
-        
+
     photo = request.files["photo"]
     result = process_ocr(photo.read())
     return jsonify(result)

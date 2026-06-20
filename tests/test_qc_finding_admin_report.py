@@ -17,11 +17,12 @@ def test_qc_finding_persists_and_records_evidence(client, staff_headers):
         bucket="qc-evidence",
     )
 
-    with patch("backend.core.di.resolve", return_value=None), patch(
-        "backend.api.qc_routes.get_client", return_value=db
-    ), patch("backend.services.storage_service.upload_file_storage", return_value=uploaded), patch(
-        "backend.services.qc_service.send_qc_finding", return_value=True
-    ) as send_finding:
+    with (
+        patch("backend.core.di.resolve", return_value=None),
+        patch("backend.api.qc_routes.get_client", return_value=db),
+        patch("backend.services.storage_service.upload_file_storage", return_value=uploaded),
+        patch("backend.services.qc_service.send_qc_finding", return_value=True) as send_finding,
+    ):
         response = client.post(
             "/api/qc/findings",
             headers=staff_headers,
@@ -43,14 +44,20 @@ def test_qc_finding_persists_and_records_evidence(client, staff_headers):
 
 
 def test_qc_finding_appears_in_admin_report(client, admin_headers):
-    db = FakeSupabase({"qc_findings": [{
-        "id": "finding-1",
-        "staff_id": "staff-1",
-        "reason": "Kemasan rusak",
-        "photo_url": "https://example.com/finding.jpg",
-        "storage_path": "staff/staff-1/findings/finding.jpg",
-        "created_at": "2026-05-16T03:00:00Z",
-    }]})
+    db = FakeSupabase(
+        {
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "staff_id": "staff-1",
+                    "reason": "Kemasan rusak",
+                    "photo_url": "https://example.com/finding.jpg",
+                    "storage_path": "staff/staff-1/findings/finding.jpg",
+                    "created_at": "2026-05-16T03:00:00Z",
+                }
+            ]
+        }
+    )
 
     with patch("backend.services.admin_service.get_client", return_value=db):
         response = client.get("/api/admin/reports/findings?date=2026-05-16", headers=admin_headers)

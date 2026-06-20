@@ -8,8 +8,8 @@ import logging
 from datetime import datetime
 
 from backend.database.supabase_client import get_client
-from backend.services.storage_service import upload_photo as upload_general_photo
 from backend.services.qc_engine import determine_overall_status
+from backend.services.storage_service import upload_photo as upload_general_photo
 
 logger = logging.getLogger("qc.ccp")
 

@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, g, jsonify
 
 from backend.middleware.security_middleware import require_auth
 from backend.services.dashboard_service import DashboardService
@@ -11,7 +11,9 @@ dashboard_bp = Blueprint("dashboard_bp", __name__, url_prefix="/api/dashboard")
 
 
 def _service():
-    return DashboardService()
+    if not hasattr(g, "dashboard_service"):
+        g.dashboard_service = DashboardService()
+    return g.dashboard_service
 
 
 def _json(result):

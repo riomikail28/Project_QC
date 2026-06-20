@@ -1,2 +1,0 @@
-from tests.test_qc_finding_admin_report import test_qc_finding_appears_in_admin_report
-from tests.test_qc_findings import test_qc_finding_accepts_preuploaded_photo_url_in_production

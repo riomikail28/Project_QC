@@ -2,7 +2,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -70,47 +69,54 @@ class Query:
 class Db:
     def __init__(self):
         self.rows = {
-            "qc_findings": [{
-                "id": "finding-1",
-                "reason": "Area kotor",
-                "status": "OPEN",
-                "staff_name": "Rio",
-                "created_at": "2026-06-07T02:00:00Z",
-            }],
+            "qc_findings": [
+                {
+                    "id": "finding-1",
+                    "reason": "Area kotor",
+                    "status": "OPEN",
+                    "staff_name": "Rio",
+                    "created_at": "2026-06-07T02:00:00Z",
+                }
+            ],
             "facility_rooms": [{"id": "room-1", "name": "PPIC"}],
-            "facility_devices": [{
-                "id": "device-1",
-                "room_id": "room-1",
-                "name": "Chiller",
-                "device_type": "chiller",
-                "min_temperature": 0,
-                "max_temperature": 5,
-            }],
-            "facility_logs": [{
-                "id": "log-1",
-                "room_id": "room-1",
-                "device_id": "device-1",
-                "room_name": "PPIC",
-                "device_name": "Chiller",
-                "temperature_c": 4.4,
-                "is_normal": True,
-                "slot_time": "07:00",
-                "staff_name": "Rio",
-                "recorded_at": "2026-06-07T00:10:00Z",
-                "monitoring_date": "2026-06-07",
-            }, {
-                "id": "log-old",
-                "room_id": "room-1",
-                "device_id": "device-1",
-                "room_name": "PPIC",
-                "device_name": "Chiller",
-                "temperature_c": 9.9,
-                "is_normal": False,
-                "slot_time": "13:00",
-                "staff_name": "Dina",
-                "recorded_at": "2026-06-06T06:10:00Z",
-                "monitoring_date": "2026-06-06",
-            }],
+            "facility_devices": [
+                {
+                    "id": "device-1",
+                    "room_id": "room-1",
+                    "name": "Chiller",
+                    "device_type": "chiller",
+                    "min_temperature": 0,
+                    "max_temperature": 5,
+                }
+            ],
+            "facility_logs": [
+                {
+                    "id": "log-1",
+                    "room_id": "room-1",
+                    "device_id": "device-1",
+                    "room_name": "PPIC",
+                    "device_name": "Chiller",
+                    "temperature_c": 4.4,
+                    "is_normal": True,
+                    "slot_time": "07:00",
+                    "staff_name": "Rio",
+                    "recorded_at": "2026-06-07T00:10:00Z",
+                    "monitoring_date": "2026-06-07",
+                },
+                {
+                    "id": "log-old",
+                    "room_id": "room-1",
+                    "device_id": "device-1",
+                    "room_name": "PPIC",
+                    "device_name": "Chiller",
+                    "temperature_c": 9.9,
+                    "is_normal": False,
+                    "slot_time": "13:00",
+                    "staff_name": "Dina",
+                    "recorded_at": "2026-06-06T06:10:00Z",
+                    "monitoring_date": "2026-06-06",
+                },
+            ],
             "temperature_logs": [],
             "staff_accounts": [],
             "users": [],
@@ -170,7 +176,13 @@ def test_admin_qc_temuan_operational_dashboard_contract():
     css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
 
     assert "findings-date-mode" in html
-    assert "Hari Ini" in html and "Kemarin" in html and "7 Hari Terakhir" in html and "30 Hari Terakhir" in html and "Custom Date" in html
+    assert (
+        "Hari Ini" in html
+        and "Kemarin" in html
+        and "7 Hari Terakhir" in html
+        and "30 Hari Terakhir" in html
+        and "Custom Date" in html
+    )
     assert "findings-summary-grid" in html
     assert "findings-status-filter" in html
     assert 'data-finding-filter="OVERDUE"' in html
@@ -188,7 +200,7 @@ def test_admin_qc_temuan_cards_show_status_category_thumbnail_age_and_overdue():
     css = (ROOT / "frontend" / "css" / "admin_enterprise.css").read_text(encoding="utf-8")
 
     board_start = js.index("renderFindingsBoard(rows = [])")
-    board_block = js[board_start:js.index("findingCategory(row = {})", board_start)]
+    board_block = js[board_start : js.index("findingCategory(row = {})", board_start)]
     assert "finding-status-badge" in board_block
     assert "finding-category-badge" in board_block
     assert "finding-thumb" in board_block
@@ -209,7 +221,9 @@ def test_admin_qc_temuan_cards_show_status_category_thumbnail_age_and_overdue():
 
 def test_admin_qc_temuan_detail_modal_is_more_informative():
     js = (ROOT / "frontend" / "js" / "admin_app.js").read_text(encoding="utf-8")
-    detail_block = js[js.index("openFindingDetail(row)"):js.index("findingCategory(row = {})", js.index("openFindingDetail(row)"))]
+    detail_block = js[
+        js.index("openFindingDetail(row)") : js.index("findingCategory(row = {})", js.index("openFindingDetail(row)"))
+    ]
 
     assert "finding-detail-hero" in detail_block
     assert "<span>Status</span>" in detail_block

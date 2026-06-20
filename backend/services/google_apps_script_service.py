@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 from datetime import datetime, timezone
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -50,11 +50,18 @@ def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
     """Build the flat QC report payload expected by the Apps Script sheet."""
     row = row or {}
     result = row.get("inspection_result") if isinstance(row.get("inspection_result"), dict) else {}
-    timestamp = row.get("timestamp") or row.get("created_at") or row.get("completed_at") or datetime.now(timezone.utc).isoformat()
+    timestamp = (
+        row.get("timestamp")
+        or row.get("created_at")
+        or row.get("completed_at")
+        or datetime.now(timezone.utc).isoformat()
+    )
     inspection_round = row.get("inspection_round") or result.get("inspection_round") or 1
     is_recheck = row.get("is_recheck")
     if is_recheck is None:
-        is_recheck = bool(row.get("parent_inspection") or result.get("parent_inspection") or int(inspection_round or 1) > 1)
+        is_recheck = bool(
+            row.get("parent_inspection") or result.get("parent_inspection") or int(inspection_round or 1) > 1
+        )
     return {
         "timestamp": timestamp,
         "date": row.get("date") or str(timestamp or "")[:10],
@@ -63,13 +70,20 @@ def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
         "batch_sequence": row.get("batch_sequence"),
         "cook_name": row.get("cook_name") or "",
         "quantity": row.get("quantity"),
-        "inspection_type": row.get("inspection_type") or _inspection_type(row.get("qc_stage") or row.get("ccp_stage") or result.get("qc_stage")),
+        "inspection_type": row.get("inspection_type")
+        or _inspection_type(row.get("qc_stage") or row.get("ccp_stage") or result.get("qc_stage")),
         "temperature": row.get("temperature") if row.get("temperature") is not None else result.get("temperature"),
         "ph": _first_present(row, result, "ph", "ph_value"),
         "brix": _first_present(row, result, "brix", "brix_value"),
         "tds": _first_present(row, result, "tds", "tds_value"),
-        "status": _status(row.get("status") or row.get("qc_status") or result.get("qc_status") or row.get("approval_status")),
-        "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
+        "status": _status(
+            row.get("status") or row.get("qc_status") or result.get("qc_status") or row.get("approval_status")
+        ),
+        "staff_name": row.get("staff_display_name")
+        or row.get("staff_name")
+        or row.get("inspector_name")
+        or row.get("staff_id")
+        or "",
         "photo_url": _photo_url(row),
         "notes": row.get("notes") or row.get("reason") or result.get("notes") or "",
         "inspection_round": inspection_round,
@@ -82,7 +96,12 @@ def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
 def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
     """Build the flat QC finding payload expected by the QC Temuan sheet."""
     row = row or {}
-    timestamp = row.get("timestamp") or row.get("created_at") or row.get("submitted_at") or datetime.now(timezone.utc).isoformat()
+    timestamp = (
+        row.get("timestamp")
+        or row.get("created_at")
+        or row.get("submitted_at")
+        or datetime.now(timezone.utc).isoformat()
+    )
     photo_url = _photo_url(row)
     status = str(row.get("status") or row.get("approval_status") or "WARNING").strip().upper()
     if status in {"", "FINDING", "FIELD_FINDING"}:
@@ -91,7 +110,14 @@ def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
         "timestamp": timestamp,
         "type": "qc_finding",
         "staff_name": _staff_name(row),
-        "finding_description": row.get("finding_description") or row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or "",
+        "finding_description": row.get("finding_description")
+        or row.get("temuan")
+        or row.get("finding")
+        or row.get("reason")
+        or row.get("notes")
+        or row.get("description")
+        or row.get("message")
+        or "",
         "photo_url": photo_url,
         "status": status,
         "source_type": "qc_finding",
@@ -169,11 +195,14 @@ def google_sheets_status() -> dict[str, Any]:
 
 
 def send_test_payload() -> bool:
-    return _send("test", {
-        "message": "QC Enterprise webhook test",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "source": "admin",
-    })
+    return _send(
+        "test",
+        {
+            "message": "QC Enterprise webhook test",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "source": "admin",
+        },
+    )
 
 
 def _send(report_type: str, payload: dict[str, Any]) -> bool:
@@ -276,17 +305,19 @@ def _record_status(
     final_status_code: int | None = None,
     final_response_text: str | None = None,
 ):
-    _last_export.update({
-        "last_export_status": status,
-        "last_export_error": error,
-        "last_export_at": datetime.now(timezone.utc).isoformat(),
-        "last_payload_type": report_type,
-        "last_http_status": http_status,
-        "last_response_text": response_text,
-        "last_exception_message": exception_message,
-        "final_status_code": final_status_code if final_status_code is not None else http_status,
-        "final_response_text": final_response_text if final_response_text is not None else response_text,
-    })
+    _last_export.update(
+        {
+            "last_export_status": status,
+            "last_export_error": error,
+            "last_export_at": datetime.now(timezone.utc).isoformat(),
+            "last_payload_type": report_type,
+            "last_http_status": http_status,
+            "last_response_text": response_text,
+            "last_exception_message": exception_message,
+            "final_status_code": final_status_code if final_status_code is not None else http_status,
+            "final_response_text": final_response_text if final_response_text is not None else response_text,
+        }
+    )
 
 
 def _post_following_redirects(webhook_url: str, envelope: dict[str, Any]) -> httpx.Response:

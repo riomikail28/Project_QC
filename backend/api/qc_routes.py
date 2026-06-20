@@ -7,14 +7,14 @@ Provides realtime dashboard data and QC decision support.
 Supabase tables: facility_logs, facility_alerts, production_batches
 """
 
-from flask import Blueprint, request, jsonify, g
 import logging
 
-from backend.services.qc_engine import validate_temperature, calculate_health_score, determine_overall_status
-from backend.services.batch_service import get_daily_summary
+from flask import Blueprint, g, jsonify, request
+
 from backend.database.supabase_client import get_client
 from backend.middleware.security_middleware import require_auth
 from backend.services.audit_service import current_actor_id, write_audit
+from backend.services.qc_engine import calculate_health_score, validate_temperature
 from backend.services.request_validation import QCValidateRequest, validate_model
 
 logger = logging.getLogger("qc.routes.qc")
@@ -63,7 +63,12 @@ def _fetch_qc_reports(filters, limit=20):
     sb = get_client()
     if not sb:
         return []
-    query = sb.table("qc_reports").select("*")
+    qc_cols = (
+        "id,batch_id,batch_code,status,final_qc_status,qc_stage,ccp_stage,started_at,created_at,completed_at,"
+        "updated_at,photo_url,product_photo_url,cooking_photo_url,barcode_photo_url,temperature_photo_url,"
+        "notes,inspection_round,parent_inspection,is_active,product_name,staff_id,staff_name,inspector_name,temperature"
+    )
+    query = sb.table("qc_reports").select(qc_cols)
     for field, value in filters:
         query = query.eq(field, value)
     return query.order("created_at", desc=True).limit(limit).execute().data or []
@@ -117,7 +122,9 @@ def dashboard():
         # Fetch latest facility logs
         logs = (
             sb.table("facility_logs")
-            .select("temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)")
+            .select(
+                "temperature_c, is_normal, recorded_at, facility_rooms(name), facility_devices(name, type, threshold_temp)"
+            )
             .order("recorded_at", desc=True)
             .limit(100)
             .execute()
@@ -126,7 +133,9 @@ def dashboard():
         # Fetch open alerts
         alerts = (
             sb.table("facility_alerts")
-            .select("*")
+            .select(
+                "id,zone,temperature_c,threshold_c,deviation_c,status,log_id,device_id,created_at,resolved_at,notes,resolved_by"
+            )
             .eq("status", "open")
             .order("created_at", desc=True)
             .limit(10)
@@ -167,33 +176,39 @@ def dashboard():
             elif status == "WARNING":
                 warning_checks += 1
 
-            temperature_rooms.append({
-                "room": zone,
-                "temperature": f"{temp}°C",
-                "threshold": f"{threshold}°C",
-                "unit_type": unit_type,
-                "status": status,
-            })
+            temperature_rooms.append(
+                {
+                    "room": zone,
+                    "temperature": f"{temp}°C",
+                    "threshold": f"{threshold}°C",
+                    "unit_type": unit_type,
+                    "status": status,
+                }
+            )
 
             # Track critical issues
             if status in ("FAIL", "WARNING"):
-                critical_issues.append({
-                    "title": zone,
-                    "value": f"{temp}°C",
-                    "status": status,
-                    "unit_type": unit_type,
-                })
+                critical_issues.append(
+                    {
+                        "title": zone,
+                        "value": f"{temp}°C",
+                        "status": status,
+                        "unit_type": unit_type,
+                    }
+                )
 
         # Calculate health score
         health_score = calculate_health_score(total_checks, passed_checks, warning_checks)
 
-        response.update({
-            "health_score": health_score,
-            "critical_issues": critical_issues,
-            "temperature_rooms": temperature_rooms,
-            "open_alerts": len(alerts),
-            "recent_alerts": alerts[:5],
-        })
+        response.update(
+            {
+                "health_score": health_score,
+                "critical_issues": critical_issues,
+                "temperature_rooms": temperature_rooms,
+                "open_alerts": len(alerts),
+                "recent_alerts": alerts[:5],
+            }
+        )
 
     except Exception as e:
         logger.error("Dashboard data error: %s", e)
@@ -206,7 +221,9 @@ def dashboard():
 def active_qc():
     """Return active QC lock for a batch or the latest active QC."""
     try:
-        batch = (request.args.get("batch") or request.args.get("batch_id") or request.args.get("batch_code") or "").strip()
+        batch = (
+            request.args.get("batch") or request.args.get("batch_id") or request.args.get("batch_code") or ""
+        ).strip()
         active = _active_for_batch(batch)
         return jsonify({"success": True, "data": {"active": _qc_report_view(active)}})
     except Exception as exc:
@@ -223,15 +240,17 @@ def qc_history(batch):
         history = [_qc_report_view(row) for row in rows]
         active = next((item for item in history if item.get("is_active")), None)
         completed = [item for item in history if not item.get("is_active")]
-        return jsonify({
-            "success": True,
-            "data": {
-                "batch": batch,
-                "active": active,
-                "latest": completed[0] if completed else (history[0] if history else None),
-                "history": history,
-            },
-        })
+        return jsonify(
+            {
+                "success": True,
+                "data": {
+                    "batch": batch,
+                    "active": active,
+                    "latest": completed[0] if completed else (history[0] if history else None),
+                    "history": history,
+                },
+            }
+        )
     except Exception as exc:
         logger.warning("QC history lookup failed for %s: %s", batch, exc)
         return jsonify({"success": False, "message": "Gagal memuat riwayat QC"}), 500
@@ -248,7 +267,9 @@ def list_alerts():
         status = request.args.get("status", "open")
         res = (
             sb.table("facility_alerts")
-            .select("*")
+            .select(
+                "id,zone,temperature_c,threshold_c,deviation_c,status,log_id,device_id,created_at,resolved_at,notes,resolved_by"
+            )
             .eq("status", status)
             .order("created_at", desc=True)
             .limit(100)
@@ -314,12 +335,14 @@ def validate_qc():
         "FAIL": "PERINGATAN: Suhu melebihi batas SOP. Segera lakukan tindakan korektif.",
     }
 
-    return jsonify({
-        "unit_type": unit_type,
-        "temperature": temperature,
-        "status": status,
-        "recommendation": recommendations.get(status, ""),
-    })
+    return jsonify(
+        {
+            "unit_type": unit_type,
+            "temperature": temperature,
+            "status": status,
+            "recommendation": recommendations.get(status, ""),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -339,11 +362,7 @@ def report_finding():
     actor = getattr(g, "current_user", {}) or {}
     staff_id = actor.get("id") or actor.get("sub") or current_actor_id()
     staff_name = (
-        actor.get("full_name")
-        or actor.get("name")
-        or actor.get("username")
-        or actor.get("email")
-        or "Unknown Staff"
+        actor.get("full_name") or actor.get("name") or actor.get("username") or actor.get("email") or "Unknown Staff"
     )
     photo_url = request.form.get("photo_url") or body.get("photo_url")
     storage_path = request.form.get("storage_path") or body.get("storage_path")
@@ -370,8 +389,10 @@ def report_finding():
             class _StorageWrap:
                 def upload_photo(self, data, filename):
                     return _upload_fn(data, filename)
+
                 def upload_file_storage(self, file_storage, staff_id="system", category=None, related_id=None):
                     return _upload_file_fn(file_storage, staff_id=staff_id, category=category, related_id=related_id)
+
                 def delete_photo(self, storage_path):
                     return _delete_fn(storage_path)
 
@@ -414,8 +435,10 @@ def health_check():
     sb = get_client()
     db_status = "connected" if sb else "offline"
 
-    return jsonify({
-        "status": "ok",
-        "system": "QC Central Kitchen API v2.0.0",
-        "database": db_status,
-    })
+    return jsonify(
+        {
+            "status": "ok",
+            "system": "QC Central Kitchen API v2.0.0",
+            "database": db_status,
+        }
+    )

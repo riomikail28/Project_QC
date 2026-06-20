@@ -1,13 +1,15 @@
 """Auth service: refresh tokens, rotation, session invalidation."""
-import os
-import json
-from datetime import datetime, timedelta, timezone
-import secrets
-import jwt
-from typing import Optional, Tuple
 
-from backend.services.session_store import get_session_store
+import json
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+import jwt
+
 from backend.middleware.security_middleware import get_security
+from backend.services.session_store import get_session_store
 
 REFRESH_PREFIX = "refresh"
 
@@ -36,12 +38,16 @@ class AuthService:
         token = jwt.encode(payload, self.secret, algorithm="HS256")
         # store mapping in session store for rotation/validation
         key = f"{REFRESH_PREFIX}:{jti}"
-        self.session_store.set(key, json.dumps({"user_id": user_id, "created_at": now.isoformat()}), ex=self.refresh_days * 24 * 3600)
+        self.session_store.set(
+            key, json.dumps({"user_id": user_id, "created_at": now.isoformat()}), ex=self.refresh_days * 24 * 3600
+        )
         return token
 
     def verify_refresh_token(self, token: str) -> Optional[dict]:
         try:
-            payload = jwt.decode(token, self.secret, algorithms=["HS256"], issuer=self.issuer, options={"require": ["exp", "sub", "jti"]})
+            payload = jwt.decode(
+                token, self.secret, algorithms=["HS256"], issuer=self.issuer, options={"require": ["exp", "sub", "jti"]}
+            )
         except jwt.PyJWTError:
             return None
         jti = payload.get("jti")

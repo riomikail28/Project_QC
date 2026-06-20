@@ -1,11 +1,9 @@
-import io
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
 from backend.services.storage_service import upload_file_storage, upload_photo_result
-
 
 JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"0" * 32
 
@@ -49,9 +47,10 @@ def test_upload_uses_supabase_storage_without_local_filesystem(monkeypatch):
     client = FakeSupabaseStorageClient()
     monkeypatch.setenv("VERCEL", "1")
 
-    with patch("backend.services.storage_service.get_client", return_value=client), patch(
-        "backend.services.storage_service.os.makedirs"
-    ) as makedirs:
+    with (
+        patch("backend.services.storage_service.get_client", return_value=client),
+        patch("backend.services.storage_service.os.makedirs") as makedirs,
+    ):
         uploaded = upload_file_storage(FakeFileStorage(), staff_id="staff/one")
 
     assert uploaded.bucket == "qc-evidence"
@@ -65,9 +64,10 @@ def test_upload_uses_supabase_storage_without_local_filesystem(monkeypatch):
 def test_upload_fails_when_supabase_unavailable_instead_of_local_fallback(monkeypatch):
     monkeypatch.delenv("VERCEL", raising=False)
 
-    with patch("backend.services.storage_service.get_client", return_value=None), patch(
-        "backend.services.storage_service.os.makedirs"
-    ) as makedirs:
+    with (
+        patch("backend.services.storage_service.get_client", return_value=None),
+        patch("backend.services.storage_service.os.makedirs") as makedirs,
+    ):
         with pytest.raises(RuntimeError, match="Supabase service role key is not configured"):
             upload_photo_result(JPEG_BYTES, "evidence.jpg", content_type="image/jpeg")
 

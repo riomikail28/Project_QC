@@ -4,6 +4,7 @@ from unittest.mock import patch
 ROOM_ID = "11111111-1111-4111-8111-111111111111"
 DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
+
 class FacilityQuery:
     def __init__(self, table, db):
         self.table = table
@@ -55,8 +56,7 @@ class FacilityQuery:
         if self.mode == "delete":
             before = len(rows)
             self.db.rows[self.table] = [
-                row for row in rows
-                if not all(row.get(field) == value for field, value in self.filters)
+                row for row in rows if not all(row.get(field) == value for field, value in self.filters)
             ]
             return SimpleNamespace(data=[{"deleted": before - len(self.db.rows[self.table])}])
         result = list(rows)
@@ -92,7 +92,9 @@ def test_admin_get_facility_rooms(client, admin_headers):
 def test_admin_room_crud(client, admin_headers):
     db = FacilityDb()
     with patch("backend.monitoring.facility_manager.get_client", return_value=db):
-        created = client.post("/api/admin/facility/rooms", headers=admin_headers, json={"name": "QA Lab"}).get_json()["data"]
+        created = client.post("/api/admin/facility/rooms", headers=admin_headers, json={"name": "QA Lab"}).get_json()[
+            "data"
+        ]
         updated = client.put(
             f"/api/admin/facility/rooms/{created['id']}",
             headers=admin_headers,

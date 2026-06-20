@@ -1,4 +1,5 @@
 """Service layer for QC business logic."""
+
 import logging
 from typing import Any, Dict, Optional
 
@@ -77,7 +78,12 @@ class QCService:
         # Audit the action if audit service available
         try:
             if self.audit:
-                self.audit.write_audit("submit_finding", "qc_finding", str(finding.get("id") if isinstance(finding, dict) else None), after=finding)
+                self.audit.write_audit(
+                    "submit_finding",
+                    "qc_finding",
+                    str(finding.get("id") if isinstance(finding, dict) else None),
+                    after=finding,
+                )
                 if uploaded_files:
                     self.audit.write_audit(
                         "upload_finding_photo",

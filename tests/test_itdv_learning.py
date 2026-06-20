@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from backend.services.learning_service import LearningService, MODULES
+from backend.services.learning_service import MODULES, LearningService
 
 
 def test_learning_modules_and_progress_without_database():
@@ -63,11 +63,15 @@ def test_module_mini_quiz_unlocks_complete_after_score_70():
     service = LearningService(repository=NoDatabaseRepo())
     user_id = "student-unlocked"
 
-    failed = service.submit_module_mini_quiz(user_id, "haccp-principles", {
-        "haccp-principles-q1": "B",
-        "haccp-principles-q2": "A",
-        "haccp-principles-q3": "D",
-    })
+    failed = service.submit_module_mini_quiz(
+        user_id,
+        "haccp-principles",
+        {
+            "haccp-principles-q1": "B",
+            "haccp-principles-q2": "A",
+            "haccp-principles-q3": "D",
+        },
+    )
     assert failed["data"]["passed"] is False
     assert service.complete_module(user_id, "haccp-principles")["status"] == 409
 
@@ -189,7 +193,8 @@ def test_career_recommendation_is_rule_based_and_ranked():
         "Auditor Internal",
     }
     assert [item["title"] for item in result["data"]["recommendations"]] == [
-        item["title"] for item in sorted(
+        item["title"]
+        for item in sorted(
             result["data"]["recommendations"],
             key=lambda row: row["match_percent"],
             reverse=True,
@@ -221,12 +226,14 @@ def test_mentor_answers_temperature_question_and_saves_history():
 
 def test_mentor_history_returns_saved_rows():
     repo = RecordingRepo()
-    repo.mentor_history = [{
-        "user_id": "student-9",
-        "question": "Kenapa suhu 11°C berbahaya?",
-        "answer": "Food safety HACCP Corrective action",
-        "topics": ["Food safety", "HACCP", "Corrective action"],
-    }]
+    repo.mentor_history = [
+        {
+            "user_id": "student-9",
+            "question": "Kenapa suhu 11°C berbahaya?",
+            "answer": "Food safety HACCP Corrective action",
+            "topics": ["Food safety", "HACCP", "Corrective action"],
+        }
+    ]
 
     result = LearningService(repository=repo).mentor_history("student-9")
 
@@ -377,12 +384,14 @@ def test_learning_module_frontend_routes_to_detail_page():
 def test_repository_uses_final_progress_table_name():
     repo = RecordingSupabaseRepo()
 
-    repo.upsert_progress({
-        "user_id": "student-7",
-        "module_slug": "haccp",
-        "status": "completed",
-        "completed_at": "2026-05-22T00:00:00Z",
-    })
+    repo.upsert_progress(
+        {
+            "user_id": "student-7",
+            "module_slug": "haccp",
+            "status": "completed",
+            "completed_at": "2026-05-22T00:00:00Z",
+        }
+    )
 
     assert repo.tables == ["itdv_progress"]
 
@@ -420,20 +429,11 @@ class RecordingRepo:
 
     def fetch_table(self, table, *args, **kwargs):
         if table == "itdv_progress":
-            return [
-                {"module_slug": slug, "status": "completed"}
-                for slug in self.completed_modules
-            ]
+            return [{"module_slug": slug, "status": "completed"} for slug in self.completed_modules]
         if table == "itdv_simulation_attempts":
-            return [
-                {"user_id": "student-8", **row}
-                for row in self.simulation_attempts
-            ]
+            return [{"user_id": "student-8", **row} for row in self.simulation_attempts]
         if table == "itdv_quiz_attempts":
-            return [
-                {"user_id": "student-8", **row}
-                for row in self.quiz_attempts
-            ]
+            return [{"user_id": "student-8", **row} for row in self.quiz_attempts]
         if table == "itdv_module_quiz_attempts":
             return self.module_quiz_attempts
         if table == "itdv_certificates":
@@ -456,7 +456,8 @@ class RecordingRepo:
     def upsert_certificate(self, payload):
         existing = next(
             (
-                item for item in self.certificates
+                item
+                for item in self.certificates
                 if item.get("user_id") == payload.get("user_id")
                 and item.get("program_code") == payload.get("program_code")
             ),

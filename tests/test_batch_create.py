@@ -71,8 +71,9 @@ class DuplicateBatchCodeError(Exception):
 
 def test_create_batch_succeeds(client, staff_headers):
     db = BatchDb()
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post(
             "/api/batch/create",
@@ -90,8 +91,9 @@ def test_create_batch_succeeds(client, staff_headers):
 def test_create_batch_does_not_send_unresolved_sku_to_uuid_product_id(client, staff_headers):
     db = BatchDb()
     db.rows["products"] = []
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post(
             "/api/batch/create",
@@ -108,8 +110,9 @@ def test_create_batch_does_not_send_unresolved_sku_to_uuid_product_id(client, st
 def test_create_batch_without_product_id_uses_default_product(client, staff_headers):
     db = BatchDb()
     db.rows["products"] = []
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post(
             "/api/batch/create",
@@ -125,8 +128,9 @@ def test_create_batch_without_product_id_uses_default_product(client, staff_head
 
 def test_create_batch_generates_batch_code_when_empty(client, staff_headers):
     db = BatchDb()
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
 
@@ -137,11 +141,16 @@ def test_create_batch_generates_batch_code_when_empty(client, staff_headers):
 
 def test_create_batch_without_batch_code_generates_unique_codes(client, staff_headers):
     db = BatchDb()
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
-        first = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"})
-        second = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"})
+        first = client.post(
+            "/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"}
+        )
+        second = client.post(
+            "/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1", "production_date": "2026-05-27"}
+        )
 
     assert first.status_code == 201
     assert second.status_code == 201
@@ -153,16 +162,19 @@ def test_create_batch_without_batch_code_generates_unique_codes(client, staff_he
 
 def test_create_batch_generates_product_date_sequence_code(client, staff_headers):
     db = BatchDb()
-    db.rows["production_batches"] = [{
-        "id": "batch-existing",
-        "product_id": "general-product-1",
-        "product_name": "Soup",
-        "production_date": "2026-05-27",
-        "batch_sequence": 5,
-        "batch_code": "SKU1-20260527-005",
-    }]
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    db.rows["production_batches"] = [
+        {
+            "id": "batch-existing",
+            "product_id": "general-product-1",
+            "product_name": "Soup",
+            "production_date": "2026-05-27",
+            "batch_sequence": 5,
+            "batch_code": "SKU1-20260527-005",
+        }
+    ]
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post(
             "/api/batch/create",
@@ -187,14 +199,16 @@ def test_create_batch_generates_product_date_sequence_code(client, staff_headers
 
 def test_next_batch_code_preview_returns_next_sequence(client, staff_headers):
     db = BatchDb()
-    db.rows["production_batches"] = [{
-        "id": "batch-existing",
-        "product_id": "product-1",
-        "product_name": "Soup",
-        "production_date": "2026-05-27",
-        "batch_sequence": 2,
-        "batch_code": "SKU1-20260527-002",
-    }]
+    db.rows["production_batches"] = [
+        {
+            "id": "batch-existing",
+            "product_id": "product-1",
+            "product_name": "Soup",
+            "production_date": "2026-05-27",
+            "batch_sequence": 2,
+            "batch_code": "SKU1-20260527-002",
+        }
+    ]
     with patch("backend.services.batch_service.get_client", return_value=db):
         response = client.get(
             "/api/batch/next-code?product_id=SKU-1&production_date=2026-05-27",
@@ -223,8 +237,9 @@ def test_create_batch_duplicate_manual_batch_code_returns_friendly_error(client,
     db = BatchDb()
     db.duplicate_batch_codes.add("BATCH-USED")
 
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post(
             "/api/batch/create",
@@ -236,13 +251,16 @@ def test_create_batch_duplicate_manual_batch_code_returns_friendly_error(client,
     assert response.status_code == 409
     assert body["success"] is False
     assert body["error_code"] == "DUPLICATE_BATCH_CODE"
-    assert body["message"] == "Kode batch sudah digunakan. Gunakan kode lain atau kosongkan agar sistem membuat otomatis."
+    assert (
+        body["message"] == "Kode batch sudah digunakan. Gunakan kode lain atau kosongkan agar sistem membuat otomatis."
+    )
 
 
 def test_create_batch_without_batch_code_keeps_ph_brix_tds_optional(client, staff_headers):
     db = BatchDb()
-    with patch("backend.services.batch_service.get_client", return_value=db), patch(
-        "backend.api.batch_routes.write_audit"
+    with (
+        patch("backend.services.batch_service.get_client", return_value=db),
+        patch("backend.api.batch_routes.write_audit"),
     ):
         response = client.post("/api/batch/create", headers=staff_headers, json={"product_id": "SKU-1"})
 

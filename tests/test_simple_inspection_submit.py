@@ -38,8 +38,9 @@ def test_inspection_submit_with_photo_records_evidence(client, staff_headers):
         bucket="qc-evidence",
     )
 
-    with patch("backend.services.inspection_service.get_client", return_value=db), patch(
-        "backend.services.inspection_service.upload_file_storage", return_value=uploaded
+    with (
+        patch("backend.services.inspection_service.get_client", return_value=db),
+        patch("backend.services.inspection_service.upload_file_storage", return_value=uploaded),
     ):
         response = client.post(
             "/api/inspection/submit",

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -62,4 +61,4 @@ def test_audit_trail_formats_actor_without_uuid_primary_label():
     assert "Unknown User" in js
     assert "compactId(actorId)" in js
     assert "const actorName = log.staff_display_name" not in js
-    assert '<strong>${this.escapeHtml(actor.name)}</strong>' in js
+    assert "<strong>${this.escapeHtml(actor.name)}</strong>" in js

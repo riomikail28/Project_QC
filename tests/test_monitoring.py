@@ -5,6 +5,7 @@ from tests.conftest import FakeSupabase
 ROOM_ID = "11111111-1111-4111-8111-111111111111"
 DEVICE_ID = "22222222-2222-4222-8222-222222222222"
 
+
 def test_monitoring_structure_requires_auth(client):
     response = client.get("/api/facility/structure")
 
@@ -27,13 +28,16 @@ def test_temperature_log_validates_empty_request(client, staff_headers):
 
 
 def test_temperature_log_saves_normal_reading(client, staff_headers):
-    fake_db = FakeSupabase({
-        "facility_rooms": [{"id": ROOM_ID, "name": "Chiller Room"}],
-        "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 4}],
-    })
+    fake_db = FakeSupabase(
+        {
+            "facility_rooms": [{"id": ROOM_ID, "name": "Chiller Room"}],
+            "facility_devices": [{"id": DEVICE_ID, "room_id": ROOM_ID, "type": "chiller", "threshold_temp": 4}],
+        }
+    )
 
-    with patch("backend.api.temperature_routes.get_client", return_value=fake_db), patch(
-        "backend.api.temperature_routes.write_audit"
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=fake_db),
+        patch("backend.api.temperature_routes.write_audit"),
     ):
         response = client.post(
             "/api/monitoring/log",
@@ -112,8 +116,9 @@ class RecordingSupabase:
 def test_temperature_log_saves_preuploaded_photo_metadata(client, staff_headers):
     fake_db = RecordingSupabase()
 
-    with patch("backend.api.temperature_routes.get_client", return_value=fake_db), patch(
-        "backend.api.temperature_routes.write_audit"
+    with (
+        patch("backend.api.temperature_routes.get_client", return_value=fake_db),
+        patch("backend.api.temperature_routes.write_audit"),
     ):
         response = client.post(
             "/api/monitoring/log",
@@ -235,7 +240,9 @@ def test_monitoring_latest_falls_back_to_temperature_logs_when_facility_logs_emp
             return self
 
         def execute(self):
-            rows = [] if self.table == "facility_logs" else [{"id": "temp-1", "zone": "Kitchen", "device_type": "freezer"}]
+            rows = (
+                [] if self.table == "facility_logs" else [{"id": "temp-1", "zone": "Kitchen", "device_type": "freezer"}]
+            )
             return type("Result", (), {"data": rows})()
 
     class DB:

@@ -16,16 +16,18 @@ def test_profile_me_uses_session_when_database_empty(client, staff_headers):
 
 
 def test_profile_activity_summary_counts_real_rows(client, staff_headers):
-    fake_db = FakeSupabase({
-        "qc_reports": [
-            {"id": "qc-1", "staff_id": "staff-1", "status": "pass", "product_photo_url": "https://img/1.jpg"},
-            {"id": "qc-2", "staff_id": "staff-1", "status": "failed"},
-            {"id": "qc-3", "staff_id": "other", "status": "pass"},
-        ],
-        "temperature_logs": [{"id": "t1", "staff_id": "staff-1", "photo_url": "https://img/t.jpg"}],
-        "barcode_labels": [{"id": "b1", "staff_id": "staff-1", "barcode_photo_url": "https://img/b.jpg"}],
-        "audit_logs": [{"id": "a1", "actor_id": "staff-1", "action": "create"}],
-    })
+    fake_db = FakeSupabase(
+        {
+            "qc_reports": [
+                {"id": "qc-1", "staff_id": "staff-1", "status": "pass", "product_photo_url": "https://img/1.jpg"},
+                {"id": "qc-2", "staff_id": "staff-1", "status": "failed"},
+                {"id": "qc-3", "staff_id": "other", "status": "pass"},
+            ],
+            "temperature_logs": [{"id": "t1", "staff_id": "staff-1", "photo_url": "https://img/t.jpg"}],
+            "barcode_labels": [{"id": "b1", "staff_id": "staff-1", "barcode_photo_url": "https://img/b.jpg"}],
+            "audit_logs": [{"id": "a1", "actor_id": "staff-1", "action": "create"}],
+        }
+    )
 
     with patch("backend.services.profile_service.get_client", return_value=fake_db):
         response = client.get("/api/profile/activity-summary", headers=staff_headers)

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -40,7 +39,7 @@ def test_qc_check_mobile_upload_notes_and_submit_spacing_contract():
     assert "photo-preview" in html
     assert "renderPhotoPreview" in js
     assert "Catatan" in html
-    assert "capture=\"environment\"" in html
+    assert 'capture="environment"' in html
     assert "padding-bottom: max(128px" in css
 
 
@@ -179,9 +178,9 @@ def test_qc_modal_hidden_by_default_and_not_active_initially():
 
     assert 'id="qcFormSheet" hidden aria-hidden="true"' in html
     assert 'id="qcFormBackdrop" hidden aria-hidden="true"' in html
-    assert 'qc-form-sheet open' not in html
-    assert 'qc-form-sheet active' not in html
-    assert 'qc-sheet-backdrop open' not in html
+    assert "qc-form-sheet open" not in html
+    assert "qc-form-sheet active" not in html
+    assert "qc-sheet-backdrop open" not in html
     assert ".qc-form-sheet[hidden]" in css
     assert "display: none !important" in css
 
@@ -280,7 +279,9 @@ def test_qc_check_next_batch_action_is_inside_sku_card():
 def test_qc_check_next_batch_payload_is_valid_batch_create_shape():
     js = (ROOT / "frontend" / "js" / "inspection.js").read_text(encoding="utf-8")
     html = (ROOT / "frontend" / "staff" / "inspection.html").read_text(encoding="utf-8")
-    save_block = js[js.index("async saveNextBatch()"):js.index("renderBatchSummary", js.index("async saveNextBatch()"))]
+    save_block = js[
+        js.index("async saveNextBatch()") : js.index("renderBatchSummary", js.index("async saveNextBatch()"))
+    ]
 
     assert "quantity," in js
     assert "const quantity = Number(document.getElementById('nextQuantity')?.value)" in js
@@ -390,9 +391,24 @@ def test_qc_check_mobile_v3_sku_list_is_compact_and_searchable():
     assert "this.skuListQuery = event.target.value || ''" in js
     assert "name.includes(query) || code.includes(query)" in js
     assert "skuSummaryLine(batches, summary)" in js
-    assert "Cook" not in js[js.index("skuCardTemplate(product)"):js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))]
-    assert "Qty" not in js[js.index("skuCardTemplate(product)"):js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))]
-    assert "pH" not in js[js.index("skuCardTemplate(product)"):js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))]
+    assert (
+        "Cook"
+        not in js[
+            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
+        ]
+    )
+    assert (
+        "Qty"
+        not in js[
+            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
+        ]
+    )
+    assert (
+        "pH"
+        not in js[
+            js.index("skuCardTemplate(product)") : js.index("filteredSkuCards()", js.index("skuCardTemplate(product)"))
+        ]
+    )
 
 
 def test_qc_check_mobile_v3_sku_detail_drawer_and_batch_list():

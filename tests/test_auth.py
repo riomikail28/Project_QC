@@ -32,11 +32,13 @@ def test_admin_role_can_access_staff_list():
         app = create_app()
         app.config["TESTING"] = True
         client = app.test_client()
-        token = app.extensions["security"].generate_token({
-            "id": "admin-1",
-            "username": "admin",
-            "role": "admin",
-        })
+        token = app.extensions["security"].generate_token(
+            {
+                "id": "admin-1",
+                "username": "admin",
+                "role": "admin",
+            }
+        )
         admin_headers = {"Authorization": f"Bearer {token}"}
         response = client.get("/api/staff", headers=admin_headers)
 

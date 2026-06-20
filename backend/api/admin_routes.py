@@ -1,14 +1,16 @@
 import logging
-from flask import Blueprint, Response, current_app, g, request, jsonify
 
+from flask import Blueprint, Response, current_app, g, jsonify, request
+
+from backend.database.supabase_client import get_client, supabase_error_response
 from backend.middleware.security_middleware import require_role
 from backend.services.admin_service import AdminService
 from backend.services.google_apps_script_service import google_sheets_status, send_test_payload
-from backend.database.supabase_client import get_client, supabase_error_response
 
 logger = logging.getLogger("qc.routes.admin")
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
 admin_legacy_bp = Blueprint("admin_legacy", __name__, url_prefix="/api/admin")
+
 
 def get_admin_service():
     return AdminService()
@@ -57,6 +59,7 @@ def _product_payload(data):
         "is_active": _nullable_bool(data.get("is_active"), True),
     }
 
+
 @admin_bp.route("/analytics/overview", methods=["GET"])
 @require_role("admin")
 def analytics_overview():
@@ -65,6 +68,7 @@ def analytics_overview():
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error fetching analytics")}), 500
+
 
 @admin_bp.route("/monitoring/realtime", methods=["GET"])
 @require_role("admin")
@@ -88,18 +92,20 @@ def update_qc_finding_status(finding_id):
     data = request.get_json(silent=True) or {}
     return _enveloped(get_admin_service().update_qc_finding_status(finding_id, data.get("status")))
 
+
 @admin_bp.route("/qc-reports", methods=["GET"])
 @require_role("admin")
 def qc_reports():
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 20))
     status_filter = request.args.get("status")
-    
+
     service = get_admin_service()
     res = service.get_qc_reports(page, limit, status_filter)
     if res.get("success"):
         return jsonify({"data": res["data"], "count": res.get("count", 0), "page": page, "limit": limit})
     return jsonify({"detail": res.get("detail", "Error fetching reports")}), 500
+
 
 @admin_bp.route("/audit-trail", methods=["GET"])
 @admin_bp.route("/audit-logs", methods=["GET"])
@@ -208,14 +214,18 @@ def google_sheets_test_route():
     ok = send_test_payload()
     status = google_sheets_status()
     config_error = not status.get("webhook_valid")
-    detail = status.get("last_export_error") or status.get("last_exception_message") or "Google Sheets test export failed"
+    detail = (
+        status.get("last_export_error") or status.get("last_exception_message") or "Google Sheets test export failed"
+    )
     message = "Google Sheets test export sent" if ok else detail
-    return jsonify({
-        "success": ok,
-        "data": status,
-        "message": message,
-        "error": None if ok else detail,
-    }), 200 if ok else (400 if config_error else 502)
+    return jsonify(
+        {
+            "success": ok,
+            "data": status,
+            "message": message,
+            "error": None if ok else detail,
+        }
+    ), 200 if ok else (400 if config_error else 502)
 
 
 def _google_sheets_export_payload():
@@ -286,18 +296,35 @@ def report_temperature():
 def report_summary():
     service = get_admin_service()
     today = request.args.get("date") or None
-    temperature = service.get_temperature_report(limit=2000, date=today).get("data", [])
-    inspection = service.get_inspection_report(limit=2000, date=today).get("data", [])
-    overview = service.get_dashboard_overview().get("data", {})
-    statuses = [str(row.get("status") or "").lower() for row in inspection]
+
+    # Optimize monitoring counts using direct counts (limit 0)
+    monitoring_filters = service._date_filters("recorded_at", today)
+    total_monitoring_today = service._count("facility_logs", monitoring_filters)
+    if total_monitoring_today == 0:
+        total_monitoring_today = service._count("temperature_logs", monitoring_filters)
+
+    # Optimize inspection query to only select 'status' field
+    qc_filters = service._date_filters("created_at", today)
+    statuses = []
+    if service.sb:
+        query = service.sb.table("qc_reports").select("status")
+        for op, field, value in qc_filters:
+            query = getattr(query, op)(field, value)
+        res = query.execute()
+        statuses = [str(row.get("status") or "").lower() for row in (res.data or [])]
+
+    # Optimize alerts and approvals counts using direct count
+    temperature_alerts = service._count("facility_alerts", [("eq", "status", "open")])
+    pending_approval = service._count("approvals", [("eq", "status", "pending")])
+
     data = {
-        "total_monitoring_today": len(temperature),
-        "total_qc_today": len(inspection),
-        "pass": sum(1 for status in statuses if status == "pass"),
-        "hold_warning": sum(1 for status in statuses if status in {"hold", "warning", "pending_review"}),
-        "fail": sum(1 for status in statuses if status in {"fail", "failed"}),
-        "temperature_alerts": overview.get("total_open_alerts", 0),
-        "pending_approval": overview.get("total_qc_pending", 0),
+        "total_monitoring_today": total_monitoring_today,
+        "total_qc_today": len(statuses),
+        "pass": sum(1 for s in statuses if s == "pass"),
+        "hold_warning": sum(1 for s in statuses if s in {"hold", "warning", "pending_review"}),
+        "fail": sum(1 for s in statuses if s in {"fail", "failed"}),
+        "temperature_alerts": temperature_alerts,
+        "pending_approval": pending_approval,
     }
     return _enveloped({"success": True, "data": data})
 
@@ -364,6 +391,7 @@ def export_daily_report():
     csv_body = get_admin_service().export_daily_report_csv(date=date, staff_id=staff_id, status_filter=status_filter)
     try:
         from backend.services.audit_service import write_audit
+
         actor = getattr(g, "current_user", {}) or {}
         write_audit(
             "export_daily_report",
@@ -478,7 +506,11 @@ def report_staff_activity():
 def approve(approval_id):
     payload = request.get_json(silent=True) or {}
     actor = getattr(g, "current_user", {}) or {}
-    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=True))
+    return _enveloped(
+        get_admin_service().approve_item(
+            approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=True
+        )
+    )
 
 
 @admin_bp.route("/approvals/<approval_id>/reject", methods=["POST"])
@@ -486,7 +518,11 @@ def approve(approval_id):
 def reject(approval_id):
     payload = request.get_json(silent=True) or {}
     actor = getattr(g, "current_user", {}) or {}
-    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=False))
+    return _enveloped(
+        get_admin_service().approve_item(
+            approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=False
+        )
+    )
 
 
 @admin_bp.route("/products", methods=["GET", "POST"])

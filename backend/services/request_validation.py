@@ -136,7 +136,8 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             batch_code=_optional_str(data, "batch_code", 80),
             batch_sequence=(
                 int(_number(data, "batch_sequence", False, 1, 9999))
-                if data.get("batch_sequence") not in (None, "") else None
+                if data.get("batch_sequence") not in (None, "")
+                else None
             ),
             product_id=_optional_str(data, "product_id", 120),
             product_name=_optional_str(data, "product_name", 160),
@@ -171,10 +172,7 @@ def validate_model(model: Type[Any], data: dict[str, Any]) -> Any:
             slot_time=_optional_str(data, "slot_time", 10),
             schedule_status=_optional_str(data, "schedule_status", 40),
             submitted_at=_optional_str(data, "submitted_at", 40),
-            is_late=(
-                str(data.get("is_late", "")).lower() in {"1", "true", "yes"}
-                if "is_late" in data else None
-            ),
+            is_late=(str(data.get("is_late", "")).lower() in {"1", "true", "yes"} if "is_late" in data else None),
         )
     if model is QCValidateRequest:
         unit_type = _optional_str(data, "unit_type", 40) or "chiller"

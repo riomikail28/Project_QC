@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -118,7 +117,7 @@ def test_monitoring_mini_card_click_opens_existing_bottom_sheet_flow():
     js = read("frontend/js/monitoring.js")
 
     assert 'id="log-modal" class="bottom-sheet"' in html
-    assert 'onclick="openLogModal(\'${device.id}\')"' in js
+    assert "onclick=\"openLogModal('${device.id}')\"" in js
     assert 'modal.classList.add("active")' in js
     assert 'overlay.classList.add("active")' in js
 
@@ -129,7 +128,7 @@ def test_monitoring_filters_still_drive_grouped_grid_and_empty_rooms_hidden():
     assert "bindUnitFilters" in js
     assert 'activeUnitFilter = label.startsWith("chiller") ? "chiller"' in js
     assert 'if (activeUnitFilter === "critical") return source.filter(device => isDeviceAlert(device));' in js
-    assert "renderDevices(filteredDevices(selectedRoomId === \"all\" || !selectedRoomId ? null" in js
+    assert 'renderDevices(filteredDevices(selectedRoomId === "all" || !selectedRoomId ? null' in js
     assert ".filter(room => room.devices.length)" in js
     assert "Belum ada unit monitoring sesuai filter." in js
 

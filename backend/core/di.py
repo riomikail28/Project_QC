@@ -3,7 +3,8 @@ Simple DI container for the backend.
 This is intentionally lightweight; it supports registering
 providers (callables) or concrete instances and resolving them.
 """
-from typing import Any, Callable, Dict
+
+from typing import Any, Dict
 
 _CONTAINER: Dict[str, Any] = {}
 

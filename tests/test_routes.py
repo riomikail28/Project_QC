@@ -11,12 +11,14 @@ class TestRoutes(unittest.TestCase):
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
-        self.token = self.app.extensions["security"].generate_token({
-            "id": "00000000-0000-0000-0000-000000000001",
-            "username": "admin",
-            "role": "admin",
-            "name": "Test Admin",
-        })
+        self.token = self.app.extensions["security"].generate_token(
+            {
+                "id": "00000000-0000-0000-0000-000000000001",
+                "username": "admin",
+                "role": "admin",
+                "name": "Test Admin",
+            }
+        )
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
     def test_health_check_is_public(self):

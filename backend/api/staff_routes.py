@@ -37,12 +37,14 @@ def staff_login():
         except Exception:
             refresh_token = None
 
-        resp = jsonify({
-            "id": result.get("id"),
-            "username": result.get("username"),
-            "role": result.get("role"),
-            "token": access_token,
-        })
+        resp = jsonify(
+            {
+                "id": result.get("id"),
+                "username": result.get("username"),
+                "role": result.get("role"),
+                "token": access_token,
+            }
+        )
         if refresh_token:
             cookie_name = os.environ.get("REFRESH_TOKEN_COOKIE", "refresh_token")
             secure_flag = False if os.environ.get("DEV_HTTP", "false").lower() in ("1", "true") else True
