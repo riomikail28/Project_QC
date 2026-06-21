@@ -13,6 +13,7 @@ env:
 jobs:
   supabase-preview:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
