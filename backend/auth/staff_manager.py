@@ -49,7 +49,7 @@ def login(username: str, password: str) -> dict:
         res_data = direct_db_query(
             "staff_accounts",
             method="GET",
-            filters=f"{filters}&select=id,username,role,full_name,password_hash",
+            filters=f"{filters}&select=id,username,role,password_hash",
         )
 
         if res_data and password_matches(res_data[0], password):
@@ -73,7 +73,7 @@ def list_staff():
 
     try:
         # Use direct query to bypass library validation
-        res_data = direct_db_query("staff_accounts", method="GET", filters="select=id,username,role,full_name")
+        res_data = direct_db_query("staff_accounts", method="GET", filters="select=id,username,role")
         staff = res_data or []
         profiles = _profiles_by_staff_id([item.get("id") for item in staff])
         for item in staff:
@@ -196,7 +196,7 @@ def get_staff_by_id(staff_id: str):
         res = direct_db_query(
             "staff_accounts",
             method="GET",
-            filters=f"id=eq.{_uri_encode(str(staff_id), safe='')}&select=id,username,role,full_name",
+            filters=f"id=eq.{_uri_encode(str(staff_id), safe='')}&select=id,username,role",
         )
         if res:
             user = res[0]
