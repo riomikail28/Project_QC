@@ -9,15 +9,15 @@ Demo link: https://project-qc-mu.vercel.app/
 Admin:
 
 ```text
-admin
-admin123
+demo.admin@qcenterprise.id
+demoadmin123
 ```
 
 Staff:
 
 ```text
-rio
-123456
+demo.staff@qcenterprise.id
+demostaff123
 ```
 
 > Catatan: akun demo dibuat melalui seed database `supabase/seed/001_demo_seed.sql`. Jangan menyimpan Supabase service role key atau secret lain di repository.
