@@ -7,7 +7,7 @@ const API_BASE = window.location.origin.includes('localhost') || window.location
     ? 'http://localhost:5000/api' 
     : '/api';
 
-const API = {
+var API = window.API = {
     _cache: (() => {
         // PERFORMANCE_OPTIMIZED: Persist API cache in tab sessionStorage to survive page reloads on Staff app.
         // Falls back to Memory Map if sessionStorage is disabled or throws.

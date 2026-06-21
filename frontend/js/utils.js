@@ -2,7 +2,7 @@
  * QC Central Kitchen — Utilities
  */
 
-const Utils = {
+var Utils = window.Utils = {
     formatDate(dateStr) {
         if (!dateStr) return '-';
         const date = new Date(dateStr);

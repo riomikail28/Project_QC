@@ -3,7 +3,7 @@
  * Manages user sessions and login state.
  */
 
-const Auth = {
+var Auth = window.Auth = {
     async login(username, password) {
         try {
             const data = await API.post('/staff/login', { username, password });
