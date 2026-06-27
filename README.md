@@ -3,6 +3,8 @@
 Sistem digital untuk monitoring suhu, QC inspection, batch traceability, approval, audit trail, dan pembelajaran HACCP berbasis web.
 
 Demo link: https://project-qc-mu.vercel.app/
+Rio
+123456
 
 ## Demo Account
 
