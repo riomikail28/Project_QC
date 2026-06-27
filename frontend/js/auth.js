@@ -8,6 +8,11 @@ var Auth = window.Auth = {
         try {
             const data = await API.post('/staff/login', { username, password });
             if (data && data.token) {
+                try {
+                    if (window.API && typeof API.clearAllAuthCaches === 'function') {
+                        API.clearAllAuthCaches();
+                    }
+                } catch (e) {}
                 localStorage.setItem('qc_token', data.token);
                 localStorage.setItem('qc_user', JSON.stringify(data));
                 if (data.role) {
@@ -28,6 +33,11 @@ var Auth = window.Auth = {
         } catch (e) {
             // ignore errors
         }
+        try {
+            if (window.API && typeof API.clearAllAuthCaches === 'function') {
+                API.clearAllAuthCaches();
+            }
+        } catch (e) {}
         localStorage.removeItem('qc_token');
         localStorage.removeItem('qc_user');
         localStorage.removeItem('qc_role');

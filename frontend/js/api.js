@@ -153,6 +153,20 @@ var API = window.API = {
         }
     },
 
+    clearAllAuthCaches() {
+        try {
+            this.clearCache();
+        } catch (e) {}
+        try {
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('page_cache:')) {
+                    localStorage.removeItem(key);
+                }
+            }
+        } catch (e) {}
+    },
+
     async _getNetwork(endpoint) {
         try {
             const url = this._url(endpoint);
@@ -564,6 +578,10 @@ var API = window.API = {
 
                 localStorage.removeItem('qc_token');
                 localStorage.removeItem('qc_user');
+                localStorage.removeItem('qc_role');
+                try {
+                    API.clearAllAuthCaches();
+                } catch (e) {}
                 if (!window.location.pathname.endsWith('login.html')) {
                     window.location.href = '/login.html';
                 }
