@@ -155,6 +155,7 @@ const Dashboard = {
                 this.renderMonitoring(monitoring);
                 this.renderCriticalIssues(alerts);
                 this.renderTodaySummary(todaySummary);
+                this.loadAnnouncementBadge();
                 this.refreshIcons();
                 this.saveCache();
             });
@@ -293,6 +294,20 @@ const Dashboard = {
             const count = Number(data.total_alerts || 0);
             badge.textContent = count;
             badge.style.display = count > 0 ? 'grid' : 'none';
+        }
+    },
+
+    async loadAnnouncementBadge() {
+        try {
+            const announcements = await API.get('/staff/announcements');
+            const count = announcements?.length || 0;
+            const badge = document.getElementById('announcementBadge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'grid' : 'none';
+            }
+        } catch (error) {
+            console.error('Failed to load announcement badge:', error);
         }
     },
 

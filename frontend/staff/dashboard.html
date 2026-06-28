@@ -41,6 +41,10 @@
                 <div class="time" id="clockTime">00:00:00</div>
                 <div id="clockDate">-- -- ----</div>
             </div>
+            <button class="nav-btn announcement-btn" onclick="openAnnouncementDrawer()" aria-label="Announcements" style="margin-right: 8px;">
+                <i class="fas fa-bullhorn"></i>
+                <span class="badge" id="announcementBadge" style="display:none; background: var(--primary);">0</span>
+            </button>
             <button class="nav-btn notification-btn" onclick="openAlertDrawer()" aria-label="Notifications">
                 <i class="fas fa-bell"></i>
                 <span class="badge" id="alertBadge" style="display:none">0</span>
@@ -326,6 +330,27 @@
         </div>
     </aside>
 
+    <div class="alert-drawer-overlay" id="announcementDrawerOverlay" onclick="closeAnnouncementDrawer()"></div>
+    <aside class="alert-drawer" id="announcementDrawer" role="dialog" aria-modal="true" aria-label="Announcements">
+        <div class="alert-drawer-header">
+            <div class="alert-drawer-title">
+                <div class="alert-icon" style="background: #e0f2fe; color: #0284c7;"><i class="fas fa-bullhorn"></i></div>
+                <div>
+                    <h3>Pengumuman</h3>
+                    <p>Informasi & update terbaru</p>
+                </div>
+            </div>
+            <button class="icon-button" onclick="closeAnnouncementDrawer()" aria-label="Close modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="announcementDrawerList" class="alert-drawer-body">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+        <div class="alert-drawer-footer">
+            <button type="button" class="btn-secondary" onclick="closeAnnouncementDrawer()">Close</button>
+        </div>
+    </aside>
+
     <nav class="bottom-nav">
         <a href="dashboard.html" class="nav-item active"><i class="fas fa-chart-pie"></i><span>Beranda</span></a>
         <a href="monitoring.html" class="nav-item"><i class="fas fa-temperature-half"></i><span>Monitoring</span></a>
@@ -409,6 +434,68 @@
             document.getElementById('alertDrawerOverlay').classList.remove('active');
             document.getElementById('alertDrawer').classList.remove('active');
             if (!document.querySelector('.alert-drawer.active')) document.body.classList.remove('modal-open');
+        }
+
+        function openAnnouncementDrawer() {
+            document.getElementById('announcementDrawerOverlay').classList.add('active');
+            document.getElementById('announcementDrawer').classList.add('active');
+            document.body.classList.add('modal-open');
+            loadAnnouncementDrawer();
+        }
+
+        function closeAnnouncementDrawer() {
+            document.getElementById('announcementDrawerOverlay').classList.remove('active');
+            document.getElementById('announcementDrawer').classList.remove('active');
+            if (!document.querySelector('.alert-drawer.active')) document.body.classList.remove('modal-open');
+        }
+
+        async function loadAnnouncementDrawer() {
+            const container = document.getElementById('announcementDrawerList');
+            container.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+            try {
+                const announcements = await API.get('/staff/announcements');
+                if (!announcements || announcements.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-bullhorn" style="font-size: 2rem; color: #94a3b8; margin-bottom: 8px;"></i>
+                            <h4>Tidak ada pengumuman</h4>
+                            <p>Belum ada informasi terbaru untuk saat ini.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                container.innerHTML = announcements.map(item => `
+                    <div class="alert-card" style="flex-direction:column;align-items:flex-start; border-left: 4px solid var(--primary); background: #f8fafc; padding: 14px;">
+                        <div style="display:flex;align-items:center;gap:12px;width:100%">
+                            <div class="alert-icon" style="background: #e0f2fe; color: #0284c7;"><i class="fas fa-bullhorn"></i></div>
+                            <div class="alert-info" style="flex:1">
+                                <h4 style="color: #0f172a; font-weight: 700; margin: 0 0 4px 0;">${escapeHtml(item.title)}</h4>
+                                <span style="font-size: 11px; color: #64748b;">${new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 13px; color: #334155; margin-top: 10px; line-height: 1.5; white-space: pre-wrap; width: 100%;">
+                            ${escapeHtml(item.content)}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-cloud-exclamation"></i>
+                        <h4>Gagal memuat pengumuman</h4>
+                        <p>Coba refresh beberapa saat lagi.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
         }
 
         function openQcFinding() {

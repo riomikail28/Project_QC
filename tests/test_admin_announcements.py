@@ -34,3 +34,18 @@ def test_announcements_crud_flow(client, admin_headers):
         # 6. Delete announcement
         resp = client.delete(f"/api/admin/announcements/{announcement_id}", headers=admin_headers)
         assert resp.status_code == 200
+
+def test_staff_announcements_flow(client, staff_headers):
+    mock_data = [
+        {"id": "a-1", "title": "Staff Update", "content": "Hello Staff", "is_active": True},
+        {"id": "a-2", "title": "Inactive Announcement", "content": "Secret info", "is_active": False}
+    ]
+    db = FakeSupabase({"announcements": mock_data})
+    with patch("backend.services.admin_service.get_client", return_value=db):
+        resp = client.get("/api/staff/announcements", headers=staff_headers)
+        assert resp.status_code == 200
+        items = resp.get_json()
+        assert isinstance(items, list)
+        # Should only get active announcements
+        assert len(items) == 1
+        assert items[0]["title"] == "Staff Update"

@@ -171,3 +171,18 @@ def staff_detail(staff_id):
     success = delete_staff(staff_id)
     write_audit("delete", "staff_account", staff_id, after={"success": success})
     return jsonify({"success": success})
+
+
+@staff_bp.route("/api/staff/announcements", methods=["GET"])
+@require_auth
+def staff_announcements():
+    try:
+        from backend.services.admin_service import AdminService
+        service = AdminService()
+        res = service.list_announcements(limit=100, offset=0, active_only=True)
+        if res.get("success"):
+            return jsonify(res["data"])
+        return jsonify({"detail": res.get("detail", "Error fetching announcements")}), 500
+    except Exception as exc:
+        logger.exception("Error fetching staff announcements")
+        return jsonify({"detail": "Internal Server Error", "message": str(exc)}), 500

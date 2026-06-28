@@ -5,6 +5,7 @@
 const adminApp = {
     // API Endpoints
     apiBase: '/v1/admin',
+    adminToastTimer: null,
     charts: {},
     crudMode: null,
     crudId: null,
@@ -410,8 +411,16 @@ const adminApp = {
         }, 100);
     },
 
-    notify(message, type = 'error') {
-        if (typeof window.showToast === 'function') {
+    notify(message, type = 'success') {
+        const toast = document.getElementById('admin-toast');
+        if (toast) {
+            clearTimeout(this.adminToastTimer);
+            toast.textContent = message;
+            toast.className = `admin-toast ${type} show`;
+            this.adminToastTimer = setTimeout(() => {
+                toast.className = `admin-toast ${type}`;
+            }, 3000);
+        } else if (typeof window.showToast === 'function') {
             window.showToast(message, type);
         } else {
             console[type === 'error' ? 'error' : 'log'](message);
@@ -2399,27 +2408,38 @@ const adminApp = {
                 await this.loadLearningSimulations();
             }
 
+            this.notify('Data berhasil disimpan', 'success');
             this.closeCrudModal();
         } catch (error) {
-            alert(`Gagal menyimpan data: ${error.message}`);
+            this.notify(`Gagal menyimpan data: ${error.message}`, 'error');
         }
     },
 
     async deleteStaff(id) {
         if (!confirm('Hapus staff ini?')) return;
-        await API.delete(`/staff/${id}`);
-        await this.loadStaff();
+        try {
+            await API.delete(`/staff/${id}`);
+            await this.loadStaff();
+            this.notify('Staff berhasil dihapus', 'success');
+        } catch (error) {
+            this.notify(`Gagal menghapus staff: ${error.message}`, 'error');
+        }
     },
 
     async deleteRoom(id) {
         if (!confirm('Hapus ruangan ini? Unit di dalamnya juga bisa terdampak.')) return;
-        await API.delete(`/admin/facility/rooms/${id}`);
-        await this.loadFacilityManager();
+        try {
+            await API.delete(`/admin/facility/rooms/${id}`);
+            await this.loadFacilityManager();
+            this.notify('Ruangan berhasil dihapus', 'success');
+        } catch (error) {
+            this.notify(`Gagal menghapus ruangan: ${error.message}`, 'error');
+        }
     },
 
     async deleteDevice(id, isDefault = false) {
         if (!this.isUuid(id)) {
-            alert('Unit ini belum tersimpan di database. Refresh facility setup.');
+            this.notify('Unit ini belum tersimpan di database. Refresh facility setup.', 'error');
             return;
         }
         const message = isDefault
@@ -2429,8 +2449,9 @@ const adminApp = {
         try {
             await API.patch(`/admin/facility/devices/${id}`, { is_active: false });
             await this.loadFacilityManager();
+            this.notify('Unit berhasil dihapus', 'success');
         } catch (error) {
-            alert(`Gagal menghapus unit: ${error.message || 'Coba lagi'}`);
+            this.notify(`Gagal menghapus unit: ${error.message || 'Coba lagi'}`, 'error');
         }
     },
 
@@ -2491,14 +2512,24 @@ const adminApp = {
 
     async deleteSku(id) {
         if (!confirm('Hapus SKU produk ini?')) return;
-        await API.delete(`/v1/admin/products/${id}`);
-        await this.loadSku();
+        try {
+            await API.delete(`/v1/admin/products/${id}`);
+            await this.loadSku();
+            this.notify('SKU produk berhasil dihapus', 'success');
+        } catch (error) {
+            this.notify(`Gagal menghapus SKU: ${error.message}`, 'error');
+        }
     },
 
     async deleteLearningItem(type, id) {
         if (!confirm('Arsipkan item Learning ITDV ini? Data progress user tetap aman.')) return;
-        await API.delete(`/admin/learning/${type}/${id}`);
-        await this.loadLearning();
+        try {
+            await API.delete(`/admin/learning/${type}/${id}`);
+            await this.loadLearning();
+            this.notify('Item berhasil diarsipkan', 'success');
+        } catch (error) {
+            this.notify(`Gagal mengarsipkan item: ${error.message}`, 'error');
+        }
     },
 
     async loadLearning() {
