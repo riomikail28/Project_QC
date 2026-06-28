@@ -1698,7 +1698,7 @@ const adminApp = {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading announcements...</td></tr>';
         try {
             const res = await API.get('/admin/announcements');
-            const list = res?.data || [];
+            const list = res || [];
             if (!list.length) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada pengumuman.</td></tr>';
                 return;
