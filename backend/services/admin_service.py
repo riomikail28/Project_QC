@@ -557,12 +557,12 @@ class AdminService:
             "facility_logs",
             select="*, facility_rooms(name), facility_devices(name,type,threshold_temp)",
             order_by="recorded_at",
-            limit=limit,
-            filters=filters,
         )
         if not rows:
             rows = self._fetch("temperature_logs", order_by="recorded_at", limit=limit, filters=filters)
         data = [self._temperature_report_row(row) for row in rows]
+        # Enrich rows with staff display information for monitoring export
+        data = [self._with_staff_display(row, ("staff_id", "created_by", "operator_id")) for row in data]
         if status_filter:
             data = [row for row in data if str(row.get("status", "")).lower() == status_filter.lower()]
         return self._empty(data)
@@ -588,18 +588,24 @@ class AdminService:
         return self._empty(data)
 
     def export_google_sheets_monitoring(self, start_date=None, end_date=None, limit=5000):
+        logger.info("Starting export_google_sheets_monitoring: start_date=%s end_date=%s limit=%s", start_date, end_date, limit)
         rows = self.get_temperature_report(limit=limit).get("data", [])
+        logger.info("Fetched %d monitoring rows for export", len(rows))
         rows = self._filter_rows_by_date(rows, start_date, end_date, "created_at")
+        logger.info("After date filtering, %d rows remain", len(rows))
         summary = self._export_summary("monitoring")
         for row in rows:
             payload = self._google_sheets_monitoring_payload(row)
+            logger.debug("Export payload for row id=%s staff=%s", payload.get("source_id"), payload.get("staff_name"))
             if not payload.get("source_id"):
                 summary["skipped"] += 1
                 continue
             if send_monitoring_log(payload):
                 summary["exported"] += 1
+                logger.info("Successfully exported monitoring row id=%s", payload.get("source_id"))
             else:
                 self._record_export_failure(summary, payload)
+                logger.warning("Failed to export monitoring row id=%s", payload.get("source_id"))
         return self._finalize_export_summary(summary)
 
     def export_google_sheets_qc(self, start_date=None, end_date=None, limit=5000):
@@ -668,6 +674,11 @@ class AdminService:
 
     def _google_sheets_monitoring_payload(self, row):
         submitted_at = row.get("created_at") or row.get("submitted_at")
+        # Resolve staff name, preferring display name then name then ID
+        staff_name = row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or ""
+        logger.debug("Monitoring payload staff_name resolved: %s", staff_name)
+        # Ensure source_id is populated; fallback to alternative fields if missing
+        source_id = row.get("id") or row.get("record_id") or row.get("source_id")
         return {
             "date": row.get("date") or row.get("monitoring_date") or str(submitted_at or "")[:10],
             "slot_time": row.get("slot_time") or "",
@@ -675,11 +686,11 @@ class AdminService:
             "device": row.get("device") or row.get("device_name") or row.get("device_id") or "",
             "temperature": row.get("temperature"),
             "status": row.get("status"),
-            "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("staff_id") or "",
+            "staff_name": staff_name,
             "submitted_at": submitted_at,
             "notes": row.get("notes") or "",
             "source_type": "monitoring_log",
-            "source_id": row.get("id"),
+            "source_id": source_id,
         }
 
     def _google_sheets_qc_payload(self, row):
@@ -1755,4 +1766,59 @@ class AdminService:
             return self._empty({"success": True})
         except Exception as exc:
             logger.error("Delete product failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
+
+    # Announcement CRUD operations
+    def list_announcements(self, limit=100, offset=0, active_only=False):
+        if not self.sb:
+            return self._empty([])
+        try:
+            query = self.sb.table("announcements").select("*")
+            if active_only:
+                query = query.eq("is_active", True)
+            query = query.limit(limit).offset(offset)
+            res = query.execute()
+            return self._empty(res.data or [])
+        except Exception as exc:
+            logger.error("List announcements failed: %s", exc)
+            return self._fail(str(exc))
+
+    def get_announcement(self, announcement_id):
+        if not self.sb:
+            return self._fail("Database not connected")
+        try:
+            res = self.sb.table("announcements").select("*").eq("id", announcement_id).execute()
+            return self._empty((res.data or [None])[0])
+        except Exception as exc:
+            logger.error("Get announcement %s failed: %s", announcement_id, exc)
+            return self._fail(str(exc))
+
+    def create_announcement(self, payload):
+        if not self.sb:
+            return {"success": False, "detail": "Database not connected"}
+        try:
+            res = self.sb.table("announcements").insert([payload]).execute()
+            return self._empty((res.data or [None])[0])
+        except Exception as exc:
+            logger.error("Create announcement failed: %s", exc)
+            return {"success": False, "detail": str(exc)}
+
+    def update_announcement(self, announcement_id, payload):
+        if not self.sb:
+            return {"success": False, "detail": "Database not connected"}
+        try:
+            res = self.sb.table("announcements").update(payload).eq("id", announcement_id).execute()
+            return self._empty((res.data or [None])[0])
+        except Exception as exc:
+            logger.error("Update announcement %s failed: %s", announcement_id, exc)
+            return {"success": False, "detail": str(exc)}
+
+    def delete_announcement(self, announcement_id):
+        if not self.sb:
+            return {"success": False, "detail": "Database not connected"}
+        try:
+            self.sb.table("announcements").delete().eq("id", announcement_id).execute()
+            return self._empty({"success": True})
+        except Exception as exc:
+            logger.error("Delete announcement %s failed: %s", announcement_id, exc)
             return {"success": False, "detail": str(exc)}

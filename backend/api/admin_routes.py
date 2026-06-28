@@ -529,3 +529,43 @@ def product_detail(product_id):
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error deleting product")}), 500
+
+@admin_bp.route("/announcements", methods=["GET", "POST"])\
+@require_role("admin")\
+def announcements():\
+    service = get_admin_service()\
+    if request.method == "POST":\
+        payload = request.get_json(silent=True) or {}\
+        res = service.create_announcement(payload)\
+        if res.get("success"):\
+            return jsonify(res["data"]), 201\
+        return jsonify({"detail": res.get("detail", "Error creating announcement")}), 500\
+    # GET list\
+    limit = int(request.args.get("limit", 100))\
+    offset = int(request.args.get("offset", 0))\
+    active_only = request.args.get("active_only", "false").lower() == "true"\
+    res = service.list_announcements(limit=limit, offset=offset, active_only=active_only)\
+    if res.get("success"):\
+        return jsonify(res["data"])\
+    return jsonify({"detail": res.get("detail", "Error fetching announcements")}), 500\
+\
+@admin_bp.route("/announcements/<announcement_id>", methods=["GET", "PATCH", "PUT", "DELETE"])\
+@require_role("admin")\
+def announcement_detail(announcement_id):\
+    service = get_admin_service()\
+    if request.method in ("PATCH", "PUT"):\
+        payload = request.get_json(silent=True) or {}\
+        res = service.update_announcement(announcement_id, payload)\
+        if res.get("success"):\
+            return jsonify(res["data"])\
+        return jsonify({"detail": res.get("detail", "Error updating announcement")}), 500\
+    if request.method == "GET":\
+        res = service.get_announcement(announcement_id)\
+        if res.get("success"):\
+            return jsonify(res["data"])\
+        return jsonify({"detail": res.get("detail", "Error fetching announcement")}), 500\
+    # DELETE\
+    res = service.delete_announcement(announcement_id)\
+    if res.get("success"):\
+        return jsonify(res["data"])\
+    return jsonify({"detail": res.get("detail", "Error deleting announcement")}), 500
