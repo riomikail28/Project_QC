@@ -434,6 +434,7 @@ const adminApp = {
             case 'traceability': this.loadTraceability(); break;
             case 'approval': this.loadApprovals(); break;
             case 'audit': this.loadAuditTrail(); break;
+            case 'announcements': this.loadAnnouncements(); break;
         }
     },
 
@@ -1682,6 +1683,64 @@ const adminApp = {
         `;
     },
 
+    async loadAnnouncements() {
+        const tbody = document.getElementById('table-announcements');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading announcements...</td></tr>';
+        try {
+            const res = await API.get('/admin/announcements');
+            const list = res?.data || [];
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada pengumuman.</td></tr>';
+                return;
+            }
+            this.setHtmlIfChanged(tbody, list.map(item => `
+                <tr>
+                    <td data-label="Judul"><strong>${this.escapeHtml(item.title || '')}</strong></td>
+                    <td data-label="Konten">${this.escapeHtml(item.content || '')}</td>
+                    <td data-label="Status">
+                        <span class="status-badge status-${item.is_active ? 'pass' : 'fail'}">
+                            ${item.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                    </td>
+                    <td data-label="Action">
+                        <span class="row-actions">
+                            <button class="btn-secondary btn-sm" onclick='adminApp.openAnnouncementModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
+                            <button class="btn-danger btn-sm" onclick="adminApp.deleteAnnouncement('${item.id}')"><i data-lucide="trash-2"></i> Hapus</button>
+                        </span>
+                    </td>
+                </tr>
+            `).join(''));
+            this.refreshIcons();
+        } catch (error) {
+            console.error('Load announcements failed:', error);
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--status-danger-text);">Gagal memuat pengumuman.</td></tr>';
+        }
+    },
+
+    openAnnouncementModal(item = null) {
+        const row = item || {};
+        this.openCrudModal(row.id ? 'Edit Pengumuman' : 'Tambah Pengumuman', row.id ? 'editAnnouncement' : 'addAnnouncement', `
+            <label>Judul<input id="announcement-title" value="${this.escapeAttr(row.title || '')}" required></label>
+            <label>Konten<textarea id="announcement-content" rows="4" required>${this.escapeHtml(row.content || '')}</textarea></label>
+            <label>Status<select id="announcement-is-active">
+                <option value="true" ${row.is_active !== false ? 'selected' : ''}>Active</option>
+                <option value="false" ${row.is_active === false ? 'selected' : ''}>Inactive</option>
+            </select></label>
+        `, { id: row.id });
+    },
+
+    async deleteAnnouncement(id) {
+        if (!confirm('Hapus pengumuman ini?')) return;
+        try {
+            await API.delete(`/admin/announcements/${id}`);
+            await this.loadAnnouncements();
+            this.notify('Pengumuman berhasil dihapus', 'success');
+        } catch (error) {
+            alert(`Gagal menghapus pengumuman: ${error.message}`);
+        }
+    },
+
     async loadStaff({ fromRevalidate = false } = {}) {
         const tbody = document.getElementById('table-staff');
         if (!tbody) return;
@@ -2272,6 +2331,18 @@ const adminApp = {
                 if (this.crudMode === 'addSku') await API.post('/v1/admin/products', payload);
                 else await API.patch(`/v1/admin/products/${this.crudId}`, payload);
                 await this.loadSku();
+            }
+
+            if (this.crudMode === 'addAnnouncement' || this.crudMode === 'editAnnouncement') {
+                const payload = {
+                    title: document.getElementById('announcement-title').value.trim(),
+                    content: document.getElementById('announcement-content').value.trim(),
+                    is_active: document.getElementById('announcement-is-active').value === 'true',
+                };
+                if (this.crudMode === 'addAnnouncement') await API.post('/admin/announcements', payload);
+                else await API.patch(`/admin/announcements/${this.crudId}`, payload);
+                await this.loadAnnouncements();
+                this.notify('Pengumuman berhasil disimpan', 'success');
             }
 
             if (this.crudMode === 'addLearningModule' || this.crudMode === 'editLearningModule') {

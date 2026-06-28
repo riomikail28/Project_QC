@@ -34,6 +34,7 @@
                 <li><a href="#section-sku" class="sidebar-item admin-nav-link" data-target="sku" data-section="sku"><i data-lucide="package-check"></i><span>Products</span></a></li>
                 <li><a href="#section-google-sheets" class="sidebar-item admin-nav-link" data-target="google-sheets" data-section="google-sheets"><i data-lucide="sheet"></i><span>Google Sheets</span></a></li>
                 <li><a href="#section-learning" class="sidebar-item admin-nav-link" data-target="learning" data-section="learning"><i data-lucide="graduation-cap"></i><span>Learning ITDV</span></a></li>
+                <li><a href="#section-announcements" class="sidebar-item admin-nav-link" data-target="announcements" data-section="announcements"><i data-lucide="megaphone"></i><span>Pengumuman</span></a></li>
                 <li class="sidebar-logout"><a href="#" class="sidebar-item" id="btn-logout"><i data-lucide="log-out"></i><span>Logout</span></a></li>
             </ul>
         </aside>
@@ -329,6 +330,32 @@
                             <table class="enterprise-table">
                                 <thead id="learning-table-head"></thead>
                                 <tbody id="learning-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: Announcements Management -->
+                <section id="section-announcements" class="dashboard-section">
+                    <div class="card">
+                        <div class="admin-section-toolbar">
+                            <div>
+                                <h3 class="card-title" style="margin:0;">Pengumuman</h3>
+                                <p class="admin-muted">Kelola pengumuman dan pemberitahuan penting untuk staff lapangan.</p>
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.openAnnouncementModal()"><i data-lucide="plus"></i> Tambah Pengumuman</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="enterprise-table">
+                                <thead>
+                                    <tr>
+                                        <th>Judul</th>
+                                        <th>Konten</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-announcements"></tbody>
                             </table>
                         </div>
                     </div>
