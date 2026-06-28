@@ -47,6 +47,9 @@ class FakeQuery:
     def limit(self, *args, **kwargs):
         return self
 
+    def offset(self, *args, **kwargs):
+        return self
+
     def insert(self, payload):
         self.payload = payload
         return self
