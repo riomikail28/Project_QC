@@ -1705,8 +1705,8 @@ const adminApp = {
             }
             this.setHtmlIfChanged(tbody, list.map(item => `
                 <tr>
-                    <td data-label="Judul"><strong>${this.escapeHtml(item.title || '')}</strong></td>
-                    <td data-label="Konten">${this.escapeHtml(item.content || '')}</td>
+                    <td data-label="Judul" style="white-space: normal; max-width: 240px; word-break: break-word;"><strong>${this.escapeHtml(item.title || '')}</strong></td>
+                    <td data-label="Konten" style="white-space: normal; max-width: 500px; word-break: break-word; line-height: 1.5;">${this.escapeHtml(item.content || '')}</td>
                     <td data-label="Status">
                         <span class="status-badge status-${item.is_active ? 'pass' : 'fail'}">
                             ${item.is_active ? 'ACTIVE' : 'INACTIVE'}
