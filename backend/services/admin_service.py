@@ -1773,12 +1773,43 @@ class AdminService:
         if not self.sb:
             return self._empty([])
         try:
-            query = self.sb.table("announcements").select("*")
+            query = self.sb.table("announcements").select("*").order("created_at", desc=True)
             if active_only:
                 query = query.eq("is_active", True)
             query = query.limit(limit).offset(offset)
             res = query.execute()
-            return self._empty(res.data or [])
+            
+            items = res.data or []
+            created_by_ids = {item.get("created_by") for item in items if item.get("created_by")}
+            creator_names = {}
+            if created_by_ids:
+                try:
+                    val_str = f"({','.join(str(uid) for uid in created_by_ids)})"
+                    users_data = self.sb.table("users").select("staff_account_id, full_name").filter("staff_account_id", "in", val_str).execute().data or []
+                    for u in users_data:
+                        if u.get("staff_account_id") and u.get("full_name"):
+                            creator_names[u.get("staff_account_id")] = u.get("full_name")
+                except Exception as e:
+                    logger.warning("Failed to fetch creator profiles: %s", e)
+                
+                missing_ids = created_by_ids - set(creator_names.keys())
+                if missing_ids:
+                    try:
+                        val_str = f"({','.join(str(uid) for uid in missing_ids)})"
+                        staff_data = self.sb.table("staff_accounts").select("id, username").filter("id", "in", val_str).execute().data or []
+                        for s in staff_data:
+                            if s.get("id") and s.get("username"):
+                                creator_names[s.get("id")] = s.get("username")
+                    except Exception as e:
+                        logger.warning("Failed to fetch creator usernames: %s", e)
+            
+            data = []
+            for item in items:
+                created_by = item.get("created_by")
+                item["creator_name"] = creator_names.get(created_by) or "Admin"
+                data.append(item)
+                
+            return self._empty(data)
         except Exception as exc:
             logger.error("List announcements failed: %s", exc)
             return self._fail(str(exc))

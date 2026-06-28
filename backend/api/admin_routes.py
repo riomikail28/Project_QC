@@ -539,6 +539,9 @@ def announcements():
         payload = request.get_json(silent=True) or {}
         if not payload.get("title") or not payload.get("content"):
             return jsonify({"detail": "Title and content are required"}), 400
+        from flask import g
+        if g.current_user and g.current_user.get("id"):
+            payload["created_by"] = g.current_user.get("id")
         res = service.create_announcement(payload)
         if res.get("success"):
             return jsonify(res["data"]), 201
