@@ -525,47 +525,242 @@ def product_detail(product_id):
             return jsonify(res["data"])
         return jsonify({"detail": res.get("detail", "Error updating product")}), 500
 
+    return _enveloped(get_admin_service().get_findings_report(**_report_args()))
+
+
+@admin_bp.route("/reports/evidence", methods=["GET"])
+@require_role("admin")
+def report_evidence():
+    args = _report_args()
+    args.pop("status_filter", None)
+    return _enveloped(get_admin_service().get_evidence_report(**args))
+
+
+@admin_bp.route("/reports/daily", methods=["GET"])
+@require_role("admin")
+def report_daily():
+    args = _report_args(default_limit=500)
+    return _enveloped(get_admin_service().get_daily_staff_report(**args))
+
+
+@admin_bp.route("/daily-reports", methods=["GET"])
+@require_role("admin")
+def daily_reports():
+    args = _report_args(default_limit=500)
+    return _enveloped(get_admin_service().get_daily_staff_report(**args))
+
+
+@admin_bp.route("/export/daily-report", methods=["GET"])
+@require_role("admin")
+def export_daily_report():
+    date = request.args.get("date")
+    staff_id = request.args.get("staff") or request.args.get("staff_id")
+    status_filter = request.args.get("status")
+    csv_body = get_admin_service().export_daily_report_csv(date=date, staff_id=staff_id, status_filter=status_filter)
+    try:
+        from backend.services.audit_service import write_audit
+        actor = getattr(g, "current_user", {}) or {}
+        write_audit(
+            "export_daily_report",
+            "daily_report",
+            date or "today",
+            metadata={"date": date, "staff_id": staff_id, "status": status_filter},
+            after={"exported_by": actor.get("id") or actor.get("sub")},
+        )
+    except Exception:
+        pass
+    filename_date = date or "today"
+    response = Response(csv_body, mimetype="text/csv")
+    response.headers["Content-Disposition"] = f"attachment; filename=qc_daily_report_{filename_date}.csv"
+    return response
+
+
+@admin_legacy_bp.route("/reports/temperature", methods=["GET"])
+@require_role("admin")
+def legacy_report_temperature():
+    return report_temperature()
+
+
+@admin_legacy_bp.route("/reports/inspection", methods=["GET"])
+@require_role("admin")
+def legacy_report_inspection():
+    return report_inspection()
+
+
+@admin_legacy_bp.route("/reports/findings", methods=["GET"])
+@require_role("admin")
+def legacy_report_findings():
+    return report_findings()
+
+
+@admin_legacy_bp.route("/reports/evidence", methods=["GET"])
+@require_role("admin")
+def legacy_report_evidence():
+    return report_evidence()
+
+
+@admin_legacy_bp.route("/reports/daily", methods=["GET"])
+@require_role("admin")
+def legacy_report_daily():
+    return report_daily()
+
+
+@admin_legacy_bp.route("/daily-reports", methods=["GET"])
+@require_role("admin")
+def legacy_daily_reports():
+    return daily_reports()
+
+
+@admin_legacy_bp.route("/export/daily-report", methods=["GET"])
+@require_role("admin")
+def legacy_export_daily_report():
+    return export_daily_report()
+
+
+@admin_legacy_bp.route("/approvals", methods=["GET"])
+@require_role("admin")
+def legacy_approvals():
+    return approvals()
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>", methods=["GET"])
+@require_role("admin")
+def legacy_approval_detail(approval_id):
+    return approval_detail(approval_id)
+
+
+@admin_legacy_bp.route("/batches", methods=["GET"])
+@require_role("admin")
+def legacy_admin_batches():
+    return admin_batches()
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>/approve", methods=["POST"])
+@require_role("admin")
+def legacy_approve(approval_id):
+    return approve(approval_id)
+
+
+@admin_legacy_bp.route("/approvals/<approval_id>/reject", methods=["POST"])
+@require_role("admin")
+def legacy_reject(approval_id):
+    return reject(approval_id)
+
+
+@admin_legacy_bp.route("/audit-trail", methods=["GET"])
+@admin_legacy_bp.route("/audit-logs", methods=["GET"])
+@require_role("admin")
+def legacy_audit_trail():
+    return audit_trail()
+
+
+@admin_bp.route("/reports/batches", methods=["GET"])
+@require_role("admin")
+def report_batches():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_batch_report(limit=limit))
+
+
+@admin_bp.route("/reports/staff-activity", methods=["GET"])
+@require_role("admin")
+def report_staff_activity():
+    limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    return _enveloped(get_admin_service().get_staff_activity_report(limit=limit))
+
+
+@admin_bp.route("/approvals/<approval_id>/approve", methods=["POST"])
+@require_role("admin")
+def approve(approval_id):
+    payload = request.get_json(silent=True) or {}
+    actor = getattr(g, "current_user", {}) or {}
+    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=True))
+
+
+@admin_bp.route("/approvals/<approval_id>/reject", methods=["POST"])
+@require_role("admin")
+def reject(approval_id):
+    payload = request.get_json(silent=True) or {}
+    actor = getattr(g, "current_user", {}) or {}
+    return _enveloped(get_admin_service().approve_item(approval_id, actor_id=actor.get("id") or actor.get("sub"), comment=payload.get("comment"), approved=False))
+
+
+@admin_bp.route("/products", methods=["GET", "POST"])
+@require_role("admin")
+def products():
+    service = get_admin_service()
+    if request.method == "POST":
+        try:
+            payload = _product_payload(request.get_json(silent=True) or {})
+        except (TypeError, ValueError) as exc:
+            return jsonify({"detail": str(exc)}), 400
+
+        res = service.create_product(payload)
+        if res.get("success"):
+            return jsonify(res["data"]), 201
+        return jsonify({"detail": res.get("detail", "Error creating product")}), 500
+
+    res = service.list_products()
+    if res.get("success"):
+        return jsonify(res["data"])
+    return jsonify({"detail": res.get("detail", "Error fetching products")}), 500
+
+
+@admin_bp.route("/products/<product_id>", methods=["PATCH", "PUT", "DELETE"])
+@require_role("admin")
+def product_detail(product_id):
+    service = get_admin_service()
+    if request.method in ("PATCH", "PUT"):
+        try:
+            payload = _product_payload(request.get_json(silent=True) or {})
+        except (TypeError, ValueError) as exc:
+            return jsonify({"detail": str(exc)}), 400
+
+        res = service.update_product(product_id, payload)
+        if res.get("success"):
+            return jsonify(res["data"])
+        return jsonify({"detail": res.get("detail", "Error updating product")}), 500
+
     res = service.delete_product(product_id)
     if res.get("success"):
         return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error deleting product")}), 500
 
-@admin_bp.route("/announcements", methods=["GET", "POST"])\
-@require_role("admin")\
-def announcements():\
-    service = get_admin_service()\
-    if request.method == "POST":\
-        payload = request.get_json(silent=True) or {}\
-        res = service.create_announcement(payload)\
-        if res.get("success"):\
-            return jsonify(res["data"]), 201\
-        return jsonify({"detail": res.get("detail", "Error creating announcement")}), 500\
-    # GET list\
-    limit = int(request.args.get("limit", 100))\
-    offset = int(request.args.get("offset", 0))\
-    active_only = request.args.get("active_only", "false").lower() == "true"\
-    res = service.list_announcements(limit=limit, offset=offset, active_only=active_only)\
-    if res.get("success"):\
-        return jsonify(res["data"])\
-    return jsonify({"detail": res.get("detail", "Error fetching announcements")}), 500\
-\
-@admin_bp.route("/announcements/<announcement_id>", methods=["GET", "PATCH", "PUT", "DELETE"])\
-@require_role("admin")\
-def announcement_detail(announcement_id):\
-    service = get_admin_service()\
-    if request.method in ("PATCH", "PUT"):\
-        payload = request.get_json(silent=True) or {}\
-        res = service.update_announcement(announcement_id, payload)\
-        if res.get("success"):\
-            return jsonify(res["data"])\
-        return jsonify({"detail": res.get("detail", "Error updating announcement")}), 500\
-    if request.method == "GET":\
-        res = service.get_announcement(announcement_id)\
-        if res.get("success"):\
-            return jsonify(res["data"])\
-        return jsonify({"detail": res.get("detail", "Error fetching announcement")}), 500\
-    # DELETE\
-    res = service.delete_announcement(announcement_id)\
-    if res.get("success"):\
-        return jsonify(res["data"])\
+@admin_bp.route("/announcements", methods=["GET", "POST"])
+@require_role("admin")
+def announcements():
+    service = get_admin_service()
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        res = service.create_announcement(payload)
+        if res.get("success"):
+            return jsonify(res["data"]), 201
+        return jsonify({"detail": res.get("detail", "Error creating announcement")}), 500
+    # GET list
+    limit = int(request.args.get("limit", 100))
+    offset = int(request.args.get("offset", 0))
+    active_only = request.args.get("active_only", "false").lower() == "true"
+    res = service.list_announcements(limit=limit, offset=offset, active_only=active_only)
+    if res.get("success"):
+        return jsonify(res["data"])
+    return jsonify({"detail": res.get("detail", "Error fetching announcements")}), 500
+
+@admin_bp.route("/announcements/<announcement_id>", methods=["GET", "PATCH", "PUT", "DELETE"])
+@require_role("admin")
+def announcement_detail(announcement_id):
+    service = get_admin_service()
+    if request.method in ("PATCH", "PUT"):
+        payload = request.get_json(silent=True) or {}
+        res = service.update_announcement(announcement_id, payload)
+        if res.get("success"):
+            return jsonify(res["data"])
+        return jsonify({"detail": res.get("detail", "Error updating announcement")}), 500
+    if request.method == "GET":
+        res = service.get_announcement(announcement_id)
+        if res.get("success"):
+            return jsonify(res["data"])
+        return jsonify({"detail": res.get("detail", "Error fetching announcement")}), 500
+    # DELETE
+    res = service.delete_announcement(announcement_id)
+    if res.get("success"):
+        return jsonify(res["data"])
     return jsonify({"detail": res.get("detail", "Error deleting announcement")}), 500
