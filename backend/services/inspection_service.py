@@ -351,10 +351,24 @@ class InspectionService:
                     )
             except Exception:
                 pass
+            resolved_staff_name = payload.get("staff_name") or payload.get("inspector_name") or staff_id or "Unknown User"
+            if resolved_staff_name and len(str(resolved_staff_name)) == 36 and str(resolved_staff_name).count("-") == 4:
+                try:
+                    user_rows = self._fetch("users", filters=[("eq", "staff_account_id", staff_id)], limit=1)
+                    if user_rows and user_rows[0].get("full_name"):
+                        resolved_staff_name = user_rows[0]["full_name"]
+                    else:
+                        staff_rows = self._fetch("staff_accounts", filters=[("eq", "id", staff_id)], limit=1)
+                        if staff_rows and staff_rows[0].get("username"):
+                            resolved_staff_name = staff_rows[0]["username"]
+                except Exception as exc:
+                    logger.warning("Failed to resolve staff name in inspection: %s", exc)
+
             created_at = (report or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
             send_qc_report(build_qc_report_payload({
                 **report_payload,
                 **(report or {}),
+                "staff_display_name": resolved_staff_name,
                 "batch_sequence": (batch_row or {}).get("batch_sequence"),
                 "cook_name": (batch_row or {}).get("cook_name"),
                 "quantity": (batch_row or {}).get("quantity"),

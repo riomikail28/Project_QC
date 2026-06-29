@@ -182,6 +182,19 @@ class MonitoringService:
                         device_id=device_id,
                     )
 
+            staff_name = staff_id or "Unknown User"
+            if staff_id and len(str(staff_id)) == 36 and str(staff_id).count("-") == 4:
+                try:
+                    user_rows = self._select_rows("users", f"staff_account_id=eq.{staff_id}&select=full_name")
+                    if user_rows and user_rows[0].get("full_name"):
+                        staff_name = user_rows[0]["full_name"]
+                    else:
+                        staff_rows = self._select_rows("staff_accounts", f"id=eq.{staff_id}&select=username")
+                        if staff_rows and staff_rows[0].get("username"):
+                            staff_name = staff_rows[0]["username"]
+                except Exception as exc:
+                    logger.warning("Failed to resolve staff name: %s", exc)
+
             send_monitoring_log({
                 "date": monitoring_date or recorded_at[:10],
                 "slot_time": slot_time,
@@ -189,7 +202,7 @@ class MonitoringService:
                 "device": (device_info or {}).get("name") or device_id,
                 "temperature": float(temperature),
                 "status": qc_status or status.upper(),
-                "staff_name": staff_id,
+                "staff_name": staff_name,
                 "submitted_at": submitted_at or recorded_at,
                 "notes": reason,
             })

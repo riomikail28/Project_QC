@@ -97,7 +97,21 @@ class QCService:
 
         try:
             if finding:
-                sheet_row = {**finding, "staff_name": staff_name or finding.get("staff_name")}
+                resolved_staff_name = staff_name
+                if resolved_staff_name in (None, "", "Unknown Staff") or (resolved_staff_name and len(resolved_staff_name) == 36 and resolved_staff_name.count("-") == 4):
+                    sb = getattr(self.repo, "sb", None)
+                    if sb and staff_id:
+                        try:
+                            res_user = sb.table("users").select("full_name").eq("staff_account_id", staff_id).limit(1).execute()
+                            if res_user.data and res_user.data[0].get("full_name"):
+                                resolved_staff_name = res_user.data[0]["full_name"]
+                            else:
+                                res_staff = sb.table("staff_accounts").select("username").eq("id", staff_id).limit(1).execute()
+                                if res_staff.data and res_staff.data[0].get("username"):
+                                    resolved_staff_name = res_staff.data[0]["username"]
+                        except Exception as exc:
+                            logger.warning("Failed to resolve staff name in qc_service: %s", exc)
+                sheet_row = {**finding, "staff_name": resolved_staff_name or finding.get("staff_name")}
                 send_qc_finding(build_qc_finding_payload(sheet_row))
         except Exception as e:
             logger.warning("Google Sheets QC finding sync skipped: %s", e)
