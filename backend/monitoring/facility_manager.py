@@ -118,8 +118,6 @@ def add_device(
             "is_default": False,
             "is_active": bool(is_active),
         }
-        if description:
-            payload["description"] = description
         if not sb:
             rows = direct_db_query("facility_devices", "POST", payload)
             return rows[0] if rows else None
@@ -440,8 +438,6 @@ def update_device(device_id: str, data: dict):
         payload["max_temperature"] = _coerce_float(data.get("max_temperature"), None)
     if "is_active" in data:
         payload["is_active"] = bool(data.get("is_active"))
-    if "description" in data or "notes" in data:
-        payload["description"] = data.get("description", data.get("notes")) or ""
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     if not payload:
         return None
