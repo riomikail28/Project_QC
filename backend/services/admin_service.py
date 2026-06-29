@@ -477,12 +477,20 @@ class AdminService:
             logger.error("Approval detail failed: %s", exc)
             return {"success": False, "detail": str(exc)}
 
-    def get_batch_production(self, date=None, status_filter=None, search=None, limit=200):
-        date = date or self._jakarta_today()
+    def get_batch_production(self, date=None, start_date=None, end_date=None, status_filter=None, search=None, limit=200):
+        if start_date and end_date:
+            start_val = start_date
+            end_val = end_date
+        else:
+            single_date = date or self._jakarta_today()
+            start_val = single_date
+            end_val = single_date
+
         try:
-            rows = self._fetch_daily_candidates(
+            rows = self._fetch_range_candidates(
                 "production_batches",
-                date,
+                start_val,
+                end_val,
                 limit,
                 timestamp_fields=("created_at", "production_time", "started_at"),
                 date_fields=("production_date",),
@@ -501,10 +509,52 @@ class AdminService:
                 normalized = self._normalize_batch_filter(status_filter)
                 if normalized:
                     data = [row for row in data if normalized in {row.get("qc_status_key"), row.get("approval_status_key"), row.get("batch_status_key")}]
-            return self._empty({"date": date, "rows": data})
+            return self._empty({"date": start_val, "start_date": start_val, "end_date": end_val, "rows": data})
         except Exception as exc:
             logger.error("Batch production failed: %s", exc)
             return {"success": False, "detail": str(exc)}
+
+    def _jakarta_range_filters(self, field, start_date, end_date):
+        jakarta = timezone(timedelta(hours=7))
+        start_local = datetime.fromisoformat(start_date).replace(tzinfo=jakarta)
+        end_local = datetime.fromisoformat(end_date).replace(tzinfo=jakarta) + timedelta(days=1)
+        return [
+            ("gte", field, start_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")),
+            ("lte", field, end_local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")),
+        ]
+
+    def _fetch_range_candidates(self, table, start_date, end_date, limit, timestamp_fields, date_fields=(), order_by=None):
+        merged = []
+        seen = set()
+        for field in timestamp_fields:
+            filters = self._jakarta_range_filters(field, start_date, end_date)
+            for row in self._fetch(table, order_by=order_by or field, limit=limit, filters=filters):
+                key = row.get("id") or (table, field, len(merged), str(row))
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(row)
+        for field in date_fields:
+            filters = [("gte", field, start_date), ("lte", field, end_date)]
+            for row in self._fetch(table, order_by=order_by, limit=limit, filters=filters):
+                key = row.get("id") or (table, field, len(merged), str(row))
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(row)
+        if not merged:
+            rows = self._fetch(table, order_by=order_by, limit=limit)
+            merged = [row for row in rows if self._row_in_date_range(row, start_date, end_date)]
+        return merged[:limit]
+
+    def _row_in_date_range(self, row, start_date, end_date):
+        for field in ("monitoring_date", "inspection_date", "finding_date", "production_date"):
+            val = str(row.get(field) or "")[:10]
+            if val and start_date <= val <= end_date:
+                return True
+        for field in ("recorded_at", "submitted_at", "completed_at", "created_at", "updated_at"):
+            val = self._row_jakarta_date(row.get(field))
+            if val and start_date <= val <= end_date:
+                return True
+        return False
 
     def get_audit_trail(self, limit=50, date=None, action=None, user=None):
         try:

@@ -501,8 +501,10 @@
                             <h3 class="card-title" style="margin:0;">Production QC Board</h3>
                             <p class="admin-muted">Board SKU harian untuk batch, hasil QC, approval, dan traceability.</p>
                         </div>
-                        <div class="monitoring-date-controls">
-                            <input id="batch-production-date" type="date">
+                        <div class="monitoring-date-controls" style="gap: 8px; align-items: center;">
+                            <input id="batch-production-start-date" type="date" onchange="adminApp.loadProductionBoard()">
+                            <span style="color: var(--text-secondary); font-size: 13px;">s/d</span>
+                            <input id="batch-production-end-date" type="date" onchange="adminApp.loadProductionBoard()">
                             <input id="batch-production-search" type="search" placeholder="Search SKU, batch, cook" oninput="adminApp.loadProductionBoard()">
                             <select id="batch-production-status" hidden>
                                 <option value=""></option>

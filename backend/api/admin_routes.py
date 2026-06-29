@@ -156,6 +156,8 @@ def admin_batches():
     limit = min(max(int(request.args.get("limit", 200)), 1), 500)
     res = get_admin_service().get_batch_production(
         date=request.args.get("date"),
+        start_date=request.args.get("start_date"),
+        end_date=request.args.get("end_date"),
         status_filter=request.args.get("status"),
         search=request.args.get("search"),
         limit=limit,

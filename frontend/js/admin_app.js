@@ -2862,10 +2862,12 @@ const adminApp = {
         }
 
         const params = this.batchProductionQuery();
-        const dateVal = params.get('date');
+        const startVal = params.get('start_date');
+        const endVal = params.get('end_date');
+        const cacheKey = `${startVal}_${endVal}`;
 
         if (!fromRevalidate) {
-            const restored = this.restorePageCache('daily-reports', dateVal);
+            const restored = this.restorePageCache('daily-reports', cacheKey);
             if (restored) {
                 const renderTime = Math.round(performance.now() - started);
                 console.log(`[METRIC] page_render_time: daily-reports ${renderTime}ms (from cache)`);
@@ -2899,10 +2901,10 @@ const adminApp = {
         }
         
         const groups = this.groupProductionBySku(filteredBatches);
-        this.renderProductionBoardSummary(groups, batches, batchEnvelope?.data?.date || dateVal);
+        this.renderProductionBoardSummary(groups, batches, batchEnvelope?.data?.start_date || startVal, batchEnvelope?.data?.end_date || endVal);
         this.renderProductionBoard(groups);
         
-        this.savePageCache('daily-reports', dateVal);
+        this.savePageCache('daily-reports', cacheKey);
         const renderTime = Math.round(performance.now() - started);
         console.log(`[METRIC] page_render_time: daily-reports ${renderTime}ms`);
     },
@@ -2953,14 +2955,20 @@ const adminApp = {
         return Array.from(groups.values()).filter(group => group.batches.length);
     },
 
-    renderProductionBoardSummary(groups = [], batches = [], dateValue = '') {
+    renderProductionBoardSummary(groups = [], batches = [], startDate = '', endDate = '') {
         const summary = document.getElementById('production-board-summary');
         if (!summary) return;
         const pending = groups.reduce((sum, group) => sum + Number(group.pending || 0), 0);
+        let dateText = '';
+        if (startDate && endDate && startDate !== endDate) {
+            dateText = `${this.escapeHtml(this.longDate(startDate))} - ${this.escapeHtml(this.longDate(endDate))}`;
+        } else {
+            dateText = this.escapeHtml(this.longDate(startDate || this.jakartaDateString()));
+        }
         summary.innerHTML = `
             <div class="metric-card">
                 <div class="metric-header"><span>Tanggal</span></div>
-                <div class="metric-value production-date-value">${this.escapeHtml(this.longDate(dateValue || this.jakartaDateString()))}</div>
+                <div class="metric-value production-date-value" style="font-size: 1.1rem; line-height: 1.4;">${dateText}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header"><span>SKU Diproduksi</span></div>
@@ -2983,7 +2991,7 @@ const adminApp = {
         if (!groups.length) {
             board.innerHTML = `
                 ${this.emptyState('Belum ada produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
-                <div class="production-empty-actions">
+                <div class="production-empty-actions" style="display: none;">
                     <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
                     <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
                 </div>
@@ -3643,13 +3651,19 @@ const adminApp = {
     },
 
     setupBatchProductionDefaults() {
-        const input = document.getElementById('batch-production-date');
-        if (input && !input.value) input.value = this.jakartaDateString();
+        const startInput = document.getElementById('batch-production-start-date');
+        const endInput = document.getElementById('batch-production-end-date');
+        const today = this.jakartaDateString();
+        if (startInput && !startInput.value) startInput.value = today;
+        if (endInput && !endInput.value) endInput.value = today;
     },
 
     batchProductionQuery() {
+        const startDate = document.getElementById('batch-production-start-date')?.value || this.jakartaDateString();
+        const endDate = document.getElementById('batch-production-end-date')?.value || this.jakartaDateString();
         const params = new URLSearchParams({
-            date: document.getElementById('batch-production-date')?.value || this.jakartaDateString(),
+            start_date: startDate,
+            end_date: endDate,
             limit: '200',
         });
         const search = document.getElementById('batch-production-search')?.value?.trim();
@@ -3676,7 +3690,7 @@ const adminApp = {
             tbody.innerHTML = `
                 <tr><td colspan="10">
                     ${this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
-                    <div class="row-actions" style="justify-content:center; margin-top:12px;">
+                    <div class="row-actions" style="justify-content:center; margin-top:12px; display: none;">
                         <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
                         <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
                     </div>
