@@ -332,6 +332,7 @@
             <div class="skeleton skeleton-card"></div>
             <div class="skeleton skeleton-card"></div>
         </div>
+        <p class="finding-scroll-hint" id="alertScrollHint" hidden>Scroll ke bawah untuk melihat tombol selesai</p>
         <div class="alert-drawer-footer">
             <button type="button" class="btn-secondary" onclick="closeAlertDrawer()">Close</button>
         </div>
@@ -420,6 +421,18 @@
                         <button class="alert-resolve-btn" onclick="resolveAlertInDrawer('${alert.id}')">Tandai Selesai</button>
                     </div>
                 `).join('');
+
+                window.setTimeout(() => {
+                    const hint = document.getElementById('alertScrollHint');
+                    if (hint && container.scrollHeight > container.clientHeight) {
+                        container.dataset.scrollSeen = 'false';
+                        container.classList.add('show-scroll-hint');
+                        hint.hidden = false;
+                    } else if (hint) {
+                        hint.hidden = true;
+                        container.classList.remove('show-scroll-hint');
+                    }
+                }, 100);
             } catch (error) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -734,9 +747,20 @@
             hint.hidden = true;
         }
 
+        function dismissAlertScrollHint() {
+            const container = document.getElementById('alertDrawerList');
+            const hint = document.getElementById('alertScrollHint');
+            if (!container || !hint || container.dataset.scrollSeen === 'true') return;
+            container.dataset.scrollSeen = 'true';
+            container.classList.remove('show-scroll-hint');
+            hint.hidden = true;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const body = document.getElementById('findingDrawerBody');
             if (body) body.addEventListener('scroll', dismissFindingScrollHint, { passive: true });
+            const alertList = document.getElementById('alertDrawerList');
+            if (alertList) alertList.addEventListener('scroll', dismissAlertScrollHint, { passive: true });
             autoResizeFindingReason(document.getElementById('findingReason'));
         });
 

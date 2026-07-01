@@ -303,7 +303,7 @@
   background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.98));
 }
 
-#findingDrawer .finding-scroll-hint {
+.finding-scroll-hint {
   position: sticky;
   bottom: 8px;
   z-index: 4;
@@ -320,7 +320,7 @@
   pointer-events: none;
 }
 
-#findingDrawer .alert-drawer-body.show-scroll-hint::after {
+.alert-drawer-body.show-scroll-hint::after {
   content: "";
   position: sticky;
   bottom: 0;
