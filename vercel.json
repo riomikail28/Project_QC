@@ -12,7 +12,7 @@
       "dest": "api/app.py"
     },
     {
-      "src": "/(css|js|styles|assets)/(.*)",
+      "src": "/(css|js|styles|assets|icons)/(.*)",
       "continue": true
     },
     {
