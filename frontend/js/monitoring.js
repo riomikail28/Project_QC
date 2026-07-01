@@ -306,6 +306,11 @@ document.addEventListener("keydown", event => {
 });
 
 function triggerPhoto() {
+    if (!window.ImageCompression) {
+        const script = document.createElement('script');
+        script.src = '../js/image-compression.js';
+        document.body.appendChild(script);
+    }
     document.getElementById("photo-input").click();
 }
 

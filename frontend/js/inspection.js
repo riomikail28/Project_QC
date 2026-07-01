@@ -94,7 +94,7 @@ const Inspection = {
             searchDebounce = setTimeout(() => {
                 this.skuListQuery = event.target.value || '';
                 this.renderSkuCards();
-            }, 150);
+            }, 300);
         });
         document.addEventListener('click', event => {
             const panel = document.getElementById('skuSearchPanel');
@@ -181,7 +181,7 @@ const Inspection = {
                 const query = input.value.trim().toLowerCase();
                 this.renderProductDropdown(query);
                 this.updateSubmitState();
-            }, 150);
+            }, 300);
         });
     },
 
@@ -497,6 +497,16 @@ const Inspection = {
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
             const input = document.getElementById(id);
             if (!input) return;
+            const lazyLoadComp = () => {
+                if (!window.ImageCompression) {
+                    const script = document.createElement('script');
+                    script.src = '../js/image-compression.js';
+                    document.body.appendChild(script);
+                }
+            };
+            input.addEventListener('click', lazyLoadComp);
+            input.closest('.upload-card-header')?.addEventListener('click', lazyLoadComp);
+
             input.addEventListener('change', async event => {
                 const file = (event.target.files || [])[0];
                 if (!file) return;
