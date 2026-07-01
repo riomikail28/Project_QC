@@ -209,6 +209,18 @@ def create_app() -> Flask:
     def frontend_assets(filename):
         return send_from_directory(os.path.join(FRONTEND_DIR, "assets"), filename)
 
+    @app.route("/icons/<path:filename>")
+    def frontend_icons(filename):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "icons"), filename)
+
+    @app.route("/favicon.ico")
+    def favicon_ico():
+        return send_from_directory(os.path.join(FRONTEND_DIR, "icons"), "icon-192.png")
+
+    @app.route("/favicon.png")
+    def favicon_png():
+        return send_from_directory(os.path.join(FRONTEND_DIR, "icons"), "icon-192.png")
+
     @app.route("/manifest.json")
     def manifest():
         return send_from_directory(FRONTEND_DIR, "manifest.json")

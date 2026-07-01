@@ -3177,7 +3177,7 @@ const adminApp = {
             }
         }
 
-        const endpoint = `${this.apiBase}/reports/findings?limit=200`;
+        const endpoint = `${this.apiBase}/reports/findings?limit=1000`;
         if (!API.hasFreshCache(endpoint) && (!board || !board.children.length)) {
             board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
         }
@@ -3228,6 +3228,9 @@ const adminApp = {
         }
         if (mode === '7d') return { start: addDays(today, -6), end: today };
         if (mode === '30d') return { start: addDays(today, -29), end: today };
+        if (mode === '60d') return { start: addDays(today, -59), end: today };
+        if (mode === '90d') return { start: addDays(today, -89), end: today };
+        if (mode === 'all') return { start: '1970-01-01', end: '9999-12-31' };
         if (mode === 'custom') {
             const date = document.getElementById('findings-date')?.value || today;
             return { start: date, end: date };
