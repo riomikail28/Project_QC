@@ -76,10 +76,13 @@
             </div>
 
             <!-- BATCH LIFECYCLE PRODUCTION LIST -->
-            <section class="sku-list-toolbar" id="productionTodayHeader" style="margin-top: 20px; margin-bottom: 8px;">
-                <div>
-                    <h2>PRODUCTION HARI INI</h2>
-                    <span id="productionTodayCount">0 Batch</span>
+            <section class="sku-list-toolbar" id="productionTodayHeader" style="margin-top: 20px; margin-bottom: 8px; cursor: pointer; user-select: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+                    <h2 style="margin: 0;">PRODUCTION HARI INI</h2>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="productionTodayCount">0 Batch</span>
+                        <i class="fas fa-chevron-down" id="productionTodayToggleIcon" style="font-size: 14px; color: var(--text-secondary); transition: transform 0.2s ease;"></i>
+                    </div>
                 </div>
             </section>
             <div class="sku-card-grid" id="productionTodayList" style="margin-bottom: 24px;"></div>

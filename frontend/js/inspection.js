@@ -30,6 +30,7 @@ const Inspection = {
     nextBatchSequence: 1,
     nextBatchCode: null,
     photoFiles: {},
+    productionTodayCollapsed: false,
 
     async init() {
         this.operationalDate = this.jakartaDateString();
@@ -75,6 +76,22 @@ const Inspection = {
             });
             expInput.addEventListener('change', () => {
                 this.updateSubmitState();
+            });
+        }
+
+        // Bind Collapsible Today's Production List
+        const headerToggle = document.getElementById('productionTodayHeader');
+        if (headerToggle) {
+            headerToggle.addEventListener('click', () => {
+                this.productionTodayCollapsed = !this.productionTodayCollapsed;
+                const list = document.getElementById('productionTodayList');
+                const icon = document.getElementById('productionTodayToggleIcon');
+                if (list) {
+                    list.style.display = this.productionTodayCollapsed ? 'none' : 'grid';
+                }
+                if (icon) {
+                    icon.style.transform = this.productionTodayCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+                }
             });
         }
 
@@ -2281,8 +2298,12 @@ const Inspection = {
         });
 
         if (countEl) countEl.textContent = `${allBatches.length} Batch`;
-        if (header) header.style.display = allBatches.length > 0 ? 'flex' : 'none';
-        list.style.display = allBatches.length > 0 ? 'flex' : 'none';
+        if (header) header.style.display = allBatches.length > 0 ? 'grid' : 'none';
+        list.style.display = (allBatches.length > 0 && !this.productionTodayCollapsed) ? 'grid' : 'none';
+        const icon = document.getElementById('productionTodayToggleIcon');
+        if (icon) {
+            icon.style.transform = this.productionTodayCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
 
         if (!allBatches.length) {
             list.innerHTML = '';
