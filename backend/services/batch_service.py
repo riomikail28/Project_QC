@@ -100,7 +100,7 @@ def get_batches(limit: int = 50) -> list:
             .select(
                 "id, batch_code, production_date, shift, status, "
                 "final_qc_status, report_url, batch_sequence, cook_name, quantity, production_shift, created_at, "
-                "products(*)"
+                "products(*), qc_reports(qc_stage, status)"
             )
             .order("created_at", desc=True)
             .limit(limit)

@@ -365,6 +365,98 @@ def get_batch(batch_id):
 
 
 # ---------------------------------------------------------------------------
+# GET /api/batch/<batch_id>/timeline — Dynamic virtual timeline for a batch
+# ---------------------------------------------------------------------------
+@batch_bp.route("/api/batch/<batch_id>/timeline", methods=["GET"])
+@require_auth
+def get_batch_timeline(batch_id):
+    """Retrieve dynamic timeline events for a batch from qc_reports & audit_logs."""
+    sb = get_client()
+    if not sb:
+        return jsonify({"success": False, "message": "Database offline"}), 503
+
+    try:
+        # 1. Fetch the batch to find creation event
+        batch_res = sb.table("production_batches").select("*").eq("id", batch_id).execute().data
+        if not batch_res:
+            batch_res = sb.table("production_batches").select("*").eq("batch_code", batch_id).execute().data
+        if not batch_res:
+            return jsonify({"success": False, "message": "Batch tidak ditemukan"}), 404
+        
+        batch = batch_res[0]
+        actual_batch_id = batch["id"]
+        
+        # 2. Fetch all inspection reports linked to the batch
+        reports = (
+            sb.table("qc_reports")
+            .select("*")
+            .eq("batch_id", actual_batch_id)
+            .order("created_at", desc=False)
+            .execute()
+            .data
+            or []
+        )
+        
+        # 3. Assemble timeline events
+        events = []
+        
+        # Event 1: Batch Creation
+        created_at = batch.get("created_at")
+        events.append({
+            "timestamp": created_at,
+            "stage": "batch_created",
+            "actor": batch.get("cook_name") or "System",
+            "description": "Batch dibuat",
+            "status": "pass"
+        })
+        
+        # Map stage keys to clean display strings and ordering
+        for report in reports:
+            qc_stage = report.get("qc_stage") or report.get("ccp_stage")
+            actor = report.get("staff_name") or report.get("inspector_name") or "Staff QC"
+            timestamp = report.get("created_at")
+            status = report.get("status") or "pending"
+            
+            if qc_stage in ("cooking_check", "cooking_sensory"):
+                desc = "Cooking Sensory Check"
+                stage_key = "cooking_sensory"
+            elif qc_stage == "cooking_instrument":
+                desc = "Cooking Instrument Check"
+                stage_key = "cooking_instrument"
+            elif qc_stage in ("final_check", "packing"):
+                desc = "Packing Check"
+                stage_key = "packing"
+            else:
+                desc = f"QC Check ({qc_stage})"
+                stage_key = qc_stage
+                
+            events.append({
+                "timestamp": timestamp,
+                "stage": stage_key,
+                "actor": actor,
+                "description": desc,
+                "status": status
+            })
+            
+        if batch.get("status") in ("completed", "finished"):
+            last_time = batch.get("updated_at") or (reports[-1].get("created_at") if reports else created_at)
+            events.append({
+                "timestamp": last_time,
+                "stage": "finished",
+                "actor": "System",
+                "description": "Finished",
+                "status": "pass"
+            })
+            
+        events.sort(key=lambda x: x["timestamp"] or "")
+        
+        return jsonify({"success": True, "batch_id": actual_batch_id, "timeline": events})
+    except Exception as e:
+        logger.error("Failed to generate batch timeline: %s", e)
+        return jsonify({"success": False, "message": f"Gagal membuat timeline: {str(e)}"}), 500
+
+
+# ---------------------------------------------------------------------------
 # POST /api/batch/create — Create a new production batch
 # ---------------------------------------------------------------------------
 @batch_bp.route("/api/batch/create", methods=["POST"])

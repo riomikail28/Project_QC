@@ -75,6 +75,15 @@
                 <p class="simple-qc-message">Belum ada SKU hari ini. Silakan klik tombol 'Tambah Produk / SKU' di bagian atas.</p>
             </div>
 
+            <!-- BATCH LIFECYCLE PRODUCTION LIST -->
+            <section class="sku-list-toolbar" id="productionTodayHeader" style="margin-top: 20px; margin-bottom: 8px;">
+                <div>
+                    <h2>PRODUCTION HARI INI</h2>
+                    <span id="productionTodayCount">0 Batch</span>
+                </div>
+            </section>
+            <div class="sku-card-grid" id="productionTodayList" style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; width: 100%;"></div>
+
             <section class="sku-card-grid" id="skuCardGrid" aria-live="polite"></section>
 
             <p class="simple-qc-message" id="productDetected"></p>
@@ -197,6 +206,19 @@
                     <div class="photo-preview" id="labelPhotoPreview" hidden></div>
                     <small id="labelPhotoCompressionStatus" class="photo-compression-hint">Foto akan dikompres otomatis sebelum dikirim.</small>
                     <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+                </div>
+
+                <!-- Manual MFG / EXP Date Fallback inputs -->
+                <div id="packFallbackFields" hidden style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px; border: 1px dashed var(--border-color, #cbd5e1); padding: 12px; border-radius: 8px; background: #fafafa;">
+                    <div style="font-size: 13px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px;">MANUAL BACKUP INPUT</div>
+                    <div class="simple-field" style="margin-bottom: 0;">
+                        <label for="qcMfgDate" style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">TANGGAL MFG (MANUFACTURING)</label>
+                        <input class="input-field" id="qcMfgDate" type="date" style="width: 100%; height: 40px; border-radius: 6px;">
+                    </div>
+                    <div class="simple-field" style="margin-bottom: 0;">
+                        <label for="qcExpDate" style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">TANGGAL EXP (EXPIRED)</label>
+                        <input class="input-field" id="qcExpDate" type="date" style="width: 100%; height: 40px; border-radius: 6px;">
+                    </div>
                 </div>
             </div>
 

@@ -90,14 +90,14 @@ class InspectionService:
     def active_batches(self, limit=20):
         rows = self._fetch(
             "production_batches",
-            select="*, products(*)",
+            select="*, products(*), qc_reports(qc_stage, status)",
             order_by="created_at",
             limit=limit,
         )
         active = [
             self._batch_view(row)
             for row in rows
-            if self._norm_status(row.get("status") or row.get("final_qc_status")) in {"pending", "hold", "warning", ""}
+            if self._norm_status(row.get("status") or row.get("final_qc_status")) in {"pending", "hold", "warning", "", "cooking", "packing", "completed", "finished", "in_progress"}
         ]
         return self._ok(active)
 
@@ -182,7 +182,7 @@ class InspectionService:
         if qc_status not in {"pass", "hold", "fail"}:
             return self._fail("Status QC tidak valid")
         temperature = payload.get("temperature")
-        if qc_stage == "cooking_check" and temperature in (None, ""):
+        if qc_stage in ("cooking_check", "cooking_sensory") and temperature in (None, ""):
             return self._fail("Temperature is required for Cooking Check")
 
         product = self._resolve_product(payload.get("product_id"), sku_code)
@@ -205,6 +205,24 @@ class InspectionService:
         if batch_row and batch_date and batch_date != operational_date:
             return self._fail("Batch ini berasal dari tanggal berbeda. Pilih batch hari ini atau buat batch baru.", status_code=409)
 
+        # State transition and locking validations
+        if qc_stage == "cooking_sensory":
+            existing_sensory = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
+            if existing_sensory:
+                return self._fail("Sensory check sudah diisi dan dikunci (LOCKED)", status_code=409)
+        elif qc_stage == "cooking_instrument":
+            existing_instrument = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
+            if existing_instrument:
+                return self._fail("Instrument check sudah diisi dan dikunci (LOCKED)", status_code=409)
+        elif qc_stage == "packing":
+            existing_sensory = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
+            existing_instrument = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
+            if not existing_sensory or not existing_instrument:
+                return self._fail("Tahap Cooking belum lengkap (Sensory & Instrument harus diisi terlebih dahulu)", status_code=400)
+            existing_packing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "packing")])
+            if existing_packing:
+                return self._fail("Packing check sudah selesai dan dikunci (LOCKED)", status_code=409)
+
         active_lock = self._active_inspection_for_batch(batch_id, batch_code)
         if active_lock and not is_admin:
             locker = active_lock.get("staff_name") or active_lock.get("inspector_name") or active_lock.get("staff_id") or "staff lain"
@@ -225,14 +243,14 @@ class InspectionService:
                 "label": self._preuploaded(payload.get("label_photo_url"), payload.get("label_storage_path")),
             }
             file_map = self._file_map(files)
-            if qc_stage == "cooking_check":
+            if qc_stage in ("cooking_check", "cooking_sensory", "cooking_instrument"):
                 for photo_file in file_map.get("cooking_photo") or file_map.get("photo") or []:
                     uploaded = self._upload_if_present(photo_file, staff_id, "cooking", batch_id or batch_code)
                     if uploaded:
                         uploaded_files.append(("cooking", uploaded))
                         uploads["cooking"]["urls"].append(uploaded.url)
                         uploads["cooking"]["paths"].append(uploaded.storage_path)
-            elif qc_stage == "final_check":
+            elif qc_stage in ("final_check", "packing"):
                 for field_name, bucket_key in (("barcode_photo", "barcode"), ("label_photo", "label"), ("photo", "generic")):
                     for photo_file in file_map.get(field_name) or []:
                         uploaded = self._upload_if_present(photo_file, staff_id, bucket_key, batch_id or batch_code)
@@ -282,6 +300,8 @@ class InspectionService:
                     "ph_value": payload.get("ph_value") or payload.get("ph"),
                     "brix_value": payload.get("brix_value") or payload.get("brix"),
                     "tds_value": payload.get("tds_value") or payload.get("tds"),
+                    "mfg_date": payload.get("mfg_date") or payload.get("mfg"),
+                    "exp_date": payload.get("exp_date") or payload.get("exp"),
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
                     "inspection_round": inspection_round,
@@ -461,8 +481,11 @@ class InspectionService:
             "final_check": "final_check",
             "label": "final_check",
             "barcode": "final_check",
+            "cooking_sensory": "cooking_sensory",
+            "cooking_instrument": "cooking_instrument",
+            "packing": "packing",
         }
-        return aliases.get(raw)
+        return aliases.get(raw, raw)
 
     def _file_map(self, files):
         if isinstance(files, dict):
@@ -526,14 +549,54 @@ class InspectionService:
             stages = {row.get("qc_stage") or row.get("ccp_stage"): self._norm_status(row.get("status")) for row in reports}
             statuses = set(stages.values())
             payload = {"updated_at": datetime.now(timezone.utc).isoformat()}
+            
+            # Check sensory, instrument and packing status
+            has_sensory = "cooking_sensory" in stages
+            has_instrument = "cooking_instrument" in stages
+            has_packing = "packing" in stages
+
             if "fail" in statuses:
                 payload.update({"status": "failed", "final_qc_status": "fail"})
             elif "hold" in statuses:
                 payload.update({"status": "on_hold", "final_qc_status": "hold"})
-            elif stages.get("cooking_check") == "pass" and stages.get("final_check") == "pass":
+            elif (stages.get("cooking_check") == "pass" and stages.get("final_check") == "pass") or (has_sensory and has_instrument and has_packing and stages.get("packing") == "pass"):
                 payload.update({"status": "completed", "final_qc_status": "pass"})
+            elif has_sensory and has_instrument and not has_packing:
+                payload.update({"status": "packing", "final_qc_status": "pending"})
             else:
-                payload.update({"status": "in_progress", "final_qc_status": "pending"})
+                payload.update({"status": "cooking", "final_qc_status": "pending"})
+
+            # Calculate expired_date automatically when packing is submitted
+            if has_packing:
+                try:
+                    batch_row = self._batch_by_id_or_code(batch_id, batch_code)
+                    product_id = current_report.get("product_id") or (batch_row or {}).get("product_id")
+                    if product_id:
+                        prod_res = self.sb.table("products").select("shelf_life_days").eq("id", product_id).execute().data or []
+                        shelf_life = prod_res[0].get("shelf_life_days") if prod_res else 3
+                        if shelf_life is None:
+                            shelf_life = 3
+                    else:
+                        shelf_life = 3
+                    from datetime import date, timedelta
+                    insp_res = current_report.get("inspection_result") or {}
+                    mfg_str = insp_res.get("mfg_date") or current_report.get("production_date") or (batch_row or {}).get("production_date") or datetime.now().isoformat()
+                    try:
+                        mfg_dt = datetime.fromisoformat(mfg_str).date()
+                    except Exception:
+                        try:
+                            mfg_dt = datetime.strptime(str(mfg_str)[:10], "%Y-%m-%d").date()
+                        except Exception:
+                            mfg_dt = date.today()
+                    
+                    expired_dt = insp_res.get("exp_date") or (mfg_dt + timedelta(days=shelf_life)).isoformat()
+                    payload.update({
+                        "production_date": mfg_dt.isoformat(),
+                        "expired_date": expired_dt
+                    })
+                except Exception as exp_err:
+                    logger.warning("Failed to calculate expired_date automatically: %s", exp_err)
+
             self.sb.table("production_batches").update(payload).eq("id", batch_id).execute()
         except Exception:
             logger.warning("Batch status update skipped for %s/%s", batch_id, batch_code, exc_info=True)
@@ -584,6 +647,7 @@ class InspectionService:
             "status": self._norm_status(row.get("final_qc_status") or row.get("status")) or "pending",
             "final_qc_status": self._norm_status(row.get("final_qc_status")),
             "created_at": row.get("created_at"),
+            "qc_reports": row.get("qc_reports") or [],
         }
 
     def _report_view(self, row):

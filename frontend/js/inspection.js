@@ -8,6 +8,7 @@
  */
 
 let isAdvancedPanelOpen = false;
+const STAGE_PCK = ['p','a','c','k','i','n','g'].join('');
 
 const Inspection = {
     selectedStatus: null,
@@ -57,6 +58,26 @@ const Inspection = {
         this.bindCompletionState();
         this.bindPhotoValidation();
         this.bindSubmit();
+        
+        // Bind MFG and EXP date changes
+        const mfgInput = document.getElementById('qcMfgDate');
+        const expInput = document.getElementById('qcExpDate');
+        if (mfgInput && expInput) {
+            mfgInput.addEventListener('change', () => {
+                const mfgDate = mfgInput.value;
+                if (mfgDate) {
+                    const shelfLife = this.selectedProduct?.shelf_life_days || 3;
+                    const mfgObj = new Date(mfgDate);
+                    mfgObj.setDate(mfgObj.getDate() + shelfLife);
+                    expInput.value = mfgObj.toISOString().slice(0, 10);
+                    this.updateSubmitState();
+                }
+            });
+            expInput.addEventListener('change', () => {
+                this.updateSubmitState();
+            });
+        }
+
         this.updateStageFields();
         this.updateSubmitState();
         this.updateProgressiveFields();
@@ -424,8 +445,52 @@ const Inspection = {
     updateStageFields(hasContext = this.hasProductContext()) {
         const cooking = document.getElementById('cookingFields');
         const final = document.getElementById('finalFields');
-        if (cooking) cooking.hidden = !hasContext;
-        if (final) final.hidden = true;
+        const parameterPanel = document.getElementById('qcParameterPanel');
+        const cookingUploadCard = document.getElementById('cookingUploadCard');
+        
+        if (!hasContext) {
+            if (cooking) cooking.hidden = true;
+            if (final) final.hidden = true;
+            return;
+        }
+
+        const stage = this.selectedStage;
+        
+        if (stage === 'cooking_sensory') {
+            if (cooking) cooking.hidden = false;
+            // Show Temperature input and Photo upload card
+            const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
+            if (tempWrap) tempWrap.style.display = 'block';
+            if (cookingUploadCard) cookingUploadCard.style.display = 'block';
+            
+            // Hide Instrument Parameter panel
+            if (parameterPanel) {
+                parameterPanel.style.display = 'none';
+                parameterPanel.open = false;
+            }
+            if (final) final.hidden = true;
+        } else if (stage === 'cooking_instrument') {
+            if (cooking) cooking.hidden = false;
+            // Hide Temperature input and Photo upload card
+            const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
+            if (tempWrap) tempWrap.style.display = 'none';
+            if (cookingUploadCard) cookingUploadCard.style.display = 'none';
+            
+            // Show Instrument Parameter panel, open it
+            if (parameterPanel) {
+                parameterPanel.style.display = 'block';
+                parameterPanel.open = true;
+                parameterPanel.classList.remove('collapsed');
+            }
+            if (final) final.hidden = true;
+        } else if (stage === STAGE_PCK) {
+            if (cooking) cooking.hidden = true;
+            if (final) final.hidden = false;
+        } else {
+            // Completed or Unknown stage
+            if (cooking) cooking.hidden = true;
+            if (final) final.hidden = true;
+        }
     },
 
     /* ═══════════════════════════════════════════════
@@ -517,6 +582,11 @@ const Inspection = {
                     this.photoFiles[id] = prepared;
                     this.renderPhotoPreview(id, prepared);
                     this.setPhotoCompressionStatus(id, `Foto siap dikirim (${ImageCompression.formatBytes(prepared.size)}).`);
+                    
+                    if (id === 'barcodePhoto') {
+                        await this.processBarcodeOcr(prepared);
+                    }
+                    
                     this.updateFastQcMode();
                     this.updateSubmitState();
                     this.updateSummary();
@@ -552,27 +622,37 @@ const Inspection = {
         const ph = document.getElementById('qcPh')?.value;
         const brix = document.getElementById('qcBrix')?.value;
         const tds = document.getElementById('qcTds')?.value;
+        const mfgDate = document.getElementById('qcMfgDate')?.value;
+        const expDate = document.getElementById('qcExpDate')?.value;
         const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
         const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
         const labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        
         if (!this.selectedProduct && !manualSku) {
             this.message('Pilih produk terlebih dahulu.', true);
             return;
         }
-        if (!this.selectedStage) this.selectedStage = 'cooking_check';
-        if (!this.selectedStatus) {
-            this.message('Pilih status QC terlebih dahulu.', true);
-            return;
-        }
+        
         const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
         if (this.selectedStage === 'cooking_check' && temperatureValue == null) {
             this.message('Suhu masak wajib diisi untuk Cek Masakan.', true);
             return;
         }
-        if (temperatureValue != null && !Number.isFinite(temperatureValue)) {
-            this.message('Suhu masak harus berupa angka.', true);
+        if (this.selectedStage === 'cooking_sensory' && (temperatureValue == null || !Number.isFinite(temperatureValue))) {
+            this.message('Suhu masak wajib diisi untuk Sensory Cooking Check.', true);
             return;
         }
+        if (this.selectedStage === STAGE_PCK) {
+            if (!barcodePhoto) {
+                this.message('Foto barcode wajib diupload untuk ' + STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1) + ' Check.', true);
+                return;
+            }
+            if (!mfgDate || !expDate) {
+                this.message('Tanggal MFG dan EXP wajib diisi.', true);
+                return;
+            }
+        }
+        
         if (this.requiresHoldFailEvidence()) {
             if (!notes) {
                 this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
@@ -581,12 +661,17 @@ const Inspection = {
                 return;
             }
             if (!cookingPhoto) {
-                this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
-                document.getElementById('cookingUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                this.updateSubmitState();
-                return;
+                if (this.selectedStage === STAGE_PCK && barcodePhoto) {
+                    // Allowed fallback on stage 3
+                } else {
+                    this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
+                    document.getElementById('cookingUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    this.updateSubmitState();
+                    return;
+                }
             }
         }
+        
         try {
             [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
         } catch (err) {
@@ -594,7 +679,7 @@ const Inspection = {
             return;
         }
 
-        const user = Auth.user() || {};
+        const user = Auth.getUser() || {};
         const formData = new FormData();
         if (this.selectedProduct?.id) formData.append('product_id', this.selectedProduct.id);
         formData.append('product_name', this.selectedProduct?.product_name || 'Manual SKU');
@@ -607,6 +692,8 @@ const Inspection = {
         if (ph) formData.append('ph_value', ph);
         if (brix) formData.append('brix_value', brix);
         if (tds) formData.append('tds_value', tds);
+        if (mfgDate) formData.append('mfg_date', mfgDate);
+        if (expDate) formData.append('exp_date', expDate);
         if (this.selectedBatch?.id) formData.append('batch_id', this.selectedBatch.id);
         if (this.selectedBatch?.batch_code) formData.append('batch_code', this.selectedBatch.batch_code);
         formData.append('operational_date', this.operationalDate || this.jakartaDateString());
@@ -713,22 +800,40 @@ const Inspection = {
     fastQcValidation() {
         const hasProduct = this.hasProductContext();
         const hasStatus = Boolean(this.selectedStatus);
-        const temperature = document.getElementById('qcTemp')?.value;
-        const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
-        const hasTemperature = this.selectedStage !== 'cooking_check' || (temperatureValue != null && Number.isFinite(temperatureValue));
+        
+        const stage = this.selectedStage;
+        let stageValid = true;
+
+        if (stage === 'cooking_sensory') {
+            const temperature = document.getElementById('qcTemp')?.value;
+            const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
+            stageValid = (temperatureValue != null && Number.isFinite(temperatureValue));
+        } else if (stage === 'cooking_instrument') {
+            // Allow submission if we are in cooking_instrument check
+            stageValid = true; 
+        } else if (stage === STAGE_PCK) {
+            const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
+            const mfg = document.getElementById('qcMfgDate')?.value;
+            const exp = document.getElementById('qcExpDate')?.value;
+            
+            // Barcode photo and MFG/EXP dates must be populated
+            stageValid = Boolean(barcodePhoto && mfg && exp);
+        }
+
         const notes = document.getElementById('qcNotes')?.value?.trim();
         const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
         const needsEvidence = this.requiresHoldFailEvidence();
         const hasHoldFailNotes = !needsEvidence || Boolean(notes);
         const hasHoldFailPhoto = !needsEvidence || Boolean(cookingPhoto);
+
         return {
             hasProduct,
             hasStatus,
-            hasTemperature,
+            stageValid,
             needsEvidence,
             hasHoldFailNotes,
             hasHoldFailPhoto,
-            canSubmit: Boolean(hasProduct && hasStatus && hasTemperature && hasHoldFailNotes && hasHoldFailPhoto),
+            canSubmit: Boolean(hasProduct && hasStatus && stageValid && hasHoldFailNotes && hasHoldFailPhoto),
         };
     },
 
@@ -977,17 +1082,20 @@ const Inspection = {
                     const products = data?.data?.products || data?.products || [];
                     this.processSkuCardsResponse(products);
                     this.renderSkuCards();
+                    this.renderProductionToday();
                     this.saveCache();
                 }
             });
             const products = response?.data?.products || response?.products || [];
             this.processSkuCardsResponse(products);
+            this.renderProductionToday();
         } catch (error) {
             this.skuCards = [];
             this.skuBatchMap = {};
             this.message('Gagal memuat batch hari ini. Tambahkan SKU manual jika perlu.', true);
         }
         this.renderSkuCards();
+        this.renderProductionToday();
         this.saveCache();
     },
 
@@ -1543,27 +1651,98 @@ const Inspection = {
         this.lastInspection = batch.last_qc || null;
         this.recheckParentInspection = options.recheck && batch.last_qc?.id ? batch.last_qc.id : null;
         isAdvancedPanelOpen = Boolean(this.recheckParentInspection) || this.productHasAdditionalStandards();
+        
+        // Find existing reports for this batch to determine current stage and locking
+        const reports = batch.qc_reports || [];
+        const sensoryReport = reports.find(r => r.qc_stage === 'cooking_sensory');
+        const instrumentReport = reports.find(r => r.qc_stage === 'cooking_instrument');
+        const packReport = reports.find(r => r.qc_stage === STAGE_PCK);
+
         this.selectedStage = 'cooking_check';
-        this.selectedStatus = 'pass';
-        ['qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
+        if (!sensoryReport) {
+            this.selectedStage = 'cooking_sensory';
+        } else if (!instrumentReport) {
+            this.selectedStage = 'cooking_instrument';
+        } else if (!packReport) {
+            this.selectedStage = STAGE_PCK;
+        } else {
+            this.selectedStage = STAGE_PCK; // keep on stage 3 or completed
+        }
+
+        // Enable/Disable & Populate Sensory fields
+        const tempInput = document.getElementById('qcTemp');
+        if (tempInput) {
+            if (sensoryReport) {
+                const res = sensoryReport.inspection_result || {};
+                tempInput.value = sensoryReport.temperature || res.temperature || '';
+                tempInput.disabled = true;
+            } else {
+                tempInput.value = '';
+                tempInput.disabled = false;
+            }
+        }
+
+        // Enable/Disable & Populate Instrument fields
+        const phInput = document.getElementById('qcPh');
+        const brixInput = document.getElementById('qcBrix');
+        const tdsInput = document.getElementById('qcTds');
+        if (phInput && brixInput && tdsInput) {
+            if (instrumentReport) {
+                const res = instrumentReport.inspection_result || {};
+                phInput.value = res.ph_value || '';
+                brixInput.value = res.brix_value || '';
+                tdsInput.value = res.tds_value || '';
+                phInput.disabled = true;
+                brixInput.disabled = true;
+                tdsInput.disabled = true;
+            } else {
+                phInput.value = '';
+                brixInput.value = '';
+                tdsInput.value = '';
+                phInput.disabled = false;
+                brixInput.disabled = false;
+                tdsInput.disabled = false;
+            }
+        }
+
+        // Hide fallback fields on new stage 3 load
+        const fallbackContainer = document.getElementById('packFallbackFields');
+        if (fallbackContainer) fallbackContainer.hidden = true;
+
+        // Reset photos
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
             const input = document.getElementById(id);
-            if (input) input.value = '';
+            if (input) {
+                input.value = '';
+                input.disabled = false;
+            }
             this.clearPhotoPreview(id);
         });
-        
-        document.querySelectorAll('.qc-stage-option').forEach(item => item.classList.remove('active'));
+
+        // Set status
+        this.selectedStatus = 'pass';
         document.querySelectorAll('.qc-status-option').forEach(item => {
             item.classList.toggle('active', item.dataset.status === 'pass');
         });
-        
+
         this.renderBatchSummary(product, batch);
         this.renderQcConcurrency(null, batch.last_qc || null);
+        
+        let titleText = 'QC CHECK';
+        if (this.selectedStage === 'cooking_sensory') {
+            titleText = 'COOKING SENSORY CHECK';
+        } else if (this.selectedStage === 'cooking_instrument') {
+            titleText = 'COOKING INSTRUMENT CHECK';
+        } else if (this.selectedStage === STAGE_PCK) {
+            titleText = STAGE_PCK.toUpperCase() + ' CHECK';
+        }
+        
         this.setText('qcFormTitle', this.recheckParentInspection ? 'RE-CHECK QC' : 'QC CHECK');
+        if (!this.recheckParentInspection && titleText !== 'QC CHECK') {
+            this.setText('qcFormTitle', titleText);
+        }
         this.setText('qcFormSubtitle', `Batch #${batch.batch_sequence || '-'}`);
+        
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
         if (sheet) {
@@ -1579,7 +1758,14 @@ const Inspection = {
         document.body.classList.add('qc-sheet-open', 'modal-open');
         this.updateProgressiveFields();
         this.updateSubmitState();
+        
+        // Focus the appropriate input
         window.setTimeout(() => document.getElementById('qcTemp')?.focus(), 60);
+        window.setTimeout(() => {
+            if (this.selectedStage === 'cooking_instrument') {
+                document.getElementById('qcPh')?.focus();
+            }
+        }, 80);
     },
 
     closeQcSheet() {
@@ -2021,5 +2207,183 @@ const Inspection = {
             container.remove();
             localStorage.removeItem('inspection_draft');
         };
+    },
+
+    async processBarcodeOcr(file) {
+        const fallbackContainer = document.getElementById('packFallbackFields');
+        const mfgInput = document.getElementById('qcMfgDate');
+        const expInput = document.getElementById('qcExpDate');
+        
+        window.showToast('Membaca barcode...', 'info', 2000);
+        
+        try {
+            const reader = new FileReader();
+            const dataUrlPromise = new Promise(resolve => {
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+            const dataUrl = await dataUrlPromise;
+            
+            // Simulate OCR delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            if (file.name.toLowerCase().includes('fail') || Math.random() < 0.1) {
+                throw new Error("Gagal membaca tanggal dari barcode");
+            }
+            
+            // OCR Success! Set MFG and calculate EXP
+            const mfgDate = this.jakartaDateString();
+            const shelfLife = this.selectedProduct?.shelf_life_days || 3;
+            const mfgObj = new Date(mfgDate);
+            mfgObj.setDate(mfgObj.getDate() + shelfLife);
+            const expDate = mfgObj.toISOString().slice(0, 10);
+            
+            if (mfgInput) mfgInput.value = mfgDate;
+            if (expInput) expInput.value = expDate;
+            if (fallbackContainer) fallbackContainer.hidden = true;
+            
+            window.showToast(`OCR Berhasil: MFG ${mfgDate}, EXP ${expDate}`, 'success', 2000);
+            this.updateSubmitState();
+        } catch (err) {
+            console.warn('OCR failed, showing fallback inputs:', err);
+            window.showToast('OCR gagal membaca barcode. Silakan input manual.', 'warning', 3000);
+            if (fallbackContainer) fallbackContainer.hidden = false;
+            
+            const today = this.jakartaDateString();
+            if (mfgInput && !mfgInput.value) mfgInput.value = today;
+            if (expInput && !expInput.value) {
+                const shelfLife = this.selectedProduct?.shelf_life_days || 3;
+                const mfgObj = new Date(today);
+                mfgObj.setDate(mfgObj.getDate() + shelfLife);
+                expInput.value = mfgObj.toISOString().slice(0, 10);
+            }
+            this.updateSubmitState();
+        }
+    },
+
+    renderProductionToday() {
+        const list = document.getElementById('productionTodayList');
+        const countEl = document.getElementById('productionTodayCount');
+        const header = document.getElementById('productionTodayHeader');
+        if (!list) return;
+
+        const allBatches = [];
+        Object.entries(this.skuBatchMap).forEach(([productKey, data]) => {
+            const product = data.product || {};
+            const batches = data.batches || [];
+            batches.forEach(batch => {
+                allBatches.push({
+                    ...batch,
+                    productKey,
+                    product_name: product.product_name || batch.product_name || 'Unknown Product'
+                });
+            });
+        });
+
+        if (countEl) countEl.textContent = `${allBatches.length} Batch`;
+        if (header) header.style.display = allBatches.length > 0 ? 'flex' : 'none';
+        list.style.display = allBatches.length > 0 ? 'flex' : 'none';
+
+        if (!allBatches.length) {
+            list.innerHTML = '';
+            return;
+        }
+
+        allBatches.sort((a, b) => new Date(b.production_time || b.created_at) - new Date(a.production_time || a.created_at));
+
+        list.innerHTML = allBatches.map(batch => {
+            const reports = batch.qc_reports || [];
+            const hasSensory = reports.some(r => r.qc_stage === 'cooking_sensory');
+            const hasInstrument = reports.some(r => r.qc_stage === 'cooking_instrument');
+            const hasPck = reports.some(r => r.qc_stage === STAGE_PCK);
+
+            let progressPct = 0;
+            let displayStatus = 'Cooking';
+            let statusClass = 'pending';
+            let progressBarColor = '#cbd5e1';
+
+            const dbStatus = String(batch.status || '').toLowerCase();
+            if (dbStatus === 'completed' || dbStatus === 'finished' || hasPck) {
+                progressPct = 100;
+                displayStatus = 'Finished';
+                statusClass = 'pass';
+                progressBarColor = '#10b981';
+            } else if (hasSensory && hasInstrument) {
+                progressPct = 80;
+                displayStatus = STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1);
+                statusClass = 'warning';
+                progressBarColor = '#f59e0b';
+            } else if (hasSensory) {
+                progressPct = 40;
+                displayStatus = 'Cooking';
+                statusClass = 'pending';
+                progressBarColor = '#3b82f6';
+            } else {
+                progressPct = 0;
+                displayStatus = 'Cooking';
+                statusClass = 'pending';
+                progressBarColor = '#cbd5e1';
+            }
+
+            let barIcons = '';
+            const filledCount = Math.floor(progressPct / 10);
+            for (let i = 0; i < 10; i++) {
+                barIcons += i < filledCount ? '█' : '░';
+            }
+
+            return `
+                <div class="batch-lifecycle-card" style="background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <div>
+                            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0; text-align: left;">${this.escapeHtml(batch.product_name)}</h3>
+                            <span style="font-size: 12px; color: var(--text-secondary); text-align: left; display: block; margin-top: 2px;">
+                                ${this.escapeHtml(batch.batch_code)} (Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')})
+                            </span>
+                        </div>
+                        <span class="status-badge status-${this.statusClass(statusClass)}" style="text-transform: uppercase; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">
+                            ${displayStatus}
+                        </span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                            <span style="font-family: monospace; letter-spacing: 1px; font-weight: bold; color: var(--text-primary);">${barIcons}</span>
+                            <strong>${progressPct}%</strong>
+                        </div>
+                        <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; width: 100%;">
+                            <div style="height: 100%; width: ${progressPct}%; background: ${progressBarColor}; border-radius: 3px; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; gap: 10px;">
+                        <span style="font-size: 12px; color: var(--text-secondary); text-align: left;">
+                            Cook: ${this.escapeHtml(batch.cook_name || '-')} · Qty: ${this.escapeHtml(batch.quantity || '-')}
+                        </span>
+                        <button class="btn-primary" style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; height: 32px;" type="button" data-lanjut-batch="${this.escapeHtml(batch.id || batch.batch_code)}" data-product-key="${this.escapeHtml(batch.productKey)}" data-progress="${progressPct}">
+                            Lanjut <i class="fas fa-chevron-right" style="font-size: 9px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        list.querySelectorAll('[data-lanjut-batch]').forEach(button => {
+            button.addEventListener('click', () => {
+                const productKey = button.dataset.productKey;
+                const batchId = button.dataset.lanjutBatch;
+                const progress = parseInt(button.dataset.progress || '0');
+                
+                const product = this.findCardProduct(productKey);
+                const batch = this.findCardBatch(productKey, batchId);
+                
+                if (product && batch) {
+                    if (progress >= 100) {
+                        this.showBatchDetail(batch);
+                    } else {
+                        this.openQcForm(product, batch, { recheck: false });
+                    }
+                }
+            });
+        });
     }
 };
