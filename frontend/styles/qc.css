@@ -1235,14 +1235,82 @@
 
 .sku-card-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
 .sku-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+}
+
+.sku-card .sku-card-head h2 {
+  font-size: 13px !important;
+}
+
+.sku-card .sku-card-head p {
+  font-size: 10px !important;
+}
+
+.sku-card .sku-summary-line {
+  font-size: 10px !important;
+}
+
+.sku-card .sku-status-strip {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sku-card .sku-status-chip {
+  padding: 4px 2px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.sku-card .sku-status-chip strong {
+  font-size: 13px;
+}
+
+@media (min-width: 640px) {
+  .sku-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .sku-card {
+    padding: 16px;
+    gap: 14px;
+  }
+  
+  .sku-card .sku-card-head h2 {
+    font-size: 15px !important;
+  }
+  
+  .sku-card .sku-card-head p {
+    font-size: 12px !important;
+  }
+  
+  .sku-card .sku-summary-line {
+    font-size: 12px !important;
+  }
+  
+  .sku-card .sku-status-strip {
+    gap: 8px;
+  }
+  
+  .sku-card .sku-status-chip {
+    padding: 9px 6px;
+    border-radius: 14px;
+    font-size: 11px;
+  }
+  
+  .sku-card .sku-status-chip strong {
+    font-size: 17px;
+  }
 }
 
 .sku-summary-card {
