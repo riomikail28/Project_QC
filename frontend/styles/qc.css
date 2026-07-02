@@ -1247,6 +1247,30 @@
   padding: 12px;
 }
 
+.batch-lifecycle-card {
+  padding: 12px !important;
+  gap: 8px !important;
+}
+
+.batch-lifecycle-card h3 {
+  font-size: 13px !important;
+}
+
+.batch-lifecycle-card span {
+  font-size: 10px !important;
+}
+
+.batch-lifecycle-card .status-badge {
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+}
+
+.batch-lifecycle-card .btn-primary {
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  height: 28px !important;
+}
+
 .sku-card .sku-card-head h2 {
   font-size: 13px !important;
 }
@@ -1310,6 +1334,30 @@
   
   .sku-card .sku-status-chip strong {
     font-size: 17px;
+  }
+
+  .batch-lifecycle-card {
+    padding: 16px !important;
+    gap: 12px !important;
+  }
+  
+  .batch-lifecycle-card h3 {
+    font-size: 15px !important;
+  }
+  
+  .batch-lifecycle-card span {
+    font-size: 12px !important;
+  }
+  
+  .batch-lifecycle-card .status-badge {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+  
+  .batch-lifecycle-card .btn-primary {
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+    height: 32px !important;
   }
 }
 
