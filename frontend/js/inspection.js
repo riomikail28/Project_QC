@@ -522,7 +522,7 @@ const Inspection = {
         } else if (stage === STAGE_PCK) {
             if (cooking) cooking.style.display = 'none';
             if (final) final.style.display = 'grid';
-            // In STAGE_PCK (packing check), both barcode and label photo cards are visible
+            // In STAGE_PCK (final check), both barcode and label photo cards are visible
             const barcodeCard = document.getElementById('barcodeUploadCard');
             const labelCard = document.getElementById('labelUploadCard');
             if (barcodeCard) barcodeCard.style.display = 'block';
