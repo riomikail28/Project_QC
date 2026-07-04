@@ -89,7 +89,7 @@
                                     <option value="custom">Pilih tanggal</option>
                                 </select>
                                 <input id="global-date" type="date" onchange="adminApp.handleGlobalDateChange()" style="display: none; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem;">
-                                <button class="btn-secondary" onclick="adminApp.loadOverview()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                                <button class="btn-secondary" onclick="adminApp.loadOverview(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                             </div>
                         </div>
                     </div>
@@ -229,7 +229,7 @@
                                 <option value="custom">Pilih tanggal</option>
                             </select>
                             <input id="monitoring-date" type="date" hidden>
-                            <button class="btn-primary" onclick="adminApp.loadMonitoring()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-primary" onclick="adminApp.loadMonitoring(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                             <button class="btn-secondary" onclick="adminApp.openMonitoringManagement()"><i data-lucide="settings-2"></i> Kelola Unit</button>
                         </div>
                     </div>
@@ -244,7 +244,7 @@
                             <h3 class="card-title" style="margin:0;">Action Queue</h3>
                             <p class="admin-muted">Pekerjaan yang perlu tindakan supervisor QC.</p>
                         </div>
-                        <button class="btn-secondary" onclick="adminApp.loadAlertsWorkflow()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        <button class="btn-secondary" onclick="adminApp.loadAlertsWorkflow(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                     </div>
                     <div class="metric-grid queue-card-grid" id="alerts-action-board"></div>
                 </section>
@@ -331,7 +331,7 @@
                             <select id="learning-module-filter" onchange="adminApp.loadLearningMiniQuiz()">
                                 <option value="">Pilih module untuk mini quiz</option>
                             </select>
-                            <button class="btn-secondary" onclick="adminApp.loadLearning()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-secondary" onclick="adminApp.loadLearning(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="enterprise-table">
@@ -520,7 +520,7 @@
                                 <option value="pass">PASS</option>
                                 <option value="fail">FAIL</option>
                             </select>
-                            <button class="btn-primary" onclick="adminApp.loadProductionBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-primary" onclick="adminApp.loadProductionBoard(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                     </div>
                     <div class="finding-status-filter" id="production-status-filter" role="tablist" aria-label="Filter status batch" style="margin-top: 12px; margin-bottom: 12px;">
@@ -555,7 +555,7 @@
                                 <option value="custom">Custom Date</option>
                             </select>
                             <input id="findings-date" type="date" hidden>
-                            <button class="btn-secondary" onclick="adminApp.loadFindingsBoard()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-secondary" onclick="adminApp.loadFindingsBoard(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                     </div>
                     <div class="metric-grid findings-summary-grid" id="findings-summary-grid"></div>
@@ -605,7 +605,7 @@
                                 <h3 class="card-title" style="margin:0;">Pending QC Approval</h3>
                                 <p class="admin-muted">Review batch, evidence, dan catatan inspector sebelum keputusan.</p>
                             </div>
-                            <button class="btn-secondary" onclick="adminApp.loadApprovals()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-secondary" onclick="adminApp.loadApprovals(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                         <div class="table-toolbar">
                             <label class="table-search"><i data-lucide="search"></i><input type="search" placeholder="Filter batch atau inspector" data-table-filter="approvals-table-body"></label>
@@ -638,7 +638,7 @@
                                 <h3 class="card-title" style="margin:0;">Audit Trail / System Logs</h3>
                                 <p class="admin-muted">Log teknis sistem untuk audit dan troubleshooting.</p>
                             </div>
-                            <button class="btn-secondary" onclick="adminApp.loadAuditTrail()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <button class="btn-secondary" onclick="adminApp.loadAuditTrail(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                         </div>
                         <div style="overflow-x: auto;">
                             <table class="enterprise-table">
@@ -711,7 +711,7 @@
             <div class="modal-body">
                 <div class="monitoring-management-actions">
                     <button type="button" class="btn-primary" onclick="adminApp.openMonitoringUnitModal()"><i data-lucide="plus"></i> Tambah Unit Monitoring</button>
-                    <button type="button" class="btn-secondary" onclick="adminApp.loadMonitoringManagementList()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                    <button type="button" class="btn-secondary" onclick="adminApp.loadMonitoringManagementList(this)"><i data-lucide="refresh-cw"></i> Refresh</button>
                 </div>
                 <div class="monitoring-management-shell">
                     <div id="monitoring-management-list" class="monitoring-management-list"></div>

@@ -24,6 +24,25 @@ class MonitoringService:
         self.sb = supabase_client
         self.audit_writer = audit_writer
 
+    def check_edit_tolerance(self, slot_time, monitoring_date, current_time_local):
+        deadlines = {
+            "07:00": "13:00",
+            "13:00": "17:00",
+            "16:00": "20:00",
+            "19:00": "23:59",
+        }
+        deadline_time_str = deadlines.get(slot_time)
+        if not deadline_time_str:
+            return True
+        try:
+            hour, minute = map(int, deadline_time_str.split(":"))
+            date_parts = [int(p) for p in monitoring_date.split("-")]
+            deadline_dt = datetime(date_parts[0], date_parts[1], date_parts[2], hour, minute, 59, tzinfo=current_time_local.tzinfo)
+            return current_time_local <= deadline_dt
+        except Exception as exc:
+            logger.warning("Error parsing deadline check: %s", exc)
+            return True
+
     def log_facility_data(self, data, files):
         device_id = data.device_id
         room_id = data.room_id
@@ -39,6 +58,21 @@ class MonitoringService:
 
         if not all([room_id, temperature is not None]):
             return {"success": False, "error": "Room and Temperature are required"}, 400
+
+        existing_log = None
+        if monitoring_date and slot_time:
+            device_filter = f"&device_id=eq.{device_id}" if device_id else "&device_id=is.null"
+            query_str = f"room_id=eq.{room_id}&monitoring_date=eq.{monitoring_date}&slot_time=eq.{slot_time}{device_filter}&select=id,created_at,photo_url,storage_path"
+            existing_rows = self._select_rows("facility_logs", query_str)
+            if existing_rows:
+                existing_log = existing_rows[0]
+
+        if existing_log:
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo("Asia/Jakarta")
+            now_local = datetime.now(tz)
+            if not self.check_edit_tolerance(slot_time, monitoring_date, now_local):
+                return {"success": False, "error": f"Batas waktu edit untuk slot {slot_time} sudah lewat."}, 400
 
         uploaded_files = []
         try:
@@ -154,39 +188,60 @@ class MonitoringService:
                     result_container["photo_url"] = final_photo_url
                     result_container["storage_path"] = final_storage_path
 
-                    log_payload = {
-                        "device_id": device_id or None,
-                        "room_id": room_id,
-                        "temperature_c": float(temperature),
-                        "threshold_c": threshold,
-                        "humidity_rh": float(humidity) if humidity not in (None, "") else None,
-                        "is_normal": is_normal,
-                        "staff_id": staff_id or None,
-                        "notes": reason,
-                        "recorded_at": recorded_at,
-                        "created_at": recorded_at,
-                    }
-                    if monitoring_date:
-                        log_payload["monitoring_date"] = monitoring_date
-                    if slot_time:
-                        log_payload["slot_time"] = slot_time
-                    if schedule_status:
-                        log_payload["schedule_status"] = schedule_status
-                    if submitted_at:
-                        log_payload["submitted_at"] = submitted_at
-                    if is_late is not None:
-                        log_payload["is_late"] = bool(is_late)
-                    if final_photo_url:
-                        log_payload["photo_url"] = final_photo_url
-                    if final_storage_path:
-                        log_payload["storage_path"] = final_storage_path
+                    if existing_log:
+                        log_payload = {
+                            "temperature_c": float(temperature),
+                            "threshold_c": threshold,
+                            "humidity_rh": float(humidity) if humidity not in (None, "") else None,
+                            "is_normal": is_normal,
+                            "staff_id": staff_id or None,
+                            "notes": reason,
+                            "recorded_at": recorded_at,
+                        }
+                        if final_photo_url:
+                            log_payload["photo_url"] = final_photo_url
+                        if final_storage_path:
+                            log_payload["storage_path"] = final_storage_path
 
-                    inserted_rows = self._insert_rows("facility_logs", log_payload)
-                    log_data = inserted_rows[0] if inserted_rows else None
-                    log_id = log_data.get("id") if log_data else None
+                        updated_rows = self._update_row("facility_logs", existing_log["id"], log_payload)
+                        log_data = updated_rows[0] if updated_rows else None
+                        log_id = existing_log["id"]
+                    else:
+                        log_payload = {
+                            "device_id": device_id or None,
+                            "room_id": room_id,
+                            "temperature_c": float(temperature),
+                            "threshold_c": threshold,
+                            "humidity_rh": float(humidity) if humidity not in (None, "") else None,
+                            "is_normal": is_normal,
+                            "staff_id": staff_id or None,
+                            "notes": reason,
+                            "recorded_at": recorded_at,
+                            "created_at": recorded_at,
+                        }
+                        if monitoring_date:
+                            log_payload["monitoring_date"] = monitoring_date
+                        if slot_time:
+                            log_payload["slot_time"] = slot_time
+                        if schedule_status:
+                            log_payload["schedule_status"] = schedule_status
+                        if submitted_at:
+                            log_payload["submitted_at"] = submitted_at
+                        if is_late is not None:
+                            log_payload["is_late"] = bool(is_late)
+                        if final_photo_url:
+                            log_payload["photo_url"] = final_photo_url
+                        if final_storage_path:
+                            log_payload["storage_path"] = final_storage_path
+
+                        inserted_rows = self._insert_rows("facility_logs", log_payload)
+                        log_data = inserted_rows[0] if inserted_rows else None
+                        log_id = log_data.get("id") if log_data else None
+
                     result_container["log_id"] = log_id
 
-                    self.audit_writer("submit_temperature", "facility_log", str(log_id) if log_id else None, after=log_data or log_payload)
+                    action_name = "update_temperature" if existing_log else "submit_temperature"
+                    self.audit_writer(action_name, "facility_log", str(log_id) if log_id else None, after=log_data or log_payload)
 
                     self._record_temperature_log(
                         room_name=room_name,
@@ -315,10 +370,20 @@ class MonitoringService:
             payload["submitted_at"] = submitted_at
         if is_late is not None:
             payload["is_late"] = bool(is_late)
-        try:
-            self._insert_rows("temperature_logs", {k: v for k, v in payload.items() if v is not None})
-        except Exception:
-            logger.warning("temperature_logs compatibility insert skipped", exc_info=True)
+        existing_temp_rows = []
+        if log_id:
+            existing_temp_rows = self._select_rows("temperature_logs", f"facility_log_id=eq.{log_id}&select=id")
+        
+        if existing_temp_rows:
+            try:
+                self.sb.table("temperature_logs").update({k: v for k, v in payload.items() if v is not None}).eq("id", existing_temp_rows[0]["id"]).execute()
+            except Exception:
+                logger.warning("temperature_logs compatibility update skipped", exc_info=True)
+        else:
+            try:
+                self._insert_rows("temperature_logs", {k: v for k, v in payload.items() if v is not None})
+            except Exception:
+                logger.warning("temperature_logs compatibility insert skipped", exc_info=True)
 
     def _default_threshold(self, unit_type):
         if unit_type == "freezer":
@@ -428,3 +493,9 @@ class MonitoringService:
             res = self.sb.table(table).insert(payload).execute()
             return res.data or []
         return direct_db_query(table, "POST", payload)
+
+    def _update_row(self, table, row_id, payload):
+        if self.sb:
+            res = self.sb.table(table).update(payload).eq("id", row_id).execute()
+            return res.data or []
+        return direct_db_query(table, "PATCH", payload, f"id=eq.{row_id}")

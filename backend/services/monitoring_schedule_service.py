@@ -246,6 +246,10 @@ class MonitoringScheduleService:
                     "label": label,
                     "submitted_at": completed.get("submitted_at") or completed.get("recorded_at") if completed else None,
                     "temperature_c": completed.get("temperature_c") if completed else None,
+                    "humidity_rh": completed.get("humidity_rh") if completed else None,
+                    "notes": completed.get("notes") or completed.get("reason") if completed else None,
+                    "photo_url": completed.get("photo_url") if completed else None,
+                    "storage_path": completed.get("storage_path") if completed else None,
                 }
             active_status = slot_statuses.get(active_slot_time) if active_slot_time else None
             statuses[device_id] = {

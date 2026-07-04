@@ -133,7 +133,12 @@ class DashboardService:
         return self._ok(list(latest.values()))
 
     def alerts(self):
-        facility_alerts = self._fetch("facility_alerts", order_by="created_at", limit=20, filters=[("eq", "status", "open")])
+        today, start, end = self._today_bounds()
+        facility_alerts = self._fetch("facility_alerts", order_by="created_at", limit=20, filters=[
+            ("eq", "status", "open"),
+            ("gte", "created_at", start),
+            ("lte", "created_at", end)
+        ])
         if facility_alerts:
             return self._ok([{
                 "id": row.get("id"),
@@ -146,6 +151,7 @@ class DashboardService:
             } for row in facility_alerts])
 
         rows = self._temperature_logs(abnormal_only=True, limit=20)
+        today_rows = [row for row in rows if (row.get("recorded_at") or row.get("created_at") or "") >= start]
         return self._ok([{
             "id": row.get("id"),
             "zone": self._room_name(row),
@@ -154,7 +160,7 @@ class DashboardService:
             "severity": "critical",
             "created_at": row.get("recorded_at") or row.get("created_at"),
             "description": row.get("reason") or "Temperature abnormal",
-        } for row in rows])
+        } for row in today_rows])
 
     def today_summary(self):
         today, start, end = self._today_bounds()

@@ -5,8 +5,19 @@
 const Utils = window.Utils || {};
 
 const adminApp = {
-    // API Endpoints
     apiBase: '/v1/admin',
+    async runWithRefreshAnimation(arg, fn) {
+        const btn = (arg && (arg instanceof HTMLElement || arg.target)) ? (arg.target || arg) : null;
+        if (!btn) return await fn();
+        btn.classList.add('refresh-loading');
+        btn.disabled = true;
+        try {
+            return await fn();
+        } finally {
+            btn.classList.remove('refresh-loading');
+            btn.disabled = false;
+        }
+    },
     adminToastTimer: null,
     charts: {},
     crudMode: null,
@@ -725,28 +736,31 @@ const adminApp = {
         window.location.href = `/api${this.apiBase}/export/daily-report?${params.toString()}&type=csv`;
     },
 
-    async loadOverview({ fromRevalidate = false } = {}) {
-        const started = performance.now();
-        const selectedDate = this.globalDateValue();
-        
-        if (!fromRevalidate && this.isThrottled('overview', 2000)) {
-            return;
-        }
-
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('overview', selectedDate);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: overview ${renderTime}ms (from cache)`);
+    async loadOverview(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const realOpts = (options && (options instanceof HTMLElement || options.target)) ? { fromRevalidate: false } : options;
+            const fromRevalidate = realOpts.fromRevalidate || false;
+            const started = performance.now();
+            const selectedDate = this.globalDateValue();
+            
+            if (!fromRevalidate && this.isThrottled('overview', 2000)) {
+                return;
             }
-        }
 
-        const onUpdate = fromRevalidate ? null : () => this.scheduleSectionRefresh('overview', () => this.loadOverview({ fromRevalidate: true }));
+            if (!fromRevalidate) {
+                const restored = this.restorePageCache('overview', selectedDate);
+                if (restored) {
+                    const renderTime = Math.round(performance.now() - started);
+                    console.log(`[METRIC] page_render_time: overview ${renderTime}ms (from cache)`);
+                }
+            }
 
-        const activeDateEl = document.getElementById('hero-active-date');
-        if (activeDateEl) {
-            activeDateEl.innerText = this.longDate(selectedDate);
-        }
+            const onUpdate = fromRevalidate ? null : () => this.scheduleSectionRefresh('overview', () => this.loadOverview({ fromRevalidate: true }));
+
+            const activeDateEl = document.getElementById('hero-active-date');
+            if (activeDateEl) {
+                activeDateEl.innerText = this.longDate(selectedDate);
+            }
 
         const [res, reportSummary, findingsEnvelope, dailyEnvelope, batchEnvelope, monitoringEnvelope, realtimeEnvelope] = await Promise.all([
             this.fetchAdminData(`${this.apiBase}/analytics/overview`, { onUpdate, revalidate: !fromRevalidate }),
@@ -815,6 +829,7 @@ const adminApp = {
                 this.preloadTab('findings')
             ]).catch(err => console.warn('[PERFORMANCE_OPTIMIZED] Dashboard preload failed', err));
         }
+        });
     },
 
     renderNeedAttention({ pendingApproval = 0, deviceAlerts = 0, openFindings = 0, holdBatch = 0, failBatch = 0 } = {}) {
@@ -1085,8 +1100,8 @@ const adminApp = {
         this.navigateTo('daily-reports');
     },
 
-    async loadAlertsWorkflow() {
-        await this.loadOverview();
+    async loadAlertsWorkflow(options = {}) {
+        await this.loadOverview(options);
     },
 
     updateQueueCounts(data = {}) {
@@ -1253,8 +1268,11 @@ const adminApp = {
         });
     },
 
-    async loadMonitoring({ fromRevalidate = false } = {}) {
-        const started = performance.now();
+    async loadMonitoring(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const realOpts = (options && (options instanceof HTMLElement || options.target)) ? { fromRevalidate: false } : options;
+            const fromRevalidate = realOpts.fromRevalidate || false;
+            const started = performance.now();
         const grid = document.getElementById('monitoring-grid');
         const date = this.monitoringDateValue();
         
@@ -1291,6 +1309,7 @@ const adminApp = {
         if (!fromRevalidate) {
             this.preloadTab('daily-reports').catch(err => console.warn('[PERFORMANCE_OPTIMIZED] Monitoring preload failed', err));
         }
+        });
     },
 
     renderMonitoringDaily(envelope) {
@@ -1935,18 +1954,20 @@ const adminApp = {
         this.setModalOpen(this.anyModalOpen());
     },
 
-    async loadMonitoringManagementList() {
-        const list = document.getElementById('monitoring-management-list');
-        if (!list) return;
-        list.innerHTML = '<div class="empty-admin-state">Loading unit monitoring...</div>';
-        try {
-            const envelope = await API.get('/admin/facility/structure');
-            const rooms = Array.isArray(envelope) ? envelope : (envelope.data || []);
-            this.monitoringManagementRooms = rooms;
-            this.renderMonitoringManagementList(rooms);
-        } catch (error) {
-            list.innerHTML = '<div class="empty-admin-state">Gagal memuat unit monitoring.</div>';
-        }
+    async loadMonitoringManagementList(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const list = document.getElementById('monitoring-management-list');
+            if (!list) return;
+            list.innerHTML = '<div class="empty-admin-state">Loading unit monitoring...</div>';
+            try {
+                const envelope = await API.get('/admin/facility/structure');
+                const rooms = Array.isArray(envelope) ? envelope : (envelope.data || []);
+                this.monitoringManagementRooms = rooms;
+                this.renderMonitoringManagementList(rooms);
+            } catch (error) {
+                list.innerHTML = '<div class="empty-admin-state">Gagal memuat unit monitoring.</div>';
+            }
+        });
     },
 
     renderMonitoringManagementList(rooms) {
@@ -2534,14 +2555,16 @@ const adminApp = {
         }
     },
 
-    async loadLearning() {
-        this.updateLearningChrome();
-        await this.loadLearningModules();
-        if (this.learningTab === 'modules') return this.renderLearningModules();
-        if (this.learningTab === 'mini-quiz') return this.loadLearningMiniQuiz();
-        if (this.learningTab === 'simulation') return this.loadLearningSimulations();
-        if (this.learningTab === 'quiz') return this.loadLearningQuizzes();
-        return this.loadLearningProgress();
+    async loadLearning(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            this.updateLearningChrome();
+            await this.loadLearningModules();
+            if (this.learningTab === 'modules') return this.renderLearningModules();
+            if (this.learningTab === 'mini-quiz') return this.loadLearningMiniQuiz();
+            if (this.learningTab === 'simulation') return this.loadLearningSimulations();
+            if (this.learningTab === 'quiz') return this.loadLearningQuizzes();
+            return this.loadLearningProgress();
+        });
     },
 
     async loadLearningModules() {
@@ -2841,15 +2864,18 @@ const adminApp = {
     },
 
     async loadProductionBoard(options = {}) {
-        const isSearchActive = document.activeElement?.id === 'batch-production-search';
-        if (isSearchActive && !options.debounced) {
-            if (!this.debouncedLoadProductionBoard) {
-                this.debouncedLoadProductionBoard = this.debounce((opts) => this._loadProductionBoard(opts), 300);
+        return this.runWithRefreshAnimation(options, async () => {
+            const realOpts = (options && (options instanceof HTMLElement || options.target)) ? { force: true } : options;
+            const isSearchActive = document.activeElement?.id === 'batch-production-search';
+            if (isSearchActive && !realOpts.debounced) {
+                if (!this.debouncedLoadProductionBoard) {
+                    this.debouncedLoadProductionBoard = this.debounce((opts) => this._loadProductionBoard(opts), 300);
+                }
+                this.debouncedLoadProductionBoard(Object.assign({}, realOpts, { debounced: true }));
+                return;
             }
-            this.debouncedLoadProductionBoard(Object.assign({}, options, { debounced: true }));
-            return;
-        }
-        await this._loadProductionBoard(options);
+            await this._loadProductionBoard(realOpts);
+        });
     },
 
     async _loadProductionBoard({ fromRevalidate = false } = {}) {
@@ -3160,45 +3186,49 @@ const adminApp = {
         this.refreshIcons();
     },
 
-    async loadFindingsBoard({ fromRevalidate = false } = {}) {
-        const started = performance.now();
-        const board = document.getElementById('findings-board');
-        if (!board) return;
-        
-        const dateVal = document.getElementById('findings-date')?.value || this.jakartaDateString();
-        
-        if (!fromRevalidate && this.isThrottled('findings', 2000)) {
-            return;
-        }
-
-        if (!fromRevalidate) {
-            const restored = this.restorePageCache('findings', dateVal);
-            if (restored) {
-                const renderTime = Math.round(performance.now() - started);
-                console.log(`[METRIC] page_render_time: findings ${renderTime}ms (from cache)`);
+    async loadFindingsBoard(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const realOpts = (options && (options instanceof HTMLElement || options.target)) ? { fromRevalidate: false } : options;
+            const fromRevalidate = realOpts.fromRevalidate || false;
+            const started = performance.now();
+            const board = document.getElementById('findings-board');
+            if (!board) return;
+            
+            const dateVal = document.getElementById('findings-date')?.value || this.jakartaDateString();
+            
+            if (!fromRevalidate && this.isThrottled('findings', 2000)) {
+                return;
             }
-        }
 
-        const endpoint = `${this.apiBase}/reports/findings?limit=1000`;
-        if (!API.hasFreshCache(endpoint) && (!board || !board.children.length)) {
-            board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
-        }
-        const res = await this.fetchAdminData(endpoint, {
-            ttlMs: 60000,
-            revalidate: !fromRevalidate,
-            onUpdate: () => this.scheduleSectionRefresh('findings', () => this.loadFindingsBoard({ fromRevalidate: true }))
+            if (!fromRevalidate) {
+                const restored = this.restorePageCache('findings', dateVal);
+                if (restored) {
+                    const renderTime = Math.round(performance.now() - started);
+                    console.log(`[METRIC] page_render_time: findings ${renderTime}ms (from cache)`);
+                }
+            }
+
+            const endpoint = `${this.apiBase}/reports/findings?limit=1000`;
+            if (!API.hasFreshCache(endpoint) && (!board || !board.children.length)) {
+                board.innerHTML = '<div class="empty-admin-state">Loading QC temuan...</div>';
+            }
+            const res = await this.fetchAdminData(endpoint, {
+                ttlMs: 60000,
+                revalidate: !fromRevalidate,
+                onUpdate: () => this.scheduleSectionRefresh('findings', () => this.loadFindingsBoard({ fromRevalidate: true }))
+            });
+            const rows = this.filterFindingsByDate(this.findingRows(res));
+            this.currentFindingsRows = rows;
+            const openRows = rows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
+            this.setText('nav-findings-count', openRows.length);
+            this.setText('metric-findings-open', openRows.length);
+            this.renderFindingsSummary(rows);
+            this.renderFindingsBoard(this.filteredFindingRows(rows));
+            
+            this.savePageCache('findings', dateVal);
+            const renderTime = Math.round(performance.now() - started);
+            console.log(`[METRIC] page_render_time: findings ${renderTime}ms`);
         });
-        const rows = this.filterFindingsByDate(this.findingRows(res));
-        this.currentFindingsRows = rows;
-        const openRows = rows.filter(row => this.findingLifecycleStatus(row) !== 'CLOSED');
-        this.setText('nav-findings-count', openRows.length);
-        this.setText('metric-findings-open', openRows.length);
-        this.renderFindingsSummary(rows);
-        this.renderFindingsBoard(this.filteredFindingRows(rows));
-        
-        this.savePageCache('findings', dateVal);
-        const renderTime = Math.round(performance.now() - started);
-        console.log(`[METRIC] page_render_time: findings ${renderTime}ms`);
     },
 
     setupFindingsDefaults() {
@@ -3972,34 +4002,36 @@ const adminApp = {
         return this.escapeHtml(value).replace(/`/g, '&#96;');
     },
 
-    async loadAuditTrail() {
-        const tbody = document.getElementById('table-audit-trail');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading audit logs...</td></tr>';
-        
-        const res = await this.fetchAdminData(`${this.apiBase}/audit-trail?limit=50`);
-        if (!res) return;
+    async loadAuditTrail(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const tbody = document.getElementById('table-audit-trail');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading audit logs...</td></tr>';
+            
+            const res = await this.fetchAdminData(`${this.apiBase}/audit-trail?limit=50`);
+            if (!res) return;
 
-        tbody.innerHTML = '';
-        if (res.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada log aktivitas.</td></tr>';
-            return;
-        }
+            tbody.innerHTML = '';
+            if (res.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada log aktivitas.</td></tr>';
+                return;
+            }
 
-        res.forEach(log => {
-            const tr = document.createElement('tr');
-            const actor = this.formatActorDisplay(log);
-            const entityLabel = this.auditEntityLabel(log.entity_type);
-            const technicalId = log.entity_id || log.related_id || log.id || '-';
-            tr.innerHTML = `
-                <td data-label="Waktu">${this.dateTime(log.created_at)}</td>
-                <td data-label="User"><strong>${this.escapeHtml(actor.name)}</strong>${actor.detail ? `<div class="admin-muted">${this.escapeHtml(actor.detail)}</div>` : ''}</td>
-                <td data-label="Role">${this.escapeHtml(actor.role)}</td>
-                <td data-label="Action"><span class="audit-action-label">${this.auditActionLabel(log.action)}</span></td>
-                <td data-label="Entity">${entityLabel}<div class="admin-muted">ID: ${this.escapeHtml(technicalId)}</div></td>
-                <td data-label="Detail">${this.escapeHtml(log.detail || log.message || log.notes || log.metadata?.message || '-')}</td>
-                <td data-label="IP/User Agent" style="font-size:0.8rem; color:var(--text-secondary);">${this.escapeHtml(log.ip_address || '-')}${log.user_agent ? `<br>${this.escapeHtml(log.user_agent)}` : ''}</td>
-            `;
-            tbody.appendChild(tr);
+            res.forEach(log => {
+                const tr = document.createElement('tr');
+                const actor = this.formatActorDisplay(log);
+                const entityLabel = this.auditEntityLabel(log.entity_type);
+                const technicalId = log.entity_id || log.related_id || log.id || '-';
+                tr.innerHTML = `
+                    <td data-label="Waktu">${this.dateTime(log.created_at)}</td>
+                    <td data-label="User"><strong>${this.escapeHtml(actor.name)}</strong>${actor.detail ? `<div class="admin-muted">${this.escapeHtml(actor.detail)}</div>` : ''}</td>
+                    <td data-label="Role">${this.escapeHtml(actor.role)}</td>
+                    <td data-label="Action"><span class="audit-action-label">${this.auditActionLabel(log.action)}</span></td>
+                    <td data-label="Entity">${entityLabel}<div class="admin-muted">ID: ${this.escapeHtml(technicalId)}</div></td>
+                    <td data-label="Detail">${this.escapeHtml(log.detail || log.message || log.notes || log.metadata?.message || '-')}</td>
+                    <td data-label="IP/User Agent" style="font-size:0.8rem; color:var(--text-secondary);">${this.escapeHtml(log.ip_address || '-')}${log.user_agent ? `<br>${this.escapeHtml(log.user_agent)}` : ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         });
     },
 
@@ -4093,19 +4125,21 @@ const adminApp = {
         this.applyTableFilter('table-traceability');
     },
 
-    async loadApprovals() {
-        const tbody = this.approvalsTableBody();
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading approvals...</td></tr>';
-        try {
-            const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
-            if (!res) throw new Error('Gagal memuat approvals dari server.');
-            const rows = this.approvalRows(res);
-            this.renderApprovals(rows);
-        } catch (error) {
-            console.error('[Admin] Failed to load approvals:', error);
-            tbody.innerHTML = `<tr><td colspan="7">${this.emptyState('Gagal memuat approvals', this.escapeHtml(error.message || 'server tidak merespons'))}</td></tr>`;
-        }
+    async loadApprovals(options = {}) {
+        return this.runWithRefreshAnimation(options, async () => {
+            const tbody = this.approvalsTableBody();
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading approvals...</td></tr>';
+            try {
+                const res = await this.fetchAdminData(`${this.apiBase}/approvals?limit=50`);
+                if (!res) throw new Error('Gagal memuat approvals dari server.');
+                const rows = this.approvalRows(res);
+                this.renderApprovals(rows);
+            } catch (error) {
+                console.error('[Admin] Failed to load approvals:', error);
+                tbody.innerHTML = `<tr><td colspan="7">${this.emptyState('Gagal memuat approvals', this.escapeHtml(error.message || 'server tidak merespons'))}</td></tr>`;
+            }
+        });
     },
 
     approvalsTableBody() {

@@ -254,3 +254,28 @@ def test_delete_default_facility_device_is_not_locked_permanently(client, admin_
     body = response.get_json()
     assert response.status_code == 400
     assert body["error_code"] == "INVALID_DEVICE_ID"
+
+
+def test_monitoring_service_edit_tolerance():
+    from backend.services.monitoring_service import MonitoringService
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    service = MonitoringService(None)
+    tz = ZoneInfo("Asia/Jakarta")
+
+    # Inside tolerance for 07:00 slot (deadline is 13:00)
+    current_time = datetime(2026, 7, 4, 12, 30, tzinfo=tz)
+    assert service.check_edit_tolerance("07:00", "2026-07-04", current_time) is True
+
+    # Past tolerance for 07:00 slot (deadline is 13:00)
+    current_time = datetime(2026, 7, 4, 13, 1, tzinfo=tz)
+    assert service.check_edit_tolerance("07:00", "2026-07-04", current_time) is False
+
+    # Inside tolerance for 19:00 slot (deadline is 23:59)
+    current_time = datetime(2026, 7, 4, 23, 30, tzinfo=tz)
+    assert service.check_edit_tolerance("19:00", "2026-07-04", current_time) is True
+
+    # Past tolerance for 19:00 slot (deadline is 23:59)
+    current_time = datetime(2026, 7, 5, 0, 1, tzinfo=tz)
+    assert service.check_edit_tolerance("19:00", "2026-07-04", current_time) is False

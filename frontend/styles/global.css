@@ -1206,3 +1206,8 @@ label {
     font-size: 24px;
   }
 }
+
+.refresh-loading svg,
+.refresh-loading i {
+  animation: spin 0.8s linear infinite !important;
+}

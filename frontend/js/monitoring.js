@@ -209,6 +209,24 @@ function monitoringMiniCardTemperature(device) {
     return `${Number.isInteger(value) ? value : value.toFixed(1)}&deg;C`;
 }
 
+function isWithinEditTolerance(slotTime) {
+    const deadlines = {
+        "07:00": "13:00",
+        "13:00": "17:00",
+        "16:00": "20:00",
+        "19:00": "23:59"
+    };
+    const deadlineTimeStr = deadlines[slotTime];
+    if (!deadlineTimeStr) return true;
+
+    const now = new Date();
+    const [dHour, dMinute] = deadlineTimeStr.split(":").map(Number);
+    const deadlineDate = new Date();
+    deadlineDate.setHours(dHour, dMinute, 59, 999);
+
+    return now <= deadlineDate;
+}
+
 function setupModalForDevice(deviceId) {
     const activeSlot = activeMonitoringSlot();
     if (!activeSlot) return false;
@@ -233,13 +251,35 @@ function setupModalForDevice(deviceId) {
 
     document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
     
-    // Clear inputs
+    const activeStatus = todaySchedule?.device_statuses?.[deviceId]?.active_status;
+    const deviceStatus = deviceScheduleStatus(deviceId);
+
+    // Clear inputs first
     document.getElementById("input-temp").value = "";
     const humidityInput = document.getElementById("input-rh");
     if (humidityInput) humidityInput.value = "";
     const reasonInput = document.getElementById("input-reason");
     if (reasonInput) reasonInput.value = "";
     removePhoto();
+
+    if (deviceStatus.status === "completed" && activeStatus) {
+        document.getElementById("input-temp").value = activeStatus.temperature_c ?? "";
+        if (humidityInput) humidityInput.value = activeStatus.humidity_rh ?? "";
+        if (reasonInput) reasonInput.value = activeStatus.notes ?? "";
+        if (activeStatus.photo_url) {
+            const previewImg = document.getElementById("preview-img");
+            const photoPreview = document.getElementById("photo-preview");
+            if (previewImg && photoPreview) {
+                previewImg.src = activeStatus.photo_url;
+                photoPreview.style.display = "block";
+                const formEl = document.getElementById("monitoring-form");
+                if (formEl) {
+                    formEl.dataset.existingPhotoUrl = activeStatus.photo_url || "";
+                    formEl.dataset.existingStoragePath = activeStatus.storage_path || "";
+                }
+            }
+        }
+    }
     
     // Auto focus (Requirement 6)
     setTimeout(() => {
@@ -260,8 +300,10 @@ function openLogModal(deviceId) {
     if (!device) return;
     const deviceStatus = deviceScheduleStatus(deviceId);
     if (deviceStatus.status === "completed") {
-        showMonitoringToast(`Unit ini sudah diinput untuk slot ${activeSlot.time}.`, true);
-        return;
+        if (!isWithinEditTolerance(activeSlot.time)) {
+            showMonitoringToast(`Batas waktu edit untuk slot ${activeSlot.time} sudah lewat.`, true);
+            return;
+        }
     }
     if (!isUuid(room.id) || !isUuid(device.id) || !isUuid(device.room_id || room.id)) {
         showMonitoringToast("Data ruangan/unit belum sinkron. Refresh halaman.", true);
@@ -351,6 +393,11 @@ document.getElementById("photo-input").addEventListener("change", async event =>
 
 function removePhoto() {
     selectedPhotoFiles = [];
+    const formEl = document.getElementById("monitoring-form");
+    if (formEl) {
+        formEl.dataset.existingPhotoUrl = "";
+        formEl.dataset.existingStoragePath = "";
+    }
     const input = document.getElementById("photo-input");
     const image = document.getElementById("preview-img");
     const preview = document.getElementById("photo-preview");
@@ -395,6 +442,19 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
     formData.append("humidity", document.getElementById("input-rh").value || "");
     formData.append("reason", document.getElementById("input-reason").value);
     formData.append("slot_time", document.getElementById("selected-slot-time").value);
+
+    const deviceStatus = deviceScheduleStatus(deviceId);
+    if (deviceStatus.status === "completed") {
+        formData.append("recheck", "true");
+    }
+
+    const formEl = document.getElementById("monitoring-form");
+    const existingPhotoUrl = formEl.dataset.existingPhotoUrl || "";
+    const existingStoragePath = formEl.dataset.existingStoragePath || "";
+    if (selectedPhotoFiles.length === 0 && existingPhotoUrl) {
+        formData.append("photo_url", existingPhotoUrl);
+        formData.append("storage_path", existingStoragePath);
+    }
 
     try {
         submitBtn.disabled = true;
