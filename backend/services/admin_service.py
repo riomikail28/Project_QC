@@ -320,7 +320,7 @@ class AdminService:
 
     def update_qc_finding_status(self, finding_id, status):
         normalized = str(status or "").strip().upper().replace("-", "_").replace(" ", "_")
-        if normalized not in {"OPEN", "IN_PROGRESS", "CLOSED"}:
+        if normalized not in {"OPEN", "IN_PROGRESS", "CLOSED", "NOTED"}:
             return self._fail("Status temuan tidak valid")
         updated = self._update_by_id("qc_findings", finding_id, {
             "status": normalized,

@@ -555,6 +555,14 @@
   padding: 0 12px 12px;
 }
 
+.qc-parameter-panel.no-summary summary {
+  display: none !important;
+}
+
+.qc-parameter-panel.no-summary .qc-optional-grid {
+  padding: 14px 12px 12px;
+}
+
 .field-error {
   margin: 0;
   padding: 8px 10px;

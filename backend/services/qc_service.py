@@ -1,6 +1,7 @@
 """Service layer for QC business logic."""
 import logging
 from typing import Any, Dict, Optional
+from datetime import datetime, timezone
 
 from backend.services.google_apps_script_service import build_qc_finding_payload, send_qc_finding
 
@@ -167,3 +168,83 @@ class QCService:
                 sb.table("qc_evidence").insert({k: v for k, v in payload.items() if v is not None}).execute()
         except Exception as e:
             logger.warning("QC finding preuploaded evidence metadata skipped: %s", e)
+
+    def update_finding(
+        self,
+        finding_id: str,
+        status: str,
+        analysis_notes: str | None = None,
+        staff_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Update finding status and analysis notes, and sync to Google Sheets."""
+        if not self.repo or not self.repo.sb:
+            return {"success": False, "error": "Database not initialized"}
+
+        normalized_status = str(status or "").strip().upper().replace("-", "_").replace(" ", "_")
+        if normalized_status not in {"OPEN", "IN_PROGRESS", "CLOSED", "NOTED"}:
+            return {"success": False, "error": "Status temuan tidak valid"}
+
+        try:
+            res = self.repo.sb.table("qc_findings").select("*").eq("id", finding_id).execute()
+            if not res.data:
+                return {"success": False, "error": "QC finding not found"}
+            finding = res.data[0]
+        except Exception as e:
+            logger.error("Failed to fetch QC finding: %s", e)
+            return {"success": False, "error": f"Failed to fetch finding: {str(e)}"}
+
+        original_reason = finding.get("reason") or ""
+        if "\n[Analisis:" in original_reason:
+            original_reason = original_reason.split("\n[Analisis:")[0].strip()
+
+        if analysis_notes:
+            new_reason = f"{original_reason}\n[Analisis: {analysis_notes}]"
+        else:
+            new_reason = original_reason
+
+        update_payload = {
+            "status": normalized_status,
+            "reason": new_reason,
+            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+
+        try:
+            res_update = self.repo.sb.table("qc_findings").update(update_payload).eq("id", finding_id).execute()
+            if not res_update.data:
+                return {"success": False, "error": "Failed to update QC finding"}
+            updated_finding = res_update.data[0]
+        except Exception as e:
+            logger.error("Failed to update QC finding in DB: %s", e)
+            return {"success": False, "error": f"Database update failed: {str(e)}"}
+
+        try:
+            if self.audit:
+                self.audit.write_audit("update_finding", "qc_finding", str(finding_id), after=updated_finding)
+        except Exception as e:
+            logger.warning("Audit write skipped: %s", e)
+
+        # Best-effort external sync to Google Sheets
+        try:
+            resolved_staff_name = staff_name or updated_finding.get("staff_name")
+            if resolved_staff_name in (None, "", "Unknown Staff") or (resolved_staff_name and len(resolved_staff_name) == 36 and resolved_staff_name.count("-") == 4):
+                try:
+                    res_user = self.repo.sb.table("users").select("full_name").eq("staff_account_id", updated_finding.get("staff_id")).limit(1).execute()
+                    if res_user.data and res_user.data[0].get("full_name"):
+                        resolved_staff_name = res_user.data[0]["full_name"]
+                    else:
+                        res_staff = self.repo.sb.table("staff_accounts").select("username").eq("id", updated_finding.get("staff_id")).limit(1).execute()
+                        if res_staff.data and res_staff.data[0].get("username"):
+                            resolved_staff_name = res_staff.data[0]["username"]
+                except Exception as exc:
+                    logger.warning("Failed to resolve staff name in update_finding: %s", exc)
+
+            sheet_row = {**updated_finding, "staff_name": resolved_staff_name or updated_finding.get("staff_name")}
+            send_qc_finding(build_qc_finding_payload(sheet_row), background=True)
+        except Exception as e:
+            logger.warning("Google Sheets sync skipped: %s", e)
+
+        return {
+            "success": True,
+            "message": "QC finding updated",
+            "data": updated_finding,
+        }

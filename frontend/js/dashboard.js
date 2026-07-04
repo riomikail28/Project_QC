@@ -58,6 +58,8 @@ const Dashboard = {
                 realtimeMonitoringList: document.getElementById('realtimeMonitoringList')?.innerHTML || '',
                 criticalList: document.getElementById('criticalList')?.innerHTML || '',
                 todaySummaryList: document.getElementById('todaySummaryList')?.innerHTML || '',
+                dashboardFindingsGrid: document.getElementById('dashboardFindingsGrid')?.innerHTML || '',
+                findings: this.findings || [],
                 
                 userInitial: document.getElementById('userInitial')?.textContent || 'QC',
             };
@@ -120,6 +122,8 @@ const Dashboard = {
             setHtml('realtimeMonitoringList', data.realtimeMonitoringList);
             setHtml('criticalList', data.criticalList);
             setHtml('todaySummaryList', data.todaySummaryList);
+            setHtml('dashboardFindingsGrid', data.dashboardFindingsGrid);
+            if (data.findings) this.findings = data.findings;
             
             setText('userInitial', data.userInitial);
             
@@ -156,6 +160,7 @@ const Dashboard = {
                 this.renderCriticalIssues(alerts);
                 this.renderTodaySummary(todaySummary);
                 this.loadAnnouncementBadge();
+                this.loadFindings();
                 this.refreshIcons();
                 this.saveCache();
             });
@@ -239,6 +244,7 @@ const Dashboard = {
         this.setHtml('realtimeMonitoringList', '<div class="skeleton skeleton-card"></div>');
         this.setHtml('todaySummaryList', '<div class="skeleton skeleton-card"></div>');
         this.setHtml('qcStatusList', '<span class="status-badge muted">Memuat...</span>');
+        this.setHtml('dashboardFindingsGrid', '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>');
     },
 
     renderTaskNow(summary = {}, todaySummary = {}, schedule = {}) {
@@ -452,6 +458,225 @@ const Dashboard = {
                 <span class="status-badge ${tone}">Live</span>
             </div>
         `).join('');
+    },
+
+    async loadFindings() {
+        try {
+            const findings = await API.get('/qc/findings');
+            this.findings = findings || [];
+            this.renderFindings(this.findings);
+        } catch (error) {
+            console.error('Failed to load findings feed:', error);
+            const grid = document.getElementById('dashboardFindingsGrid');
+            if (grid) {
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 20px;">Gagal memuat feed temuan.</div>';
+            }
+        }
+    },
+
+    renderFindings(findings = []) {
+        const grid = document.getElementById('dashboardFindingsGrid');
+        if (!grid) return;
+        if (!findings.length) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px 24px; color: var(--muted, #64748b);">
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 12px;"></i>
+                    <p style="margin: 0; font-weight: 600;">Tidak ada temuan QC aktif saat ini.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = findings.map(f => {
+            const statusLabel = {
+                'OPEN': 'Open',
+                'IN_PROGRESS': 'In Progress',
+                'CLOSED': 'Closed',
+                'NOTED': 'Noted'
+            }[f.status] || 'Open';
+
+            const statusClass = {
+                'OPEN': 'fail',
+                'IN_PROGRESS': 'warning',
+                'CLOSED': 'pass',
+                'NOTED': 'info'
+            }[f.status] || 'fail';
+
+            const photoUrls = String(f.photo_url || '').split(';');
+            const firstPhoto = photoUrls.find(url => url.trim()) || '';
+
+            let displayReason = f.reason || '';
+            let analysisText = '';
+            if (displayReason.includes('[Analisis:')) {
+                const parts = displayReason.split('[Analisis:');
+                displayReason = parts[0].trim();
+                analysisText = parts[1].replace(']', '').trim();
+            }
+
+            const imgHtml = firstPhoto
+                ? `<img src="${firstPhoto}" alt="Temuan" style="width: 100%; height: 140px; object-fit: cover; border-radius: 12px 12px 0 0; display: block;">`
+                : `<div style="width: 100%; height: 140px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: 12px 12px 0 0; color: #94a3b8;">
+                       <i class="fas fa-camera" style="font-size: 32px;"></i>
+                   </div>`;
+
+            const dateStr = new Date(f.created_at).toLocaleDateString('id-ID', {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            return `
+                <article class="finding-feed-card" onclick="Dashboard.openFindingAction('${f.id}')" style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;">
+                    ${imgHtml}
+                    <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="status-badge ${statusClass}" style="padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 8px; text-transform: uppercase;">${statusLabel}</span>
+                            <span style="font-size: 11px; color: var(--muted, #64748b);">${dateStr}</span>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 700; margin: 0; color: #1e293b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${this.escapeHtml(displayReason)}</h4>
+                        ${analysisText ? `<p style="font-size: 12px; margin: 0; padding: 6px 10px; background: #f8fafc; border-left: 3px solid #6366f1; color: #475569; border-radius: 0 6px 6px 0; font-style: italic;"><strong>Analisis:</strong> ${this.escapeHtml(analysisText)}</p>` : ''}
+                        <div style="margin-top: auto; font-size: 12px; color: var(--muted, #64748b); display: flex; align-items: center; gap: 6px; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+                            <i class="fas fa-user-circle" style="color: #94a3b8;"></i>
+                            <span>${this.escapeHtml(f.staff_name || 'QC Staff')}</span>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    },
+
+    openFindingAction(findingId) {
+        const f = (this.findings || []).find(item => item.id === findingId);
+        if (!f) return;
+
+        let displayReason = f.reason || '';
+        let analysisText = '';
+        if (displayReason.includes('[Analisis:')) {
+            const parts = displayReason.split('[Analisis:');
+            displayReason = parts[0].trim();
+            analysisText = parts[1].replace(']', '').trim();
+        }
+
+        const dateStr = new Date(f.created_at).toLocaleDateString('id-ID', {
+            month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const contentHtml = `
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="font-size: 13px; color: #64748b;">
+                    <strong>Dilaporkan:</strong> ${this.escapeHtml(f.staff_name || 'QC Staff')} pada ${dateStr}
+                </div>
+                <div style="padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Detail Temuan</div>
+                    <div style="font-size: 14px; color: #1e293b; font-weight: 600; line-height: 1.4;">${this.escapeHtml(displayReason)}</div>
+                </div>
+                
+                <form id="finding-update-form" onsubmit="event.preventDefault(); Dashboard.saveFindingUpdate('${f.id}')" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin-bottom: 8px;">Ubah Status Temuan</label>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <label style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; display: block; font-size: 13px; font-weight: 600; background: ${f.status === 'IN_PROGRESS' ? '#eff6ff' : '#ffffff'}; border-color: ${f.status === 'IN_PROGRESS' ? '#2563eb' : '#cbd5e1'}; color: ${f.status === 'IN_PROGRESS' ? '#2563eb' : '#475569'};">
+                                <input type="radio" name="findingStatus" value="IN_PROGRESS" ${f.status === 'IN_PROGRESS' ? 'checked' : ''} style="display:none;" onchange="Dashboard.updateStatusSelection(this)">
+                                In Progress
+                            </label>
+                            <label style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; display: block; font-size: 13px; font-weight: 600; background: ${f.status === 'CLOSED' ? '#f0fdf4' : '#ffffff'}; border-color: ${f.status === 'CLOSED' ? '#16a34a' : '#cbd5e1'}; color: ${f.status === 'CLOSED' ? '#16a34a' : '#475569'};">
+                                <input type="radio" name="findingStatus" value="CLOSED" ${f.status === 'CLOSED' ? 'checked' : ''} style="display:none;" onchange="Dashboard.updateStatusSelection(this)">
+                                Closed
+                            </label>
+                            <label style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; display: block; font-size: 13px; font-weight: 600; background: ${f.status === 'NOTED' ? '#f5f3ff' : '#ffffff'}; border-color: ${f.status === 'NOTED' ? '#6366f1' : '#cbd5e1'}; color: ${f.status === 'NOTED' ? '#6366f1' : '#475569'};">
+                                <input type="radio" name="findingStatus" value="NOTED" ${f.status === 'NOTED' ? 'checked' : ''} style="display:none;" onchange="Dashboard.updateStatusSelection(this)">
+                                Noted
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="finding-analysis-input" style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Hasil Analisis</label>
+                        <textarea id="finding-analysis-input" rows="3" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; font-size: 14px; color: #1e293b; outline: none; transition: border-color 0.2s;" placeholder="Tulis hasil analisis kejadian qc temuan di sini...">${this.escapeHtml(analysisText)}</textarea>
+                    </div>
+                    
+                    <button type="submit" id="btnSaveFinding" class="btn-primary" style="width: 100%; min-height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; background: #2563eb; color: white;">Simpan Analisis</button>
+                </form>
+            </div>
+        `;
+
+        if (window.UI && typeof UI.showSheet === 'function') {
+            UI.showSheet('Tindak Lanjut Temuan QC', contentHtml);
+        } else {
+            console.warn('UI Bottom Sheet not available');
+        }
+    },
+
+    updateStatusSelection(radio) {
+        const labels = radio.closest('div').querySelectorAll('label');
+        labels.forEach(label => {
+            const input = label.querySelector('input');
+            if (input.checked) {
+                if (input.value === 'IN_PROGRESS') {
+                    label.style.background = '#eff6ff';
+                    label.style.borderColor = '#2563eb';
+                    label.style.color = '#2563eb';
+                } else if (input.value === 'CLOSED') {
+                    label.style.background = '#f0fdf4';
+                    label.style.borderColor = '#16a34a';
+                    label.style.color = '#16a34a';
+                } else if (input.value === 'NOTED') {
+                    label.style.background = '#f5f3ff';
+                    label.style.borderColor = '#6366f1';
+                    label.style.color = '#6366f1';
+                }
+            } else {
+                label.style.background = '#ffffff';
+                label.style.borderColor = '#cbd5e1';
+                label.style.color = '#475569';
+            }
+        });
+    },
+
+    async saveFindingUpdate(findingId) {
+        const form = document.getElementById('finding-update-form');
+        const selectedRadio = form?.querySelector('input[name="findingStatus"]:checked');
+        const notes = document.getElementById('finding-analysis-input')?.value || '';
+        const submitBtn = document.getElementById('btnSaveFinding');
+
+        if (!selectedRadio) {
+            if (window.showToast) window.showToast('Pilih status temuan terlebih dahulu.', 'error');
+            return;
+        }
+
+        const status = selectedRadio.value;
+        const originalBtnText = submitBtn.innerHTML;
+
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+            const response = await API.patch(`/qc/findings/${findingId}`, {
+                status: status,
+                analysis_notes: notes
+            });
+
+            if (response && response.success) {
+                if (window.showToast) window.showToast('✓ Temuan berhasil diperbarui', 'success');
+                if (window.UI && typeof UI.hideSheet === 'function') {
+                    UI.hideSheet();
+                }
+                this.loadFindings();
+            } else {
+                if (window.showToast) window.showToast(response.message || 'Gagal memperbarui temuan.', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to update finding:', error);
+            if (window.showToast) window.showToast('Gagal memperbarui temuan.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        }
     },
 
     renderError() {

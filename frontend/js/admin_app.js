@@ -2993,7 +2993,7 @@ const adminApp = {
                 ${this.emptyState('Belum ada produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
                 <div class="production-empty-actions" style="display: none;">
                     <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
-                    <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
+                    <a class="btn-secondary" href="/staff/new_batch.html" style="display: none !important;"><i data-lucide="plus"></i> Buat Batch Baru</a>
                 </div>
             `;
             this.refreshIcons();
@@ -3695,7 +3695,7 @@ const adminApp = {
                     ${this.emptyState('Belum ada batch produksi pada tanggal ini.', 'Batch akan muncul setelah dibuat dari flow staff.')}
                     <div class="row-actions" style="justify-content:center; margin-top:12px; display: none;">
                         <a class="btn-primary" href="/staff/inspection.html"><i data-lucide="clipboard-check"></i> Buka Staff QC Check</a>
-                        <a class="btn-secondary" href="/staff/new_batch.html"><i data-lucide="plus"></i> Buat Batch Baru</a>
+                        <a class="btn-secondary" href="/staff/new_batch.html" style="display: none !important;"><i data-lucide="plus"></i> Buat Batch Baru</a>
                     </div>
                 </td></tr>
             `;

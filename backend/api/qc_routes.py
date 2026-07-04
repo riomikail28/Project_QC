@@ -419,3 +419,99 @@ def health_check():
         "system": "QC Central Kitchen API v2.0.0",
         "database": db_status,
     })
+
+
+# ---------------------------------------------------------------------------
+# GET /api/qc/findings — List all findings
+# ---------------------------------------------------------------------------
+@qc_bp.route("/api/qc/findings", methods=["GET"])
+@require_auth
+def get_findings():
+    """Retrieve recent QC findings for staff live feed."""
+    sb = get_client()
+    if not sb:
+        return jsonify({"detail": "Database client not initialized"}), 500
+    
+    try:
+        res = sb.table("qc_findings").select("*").order("created_at", desc=True).limit(100).execute()
+        findings = res.data or []
+        
+        # Resolve user names
+        user_map = {}
+        try:
+            user_res = sb.table("users").select("staff_account_id, full_name").execute()
+            if user_res.data:
+                for u in user_res.data:
+                    if u.get("staff_account_id") and u.get("full_name"):
+                        user_map[u["staff_account_id"]] = u["full_name"]
+            
+            staff_res = sb.table("staff_accounts").select("id, username").execute()
+            if staff_res.data:
+                for s in staff_res.data:
+                    if s.get("id") and s.get("username") and s["id"] not in user_map:
+                        user_map[s["id"]] = s["username"]
+        except Exception as e:
+            logger.warning("Failed to load user map for findings: %s", e)
+            
+        for f in findings:
+            sid = f.get("staff_id")
+            if sid and sid in user_map:
+                f["staff_name"] = user_map[sid]
+            elif not f.get("staff_name"):
+                f["staff_name"] = "QC Staff"
+                
+        return jsonify(findings)
+    except Exception as e:
+        logger.exception("Failed to get findings: %s", e)
+        return jsonify({"detail": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/qc/findings/<finding_id> — Update finding status and analysis notes
+# ---------------------------------------------------------------------------
+@qc_bp.route("/api/qc/findings/<finding_id>", methods=["PATCH"])
+@require_auth
+def update_finding_route(finding_id):
+    """Update QC finding status and analysis notes."""
+    from backend.core.di import resolve
+    from backend.repositories.qc_repository import QCRepository
+    from backend.services.qc_service import QCService
+
+    body = request.get_json(silent=True) or {}
+    status = body.get("status")
+    analysis_notes = body.get("analysis_notes")
+
+    if not status:
+        return jsonify({"detail": "Status is required"}), 400
+
+    actor = getattr(g, "current_user", {}) or {}
+    staff_name = (
+        actor.get("full_name")
+        or actor.get("name")
+        or actor.get("username")
+        or actor.get("email")
+        or "Unknown Staff"
+    )
+
+    qc_service = resolve("qc_service")
+    if qc_service is None:
+        sb = get_client()
+        repo = QCRepository(sb)
+        try:
+            from backend.services import audit_service as audit_mod
+        except Exception:
+            audit_mod = None
+        qc_service = QCService(repo, audit_service=audit_mod)
+
+    try:
+        result = qc_service.update_finding(
+            finding_id,
+            status,
+            analysis_notes=analysis_notes,
+            staff_name=staff_name
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.exception("Failed to update finding: %s", e)
+        return jsonify({"detail": str(e)}), 500
+

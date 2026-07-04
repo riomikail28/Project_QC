@@ -553,6 +553,9 @@ const Inspection = {
             // Show Instrument Parameter panel (optional pH, brix, tds as requested)
             if (parameterPanel) {
                 parameterPanel.style.display = 'block';
+                parameterPanel.classList.remove('no-summary');
+                const summaryEl = parameterPanel.querySelector('summary');
+                if (summaryEl) summaryEl.style.display = '';
             }
             
             // Manage finalFields photo cards and gramasi for cooking_sensory
@@ -584,6 +587,7 @@ const Inspection = {
                 parameterPanel.style.display = 'block';
                 parameterPanel.open = true;
                 parameterPanel.classList.remove('collapsed');
+                parameterPanel.classList.add('no-summary');
             }
             if (final) final.style.display = 'none';
             const gramasiContainer = document.getElementById('gramasiContainer');
