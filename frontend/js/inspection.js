@@ -703,12 +703,6 @@ const Inspection = {
         }
         
         const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
-        if (this.selectedStage === 'cooking_sensory' && isBatch1) {
-            if (!gramasi1 || !gramasi2 || !gramasi3 || !gramasi4 || !gramasi5) {
-                this.message('Semua 5 input gramasi produk wajib diisi untuk Batch 1.', true);
-                return;
-            }
-        }
         
         if (this.selectedStage === STAGE_PCK) {
             if (!barcodePhoto) {
@@ -894,7 +888,7 @@ const Inspection = {
                 const g5 = document.getElementById('qcGramasi5')?.value?.trim();
                 hasGramasi = Boolean(g1 && g2 && g3 && g4 && g5);
             }
-            stageValid = hasTemperature && hasGramasi;
+            stageValid = hasTemperature;
         } else if (stage === 'cooking_instrument') {
             // Allow submission if we are in cooking_instrument check
             stageValid = true; 
