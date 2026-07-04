@@ -464,6 +464,8 @@ const Inspection = {
         const final = document.getElementById('finalFields');
         const parameterPanel = document.getElementById('qcParameterPanel');
         const cookingUploadCard = document.getElementById('cookingUploadCard');
+        const fallbackContainer = document.getElementById('packFallbackFields');
+        if (fallbackContainer) fallbackContainer.style.display = 'none';
         
         if (!hasContext) {
             if (cooking) cooking.style.display = 'none';
@@ -1795,7 +1797,7 @@ const Inspection = {
 
         // Hide fallback fields on new stage 3 load
         const fallbackContainer = document.getElementById('packFallbackFields');
-        if (fallbackContainer) fallbackContainer.hidden = true;
+        if (fallbackContainer) fallbackContainer.style.display = 'none';
 
         // Reset photos
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
@@ -2337,14 +2339,14 @@ const Inspection = {
             
             if (mfgInput) mfgInput.value = mfgDate;
             if (expInput) expInput.value = expDate;
-            if (fallbackContainer) fallbackContainer.hidden = true;
+            if (fallbackContainer) fallbackContainer.style.display = 'none';
             
             window.showToast(`OCR Berhasil: MFG ${mfgDate}, EXP ${expDate}`, 'success', 2000);
             this.updateSubmitState();
         } catch (err) {
             console.warn('OCR failed, showing fallback inputs:', err);
             window.showToast('OCR gagal membaca barcode. Silakan input manual.', 'warning', 3000);
-            if (fallbackContainer) fallbackContainer.hidden = false;
+            if (fallbackContainer) fallbackContainer.style.display = 'flex';
             
             const today = this.jakartaDateString();
             if (mfgInput && !mfgInput.value) mfgInput.value = today;

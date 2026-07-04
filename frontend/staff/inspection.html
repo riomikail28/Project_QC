@@ -161,7 +161,8 @@
                     <input class="input-field" id="qcTemp" type="number" step="0.1" placeholder="Contoh: 82.0 C" inputmode="decimal" pattern="[0-9]*" autocomplete="off">
                     <span aria-hidden="true">C</span>
                 </div>
-                <p class="field-error" id="qcTempError" hidden>Suhu masak wajib diisi untuk Cek Masakan.</p                 <div id="gramasiContainer" style="display: none; flex-direction: column; gap: 8px; margin-top: 12px; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc;">
+                <p class="field-error" id="qcTempError" hidden>Suhu masak wajib diisi untuk Cek Masakan.</p>
+                <div id="gramasiContainer" style="display: none; flex-direction: column; gap: 8px; margin-top: 12px; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc;">
                     <label style="font-weight: 800; font-size: 13px; color: var(--text-primary);">GRAMASI PRODUK (GRAM - MINIMAL 5 QTY)</label>
                     <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
                         <input class="input-field" id="qcGramasi1" type="number" step="0.1" placeholder="1 (g)" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
@@ -220,10 +221,10 @@
                     <div class="photo-preview" id="labelPhotoPreview" hidden></div>
                     <small id="labelPhotoCompressionStatus" class="photo-compression-hint">Foto akan dikompres otomatis sebelum dikirim.</small>
                     <input id="labelPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
-                </div>iv>
-
+                </div>
+                
                 <!-- Manual MFG / EXP Date Fallback inputs -->
-                <div id="packFallbackFields" hidden style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px; border: 1px dashed var(--border-color, #cbd5e1); padding: 12px; border-radius: 8px; background: #fafafa;">
+                <div id="packFallbackFields" style="margin-top: 16px; display: none; flex-direction: column; gap: 12px; border: 1px dashed var(--border-color, #cbd5e1); padding: 12px; border-radius: 8px; background: #fafafa;">
                     <div style="font-size: 13px; font-weight: bold; color: var(--text-primary); margin-bottom: 4px;">MANUAL BACKUP INPUT</div>
                     <div class="simple-field" style="margin-bottom: 0;">
                         <label for="qcMfgDate" style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">TANGGAL MFG (MANUFACTURING)</label>
