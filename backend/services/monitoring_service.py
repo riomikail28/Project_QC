@@ -205,7 +205,7 @@ class MonitoringService:
                 "staff_name": staff_name,
                 "submitted_at": submitted_at or recorded_at,
                 "notes": reason,
-            })
+            }, background=True)
 
             return {
                 "success": True,

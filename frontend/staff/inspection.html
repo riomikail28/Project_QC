@@ -162,6 +162,17 @@
                     <span aria-hidden="true">C</span>
                 </div>
                 <p class="field-error" id="qcTempError" hidden>Suhu masak wajib diisi untuk Cek Masakan.</p>
+                <div id="gramasiContainer" style="display: none; flex-direction: column; gap: 8px; margin-top: 12px; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc;">
+                    <label style="font-weight: 800; font-size: 13px; color: var(--text-primary);">GRAMASI PRODUK (MINIMAL 5 QTY)</label>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                        <input class="input-field" id="qcGramasi1" type="number" step="0.1" placeholder="Qty 1" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
+                        <input class="input-field" id="qcGramasi2" type="number" step="0.1" placeholder="Qty 2" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
+                        <input class="input-field" id="qcGramasi3" type="number" step="0.1" placeholder="Qty 3" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
+                        <input class="input-field" id="qcGramasi4" type="number" step="0.1" placeholder="Qty 4" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
+                        <input class="input-field" id="qcGramasi5" type="number" step="0.1" placeholder="Qty 5" style="min-height: 44px; padding: 6px; font-size: 14px; text-align: center; border-radius: 8px;" autocomplete="off">
+                    </div>
+                    <p class="field-error" id="qcGramasiError" hidden>Semua 5 input gramasi wajib diisi.</p>
+                </div>
                 <details class="qc-parameter-panel" id="qcParameterPanel">
                     <summary>Parameter QC Tambahan</summary>
                     <div class="qc-optional-grid">

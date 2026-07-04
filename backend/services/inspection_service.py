@@ -250,6 +250,12 @@ class InspectionService:
                         uploaded_files.append(("cooking", uploaded))
                         uploads["cooking"]["urls"].append(uploaded.url)
                         uploads["cooking"]["paths"].append(uploaded.storage_path)
+                for photo_file in file_map.get("barcode_photo") or []:
+                    uploaded = self._upload_if_present(photo_file, staff_id, "barcode", batch_id or batch_code)
+                    if uploaded:
+                        uploaded_files.append(("barcode", uploaded))
+                        uploads["barcode"]["urls"].append(uploaded.url)
+                        uploads["barcode"]["paths"].append(uploaded.storage_path)
             elif qc_stage in ("final_check", "packing"):
                 for field_name, bucket_key in (("barcode_photo", "barcode"), ("label_photo", "label"), ("photo", "generic")):
                     for photo_file in file_map.get(field_name) or []:
@@ -302,6 +308,11 @@ class InspectionService:
                     "tds_value": payload.get("tds_value") or payload.get("tds"),
                     "mfg_date": payload.get("mfg_date") or payload.get("mfg"),
                     "exp_date": payload.get("exp_date") or payload.get("exp"),
+                    "gramasi_1": payload.get("gramasi_1"),
+                    "gramasi_2": payload.get("gramasi_2"),
+                    "gramasi_3": payload.get("gramasi_3"),
+                    "gramasi_4": payload.get("gramasi_4"),
+                    "gramasi_5": payload.get("gramasi_5"),
                     "notes": payload.get("notes"),
                     "qc_status": qc_status,
                     "inspection_round": inspection_round,
@@ -396,10 +407,15 @@ class InspectionService:
                 "ph_value": payload.get("ph_value") or payload.get("ph"),
                 "brix_value": payload.get("brix_value") or payload.get("brix"),
                 "tds_value": payload.get("tds_value") or payload.get("tds"),
+                "gramasi_1": payload.get("gramasi_1"),
+                "gramasi_2": payload.get("gramasi_2"),
+                "gramasi_3": payload.get("gramasi_3"),
+                "gramasi_4": payload.get("gramasi_4"),
+                "gramasi_5": payload.get("gramasi_5"),
                 "created_at": created_at,
                 "source_type": "qc_report",
                 "source_id": report_id,
-            }))
+            }), background=True)
             return self._ok({
                 "report_id": report_id,
                 "batch_id": batch_id,

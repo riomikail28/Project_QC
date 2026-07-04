@@ -112,7 +112,7 @@ class QCService:
                         except Exception as exc:
                             logger.warning("Failed to resolve staff name in qc_service: %s", exc)
                 sheet_row = {**finding, "staff_name": resolved_staff_name or finding.get("staff_name")}
-                send_qc_finding(build_qc_finding_payload(sheet_row))
+                send_qc_finding(build_qc_finding_payload(sheet_row), background=True)
         except Exception as e:
             logger.warning("Google Sheets QC finding sync skipped: %s", e)
 

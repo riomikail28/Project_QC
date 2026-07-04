@@ -464,6 +464,8 @@ def test_qc_finding_payload_targets_qc_temuan_sheet():
         "type": "qc_finding",
         "staff_name": "Rio Mikail",
         "finding_description": "Label salah",
+        "notes": "Label salah",
+        "reason": "Label salah",
         "photo_url": "https://example.test/finding.jpg",
         "status": "WARNING",
         "source_type": "qc_finding",

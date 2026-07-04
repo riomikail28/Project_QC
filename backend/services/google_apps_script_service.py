@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from typing import Any
 from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
@@ -31,18 +32,32 @@ _last_export = {
 }
 
 
-def send_monitoring_log(payload: dict[str, Any]) -> bool:
+def _run_in_background(func, *args, **kwargs):
+    thread = threading.Thread(target=func, args=args, kwargs=kwargs, daemon=True)
+    thread.start()
+
+
+def send_monitoring_log(payload: dict[str, Any], background: bool = False) -> bool:
     """Send a temperature monitoring log when the webhook env is configured."""
+    if background:
+        _run_in_background(_send, "monitoring_log", payload)
+        return True
     return _send("monitoring_log", payload)
 
 
-def send_qc_report(payload: dict[str, Any]) -> bool:
+def send_qc_report(payload: dict[str, Any], background: bool = False) -> bool:
     """Send a QC inspection report when the webhook env is configured."""
+    if background:
+        _run_in_background(_send, "qc_report", payload)
+        return True
     return _send("qc_report", payload)
 
 
-def send_qc_finding(payload: dict[str, Any]) -> bool:
+def send_qc_finding(payload: dict[str, Any], background: bool = False) -> bool:
     """Send a standalone QC finding to the QC Temuan sheet."""
+    if background:
+        _run_in_background(_send, "qc_finding", payload)
+        return True
     return _send("qc_finding", payload)
 
 
@@ -68,6 +83,11 @@ def build_qc_report_payload(row: dict[str, Any]) -> dict[str, Any]:
         "ph": _first_present(row, result, "ph", "ph_value"),
         "brix": _first_present(row, result, "brix", "brix_value"),
         "tds": _first_present(row, result, "tds", "tds_value"),
+        "gramasi_1": row.get("gramasi_1") or result.get("gramasi_1"),
+        "gramasi_2": row.get("gramasi_2") or result.get("gramasi_2"),
+        "gramasi_3": row.get("gramasi_3") or result.get("gramasi_3"),
+        "gramasi_4": row.get("gramasi_4") or result.get("gramasi_4"),
+        "gramasi_5": row.get("gramasi_5") or result.get("gramasi_5"),
         "status": _status(row.get("status") or row.get("qc_status") or result.get("qc_status") or row.get("approval_status")),
         "staff_name": row.get("staff_display_name") or row.get("staff_name") or row.get("inspector_name") or row.get("staff_id") or "",
         "photo_url": _photo_url(row),
@@ -87,11 +107,14 @@ def build_qc_finding_payload(row: dict[str, Any]) -> dict[str, Any]:
     status = str(row.get("status") or row.get("approval_status") or "WARNING").strip().upper()
     if status in {"", "FINDING", "FIELD_FINDING"}:
         status = "WARNING"
+    desc = row.get("finding_description") or row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or ""
     return {
         "timestamp": timestamp,
         "type": "qc_finding",
         "staff_name": _staff_name(row),
-        "finding_description": row.get("finding_description") or row.get("temuan") or row.get("finding") or row.get("reason") or row.get("notes") or row.get("description") or row.get("message") or "",
+        "finding_description": desc,
+        "notes": desc,
+        "reason": desc,
         "photo_url": photo_url,
         "status": status,
         "source_type": "qc_finding",
