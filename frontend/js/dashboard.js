@@ -514,9 +514,9 @@ const Dashboard = {
             }
 
             const imgHtml = firstPhoto
-                ? `<img src="${firstPhoto}" alt="Temuan" style="width: 100%; height: 140px; object-fit: cover; border-radius: 12px 12px 0 0; display: block;">`
-                : `<div style="width: 100%; height: 140px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: 12px 12px 0 0; color: #94a3b8;">
-                       <i class="fas fa-camera" style="font-size: 32px;"></i>
+                ? `<img src="${firstPhoto}" alt="Temuan" style="width: 100%; height: 110px; object-fit: cover; border-radius: 0; display: block;">`
+                : `<div style="width: 100%; height: 110px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                       <i class="fas fa-camera" style="font-size: 24px;"></i>
                    </div>`;
 
             const dateStr = new Date(f.created_at).toLocaleDateString('id-ID', {
@@ -524,18 +524,18 @@ const Dashboard = {
             });
 
             return `
-                <article class="finding-feed-card" onclick="Dashboard.openFindingAction('${f.id}')" style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;">
+                <article class="task-now-card" onclick="Dashboard.openFindingAction('${f.id}')" style="min-height: auto; padding: 0; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-align: left;">
                     ${imgHtml}
-                    <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="status-badge ${statusClass}" style="padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 8px; text-transform: uppercase;">${statusLabel}</span>
-                            <span style="font-size: 11px; color: var(--muted, #64748b);">${dateStr}</span>
+                    <div style="padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+                            <span class="status-badge ${statusClass}" style="padding: 2px 6px; font-size: 10px; font-weight: 800; border-radius: 6px; text-transform: uppercase;">${statusLabel}</span>
+                            <span style="font-size: 10px; color: var(--muted, #64748b);">${dateStr}</span>
                         </div>
-                        <h4 style="font-size: 14px; font-weight: 700; margin: 0; color: #1e293b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${this.escapeHtml(displayReason)}</h4>
-                        ${analysisText ? `<p style="font-size: 12px; margin: 0; padding: 6px 10px; background: #f8fafc; border-left: 3px solid #6366f1; color: #475569; border-radius: 0 6px 6px 0; font-style: italic;"><strong>Analisis:</strong> ${this.escapeHtml(analysisText)}</p>` : ''}
-                        <div style="margin-top: auto; font-size: 12px; color: var(--muted, #64748b); display: flex; align-items: center; gap: 6px; border-top: 1px solid #f1f5f9; padding-top: 8px;">
-                            <i class="fas fa-user-circle" style="color: #94a3b8;"></i>
-                            <span>${this.escapeHtml(f.staff_name || 'QC Staff')}</span>
+                        <h4 style="font-size: 13px; font-weight: 800; margin: 0; color: #1e293b; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-align: left;">${this.escapeHtml(displayReason)}</h4>
+                        ${analysisText ? `<p style="font-size: 11px; margin: 0; padding: 4px 6px; background: #f8fafc; border-left: 2px solid #6366f1; color: #475569; border-radius: 0 4px 4px 0; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-align: left;"><strong>Analisis:</strong> ${this.escapeHtml(analysisText)}</p>` : ''}
+                        <div style="margin-top: auto; font-size: 11px; color: var(--muted, #64748b); display: flex; align-items: center; gap: 4px; border-top: 1px solid #f1f5f9; padding-top: 6px;">
+                            <i class="fas fa-user-circle" style="color: #94a3b8; font-size: 12px;"></i>
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(f.staff_name || 'QC Staff')}</span>
                         </div>
                     </div>
                 </article>

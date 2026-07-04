@@ -433,7 +433,14 @@ def get_findings():
         return jsonify({"detail": "Database client not initialized"}), 500
     
     try:
-        res = sb.table("qc_findings").select("*").order("created_at", desc=True).limit(100).execute()
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Asia/Jakarta")
+        now_local = datetime.now(tz)
+        start_of_day = datetime(now_local.year, now_local.month, now_local.day, tzinfo=tz)
+        start_of_day_iso = start_of_day.isoformat()
+
+        res = sb.table("qc_findings").select("*").gte("created_at", start_of_day_iso).order("created_at", desc=True).limit(100).execute()
         findings = res.data or []
         
         # Resolve user names
