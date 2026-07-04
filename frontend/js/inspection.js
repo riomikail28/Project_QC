@@ -455,6 +455,74 @@ const Inspection = {
         }
     },
 
+    renderStageTabs() {
+        const container = document.getElementById('qcStageTabs');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        const stages = [
+            { id: 'cooking_sensory', label: 'Sensory' },
+            { id: 'cooking_instrument', label: 'Instrument' },
+            { id: STAGE_PCK, label: STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1) }
+        ];
+        
+        stages.forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = 'qc-stage-tab';
+            btn.type = 'button';
+            btn.dataset.stage = s.id;
+            btn.textContent = s.label;
+            btn.style.flex = '1';
+            btn.style.border = 'none';
+            btn.style.background = 'none';
+            btn.style.padding = '8px 12px';
+            btn.style.fontSize = '13px';
+            btn.style.fontWeight = '700';
+            btn.style.borderRadius = '6px';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'all 0.2s ease';
+            btn.style.color = 'var(--text-secondary)';
+            btn.style.textAlign = 'center';
+            
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.selectedStage = s.id;
+                this.updateStageTabs();
+                this.updateStageFields();
+                this.updateSubmitState();
+            };
+            container.appendChild(btn);
+        });
+        this.updateStageTabs();
+    },
+
+    updateStageTabs() {
+        const tabs = document.querySelectorAll('.qc-stage-tab');
+        tabs.forEach(tab => {
+            const isActive = tab.dataset.stage === this.selectedStage;
+            tab.classList.toggle('active', isActive);
+            if (isActive) {
+                tab.style.background = 'white';
+                tab.style.color = 'var(--accent-blue)';
+                tab.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            } else {
+                tab.style.background = 'none';
+                tab.style.color = 'var(--text-secondary)';
+                tab.style.boxShadow = 'none';
+            }
+        });
+
+        let titleText = 'QC CHECK';
+        if (this.selectedStage === 'cooking_sensory') {
+            titleText = 'COOKING SENSORY CHECK';
+        } else if (this.selectedStage === 'cooking_instrument') {
+            titleText = 'COOKING INSTRUMENT CHECK';
+        } else if (this.selectedStage === STAGE_PCK) {
+            titleText = STAGE_PCK.toUpperCase() + ' CHECK';
+        }
+        this.setText('qcFormTitle', this.recheckParentInspection ? 'RE-CHECK QC' : titleText);
+    },
+
     /* ═══════════════════════════════════════════════
        Stage Fields Visibility
        ═══════════════════════════════════════════════ */
@@ -482,10 +550,9 @@ const Inspection = {
             if (tempWrap) tempWrap.style.display = 'grid';
             if (cookingUploadCard) cookingUploadCard.style.display = 'block';
             
-            // Hide Instrument Parameter panel
+            // Show Instrument Parameter panel (optional pH, brix, tds as requested)
             if (parameterPanel) {
-                parameterPanel.style.display = 'none';
-                parameterPanel.open = false;
+                parameterPanel.style.display = 'block';
             }
             
             // Manage finalFields photo cards and gramasi for cooking_sensory
@@ -1765,7 +1832,7 @@ const Inspection = {
             if (sensoryReport) {
                 const res = sensoryReport.inspection_result || {};
                 tempInput.value = sensoryReport.temperature || res.temperature || '';
-                tempInput.disabled = true;
+                tempInput.disabled = false;
             } else {
                 tempInput.value = '';
                 tempInput.disabled = false;
@@ -1782,9 +1849,9 @@ const Inspection = {
                 phInput.value = res.ph_value || '';
                 brixInput.value = res.brix_value || '';
                 tdsInput.value = res.tds_value || '';
-                phInput.disabled = true;
-                brixInput.disabled = true;
-                tdsInput.disabled = true;
+                phInput.disabled = false;
+                brixInput.disabled = false;
+                tdsInput.disabled = false;
             } else {
                 phInput.value = '';
                 brixInput.value = '';
@@ -1856,6 +1923,7 @@ const Inspection = {
         }
         document.body.classList.add('qc-sheet-open', 'modal-open');
         this.updateProgressiveFields();
+        this.renderStageTabs();
         this.updateSubmitState();
         
         // Focus the appropriate input

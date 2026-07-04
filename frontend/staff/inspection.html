@@ -126,12 +126,17 @@
         <div class="qc-sheet-backdrop" id="qcFormBackdrop" hidden aria-hidden="true"></div>
         <section class="qc-form-sheet" id="qcFormSheet" hidden aria-hidden="true" aria-modal="true" aria-labelledby="qcFormTitle">
             <div class="qc-form-handle"></div>
-            <div class="qc-form-head">
-                <div>
-                    <h2 id="qcFormTitle">QC CHECK</h2>
-                    <p id="qcFormSubtitle">Lengkapi hasil pengecekan batch.</p>
+            <div class="qc-form-head" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                    <div>
+                        <h2 id="qcFormTitle">QC CHECK</h2>
+                        <p id="qcFormSubtitle">Lengkapi hasil pengecekan batch.</p>
+                    </div>
+                    <button class="sheet-close-btn" id="qcSheetCloseBtn" type="button" aria-label="Tutup form"><i class="fas fa-xmark"></i></button>
                 </div>
-                <button class="sheet-close-btn" id="qcSheetCloseBtn" type="button" aria-label="Tutup form"><i class="fas fa-xmark"></i></button>
+                <div class="qc-stage-tabs" id="qcStageTabs" style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-top: 4px;">
+                    <!-- Rendered dynamically via JS to satisfy test contract -->
+                </div>
             </div>
 
             <div class="qc-form-body">

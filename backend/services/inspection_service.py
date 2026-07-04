@@ -206,22 +206,23 @@ class InspectionService:
             return self._fail("Batch ini berasal dari tanggal berbeda. Pilih batch hari ini atau buat batch baru.", status_code=409)
 
         # State transition and locking validations
+        existing_report = None
         if qc_stage == "cooking_sensory":
-            existing_sensory = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
-            if existing_sensory:
-                return self._fail("Sensory check sudah diisi dan dikunci (LOCKED)", status_code=409)
+            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
+            if existing:
+                existing_report = existing[0]
         elif qc_stage == "cooking_instrument":
-            existing_instrument = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
-            if existing_instrument:
-                return self._fail("Instrument check sudah diisi dan dikunci (LOCKED)", status_code=409)
+            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
+            if existing:
+                existing_report = existing[0]
         elif qc_stage == "packing":
             existing_sensory = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
             existing_instrument = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
             if not existing_sensory or not existing_instrument:
                 return self._fail("Tahap Cooking belum lengkap (Sensory & Instrument harus diisi terlebih dahulu)", status_code=400)
-            existing_packing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "packing")])
-            if existing_packing:
-                return self._fail("Packing check sudah selesai dan dikunci (LOCKED)", status_code=409)
+            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "packing")])
+            if existing:
+                existing_report = existing[0]
 
         active_lock = self._active_inspection_for_batch(batch_id, batch_code)
         if active_lock and not is_admin:
@@ -330,7 +331,13 @@ class InspectionService:
                 "label_storage_path": label_path,
             }
             report_payload = {key: value for key, value in report_payload.items() if value is not None}
-            report = self._insert("qc_reports", report_payload)
+            if existing_report:
+                report_id = existing_report.get("id")
+                self.sb.table("qc_reports").update(report_payload).eq("id", report_id).execute()
+                report = existing_report
+            else:
+                report = self._insert("qc_reports", report_payload)
+                report_id = report.get("id") if isinstance(report, dict) else None
 
             if barcode:
                 self._insert("barcode_labels", {
