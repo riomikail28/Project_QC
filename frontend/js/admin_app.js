@@ -2,6 +2,8 @@
  * Admin Enterprise App Logic
  */
 
+const Utils = window.Utils || {};
+
 const adminApp = {
     // API Endpoints
     apiBase: '/v1/admin',
