@@ -79,6 +79,26 @@ const Inspection = {
             });
         }
 
+        // Bind Gramasi Auto-Tab/Auto-Focus
+        for (let i = 1; i <= 5; i++) {
+            const el = document.getElementById(`qcGramasi${i}`);
+            if (el) {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const next = document.getElementById(`qcGramasi${i + 1}`);
+                        if (next) {
+                            next.focus();
+                            next.select();
+                        } else {
+                            const nextField = document.getElementById('qcPh') || document.getElementById('qcNotes');
+                            if (nextField) nextField.focus();
+                        }
+                    }
+                });
+            }
+        }
+
         // Bind Collapsible Today's Production List
         const headerToggle = document.getElementById('productionTodayHeader');
         if (headerToggle) {
