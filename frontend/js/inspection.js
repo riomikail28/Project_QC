@@ -747,7 +747,7 @@ const Inspection = {
             return;
         }
 
-        const user = Auth.getUser() || {};
+        const user = Auth.user() || {};
         const formData = new FormData();
         if (this.selectedProduct?.id) formData.append('product_id', this.selectedProduct.id);
         formData.append('product_name', this.selectedProduct?.product_name || 'Manual SKU');
