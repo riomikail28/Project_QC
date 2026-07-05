@@ -28,9 +28,10 @@ jobs:
           supabase link --project-ref "vftajivjfdxpijxagjog" -p "${{ secrets.SUPABASE_DB_PASSWORD }}"
 
       - name: Repair Missing Migration (Revert 025)
+        shell: bash
         run: |
           # Menghapus catatan migrasi 025 di remote agar tidak memicu error remote versions not found
-          supabase migration repair --status reverted 025 || true
+          supabase migration repair --status reverted --include-all 025 || true
 
       - name: Deploy Database Migrations
         run: |
