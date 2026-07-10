@@ -378,75 +378,7 @@ const Inspection = {
     bindQcHistoryActions() {
         document.getElementById('qcDetailBtn')?.addEventListener('click', () => {
             const batch = this.selectedBatch || {};
-            const reports = batch.qc_reports || [];
-            const sensory = reports.find(r => r.qc_stage === 'cooking_sensory');
-            const instrument = reports.find(r => r.qc_stage === 'cooking_instrument');
-            const pack = reports.find(r => r.qc_stage === STAGE_PCK);
-
-            const details = [
-                `Batch: ${batch.batch_code || '-'}`,
-                `Pemasakan ke: ${batch.batch_sequence || '-'}`,
-                `Cook: ${batch.cook_name || '-'}`,
-                `Qty: ${batch.quantity || '-'}`,
-                `Status Akhir: ${String(batch.qc_status || batch.final_qc_status || '-').toUpperCase()}`,
-                ''
-            ];
-
-            if (sensory) {
-                let res = sensory.inspection_result || {};
-                if (typeof res === 'string') {
-                    try { res = JSON.parse(res); } catch (e) { res = {}; }
-                }
-                const temp = sensory.temperature || res.temperature || '-';
-                details.push(`[SENSORY CHECK]`);
-                details.push(`Suhu: ${temp}°C`);
-                details.push(`Status: ${String(sensory.status || '-').toUpperCase()}`);
-                details.push(`Waktu: ${this.formatDateTime(sensory.created_at || sensory.submitted_at)}`);
-                details.push('');
-            } else {
-                details.push(`[SENSORY CHECK]: Belum QC\n`);
-            }
-
-            if (instrument) {
-                let res = instrument.inspection_result || {};
-                if (typeof res === 'string') {
-                    try { res = JSON.parse(res); } catch (e) { res = {}; }
-                }
-                const ph = instrument.ph_value || res.ph_value || '-';
-                const brix = instrument.brix_value || res.brix_value || '-';
-                const tds = instrument.tds_value || res.tds_value || '-';
-                details.push(`[INSTRUMENT CHECK]`);
-                details.push(`pH: ${ph} | Brix: ${brix} | TDS: ${tds}`);
-                details.push(`Status: ${String(instrument.status || '-').toUpperCase()}`);
-                details.push(`Waktu: ${this.formatDateTime(instrument.created_at || instrument.submitted_at)}`);
-                details.push('');
-            } else {
-                details.push(`[INSTRUMENT CHECK]: Belum QC\n`);
-            }
-
-            if (pack) {
-                let res = pack.inspection_result || {};
-                if (typeof res === 'string') {
-                    try { res = JSON.parse(res); } catch (e) { res = {}; }
-                }
-                const gramasi = [];
-                for (let i = 1; i <= 5; i++) {
-                    const g = pack[`gramasi_${i}`] || res[`gramasi_${i}`];
-                    if (g !== undefined && g !== null) gramasi.push(`${g}g`);
-                }
-                const mfg = pack.mfg_date || res.mfg_date || '-';
-                const exp = pack.exp_date || res.exp_date || '-';
-                details.push(`[${STAGE_PCK.toUpperCase()} CHECK]`);
-                details.push(`Gramasi: ${gramasi.join(', ') || '-'}`);
-                details.push(`MFG: ${mfg} | EXP: ${exp}`);
-                details.push(`Status: ${String(pack.status || '-').toUpperCase()}`);
-                details.push(`Waktu: ${this.formatDateTime(pack.created_at || pack.submitted_at)}`);
-                details.push('');
-            } else {
-                details.push(`[${STAGE_PCK.toUpperCase()} CHECK]: Belum QC\n`);
-            }
-
-            window.alert(details.filter(line => line !== null).join('\n').trim());
+            window.alert(this.formatBatchDetailedReport(batch));
         });
         document.getElementById('qcRecheckBtn')?.addEventListener('click', () => {
             if (!this.lastInspection?.id) return;
@@ -2488,18 +2420,78 @@ const Inspection = {
 
     showBatchDetail(batch) {
         if (!batch) return;
-        const latest = batch.last_qc || {};
-        const detail = [
-            `Batch: ${batch.batch_code || '-'}`,
+        window.alert(this.formatBatchDetailedReport(batch));
+    },
+
+    formatBatchDetailedReport(batch) {
+        const reports = batch.qc_reports || [];
+        const sensory = reports.find(r => r.qc_stage === 'cooking_sensory');
+        const instrument = reports.find(r => r.qc_stage === 'cooking_instrument');
+        const pack = reports.find(r => r.qc_stage === STAGE_PCK);
+
+        const details = [
             `Pemasakan ke: ${batch.batch_sequence || '-'}`,
             `Cook: ${batch.cook_name || '-'}`,
             `Qty: ${batch.quantity || '-'}`,
-            `Status QC: ${String(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || '-').toUpperCase()}`,
-            latest.qc_stage ? `Jenis: ${this.stageLabel(latest.qc_stage)}` : null,
-            latest.inspection_round ? `Round: ${latest.inspection_round}` : null,
-            latest.notes ? `Catatan: ${latest.notes}` : null,
-        ].filter(Boolean).join('\n');
-        window.alert(detail);
+            `Status Akhir: ${String(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || '-').toUpperCase()}`,
+            ''
+        ];
+
+        // 1. Sensory Check
+        details.push(`sensory check`);
+        if (sensory) {
+            let res = sensory.inspection_result || {};
+            if (typeof res === 'string') {
+                try { res = JSON.parse(res); } catch (e) { res = {}; }
+            }
+            const temp = sensory.temperature || res.temperature || '-';
+            const hasPhoto = sensory.cooking_photo_url || sensory.photo_url || res.cooking_photo_url || res.photo_url;
+            details.push(`1.foto masakan: ${hasPhoto ? 'done' : 'belum upload'}`);
+            details.push(`2.suhu: ${temp !== '-' ? temp + '°C' : '-'}`);
+        } else {
+            details.push(`Belum QC`);
+        }
+        details.push('');
+
+        // 2. Instrument Check
+        details.push(`instrument chek`);
+        if (instrument) {
+            let res = instrument.inspection_result || {};
+            if (typeof res === 'string') {
+                try { res = JSON.parse(res); } catch (e) { res = {}; }
+            }
+            const ph = instrument.ph_value || res.ph_value || '-';
+            const brix = instrument.brix_value || res.brix_value || '-';
+            const tds = instrument.tds_value || res.tds_value || '-';
+            details.push(`angka dari`);
+            details.push(`1.ph: ${ph}`);
+            details.push(`2.brix: ${brix}`);
+            details.push(`3.tds: ${tds}`);
+        } else {
+            details.push(`Belum QC`);
+        }
+        details.push('');
+
+        // 3. STAGE_PCK check
+        details.push(`${STAGE_PCK} check`);
+        if (pack) {
+            let res = pack.inspection_result || {};
+            if (typeof res === 'string') {
+                try { res = JSON.parse(res); } catch (e) { res = {}; }
+            }
+            const hasBarcodePhoto = pack.barcode_photo_url || pack.photo_url || res.barcode_photo_url || res.photo_url;
+            const gramasi = [];
+            for (let i = 1; i <= 5; i++) {
+                const g = pack[`gramasi_${i}`] || res[`gramasi_${i}`];
+                if (g !== undefined && g !== null && g !== '') gramasi.push(`${g}g`);
+            }
+            details.push(`1.foto barcode: ${hasBarcodePhoto ? 'done' : 'belum upload'}`);
+            details.push(`2.gramasi 1-5 sampel(gr): ${gramasi.join(', ') || '-'}`);
+        } else {
+            details.push(`Belum QC`);
+        }
+
+        return details.join('\n');
     },
 
     /* ═══════════════════════════════════════════════

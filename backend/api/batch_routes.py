@@ -242,16 +242,20 @@ def batches_by_product(product_id):
 
         reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(500).execute().data or []
         report_map = {}
+        reports_by_batch = {}
         for report in reports:
-            keys = [report.get("batch_id"), report.get("batch_code")]
-            for key in keys:
+            for key in (report.get("batch_id"), report.get("batch_code")):
                 if key and key not in report_map:
                     report_map[key] = report
+            for key in (report.get("batch_id"), report.get("batch_code")):
+                if key:
+                    reports_by_batch.setdefault(key, []).append(report)
 
         batches = []
         for row in batch_rows:
             last_qc = report_map.get(row.get("id")) or report_map.get(row.get("batch_code")) or {}
             qc_status = last_qc.get("status") or row.get("final_qc_status") or row.get("status") or "pending"
+            batch_reports = reports_by_batch.get(row.get("id")) or reports_by_batch.get(row.get("batch_code")) or []
             batches.append({
                 "id": row.get("id"),
                 "batch_code": row.get("batch_code"),
@@ -262,6 +266,7 @@ def batches_by_product(product_id):
                 "production_time": row.get("production_time") or row.get("created_at"),
                 "qc_status": qc_status,
                 "last_qc": last_qc or None,
+                "qc_reports": batch_reports,
                 "inspection_round": last_qc.get("inspection_round") or 0,
             })
 
@@ -297,10 +302,14 @@ def today_batches():
         product_map = {row.get("id"): row for row in product_rows if row.get("id")}
         reports = sb.table("qc_reports").select("*").order("created_at", desc=True).limit(1000).execute().data or []
         report_map = {}
+        reports_by_batch = {}
         for report in reports:
             for key in (report.get("batch_id"), report.get("batch_code")):
                 if key and key not in report_map:
                     report_map[key] = report
+            for key in (report.get("batch_id"), report.get("batch_code")):
+                if key:
+                    reports_by_batch.setdefault(key, []).append(report)
 
         grouped = {}
         for row in batch_rows:
@@ -330,6 +339,8 @@ def today_batches():
                 normalized = "pending"
             group["batch_count"] += 1
             group["status_summary"][normalized] += 1
+            
+            batch_reports = reports_by_batch.get(row.get("id")) or reports_by_batch.get(row.get("batch_code")) or []
             group["batches"].append({
                 "id": row.get("id"),
                 "batch_code": row.get("batch_code"),
@@ -341,6 +352,7 @@ def today_batches():
                 "production_time": row.get("production_time") or row.get("created_at"),
                 "qc_status": qc_status,
                 "last_qc": last_qc or None,
+                "qc_reports": batch_reports,
                 "inspection_round": last_qc.get("inspection_round") or 0,
             })
 
