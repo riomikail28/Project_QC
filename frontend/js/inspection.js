@@ -2546,12 +2546,6 @@ const Inspection = {
                 progressBarColor = '#cbd5e1';
             }
 
-            let barIcons = '';
-            const filledCount = Math.floor(progressPct / 10);
-            for (let i = 0; i < 10; i++) {
-                barIcons += i < filledCount ? '█' : '░';
-            }
-
             return `
                 <div class="batch-lifecycle-card" style="background: var(--card-bg, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
@@ -2568,7 +2562,7 @@ const Inspection = {
                     
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
-                            <span style="font-family: monospace; letter-spacing: 1px; font-weight: bold; color: var(--text-primary);">${barIcons}</span>
+                            <span>Progress Pengecekan</span>
                             <strong>${progressPct}%</strong>
                         </div>
                         <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; width: 100%;">

@@ -720,17 +720,16 @@ function renderNextDevice() {
 
     if (progressEl) {
         const progress = roomProgress(next.room);
-        const totalBlocks = 10;
-        const filledBlocks = Math.round((progress.completed / progress.total) * totalBlocks);
-        const emptyBlocks = totalBlocks - filledBlocks;
-        const barStr = "█".repeat(filledBlocks) + "░".repeat(emptyBlocks);
+        const percent = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
         progressEl.innerHTML = `
-            <div style="font-size: 13px; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-color); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <span>${next.room.name}</span>
-                <span style="font-family: monospace; letter-spacing: 1px; color: var(--primary);">${barStr}</span>
+                <div style="background: #e2e8f0; border-radius: 99px; height: 6px; width: 80px; display: inline-block; overflow: hidden; vertical-align: middle;">
+                    <div style="background: var(--primary); width: ${percent}%; height: 100%; border-radius: 99px;"></div>
+                </div>
                 <span>${progress.completed} / ${progress.total} Device</span>
             </div>
-            <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
                 Device berikutnya: ${next.device.name || unitName(next.device.type)}
             </div>
         `;
