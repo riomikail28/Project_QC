@@ -208,19 +208,44 @@ class InspectionService:
         # State transition and locking validations
         existing_report = None
         if qc_stage == "cooking_sensory":
-            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
+            filters = [("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")]
+            if parent_inspection:
+                filters.append(("eq", "parent_inspection", parent_inspection))
+            else:
+                filters.append(("is", "parent_inspection", "null"))
+            existing = self._fetch("qc_reports", limit=1, filters=filters)
             if existing:
                 existing_report = existing[0]
         elif qc_stage == "cooking_instrument":
-            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
+            filters = [("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")]
+            if parent_inspection:
+                filters.append(("eq", "parent_inspection", parent_inspection))
+            else:
+                filters.append(("is", "parent_inspection", "null"))
+            existing = self._fetch("qc_reports", limit=1, filters=filters)
             if existing:
                 existing_report = existing[0]
         elif qc_stage == "packing":
-            existing_sensory = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")])
-            existing_instrument = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")])
+            sensory_filters = [("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_sensory")]
+            instr_filters = [("eq", "batch_id", batch_id), ("eq", "qc_stage", "cooking_instrument")]
+            if parent_inspection:
+                sensory_filters.append(("eq", "parent_inspection", parent_inspection))
+                instr_filters.append(("eq", "parent_inspection", parent_inspection))
+            else:
+                sensory_filters.append(("is", "parent_inspection", "null"))
+                instr_filters.append(("is", "parent_inspection", "null"))
+            
+            existing_sensory = self._fetch("qc_reports", limit=1, filters=sensory_filters)
+            existing_instrument = self._fetch("qc_reports", limit=1, filters=instr_filters)
             if not existing_sensory or not existing_instrument:
                 return self._fail("Tahap Cooking belum lengkap (Sensory & Instrument harus diisi terlebih dahulu)", status_code=400)
-            existing = self._fetch("qc_reports", limit=1, filters=[("eq", "batch_id", batch_id), ("eq", "qc_stage", "packing")])
+            
+            pack_filters = [("eq", "batch_id", batch_id), ("eq", "qc_stage", "packing")]
+            if parent_inspection:
+                pack_filters.append(("eq", "parent_inspection", parent_inspection))
+            else:
+                pack_filters.append(("is", "parent_inspection", "null"))
+            existing = self._fetch("qc_reports", limit=1, filters=pack_filters)
             if existing:
                 existing_report = existing[0]
 
