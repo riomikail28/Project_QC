@@ -836,9 +836,16 @@ const Inspection = {
         const tds = document.getElementById('qcTds')?.value;
         const mfgDate = document.getElementById('qcMfgDate')?.value;
         const expDate = document.getElementById('qcExpDate')?.value;
-        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
-        const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
-        const labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        let cookingPhoto = null;
+        let barcodePhoto = null;
+        let labelPhoto = null;
+        
+        if (this.selectedStage === 'cooking_sensory') {
+            cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
+        } else if (this.selectedStage === STAGE_PCK) {
+            barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
+            labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        }
         
         const gramasi1 = document.getElementById('qcGramasi1')?.value?.trim();
         const gramasi2 = document.getElementById('qcGramasi2')?.value?.trim();
@@ -1934,10 +1941,14 @@ const Inspection = {
         }
 
         // Enable/Disable & Populate Sensory fields
+        // Enable/Disable & Populate Sensory fields
         const tempInput = document.getElementById('qcTemp');
         if (tempInput) {
             if (sensoryReport) {
-                const res = sensoryReport.inspection_result || {};
+                let res = sensoryReport.inspection_result || {};
+                if (typeof res === 'string') {
+                    try { res = JSON.parse(res); } catch (e) { res = {}; }
+                }
                 tempInput.value = sensoryReport.temperature || res.temperature || '';
                 tempInput.disabled = false;
             } else {
@@ -1952,10 +1963,13 @@ const Inspection = {
         const tdsInput = document.getElementById('qcTds');
         if (phInput && brixInput && tdsInput) {
             if (instrumentReport) {
-                const res = instrumentReport.inspection_result || {};
-                phInput.value = res.ph_value || '';
-                brixInput.value = res.brix_value || '';
-                tdsInput.value = res.tds_value || '';
+                let res = instrumentReport.inspection_result || {};
+                if (typeof res === 'string') {
+                    try { res = JSON.parse(res); } catch (e) { res = {}; }
+                }
+                phInput.value = instrumentReport.ph_value || res.ph_value || '';
+                brixInput.value = instrumentReport.brix_value || res.brix_value || '';
+                tdsInput.value = instrumentReport.tds_value || res.tds_value || '';
                 phInput.disabled = false;
                 brixInput.disabled = false;
                 tdsInput.disabled = false;
@@ -2002,12 +2016,37 @@ const Inspection = {
             }
         }
 
-        // Reset Gramasi
+        // Reset & Populate Gramasi
         for (let i = 1; i <= 5; i++) {
             const el = document.getElementById(`qcGramasi${i}`);
             if (el) {
-                el.value = '';
+                if (packReport) {
+                    let res = packReport.inspection_result || {};
+                    if (typeof res === 'string') {
+                        try { res = JSON.parse(res); } catch (e) { res = {}; }
+                    }
+                    el.value = packReport[`gramasi_${i}`] || res[`gramasi_${i}`] || '';
+                } else {
+                    el.value = '';
+                }
                 el.disabled = false;
+            }
+        }
+
+        // Reset & Populate MFG and EXP dates
+        const mfgInput = document.getElementById('qcMfgDate');
+        const expInput = document.getElementById('qcExpDate');
+        if (mfgInput && expInput) {
+            if (packReport) {
+                let res = packReport.inspection_result || {};
+                if (typeof res === 'string') {
+                    try { res = JSON.parse(res); } catch (e) { res = {}; }
+                }
+                mfgInput.value = packReport.mfg_date || res.mfg_date || '';
+                expInput.value = packReport.exp_date || res.exp_date || '';
+            } else {
+                mfgInput.value = '';
+                expInput.value = '';
             }
         }
 
@@ -2115,9 +2154,17 @@ const Inspection = {
         const tds = document.getElementById('qcTds')?.value;
         const mfgDate = document.getElementById('qcMfgDate')?.value;
         const expDate = document.getElementById('qcExpDate')?.value;
-        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
-        const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
-        const labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        
+        let cookingPhoto = null;
+        let barcodePhoto = null;
+        let labelPhoto = null;
+        
+        if (this.selectedStage === 'cooking_sensory') {
+            cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
+        } else if (this.selectedStage === STAGE_PCK) {
+            barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
+            labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        }
         
         const gramasi1 = document.getElementById('qcGramasi1')?.value?.trim();
         const gramasi2 = document.getElementById('qcGramasi2')?.value?.trim();
@@ -2157,17 +2204,26 @@ const Inspection = {
         if (gramasi4) formData.append('gramasi_4', gramasi4);
         if (gramasi5) formData.append('gramasi_5', gramasi5);
         
-        const response = await API.submitInspection(formData);
+        const response = await API.upload('/inspection/submit', formData);
         
-        if (response) {
+        if (response && response.success && response.data) {
+            const report = response.data;
             const reports = this.selectedBatch.qc_reports || [];
             const idx = reports.findIndex(r => r.qc_stage === this.selectedStage);
             if (idx !== -1) {
-                reports[idx] = response;
+                reports[idx] = report;
             } else {
-                reports.push(response);
+                reports.push(report);
             }
             this.selectedBatch.qc_reports = reports;
+            
+            // Clear photo uploads from state since they are saved
+            if (this.selectedStage === 'cooking_sensory') {
+                delete this.photoFiles.cookingPhoto;
+            } else if (this.selectedStage === STAGE_PCK) {
+                delete this.photoFiles.barcodePhoto;
+                delete this.photoFiles.labelPhoto;
+            }
             
             if (typeof this.loadInspectionWorkspace === 'function') {
                 this.loadInspectionWorkspace();

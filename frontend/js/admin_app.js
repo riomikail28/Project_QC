@@ -3181,6 +3181,73 @@ const adminApp = {
                 </div>
             </div>
         ` : '';
+
+        const phVal = detail.ph !== null && detail.ph !== undefined ? detail.ph : '-';
+        const brixVal = detail.brix !== null && detail.brix !== undefined ? detail.brix : '-';
+        const tdsVal = detail.tds !== null && detail.tds !== undefined ? detail.tds : '-';
+        const tempVal = detail.temperature !== null && detail.temperature !== undefined ? `${detail.temperature}°C` : '-';
+        
+        const gramasiHtml = detail.gramasi && Array.isArray(detail.gramasi) && detail.gramasi.length ? `
+            <div class="review-field" style="margin-top:10px;">
+                <span>Gramasi Produk (5 Cek)</span>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    ${detail.gramasi.map(g => `<span style="font-size: 0.9em; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f1f5f9; font-weight:600; color:#334155;">${g}g</span>`).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        const datesHtml = detail.mfg_date || detail.exp_date ? `
+            <div class="review-grid" style="margin-top:10px;">
+                ${this.reviewField('MFG Date', detail.mfg_date)}
+                ${this.reviewField('EXP Date', detail.exp_date)}
+            </div>
+        ` : '';
+
+        const photosHtml = [];
+        if (detail.cooking_photo) {
+            photosHtml.push(`
+                <div class="admin-photo-card" style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; background: #f8fafc; text-align: center;">
+                    <span style="font-size:0.8em; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">Foto Masakan</span>
+                    <img src="${this.escapeAttr(detail.cooking_photo)}" style="width:100px; height:100px; object-fit:cover; border-radius:4px; display:block; cursor:pointer;" onclick="adminApp.previewImage('${this.escapeAttr(detail.cooking_photo)}')">
+                </div>
+            `);
+        }
+        if (detail.barcode_photo) {
+            photosHtml.push(`
+                <div class="admin-photo-card" style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; background: #f8fafc; text-align: center;">
+                    <span style="font-size:0.8em; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">Foto Barcode</span>
+                    <img src="${this.escapeAttr(detail.barcode_photo)}" style="width:100px; height:100px; object-fit:cover; border-radius:4px; display:block; cursor:pointer;" onclick="adminApp.previewImage('${this.escapeAttr(detail.barcode_photo)}')">
+                </div>
+            `);
+        }
+        if (detail.label_photo) {
+            photosHtml.push(`
+                <div class="admin-photo-card" style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; background: #f8fafc; text-align: center;">
+                    <span style="font-size:0.8em; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">Foto Label</span>
+                    <img src="${this.escapeAttr(detail.label_photo)}" style="width:100px; height:100px; object-fit:cover; border-radius:4px; display:block; cursor:pointer;" onclick="adminApp.previewImage('${this.escapeAttr(detail.label_photo)}')">
+                </div>
+            `);
+        }
+        
+        if (!photosHtml.length && evidence) {
+            const firstEv = String(evidence).split(';')[0];
+            photosHtml.push(`
+                <div class="admin-photo-card" style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; background: #f8fafc; text-align: center;">
+                    <span style="font-size:0.8em; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">Evidence</span>
+                    <img src="${this.escapeAttr(firstEv)}" style="width:100px; height:100px; object-fit:cover; border-radius:4px; display:block; cursor:pointer;" onclick="adminApp.previewImage('${this.escapeAttr(firstEv)}')">
+                </div>
+            `);
+        }
+
+        const photosSection = photosHtml.length ? `
+            <section class="review-section">
+                <h4>QC Photo Evidence</h4>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
+                    ${photosHtml.join('')}
+                </div>
+            </section>
+        ` : '<section class="review-section"><h4>Evidence Photo</h4><p class="admin-muted">Tidak ada evidence.</p></section>';
+
         const html = `
             <section class="review-section"><h4>Batch Info</h4><div class="review-grid">
                 ${this.reviewField('Batch Code', detail.batch_code)}
@@ -3191,16 +3258,17 @@ const adminApp = {
                 ${this.reviewField('Jam Produksi', this.dateTime(detail.production_time))}
             </div></section>
             <section class="review-section"><h4>QC Result</h4><div class="review-grid">
-                ${this.reviewField('Temperature', detail.temperature)}
-                ${this.reviewField('pH', detail.ph)}
-                ${this.reviewField('Brix', detail.brix)}
-                ${this.reviewField('TDS', detail.tds)}
+                ${this.reviewField('Temperature', tempVal)}
+                ${this.reviewField('pH', phVal)}
+                ${this.reviewField('Brix', brixVal)}
+                ${this.reviewField('TDS', tdsVal)}
                 <div class="review-field"><span>Status</span>${this.statusBadge(detail.qc_status || 'Belum QC')}</div>
                 ${this.reviewField('Inspector', detail.inspector_display_name || detail.last_inspector)}
-            </div><div class="review-field" style="margin-top:10px;"><span>Notes</span><p>${this.escapeHtml(detail.notes || '-')}</p></div></section>
-            <section class="review-section"><h4>Evidence Photo</h4><div class="review-evidence">
-                ${evidence ? `<img src="${this.escapeAttr(Utils.thumbnailUrl ? Utils.thumbnailUrl(String(evidence).split(';')[0]) : this.thumbnailUrl(String(evidence).split(';')[0]))}" alt="QC evidence" loading="lazy"><button class="btn-secondary" onclick='adminApp.previewImage(${this.safeJson(evidence)})'><i data-lucide="image"></i> Buka Foto</button>` : '<p class="admin-muted">Tidak ada evidence.</p>'}
-            </div></section>
+            </div>
+            ${gramasiHtml}
+            ${datesHtml}
+            <div class="review-field" style="margin-top:10px;"><span>Notes</span><p>${this.escapeHtml(detail.notes || '-')}</p></div></section>
+            ${photosSection}
             <section class="review-section"><h4>Re-check History</h4>${history.length ? history.map(row => `<p class="admin-muted">${this.dateTime(row.submitted_at)} - ${this.escapeHtml(row.status || '-')} - ${this.escapeHtml(row.notes || '-')}</p>`).join('') : '<p class="admin-muted">Belum ada re-check history.</p>'}</section>
             <section class="review-section"><h4>Traceability</h4><button class="btn-secondary" onclick="adminApp.openBatchTraceabilityDetail('${this.escapeAttr(detail.batch_code || '')}')"><i data-lucide="qr-code"></i> Traceability</button><div id="batch-traceability-inline"></div></section>
             ${approvalActions}

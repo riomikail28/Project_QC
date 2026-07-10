@@ -1191,6 +1191,60 @@ class AdminService:
         qc_status = self._display_qc_status(latest_qc.get("status")) if latest_qc else "Belum QC"
         approval_status = self._display_approval_status(latest_approval.get("status") or latest_qc.get("approval_status"))
         product = item.get("products") if isinstance(item.get("products"), dict) else {}
+        
+        # Aggregate stage details across all reports of this batch
+        sensory_rep = next((r for r in related_qc if r.get("qc_stage") == "cooking_sensory"), None)
+        instrument_rep = next((r for r in related_qc if r.get("qc_stage") == "cooking_instrument"), None)
+        pack_rep = next((r for r in related_qc if r.get("qc_stage") == "packing"), None)
+
+        temperature = None
+        if sensory_rep:
+            temperature = sensory_rep.get("temperature")
+            if temperature is None and isinstance(sensory_rep.get("inspection_result"), dict):
+                temperature = sensory_rep["inspection_result"].get("temperature")
+
+        ph_value = None
+        brix_value = None
+        tds_value = None
+        if instrument_rep:
+            ph_value = instrument_rep.get("ph_value")
+            brix_value = instrument_rep.get("brix_value")
+            tds_value = instrument_rep.get("tds_value")
+            if isinstance(instrument_rep.get("inspection_result"), dict):
+                res = instrument_rep["inspection_result"]
+                ph_value = ph_value or res.get("ph_value")
+                brix_value = brix_value or res.get("brix_value")
+                tds_value = tds_value or res.get("tds_value")
+
+        gramasi = []
+        mfg_date = None
+        exp_date = None
+        if pack_rep:
+            if isinstance(pack_rep.get("inspection_result"), dict):
+                res = pack_rep["inspection_result"]
+                mfg_date = pack_rep.get("mfg_date") or res.get("mfg_date")
+                exp_date = pack_rep.get("exp_date") or res.get("exp_date")
+                for i in range(1, 6):
+                    val = pack_rep.get(f"gramasi_{i}") or res.get(f"gramasi_{i}")
+                    if val is not None:
+                        gramasi.append(val)
+            else:
+                mfg_date = pack_rep.get("mfg_date")
+                exp_date = pack_rep.get("exp_date")
+                for i in range(1, 6):
+                    val = pack_rep.get(f"gramasi_{i}")
+                    if val is not None:
+                        gramasi.append(val)
+
+        cooking_photo = None
+        barcode_photo = None
+        label_photo = None
+        if sensory_rep:
+            cooking_photo = sensory_rep.get("cooking_photo_url") or sensory_rep.get("photo_url")
+        if pack_rep:
+            barcode_photo = pack_rep.get("barcode_photo_url")
+            label_photo = pack_rep.get("label_photo_url")
+            
         return {
             "id": batch_id,
             "batch_code": batch_code,
@@ -1209,6 +1263,16 @@ class AdminService:
             "last_inspector": latest_qc.get("staff_display_name") or latest_qc.get("inspector_name") or "-",
             "last_qc_report_id": latest_qc.get("id"),
             "approval_id": latest_approval.get("id"),
+            "temperature": temperature,
+            "ph": ph_value,
+            "brix": brix_value,
+            "tds": tds_value,
+            "gramasi": gramasi,
+            "mfg_date": mfg_date,
+            "exp_date": exp_date,
+            "cooking_photo": cooking_photo,
+            "barcode_photo": barcode_photo,
+            "label_photo": label_photo,
         }
 
     def _same_batch(self, row, batch_id, batch_code):
