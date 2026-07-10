@@ -504,8 +504,9 @@ const Inspection = {
             btn.style.color = 'var(--text-secondary)';
             btn.style.textAlign = 'center';
             
-            btn.onclick = (e) => {
+            btn.onclick = async (e) => {
                 e.stopPropagation();
+                await this.autoSaveCurrentTab();
                 this.selectedStage = s.id;
                 this.updateStageTabs();
                 this.updateStageFields();
@@ -555,77 +556,117 @@ const Inspection = {
         const fallbackContainer = document.getElementById('packFallbackFields');
         if (fallbackContainer) fallbackContainer.style.display = 'none';
         
+        const statusField = document.getElementById('statusField');
+        const notesField = document.getElementById('notesField');
+        const submitSummary = document.getElementById('qcSubmitSummary');
+        const miniSummary = document.getElementById('qcMiniSummary');
+        
         if (!hasContext) {
             if (cooking) cooking.style.display = 'none';
             if (final) final.style.display = 'none';
+            const gramasiContainer = document.getElementById('gramasiContainer');
+            if (gramasiContainer) gramasiContainer.style.display = 'none';
             return;
         }
 
         const stage = this.selectedStage;
-        
+        const barcodeCard = document.getElementById('barcodeUploadCard');
+        const labelCard = document.getElementById('labelUploadCard');
+        const gramasiContainer = document.getElementById('gramasiContainer');
+        const cookingPhotoLabel = document.getElementById('cookingPhotoLabel');
+
         if (stage === 'cooking_sensory') {
+            // Show cookingFields (Suhu Masak, Foto Masakan)
             if (cooking) cooking.style.display = 'grid';
-            // Show Temperature input and Photo upload card
+            
+            // Show Suhu Masak
             const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
             if (tempWrap) tempWrap.style.display = 'grid';
+            
+            // Show Foto Masakan (cookingUploadCard)
             if (cookingUploadCard) cookingUploadCard.style.display = 'block';
+            if (cookingPhotoLabel) cookingPhotoLabel.textContent = 'Foto Masakan';
             
-            // Show Instrument Parameter panel (optional pH, brix, tds as requested)
-            if (parameterPanel) {
-                parameterPanel.style.display = 'block';
-                parameterPanel.classList.remove('no-summary');
-                const summaryEl = parameterPanel.querySelector('summary');
-                if (summaryEl) summaryEl.style.display = '';
-            }
+            // Hide Parameter QC Tambahan
+            if (parameterPanel) parameterPanel.style.display = 'none';
             
-            // Manage finalFields photo cards and gramasi for cooking_sensory
-            const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
-            const barcodeCard = document.getElementById('barcodeUploadCard');
-            const labelCard = document.getElementById('labelUploadCard');
-            const gramasiContainer = document.getElementById('gramasiContainer');
+            // Hide final fields (Barcode, Label)
+            if (final) final.style.display = 'none';
+            if (barcodeCard) barcodeCard.style.display = 'none';
+            if (labelCard) labelCard.style.display = 'none';
             
-            if (isBatch1) {
-                if (final) final.style.display = 'grid';
-                if (barcodeCard) barcodeCard.style.display = 'block';
-                if (labelCard) labelCard.style.display = 'none'; // label photo always deleted from cooking sensory
-                if (gramasiContainer) gramasiContainer.style.display = 'flex';
-            } else {
-                if (final) final.style.display = 'none';
-                if (barcodeCard) barcodeCard.style.display = 'none';
-                if (labelCard) labelCard.style.display = 'none';
-                if (gramasiContainer) gramasiContainer.style.display = 'none';
-            }
+            // Hide Gramasi Container
+            if (gramasiContainer) gramasiContainer.style.display = 'none';
+            
+            // Sensory is auto PASS: hide status selector, notes, and summary
+            if (statusField) statusField.hidden = true;
+            if (notesField) notesField.hidden = true;
+            if (submitSummary) submitSummary.hidden = true;
+            if (miniSummary) miniSummary.hidden = true;
+            
+            this.selectedStatus = 'pass';
+            
         } else if (stage === 'cooking_instrument') {
+            // Show cookingFields (only Parameter QC Tambahan)
             if (cooking) cooking.style.display = 'grid';
-            // Hide Temperature input and Photo upload card
+            
+            // Hide Suhu Masak
             const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
             if (tempWrap) tempWrap.style.display = 'none';
+            
+            // Hide Foto Masakan
             if (cookingUploadCard) cookingUploadCard.style.display = 'none';
             
-            // Show Instrument Parameter panel, open it
+            // Show Parameter QC Tambahan & keep it open
             if (parameterPanel) {
                 parameterPanel.style.display = 'block';
                 parameterPanel.open = true;
                 parameterPanel.classList.remove('collapsed');
                 parameterPanel.classList.add('no-summary');
+                const summaryEl = parameterPanel.querySelector('summary');
+                if (summaryEl) summaryEl.style.display = 'none';
             }
+            
+            // Hide final fields, gramasi
             if (final) final.style.display = 'none';
-            const gramasiContainer = document.getElementById('gramasiContainer');
+            if (barcodeCard) barcodeCard.style.display = 'none';
+            if (labelCard) labelCard.style.display = 'none';
             if (gramasiContainer) gramasiContainer.style.display = 'none';
+            
+            // Instrument is auto PASS: hide status selector, notes, and summary
+            if (statusField) statusField.hidden = true;
+            if (notesField) notesField.hidden = true;
+            if (submitSummary) submitSummary.hidden = true;
+            if (miniSummary) miniSummary.hidden = true;
+            
+            this.selectedStatus = 'pass';
+            
         } else if (stage === STAGE_PCK) {
+            // Hide cookingFields (Suhu, Foto Masakan, Parameter QC)
             if (cooking) cooking.style.display = 'none';
+            
+            // Show finalFields
             if (final) final.style.display = 'grid';
-            // In STAGE_PCK (final check), both barcode and label photo cards are visible
-            const barcodeCard = document.getElementById('barcodeUploadCard');
-            const labelCard = document.getElementById('labelUploadCard');
+            
+            // Show Barcode Card, HIDE Label Card (foto label cetak tidak usah)
             if (barcodeCard) barcodeCard.style.display = 'block';
-            if (labelCard) labelCard.style.display = 'block';
-            const gramasiContainer = document.getElementById('gramasiContainer');
-            if (gramasiContainer) gramasiContainer.style.display = 'none';
+            if (labelCard) labelCard.style.display = 'none';
+            
+            // Show Gramasi Container (wajib untuk tahap akhir!)
+            if (gramasiContainer) gramasiContainer.style.display = 'flex';
+            
+            // Show status selector, notes, and summary
+            if (statusField) statusField.hidden = false;
+            
+            const holdFail = this.requiresHoldFailEvidence();
+            const recheck = Boolean(this.recheckParentInspection);
+            if (notesField) notesField.hidden = !holdFail && !recheck;
+            if (submitSummary) submitSummary.hidden = false;
+            
         } else {
-            // Completed or Unknown stage
             if (cooking) cooking.style.display = 'none';
             if (final) final.style.display = 'none';
+            if (gramasiContainer) gramasiContainer.style.display = 'none';
         }
 
         const body = document.querySelector('.qc-form-body');
@@ -675,7 +716,8 @@ const Inspection = {
         const uploadCard = document.getElementById('cookingUploadCard');
         const photoLabel = document.getElementById('cookingPhotoLabel');
         const sheet = document.getElementById('qcFormSheet');
-        const standardDriven = this.productHasAdditionalStandards();
+        const statusField = document.getElementById('statusField');
+        const submitSummary = document.getElementById('qcSubmitSummary');
 
         if (parameterPanel) {
             if (isAdvancedPanelOpen) {
@@ -686,18 +728,29 @@ const Inspection = {
                 parameterPanel.open = false;
             }
         }
-        if (notesField) notesField.hidden = !hasContext || (!holdFail && !recheck);
-        if (uploadCard) {
-            if (this.selectedStage === 'cooking_sensory') {
-                uploadCard.style.display = hasContext ? 'block' : 'none';
-            } else {
-                if (!hasContext || (!holdFail && !recheck)) {
-                    uploadCard.style.display = 'none';
-                } else {
-                    uploadCard.style.display = 'block';
-                }
+
+        const stage = this.selectedStage;
+
+        if (stage === 'cooking_sensory' || stage === 'cooking_instrument') {
+            // Hide status, notes, and summary for sensory & instrument
+            if (statusField) statusField.hidden = true;
+            if (notesField) notesField.hidden = true;
+            if (submitSummary) submitSummary.hidden = true;
+            
+            // Show upload card only for sensory check
+            if (uploadCard) {
+                uploadCard.style.display = (stage === 'cooking_sensory' && hasContext) ? 'block' : 'none';
             }
+        } else if (stage === STAGE_PCK) {
+            // Show status and notes (if hold/fail or recheck)
+            if (statusField) statusField.hidden = !hasContext;
+            if (notesField) notesField.hidden = !hasContext || (!holdFail && !recheck);
+            if (submitSummary) submitSummary.hidden = !hasContext;
+            
+            // Hide cooking photo upload card
+            if (uploadCard) uploadCard.style.display = 'none';
         }
+
         if (photoLabel) photoLabel.textContent = holdFail ? 'Foto evidence wajib' : 'Foto evidence optional';
         if (sheet) {
             sheet.classList.toggle('fast-pass-mode', hasContext && this.selectedStatus === 'pass' && !recheck);
@@ -980,26 +1033,23 @@ const Inspection = {
             const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
             hasTemperature = (temperatureValue != null && Number.isFinite(temperatureValue));
             
-            const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
-            if (isBatch1) {
-                const g1 = document.getElementById('qcGramasi1')?.value?.trim();
-                const g2 = document.getElementById('qcGramasi2')?.value?.trim();
-                const g3 = document.getElementById('qcGramasi3')?.value?.trim();
-                const g4 = document.getElementById('qcGramasi4')?.value?.trim();
-                const g5 = document.getElementById('qcGramasi5')?.value?.trim();
-                hasGramasi = Boolean(g1 && g2 && g3 && g4 && g5);
-            }
             stageValid = hasTemperature;
         } else if (stage === 'cooking_instrument') {
-            // Allow submission if we are in cooking_instrument check
             stageValid = true; 
         } else if (stage === STAGE_PCK) {
             const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
             const mfg = document.getElementById('qcMfgDate')?.value;
             const exp = document.getElementById('qcExpDate')?.value;
             
-            // Barcode photo and MFG/EXP dates must be populated
-            stageValid = Boolean(barcodePhoto && mfg && exp);
+            // Gramasi is mandatory for final check
+            const g1 = document.getElementById('qcGramasi1')?.value?.trim();
+            const g2 = document.getElementById('qcGramasi2')?.value?.trim();
+            const g3 = document.getElementById('qcGramasi3')?.value?.trim();
+            const g4 = document.getElementById('qcGramasi4')?.value?.trim();
+            const g5 = document.getElementById('qcGramasi5')?.value?.trim();
+            hasGramasi = Boolean(g1 && g2 && g3 && g4 && g5);
+            
+            stageValid = Boolean(barcodePhoto && hasGramasi && mfg && exp);
         }
 
         const notes = document.getElementById('qcNotes')?.value?.trim();
@@ -1038,14 +1088,16 @@ const Inspection = {
         const notesError = document.getElementById('qcNotesError');
         const photoError = document.getElementById('qcPhotoError');
         const gramasiError = document.getElementById('qcGramasiError');
-        if (tempError) tempError.hidden = !validation.hasProduct || validation.hasTemperature;
-        if (notesError) notesError.hidden = !validation.needsEvidence || validation.hasHoldFailNotes;
-        if (photoError) photoError.hidden = !validation.needsEvidence || validation.hasHoldFailPhoto;
+        
+        const stage = this.selectedStage;
+
+        if (tempError) tempError.hidden = !validation.hasProduct || (stage !== 'cooking_sensory') || validation.hasTemperature;
+        if (notesError) notesError.hidden = (stage !== STAGE_PCK) || !validation.needsEvidence || validation.hasHoldFailNotes;
+        if (photoError) photoError.hidden = (stage !== STAGE_PCK) || !validation.needsEvidence || validation.hasHoldFailPhoto;
         if (gramasiError) {
-            const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
-            gramasiError.hidden = !validation.hasProduct || (this.selectedStage !== 'cooking_sensory' || !isBatch1) || validation.hasGramasi;
+            gramasiError.hidden = !validation.hasProduct || (stage !== STAGE_PCK) || validation.hasGramasi;
         }
-        if (validation.needsEvidence && (!validation.hasHoldFailNotes || !validation.hasHoldFailPhoto)) {
+        if (stage === STAGE_PCK && validation.needsEvidence && (!validation.hasHoldFailNotes || !validation.hasHoldFailPhoto)) {
             this.message('Catatan dan foto wajib untuk HOLD/FAIL.', true);
         } else if (document.getElementById('qcSubmitMessage')?.textContent === 'Catatan dan foto wajib untuk HOLD/FAIL.') {
             this.message('', false);
@@ -1917,6 +1969,7 @@ const Inspection = {
         if (fallbackContainer) fallbackContainer.style.display = 'none';
 
         // Reset photos
+        this.photoFiles = {};
         ['cookingPhoto', 'barcodePhoto', 'labelPhoto'].forEach(id => {
             const input = document.getElementById(id);
             if (input) {
@@ -1925,6 +1978,24 @@ const Inspection = {
             }
             this.clearPhotoPreview(id);
         });
+
+        // Render existing photo previews if they are stored in the database
+        if (sensoryReport) {
+            const photoUrl = sensoryReport.cooking_photo_url || sensoryReport.photo_url;
+            if (photoUrl) {
+                this.renderExistingPhotoPreview('cookingPhoto', photoUrl);
+            }
+        }
+        if (packReport) {
+            const barcodeUrl = packReport.barcode_photo_url;
+            if (barcodeUrl) {
+                this.renderExistingPhotoPreview('barcodePhoto', barcodeUrl);
+            }
+            const labelUrl = packReport.label_photo_url;
+            if (labelUrl) {
+                this.renderExistingPhotoPreview('labelPhoto', labelUrl);
+            }
+        }
 
         // Reset Gramasi
         for (let i = 1; i <= 5; i++) {
@@ -1986,6 +2057,7 @@ const Inspection = {
     },
 
     closeQcSheet() {
+        this.autoSaveCurrentTab().catch(console.error);
         isAdvancedPanelOpen = false;
         const sheet = document.getElementById('qcFormSheet');
         const backdrop = document.getElementById('qcFormBackdrop');
@@ -2000,6 +2072,102 @@ const Inspection = {
             backdrop.hidden = true;
         }
         document.body.classList.remove('qc-sheet-open', 'modal-open');
+    },
+
+    async autoSaveCurrentTab() {
+        const stage = this.selectedStage;
+        if (stage === 'cooking_sensory') {
+            const temp = document.getElementById('qcTemp')?.value;
+            const tempValue = temp === '' || temp == null ? null : Number(temp);
+            if (tempValue != null && Number.isFinite(tempValue)) {
+                try {
+                    await this.silentSubmitCurrentStage();
+                } catch (err) {
+                    console.error("Auto-save sensory failed:", err);
+                }
+            }
+        } else if (stage === 'cooking_instrument') {
+            const ph = document.getElementById('qcPh')?.value;
+            const brix = document.getElementById('qcBrix')?.value;
+            const tds = document.getElementById('qcTds')?.value;
+            if (ph || brix || tds) {
+                try {
+                    await this.silentSubmitCurrentStage();
+                } catch (err) {
+                    console.error("Auto-save instrument failed:", err);
+                }
+            }
+        }
+    },
+
+    async silentSubmitCurrentStage() {
+        const manualSku = document.getElementById('qcSku')?.value?.trim();
+        const sku = this.selectedProduct?.product_code || manualSku;
+        const notes = document.getElementById('qcNotes')?.value?.trim();
+        const temperature = document.getElementById('qcTemp')?.value;
+        const ph = document.getElementById('qcPh')?.value;
+        const brix = document.getElementById('qcBrix')?.value;
+        const tds = document.getElementById('qcTds')?.value;
+        const mfgDate = document.getElementById('qcMfgDate')?.value;
+        const expDate = document.getElementById('qcExpDate')?.value;
+        const cookingPhoto = this.photoFiles.cookingPhoto || (document.getElementById('cookingPhoto')?.files || [])[0];
+        const barcodePhoto = this.photoFiles.barcodePhoto || (document.getElementById('barcodePhoto')?.files || [])[0];
+        const labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
+        
+        const gramasi1 = document.getElementById('qcGramasi1')?.value?.trim();
+        const gramasi2 = document.getElementById('qcGramasi2')?.value?.trim();
+        const gramasi3 = document.getElementById('qcGramasi3')?.value?.trim();
+        const gramasi4 = document.getElementById('qcGramasi4')?.value?.trim();
+        const gramasi5 = document.getElementById('qcGramasi5')?.value?.trim();
+        
+        const temperatureValue = temperature === '' || temperature == null ? null : Number(temperature);
+        
+        const user = Auth.user() || {};
+        const formData = new FormData();
+        if (this.selectedProduct?.id) formData.append('product_id', this.selectedProduct.id);
+        formData.append('product_name', this.selectedProduct?.product_name || 'Manual SKU');
+        formData.append('sku_code', sku);
+        formData.append('barcode', sku);
+        formData.append('qc_stage', this.selectedStage);
+        formData.append('qc_status', 'pass');
+        formData.append('notes', notes || '');
+        if (temperatureValue != null) formData.append('temperature', String(temperatureValue));
+        if (ph) formData.append('ph_value', ph);
+        if (brix) formData.append('brix_value', brix);
+        if (tds) formData.append('tds_value', tds);
+        if (mfgDate) formData.append('mfg_date', mfgDate);
+        if (expDate) formData.append('exp_date', expDate);
+        if (this.selectedBatch?.id) formData.append('batch_id', this.selectedBatch.id);
+        formData.append('batch_code', this.selectedBatch?.batch_code || '');
+        formData.append('staff_id', user.id || 'system');
+        formData.append('staff_name', user.full_name || user.email || 'Staff');
+        
+        if (cookingPhoto) formData.append('cooking_photo', cookingPhoto);
+        if (barcodePhoto) formData.append('barcode_photo', barcodePhoto);
+        if (labelPhoto) formData.append('label_photo', labelPhoto);
+        
+        if (gramasi1) formData.append('gramasi_1', gramasi1);
+        if (gramasi2) formData.append('gramasi_2', gramasi2);
+        if (gramasi3) formData.append('gramasi_3', gramasi3);
+        if (gramasi4) formData.append('gramasi_4', gramasi4);
+        if (gramasi5) formData.append('gramasi_5', gramasi5);
+        
+        const response = await API.submitInspection(formData);
+        
+        if (response) {
+            const reports = this.selectedBatch.qc_reports || [];
+            const idx = reports.findIndex(r => r.qc_stage === this.selectedStage);
+            if (idx !== -1) {
+                reports[idx] = response;
+            } else {
+                reports.push(response);
+            }
+            this.selectedBatch.qc_reports = reports;
+            
+            if (typeof this.loadInspectionWorkspace === 'function') {
+                this.loadInspectionWorkspace();
+            }
+        }
     },
 
     async openNextBatchSheet(product) {
@@ -2147,26 +2315,22 @@ const Inspection = {
     renderBatchSummary(product, batch) {
         const summary = document.getElementById('qcBatchSummary');
         if (!summary) return;
+        summary.style.display = 'block';
+        summary.style.width = '100%';
         summary.innerHTML = `
-            <div>
-                <span>Produk</span>
-                <strong>${this.escapeHtml(product.product_name || '-')}</strong>
-                <small>${this.escapeHtml(product.product_code || product.sku_code || product.barcode || '-')}</small>
-            </div>
-            <div>
-                <span>Batch code</span>
-                <strong>${this.escapeHtml(batch.batch_code || '-')}</strong>
-                <small>Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')}</small>
-            </div>
-            <div>
-                <span>Cook</span>
-                <strong>${this.escapeHtml(batch.cook_name || '-')}</strong>
-                <small>Qty ${this.escapeHtml(batch.quantity || '-')}</small>
-            </div>
-            <div>
-                <span>Jam produksi</span>
-                <strong>${this.escapeHtml(this.batchTime(batch))}</strong>
-                <small>${this.escapeHtml(batch.production_date || this.operationalDate || '-')}</small>
+            <div style="background: var(--card-bg, #ffffff); border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px 14px; width: 100%; box-sizing: border-box; font-size: 13px; line-height: 1.4; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+                    <strong style="color: var(--text-main); font-weight: 700;">${this.escapeHtml(product.product_name || '-')}</strong>
+                    <span style="font-size: 11px; font-weight: bold; color: var(--primary); background: rgba(37,99,235,0.08); padding: 2px 6px; border-radius: 4px;">Pemasakan ke-${this.escapeHtml(batch.batch_sequence || '-')}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                    <span>Batch: ${this.escapeHtml(batch.batch_code || '-')}</span>
+                    <span>Cook: ${this.escapeHtml(batch.cook_name || '-')} (Qty ${this.escapeHtml(batch.quantity || '-')})</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); border-top: 1px solid #f1f5f9; padding-top: 4px; margin-top: 2px;">
+                    <span>Jam: ${this.escapeHtml(this.batchTime(batch))}</span>
+                    <span>Tanggal: ${this.escapeHtml(batch.production_date || this.operationalDate || '-')}</span>
+                </div>
             </div>
         `;
     },
@@ -2205,6 +2369,25 @@ const Inspection = {
             event.stopPropagation();
             const input = document.getElementById(inputId);
             if (input) input.value = '';
+            delete this.photoFiles[inputId];
+            this.clearPhotoPreview(inputId);
+        });
+    },
+
+    renderExistingPhotoPreview(inputId, url) {
+        const preview = document.getElementById(`${inputId}Preview`);
+        if (!preview || !url) return;
+        preview.hidden = false;
+        preview.innerHTML = `
+            <img src="${url}" alt="" style="cursor: pointer;" onclick="window.open('${url}', '_blank')">
+            <span style="color: var(--success); font-weight: bold;">Foto Tersimpan</span>
+            <button type="button" aria-label="Hapus foto">Hapus</button>
+        `;
+        preview.querySelector('button')?.addEventListener('click', event => {
+            event.stopPropagation();
+            const input = document.getElementById(inputId);
+            if (input) input.value = '';
+            delete this.photoFiles[inputId];
             this.clearPhotoPreview(inputId);
         });
     },
