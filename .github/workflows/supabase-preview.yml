@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           # Menghapus catatan migrasi 025 di remote agar tidak memicu error remote versions not found
-          supabase migration repair --status reverted --include-all 025 || true
+          supabase migration repair 025 --status reverted --yes || true
 
       - name: Deploy Database Migrations
         run: |
