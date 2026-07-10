@@ -10,11 +10,12 @@ def test_announcements_crud_flow(client, admin_headers):
         assert resp.status_code == 400
 
         # 2. Create valid announcement
-        payload = {"title": "Maintenance Notice", "content": "System update at 10 PM"}
+        payload = {"title": "Maintenance Notice", "content": "System update at 10 PM", "photos": ["http://example.com/p1.jpg"]}
         resp = client.post("/api/admin/announcements", json=payload, headers=admin_headers)
         assert resp.status_code == 201
         data = resp.get_json()
         assert data["title"] == "Maintenance Notice"
+        assert data["photos"] == ["http://example.com/p1.jpg"]
         announcement_id = data["id"]
 
         # 3. List announcements

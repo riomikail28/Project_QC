@@ -672,8 +672,16 @@
                 <h3 id="image-modal-title" style="margin:0;">Evidence Preview</h3>
                 <button class="icon-btn modal-close-btn" type="button" onclick="adminApp.closeImageModal()" aria-label="Close modal"><i data-lucide="x"></i></button>
             </div>
-            <div class="modal-body" style="text-align:center;" id="modal-image-container">
-                <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px;">
+            <div class="modal-body" style="text-align:center;">
+                <div style="margin-bottom:12px; display:flex; justify-content:center; gap:8px; align-items:center;">
+                    <button type="button" class="btn-secondary btn-sm" onclick="adminApp.zoomImageModal(-0.2)" style="display:inline-flex; align-items:center; gap:4px;"><i data-lucide="zoom-out"></i> Zoom Out</button>
+                    <span id="admin-zoom-level-text" style="font-weight:bold; font-size:13px; min-width:40px; display:inline-block;">100%</span>
+                    <button type="button" class="btn-secondary btn-sm" onclick="adminApp.zoomImageModal(0.2)" style="display:inline-flex; align-items:center; gap:4px;"><i data-lucide="zoom-in"></i> Zoom In</button>
+                    <button type="button" class="btn-secondary btn-sm" onclick="adminApp.zoomImageModal(0, true)" style="display:inline-flex; align-items:center; gap:4px;"><i data-lucide="rotate-ccw"></i> Reset</button>
+                </div>
+                <div id="modal-image-container" style="overflow:auto; max-height:55vh; padding:20px; display:flex; align-items:center; justify-content:center;">
+                    <img id="modal-image" src="" alt="Evidence" style="max-width: 100%; border-radius: 8px; transition:transform 0.15s ease;">
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="adminApp.closeImageModal()">Close</button>

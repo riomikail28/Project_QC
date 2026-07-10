@@ -1750,6 +1750,7 @@ const adminApp = {
 
     openAnnouncementModal(item = null) {
         const row = item || {};
+        this.announcementPhotos = Array.isArray(row.photos) ? [...row.photos] : [];
         this.openCrudModal(row.id ? 'Edit Pengumuman' : 'Tambah Pengumuman', row.id ? 'editAnnouncement' : 'addAnnouncement', `
             <label>Judul<input id="announcement-title" value="${this.escapeAttr(row.title || '')}" required></label>
             <label>Konten<textarea id="announcement-content" rows="4" required>${this.escapeHtml(row.content || '')}</textarea></label>
@@ -1757,7 +1758,62 @@ const adminApp = {
                 <option value="true" ${row.is_active !== false ? 'selected' : ''}>Active</option>
                 <option value="false" ${row.is_active === false ? 'selected' : ''}>Inactive</option>
             </select></label>
+            <div style="margin-top:12px;">
+                <label style="font-weight:bold; margin-bottom:4px; display:block;">Foto Pengumuman (Maksimal 10)</label>
+                <span id="announcement-photos-status" style="font-size:12px; color:var(--primary); margin-left:8px;"></span>
+                <input type="file" id="announcement-photos-input" accept="image/*" multiple style="margin-top:4px; width:100%;">
+                <div id="announcement-photos-preview" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+            </div>
         `, { id: row.id });
+
+        this.renderAnnouncementPhotosPreview();
+        const input = document.getElementById('announcement-photos-input');
+        if (input) {
+            input.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files || []);
+                const remaining = 10 - this.announcementPhotos.length;
+                const filesToUpload = files.slice(0, remaining);
+                if (files.length > remaining) {
+                    alert(`Hanya bisa menambah ${remaining} foto lagi (Maksimal 10).`);
+                }
+                const statusText = document.getElementById('announcement-photos-status');
+                if (statusText) statusText.textContent = 'Mengupload...';
+                for (const file of filesToUpload) {
+                    try {
+                        const res = await API.uploadPhotoToSupabase(file, { source: 'announcements', staffId: 'admin' });
+                        if (res && res.url) {
+                            this.announcementPhotos.push(res.url);
+                        }
+                    } catch (error) {
+                        alert(`Gagal mengupload ${file.name}: ${error.message}`);
+                    }
+                }
+                if (statusText) statusText.textContent = '';
+                input.value = '';
+                this.renderAnnouncementPhotosPreview();
+            });
+        }
+    },
+
+    renderAnnouncementPhotosPreview() {
+        const container = document.getElementById('announcement-photos-preview');
+        if (!container) return;
+        container.innerHTML = this.announcementPhotos.map((url, index) => `
+            <div style="position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+                <img src="${url}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="adminApp.previewImage('${url}')">
+                <button type="button" onclick="adminApp.removeAnnouncementPhoto(${index})" style="position:absolute; top:4px; right:4px; background:rgba(239,68,68,0.9); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            </div>
+        `).join('');
+        
+        const input = document.getElementById('announcement-photos-input');
+        if (input) {
+            input.style.display = this.announcementPhotos.length >= 10 ? 'none' : 'block';
+        }
+    },
+
+    removeAnnouncementPhoto(index) {
+        this.announcementPhotos.splice(index, 1);
+        this.renderAnnouncementPhotosPreview();
     },
 
     async deleteAnnouncement(id) {
@@ -2370,6 +2426,7 @@ const adminApp = {
                     title: document.getElementById('announcement-title').value.trim(),
                     content: document.getElementById('announcement-content').value.trim(),
                     is_active: document.getElementById('announcement-is-active').value === 'true',
+                    photos: this.announcementPhotos || [],
                 };
                 if (this.crudMode === 'addAnnouncement') await API.post('/admin/announcements', payload);
                 else await API.patch(`/admin/announcements/${this.crudId}`, payload);
@@ -4336,14 +4393,17 @@ const adminApp = {
     },
 
     previewImage(input) {
+        this.adminZoomLevel = 1.0;
+        const text = document.getElementById('admin-zoom-level-text');
+        if (text) text.textContent = '100%';
         const meta = typeof input === 'object' ? input : { url: input };
         const urls = String(meta.url || '').split(';').filter(u => u);
         const container = document.getElementById('modal-image-container') || document.getElementById('modal-image').parentElement;
         
         if (urls.length > 1) {
-            container.innerHTML = urls.map(u => `<img src="${this.escapeAttr(u)}" alt="Evidence" style="width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">`).join('');
+            container.innerHTML = urls.map(u => `<img src="${this.escapeAttr(u)}" alt="Evidence" style="width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color); transition: transform 0.15s ease;">`).join('');
         } else {
-            container.innerHTML = `<img id="modal-image" src="${this.escapeAttr(urls[0] || '')}" alt="Evidence" style="max-width: 100%; border-radius: 8px;">`;
+            container.innerHTML = `<img id="modal-image" src="${this.escapeAttr(urls[0] || '')}" alt="Evidence" style="max-width: 100%; border-radius: 8px; transition: transform 0.15s ease;">`;
         }
         const details = `
             <div class="admin-muted" style="margin-top:12px; display:grid; gap:4px;">
@@ -4357,6 +4417,20 @@ const adminApp = {
         
         document.getElementById('image-modal').classList.add('active');
         this.setModalOpen(true);
+    },
+
+    zoomImageModal(delta, reset = false) {
+        if (reset) {
+            this.adminZoomLevel = 1.0;
+        } else {
+            this.adminZoomLevel = Math.max(0.5, Math.min(4.0, (this.adminZoomLevel || 1.0) + delta));
+        }
+        const text = document.getElementById('admin-zoom-level-text');
+        if (text) text.textContent = `${Math.round(this.adminZoomLevel * 100)}%`;
+        const imgs = document.querySelectorAll('#modal-image-container img');
+        imgs.forEach(img => {
+            img.style.transform = `scale(${this.adminZoomLevel})`;
+        });
     }
 };
 

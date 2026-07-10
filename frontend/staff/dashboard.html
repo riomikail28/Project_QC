@@ -354,6 +354,10 @@
             <div class="skeleton skeleton-card"></div>
             <div class="skeleton skeleton-card"></div>
         </div>
+        <div id="announcementDrawerDetail" class="alert-drawer-body" style="display:none; padding:16px;">
+            <button type="button" class="btn-secondary" onclick="showAnnouncementList()" style="margin-bottom:12px; display:inline-flex; align-items:center; gap:8px; border:none; background:#f1f5f9; color:#475569; padding:8px 12px; border-radius:6px; font-weight:600; cursor:pointer;"><i class="fas fa-arrow-left"></i> Kembali</button>
+            <div id="announcementDetailContent"></div>
+        </div>
         <div class="alert-drawer-footer">
             <button type="button" class="btn-secondary" onclick="closeAnnouncementDrawer()">Close</button>
         </div>
@@ -464,6 +468,50 @@
             loadAnnouncementDrawer();
         }
 
+        let allAnnouncements = [];
+
+        function showAnnouncementList() {
+            document.getElementById('announcementDrawerList').style.display = 'block';
+            document.getElementById('announcementDrawerDetail').style.display = 'none';
+        }
+
+        async function viewAnnouncementDetail(id) {
+            const announcement = allAnnouncements.find(item => item.id === id);
+            if (!announcement) return;
+            document.getElementById('announcementDrawerList').style.display = 'none';
+            const detailContainer = document.getElementById('announcementDrawerDetail');
+            const contentContainer = document.getElementById('announcementDetailContent');
+            
+            const photos = announcement.photos || [];
+            const photosHtml = photos.length > 0 ? `
+                <div style="margin-top:16px;">
+                    <label style="font-weight:700; color:#334155; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Foto Terlampir (${photos.length})</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                        ${photos.map(url => `
+                            <div style="width:calc(33.33% - 6px); aspect-ratio:1; border-radius:8px; overflow:hidden; border:1px solid #e2e8f0; cursor:pointer;" onclick="openStaffImageZoom('${url}')">
+                                <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            contentContainer.innerHTML = `
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                    <div class="alert-icon" style="background: #e0f2fe; color: #0284c7;"><i class="fas fa-bullhorn"></i></div>
+                    <div style="flex:1;">
+                        <h4 style="color:#0f172a; font-weight:700; font-size:16px; margin:0 0 4px 0;">${escapeHtml(announcement.title)}</h4>
+                        <span style="font-size:11px; color:#64748b;">${new Date(announcement.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'})} &bull; Oleh: ${escapeHtml(announcement.creator_name || 'Admin')}</span>
+                    </div>
+                </div>
+                <div style="font-size:14px; color:#334155; line-height:1.6; white-space:pre-wrap; background:#f8fafc; padding:16px; border-radius:8px; border:1px solid #f1f5f9;">
+                    ${escapeHtml(announcement.content)}
+                </div>
+                ${photosHtml}
+            `;
+            detailContainer.style.display = 'block';
+        }
+
         function closeAnnouncementDrawer() {
             document.getElementById('announcementDrawerOverlay').classList.remove('active');
             document.getElementById('announcementDrawer').classList.remove('active');
@@ -473,9 +521,11 @@
         async function loadAnnouncementDrawer() {
             const container = document.getElementById('announcementDrawerList');
             container.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+            showAnnouncementList();
             try {
                 const announcements = await API.get('/staff/announcements');
-                if (!announcements || announcements.length === 0) {
+                allAnnouncements = announcements || [];
+                if (!allAnnouncements.length) {
                     container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-bullhorn" style="font-size: 2rem; color: #94a3b8; margin-bottom: 8px;"></i>
@@ -485,20 +535,28 @@
                     `;
                     return;
                 }
-                container.innerHTML = announcements.map(item => `
-                    <div class="alert-card" style="flex-direction:column;align-items:flex-start; border-left: 4px solid var(--primary); background: #f8fafc; padding: 14px;">
-                        <div style="display:flex;align-items:center;gap:12px;width:100%">
-                            <div class="alert-icon" style="background: #e0f2fe; color: #0284c7;"><i class="fas fa-bullhorn"></i></div>
-                            <div class="alert-info" style="flex:1">
-                                <h4 style="color: #0f172a; font-weight: 700; margin: 0 0 4px 0;">${escapeHtml(item.title)}</h4>
-                                <span style="font-size: 11px; color: #64748b;">${new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'})} &bull; Oleh: ${escapeHtml(item.creator_name || 'Admin')}</span>
+                container.innerHTML = allAnnouncements.map(item => {
+                    const previewText = item.content && item.content.length > 80 ? escapeHtml(item.content.slice(0, 80)) + '...' : escapeHtml(item.content || '');
+                    return `
+                        <div class="alert-card" onclick="viewAnnouncementDetail('${item.id}')" style="flex-direction:column;align-items:flex-start; border-left: 4px solid var(--primary); background: #f8fafc; padding: 14px; cursor:pointer; transition: background 0.2s;">
+                            <div style="display:flex;align-items:center;gap:12px;width:100%">
+                                <div class="alert-icon" style="background: #e0f2fe; color: #0284c7;"><i class="fas fa-bullhorn"></i></div>
+                                <div class="alert-info" style="flex:1">
+                                    <h4 style="color: #0f172a; font-weight: 700; margin: 0 0 4px 0;">${escapeHtml(item.title)}</h4>
+                                    <span style="font-size: 11px; color: #64748b;">${new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'})} &bull; Oleh: ${escapeHtml(item.creator_name || 'Admin')}</span>
+                                </div>
                             </div>
+                            <div style="font-size: 13px; color: #475569; margin-top: 10px; line-height: 1.5; white-space: pre-wrap; width: 100%;">
+                                ${previewText}
+                            </div>
+                            ${item.photos && item.photos.length > 0 ? `
+                                <div style="font-size:11px; color:var(--primary); font-weight:600; margin-top:8px; display:flex; align-items:center; gap:4px;">
+                                    <i class="fas fa-image"></i> ${item.photos.length} Foto terlampir
+                                </div>
+                            ` : ''}
                         </div>
-                        <div style="font-size: 13px; color: #334155; margin-top: 10px; line-height: 1.5; white-space: pre-wrap; width: 100%;">
-                            ${escapeHtml(item.content)}
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (error) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -508,6 +566,35 @@
                     </div>
                 `;
             }
+        }
+
+        let staffZoomLevel = 1.0;
+        function openStaffImageZoom(url) {
+            const modal = document.getElementById('staffImageZoomModal');
+            const img = document.getElementById('staffZoomImage');
+            if (!modal || !img) return;
+            img.src = url;
+            staffZoomLevel = 1.0;
+            updateStaffZoom();
+            modal.style.display = 'flex';
+        }
+        function closeStaffImageZoom() {
+            const modal = document.getElementById('staffImageZoomModal');
+            if (modal) modal.style.display = 'none';
+        }
+        function zoomStaffImage(delta, reset = false) {
+            if (reset) {
+                staffZoomLevel = 1.0;
+            } else {
+                staffZoomLevel = Math.max(0.5, Math.min(4.0, staffZoomLevel + delta));
+            }
+            updateStaffZoom();
+        }
+        function updateStaffZoom() {
+            const img = document.getElementById('staffZoomImage');
+            const text = document.getElementById('staffZoomLevelText');
+            if (img) img.style.transform = `scale(${staffZoomLevel})`;
+            if (text) text.textContent = `${Math.round(staffZoomLevel * 100)}%`;
         }
 
         function escapeHtml(str) {
@@ -824,7 +911,22 @@
             if (event.key !== 'Escape') return;
             closeAlertDrawer();
             closeQcFinding();
+            closeStaffImageZoom();
         });
     </script>
+    
+    <!-- Image Zoom Modal for Staff -->
+    <div id="staffImageZoomModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column; padding:20px;">
+        <div style="position:absolute; top:20px; right:20px; display:flex; gap:12px; z-index:10000;">
+            <button type="button" onclick="zoomStaffImage(-0.2)" style="background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:40px; height:40px; color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-search-minus"></i></button>
+            <button type="button" onclick="zoomStaffImage(0.2)" style="background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:40px; height:40px; color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-search-plus"></i></button>
+            <button type="button" onclick="zoomStaffImage(0, true)" style="background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:40px; height:40px; color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-sync"></i></button>
+            <button type="button" onclick="closeStaffImageZoom()" style="background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:40px; height:40px; color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="staffZoomLevelText" style="color:white; font-size:14px; position:absolute; top:28px; right:220px; font-weight:bold; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px; z-index:10000;">100%</div>
+        <div style="width:100%; height:100%; overflow:auto; display:flex; align-items:center; justify-content:center;" id="staffZoomContainer">
+            <img id="staffZoomImage" src="" style="max-width:100%; max-height:100%; transition:transform 0.15s ease; border-radius:8px;">
+        </div>
+    </div>
 </body>
 </html>
