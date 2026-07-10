@@ -251,3 +251,65 @@ def test_full_three_stage_qc_flow_with_recheck():
         assert row["tds"] == "150"
         assert row["temperature"] == "89"
         assert row["gramasi"] == ["95", "91", "90", "92", "90"]
+
+
+def test_batch_sequence_greater_than_one_workflow():
+    db = MockDb()
+    db.fixtures["production_batches"] = [{
+        "id": "batch-2",
+        "batch_code": "QC-20260517-002",
+        "product_id": "product-1",
+        "product_name": "Chicken Katsu",
+        "production_date": "2026-05-17",
+        "batch_sequence": 2,
+        "status": "in_progress",
+        "final_qc_status": "pending"
+    }]
+    db.fixtures["qc_reports"] = []
+
+    service = InspectionService(sb_client=db)
+    
+    payload_sensory = {
+        "sku_code": "SKU-CK",
+        "batch_id": "batch-2",
+        "batch_code": "QC-20260517-002",
+        "qc_stage": "cooking_sensory",
+        "temperature": "82",
+        "staff_id": "staff-1",
+        "staff_name": "Staff QC",
+        "qc_status": "pass",
+        "operational_date": "2026-05-17",
+        "created_at": "2026-05-17T07:00:00Z"
+    }
+
+    payload_instrument = {
+        "sku_code": "SKU-CK",
+        "batch_id": "batch-2",
+        "batch_code": "QC-20260517-002",
+        "qc_stage": "cooking_instrument",
+        "ph_value": "6.2",
+        "brix_value": "12.0",
+        "tds_value": "140",
+        "staff_id": "staff-1",
+        "staff_name": "Staff QC",
+        "qc_status": "pass",
+        "operational_date": "2026-05-17",
+        "created_at": "2026-05-17T07:10:00Z"
+    }
+
+    with patch("backend.services.inspection_service.get_client", return_value=db), \
+         patch("backend.services.inspection_service.write_audit"):
+        
+        # 1. Submit Sensory -> Status remains cooking or in_progress
+        res1 = service.submit_qc(payload_sensory, files={}, actor_role="staff")
+        assert res1["success"] is True
+        batch = db.fixtures["production_batches"][0]
+        assert batch["status"] == "cooking"
+        assert batch["final_qc_status"] == "pending"
+
+        # 2. Submit Instrument -> Status becomes completed and final_qc_status becomes pass
+        res2 = service.submit_qc(payload_instrument, files={}, actor_role="staff")
+        assert res2["success"] is True
+        batch = db.fixtures["production_batches"][0]
+        assert batch["status"] == "completed"
+        assert batch["final_qc_status"] == "pass"

@@ -469,12 +469,14 @@ const Inspection = {
         const container = document.getElementById('qcStageTabs');
         if (!container) return;
         container.innerHTML = '';
-        
+        const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
         const stages = [
             { id: 'cooking_sensory', label: 'Sensory' },
-            { id: 'cooking_instrument', label: 'Instrument' },
-            { id: STAGE_PCK, label: STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1) }
+            { id: 'cooking_instrument', label: 'Instrument' }
         ];
+        if (isBatch1) {
+            stages.push({ id: STAGE_PCK, label: STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1) });
+        }
         
         stages.forEach(s => {
             const btn = document.createElement('button');
@@ -653,12 +655,21 @@ const Inspection = {
             if (gramasiContainer) gramasiContainer.style.display = 'none';
             
             // Instrument is auto PASS: hide status selector, notes, and summary
-            if (statusField) statusField.hidden = true;
-            if (notesField) notesField.hidden = true;
-            if (submitSummary) submitSummary.hidden = true;
-            if (miniSummary) miniSummary.hidden = true;
-            
-            this.selectedStatus = 'pass';
+            const isBatch1 = Number(this.selectedBatch?.batch_sequence) === 1;
+            if (isBatch1) {
+                if (statusField) statusField.hidden = true;
+                if (notesField) notesField.hidden = true;
+                if (submitSummary) submitSummary.hidden = true;
+                if (miniSummary) miniSummary.hidden = true;
+                this.selectedStatus = 'pass';
+            } else {
+                if (statusField) statusField.hidden = false;
+                const holdFail = this.requiresHoldFailEvidence();
+                const recheck = Boolean(this.recheckParentInspection);
+                if (notesField) notesField.hidden = !holdFail && !recheck;
+                if (submitSummary) submitSummary.hidden = false;
+                if (miniSummary) miniSummary.hidden = false;
+            }
             
         } else if (stage === STAGE_PCK) {
             // Hide cookingFields (Suhu, Foto Masakan, Parameter QC)
@@ -1632,7 +1643,8 @@ const Inspection = {
         if (!batches.length) {
             return '<p class="simple-qc-message">Belum ada batch produk ini untuk hari ini.</p>';
         }
-        return batches.map((batch, index) => {
+        const sortedBatches = [...batches].sort((a, b) => (a.batch_sequence || 0) - (b.batch_sequence || 0));
+        return sortedBatches.map((batch, index) => {
             const status = this.normalizeStatus(batch.qc_status || batch.last_status || batch.final_qc_status || batch.status || 'pending');
             const hasQc = ['pass', 'hold', 'fail'].includes(status);
             return `
@@ -2850,26 +2862,48 @@ const Inspection = {
             let progressBarColor = '#cbd5e1';
 
             const dbStatus = String(batch.status || '').toLowerCase();
-            if (dbStatus === 'completed' || dbStatus === 'finished' || hasPck) {
-                progressPct = 100;
-                displayStatus = 'Finished';
-                statusClass = 'pass';
-                progressBarColor = '#10b981';
-            } else if (hasSensory && hasInstrument) {
-                progressPct = 80;
-                displayStatus = STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1);
-                statusClass = 'warning';
-                progressBarColor = '#f59e0b';
-            } else if (hasSensory) {
-                progressPct = 40;
-                displayStatus = 'Cooking';
-                statusClass = 'pending';
-                progressBarColor = '#3b82f6';
+            const isBatch1 = Number(batch.batch_sequence) === 1;
+
+            if (isBatch1) {
+                if (dbStatus === 'completed' || dbStatus === 'finished' || hasPck) {
+                    progressPct = 100;
+                    displayStatus = 'Finished';
+                    statusClass = 'pass';
+                    progressBarColor = '#10b981';
+                } else if (hasSensory && hasInstrument) {
+                    progressPct = 80;
+                    displayStatus = STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1);
+                    statusClass = 'warning';
+                    progressBarColor = '#f59e0b';
+                } else if (hasSensory) {
+                    progressPct = 40;
+                    displayStatus = 'Cooking';
+                    statusClass = 'pending';
+                    progressBarColor = '#3b82f6';
+                } else {
+                    progressPct = 0;
+                    displayStatus = 'Cooking';
+                    statusClass = 'pending';
+                    progressBarColor = '#cbd5e1';
+                }
             } else {
-                progressPct = 0;
-                displayStatus = 'Cooking';
-                statusClass = 'pending';
-                progressBarColor = '#cbd5e1';
+                // For Batch > 1
+                if (dbStatus === 'completed' || dbStatus === 'finished' || hasInstrument) {
+                    progressPct = 100;
+                    displayStatus = 'Finished';
+                    statusClass = 'pass';
+                    progressBarColor = '#10b981';
+                } else if (hasSensory) {
+                    progressPct = 50;
+                    displayStatus = 'Instrument';
+                    statusClass = 'warning';
+                    progressBarColor = '#f59e0b';
+                } else {
+                    progressPct = 0;
+                    displayStatus = 'Cooking';
+                    statusClass = 'pending';
+                    progressBarColor = '#cbd5e1';
+                }
             }
 
             return `

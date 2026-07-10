@@ -602,6 +602,9 @@ class InspectionService:
             statuses = set(stages.values())
             payload = {"updated_at": datetime.now(timezone.utc).isoformat()}
             
+            batch_row = self._batch_by_id_or_code(batch_id, batch_code)
+            batch_sequence = int((batch_row or {}).get("batch_sequence") or 1)
+
             # Check sensory, instrument and packing status
             has_sensory = "cooking_sensory" in stages
             has_instrument = "cooking_instrument" in stages
@@ -611,6 +614,11 @@ class InspectionService:
                 payload.update({"status": "failed", "final_qc_status": "fail"})
             elif "hold" in statuses:
                 payload.update({"status": "on_hold", "final_qc_status": "hold"})
+            elif batch_sequence > 1 and has_sensory and has_instrument:
+                if stages.get("cooking_instrument") == "pass":
+                    payload.update({"status": "completed", "final_qc_status": "pass"})
+                else:
+                    payload.update({"status": "cooking", "final_qc_status": "pending"})
             elif (stages.get("cooking_check") == "pass" and stages.get("final_check") == "pass") or (has_sensory and has_instrument and has_packing and stages.get("packing") == "pass"):
                 payload.update({"status": "completed", "final_qc_status": "pass"})
             elif has_sensory and has_instrument and not has_packing:
