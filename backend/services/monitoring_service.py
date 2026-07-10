@@ -26,9 +26,9 @@ class MonitoringService:
 
     def check_edit_tolerance(self, slot_time, monitoring_date, current_time_local):
         deadlines = {
-            "07:00": "13:00",
-            "13:00": "17:00",
-            "16:00": "20:00",
+            "07:00": "23:59",
+            "13:00": "23:59",
+            "16:00": "23:59",
             "19:00": "23:59",
         }
         deadline_time_str = deadlines.get(slot_time)

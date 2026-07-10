@@ -2065,12 +2065,12 @@ body.modal-open {
   }
 }
 
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .qc-form-body {
-    grid-template-columns: 1.15fr 0.85fr;
+    grid-template-columns: 1fr 1fr;
     align-items: start;
     column-gap: 20px;
-    row-gap: 12px;
+    row-gap: 16px;
   }
   .qc-batch-summary,
   .qc-recheck-banner,
@@ -2080,10 +2080,31 @@ body.modal-open {
   #qcSubmitMessage {
     grid-column: 1 / -1;
   }
+  
+  /* Status QC in Column 1, Notes in Column 2 */
+  #statusField {
+    grid-column: 1;
+  }
   .simple-field.optional-notes {
     grid-column: 2;
   }
-  #statusField {
+  
+  /* Dynamic layout overrides based on visible sections */
+  .qc-form-body.has-cooking.has-final #cookingFields {
+    grid-column: 1;
+  }
+  .qc-form-body.has-cooking.has-final #finalFields {
     grid-column: 2;
+  }
+  
+  .qc-form-body.has-cooking:not(.has-final) #cookingFields {
+    grid-column: 1 / -1;
+  }
+  
+  .qc-form-body.has-final:not(.has-cooking) #finalFields {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 }

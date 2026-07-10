@@ -627,6 +627,14 @@ const Inspection = {
             if (cooking) cooking.style.display = 'none';
             if (final) final.style.display = 'none';
         }
+
+        const body = document.querySelector('.qc-form-body');
+        if (body) {
+            const isCookingVisible = cooking && cooking.style.display !== 'none';
+            const isFinalVisible = final && final.style.display !== 'none';
+            body.classList.toggle('has-cooking', isCookingVisible);
+            body.classList.toggle('has-final', isFinalVisible);
+        }
     },
 
     /* ═══════════════════════════════════════════════
@@ -1337,6 +1345,12 @@ const Inspection = {
             const empty = document.getElementById('skuEmptyNote');
             if (empty) empty.hidden = data.skuEmptyNoteHidden;
 
+            const hasSku = this.skuCards && this.skuCards.length > 0;
+            const toolbar = document.querySelector('.sku-list-toolbar[aria-labelledby="skuTodayTitle"]');
+            if (toolbar) toolbar.style.display = hasSku ? '' : 'none';
+            if (grid) grid.style.display = hasSku ? '' : 'none';
+            if (empty && !hasSku) empty.hidden = true;
+
             // Re-bind click handlers for the restored cards
             grid?.querySelectorAll('[data-sku-detail]').forEach(button => {
                 button.addEventListener('click', () => this.openSkuDetail(button.dataset.skuDetail));
@@ -1364,14 +1378,26 @@ const Inspection = {
         const grid = document.getElementById('skuCardGrid');
         const empty = document.getElementById('skuEmptyNote');
         const count = document.getElementById('skuTodayCount');
+        const toolbar = document.querySelector('.sku-list-toolbar[aria-labelledby="skuTodayTitle"]');
         if (!grid) return;
+        
+        const hasSku = this.skuCards && this.skuCards.length > 0;
+        if (toolbar) toolbar.style.display = hasSku ? '' : 'none';
+        
         const filteredProducts = this.filteredSkuCards();
         if (count) count.textContent = `${filteredProducts.length} SKU`;
         if (empty) empty.hidden = Boolean(this.skuCards.length);
-        if (!this.skuCards.length) {
+        
+        if (!hasSku) {
+            if (empty) empty.hidden = true;
             grid.innerHTML = '';
+            grid.style.display = 'none';
             return;
         }
+        
+        grid.style.display = '';
+        if (empty) empty.hidden = Boolean(filteredProducts.length);
+        
         if (!filteredProducts.length) {
             grid.innerHTML = '<p class="simple-qc-message sku-filter-empty">Belum ada SKU sesuai pencarian.</p>';
             return;

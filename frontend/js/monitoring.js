@@ -211,9 +211,9 @@ function monitoringMiniCardTemperature(device) {
 
 function isWithinEditTolerance(slotTime) {
     const deadlines = {
-        "07:00": "13:00",
-        "13:00": "17:00",
-        "16:00": "20:00",
+        "07:00": "23:59",
+        "13:00": "23:59",
+        "16:00": "23:59",
         "19:00": "23:59"
     };
     const deadlineTimeStr = deadlines[slotTime];
