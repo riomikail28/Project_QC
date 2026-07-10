@@ -1179,7 +1179,7 @@ class AdminService:
             qc for qc in qc_rows or []
             if self._same_batch(qc, batch_id, batch_code)
         ]
-        related_qc = sorted(related_qc, key=lambda qc: qc.get("created_at") or qc.get("submitted_at") or "", reverse=True)
+        related_qc = sorted(related_qc, key=lambda qc: qc.get("created_at") or qc.get("submitted_at") or qc.get("completed_at") or "", reverse=True)
         latest_qc = self._normalize_qc_report(related_qc[0]) if related_qc else {}
         related_approvals = [
             approval for approval in approval_rows or []
@@ -1522,6 +1522,45 @@ class AdminService:
         batch = self._approval_batch_info(qc)
         evidence = self._approval_evidence_url(qc)
         history = self._approval_recheck_history(qc)
+
+        batch_id = qc.get("batch_id") or report.get("batch_id")
+        other_reports = []
+        if batch_id:
+            other_reports = self._fetch("qc_reports", filters=[("eq", "batch_id", batch_id)])
+
+        def find_val(field):
+            val = report.get(field)
+            if val is not None and val != "":
+                return val
+            res = report.get("inspection_result") or {}
+            if isinstance(res, dict) and res.get(field) is not None and res.get(field) != "":
+                return res.get(field)
+            for r in other_reports:
+                val = r.get(field)
+                if val is not None and val != "":
+                    return val
+                r_res = r.get("inspection_result") or {}
+                if isinstance(r_res, dict) and r_res.get(field) is not None and r_res.get(field) != "":
+                    return r_res.get(field)
+            return None
+
+        gramasi = []
+        for i in range(1, 6):
+            g = find_val(f"gramasi_{i}")
+            if g is not None:
+                gramasi.append(str(g))
+
+        mfg_date = find_val("mfg_date")
+        exp_date = find_val("exp_date")
+
+        cooking_photo = find_val("cooking_photo") or find_val("photo_url")
+        barcode_photo = find_val("barcode_photo")
+
+        if cooking_photo and not cooking_photo.startswith("http"):
+            cooking_photo = self.normalize_evidence_url(cooking_photo)
+        if barcode_photo and not barcode_photo.startswith("http"):
+            barcode_photo = self.normalize_evidence_url(barcode_photo)
+
         return {
             "id": approval.get("id") or qc.get("id"),
             "approval_id": approval.get("id") or qc.get("approval_id") or qc.get("id"),
@@ -1534,10 +1573,10 @@ class AdminService:
             "production_time": batch.get("production_time") or batch.get("created_at") or qc.get("production_time"),
             "qc_status": self._display_qc_status(qc.get("status") or qc.get("qc_status")),
             "inspection_type": qc.get("inspection_type") or qc.get("qc_stage") or qc.get("ccp_stage") or qc.get("check_type"),
-            "temperature": qc.get("temperature") or qc.get("cooking_temperature") or qc.get("temperature_c"),
-            "ph": qc.get("ph") or qc.get("ph_value"),
-            "brix": qc.get("brix") or qc.get("brix_value"),
-            "tds": qc.get("tds") or qc.get("tds_value"),
+            "temperature": find_val("temperature"),
+            "ph": find_val("ph") or find_val("ph_value"),
+            "brix": find_val("brix") or find_val("brix_value"),
+            "tds": find_val("tds") or find_val("tds_value"),
             "notes": qc.get("notes") or qc.get("parameter_notes") or qc.get("finding_notes"),
             "inspection_round": qc.get("inspection_round") or qc.get("batch_sequence"),
             "is_recheck": bool(qc.get("is_recheck") or qc.get("recheck_of") or qc.get("parent_report_id")),
@@ -1545,6 +1584,11 @@ class AdminService:
             "submitted_at": qc.get("submitted_at") or qc.get("created_at") or approval.get("created_at"),
             "evidence_url": evidence,
             "photo_url": evidence,
+            "cooking_photo": cooking_photo,
+            "barcode_photo": barcode_photo,
+            "gramasi": gramasi if gramasi else None,
+            "mfg_date": mfg_date,
+            "exp_date": exp_date,
             "storage_path": qc.get("storage_path") or qc.get("product_storage_path") or qc.get("temperature_storage_path") or qc.get("barcode_storage_path"),
             "history": history,
         }

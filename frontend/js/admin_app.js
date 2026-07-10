@@ -3167,7 +3167,15 @@ const adminApp = {
         let detail = batch || {};
         if (batch.approval_id) {
             const approvalDetail = await this.fetchAdminData(`${this.apiBase}/approvals/${encodeURIComponent(batch.approval_id)}`);
-            if (approvalDetail) detail = { ...batch, ...approvalDetail };
+            if (approvalDetail) {
+                const merged = { ...batch, ...approvalDetail };
+                for (const key of ['ph', 'brix', 'tds', 'temperature', 'gramasi', 'mfg_date', 'exp_date', 'cooking_photo', 'barcode_photo']) {
+                    if (batch[key] !== undefined && batch[key] !== null && batch[key] !== '' && batch[key] !== '-') {
+                        merged[key] = batch[key];
+                    }
+                }
+                detail = merged;
+            }
         }
         const evidence = detail.evidence_url || detail.photo_url || '';
         const history = Array.isArray(detail.history) ? detail.history : [];

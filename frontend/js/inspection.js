@@ -577,9 +577,33 @@ const Inspection = {
 
     updateStageTabs() {
         const tabs = document.querySelectorAll('.qc-stage-tab');
+        const batch = this.selectedBatch || {};
+        const reports = batch.qc_reports || [];
+
         tabs.forEach(tab => {
-            const isActive = tab.dataset.stage === this.selectedStage;
+            const stageId = tab.dataset.stage;
+            const isActive = stageId === this.selectedStage;
             tab.classList.toggle('active', isActive);
+
+            const isSaved = reports.some(r => {
+                const matchesStage = r.qc_stage === stageId;
+                if (this.recheckParentInspection) {
+                    return matchesStage && r.parent_inspection === this.recheckParentInspection;
+                } else {
+                    return matchesStage && !r.parent_inspection;
+                }
+            });
+
+            const baseLabel = stageId === 'cooking_sensory' ? 'Sensory' :
+                              stageId === 'cooking_instrument' ? 'Instrument' :
+                              (STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1));
+
+            if (isSaved) {
+                tab.innerHTML = `${baseLabel} <span style="color: #10b981; font-weight: 900; margin-left: 4px;">✓</span>`;
+            } else {
+                tab.textContent = baseLabel;
+            }
+
             if (isActive) {
                 tab.style.background = 'white';
                 tab.style.color = 'var(--accent-blue)';
@@ -2283,6 +2307,14 @@ const Inspection = {
                 delete this.photoFiles.labelPhoto;
             }
             
+            this.updateStageTabs();
+            if (typeof window.showToast === 'function') {
+                const stageLabel = this.selectedStage === 'cooking_sensory' ? 'Sensory' :
+                                   this.selectedStage === 'cooking_instrument' ? 'Instrument' :
+                                   (STAGE_PCK.charAt(0).toUpperCase() + STAGE_PCK.slice(1));
+                window.showToast(`✓ draft ${stageLabel} tersimpan`, 'success', 1200);
+            }
+
             if (typeof this.loadInspectionWorkspace === 'function') {
                 this.loadInspectionWorkspace();
             }
