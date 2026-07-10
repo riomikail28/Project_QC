@@ -420,13 +420,13 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (min-width: 390px) {
+@media (min-width: 390px) and (min-width: 0px) {
   .profile-page .app-shell {
     padding-inline: 16px;
   }
 }
 
-@media (min-width: 680px) {
+@media (min-width: 680px) and (min-width: 9999px) {
   .profile-grid,
   .skeleton-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -437,7 +437,7 @@
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-width: 9999px) {
   .profile-page .app-shell {
     padding-top: 24px;
   }
@@ -452,13 +452,13 @@
   }
 }
 
-@media (min-width: 1180px) {
+@media (min-width: 1180px) and (min-width: 9999px) {
   .profile-cover {
     min-height: 210px;
   }
 }
 
-@media (max-width: 374px) {
+@media (max-width: 374px) and (min-width: 9999px) {
   .profile-cover {
     padding: 18px;
     border-radius: 24px;

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -21,6 +22,7 @@
             justify-content: center;
             padding: 20px;
         }
+
         .login-card {
             width: 100%;
             max-width: 400px;
@@ -28,9 +30,10 @@
             border: 1px solid #e2e8f0;
             border-radius: var(--radius-xl);
             padding: 48px 32px;
-            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
             text-align: center;
         }
+
         .logo-box {
             width: 80px;
             height: 80px;
@@ -44,22 +47,26 @@
             color: white;
             box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
         }
+
         .login-header h1 {
             font-size: 32px;
             font-weight: 800;
             margin-bottom: 8px;
             color: #1e293b;
         }
+
         .login-header p {
             color: var(--text-secondary);
             font-size: 14px;
             margin-bottom: 32px;
             font-weight: 500;
         }
+
         .form-group {
             text-align: left;
             margin-bottom: 20px;
         }
+
         .form-group label {
             display: block;
             font-size: 12px;
@@ -69,6 +76,7 @@
             letter-spacing: 0.1em;
             margin-bottom: 8px;
         }
+
         .form-input {
             width: 100%;
             background: #f8fafc;
@@ -79,12 +87,14 @@
             font-family: 'Outfit', sans-serif;
             transition: all 0.3s ease;
         }
+
         .form-input:focus {
             outline: none;
             border-color: var(--accent-blue);
             background: #ffffff;
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
         }
+
         .btn-login {
             width: 100%;
             padding: 18px;
@@ -99,19 +109,21 @@
             box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
             transition: all 0.3s;
         }
+
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 12px 32px rgba(37, 99, 235, 0.3);
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
         <div class="logo-box">
             <i class="fas fa-microchip"></i>
         </div>
         <div class="login-header">
-            <h1>AstroQC</h1>
+            <h1>QC Central Kitchen</h1>
             <p>Sistem QC Dapur</p>
         </div>
         <div class="form-group">
@@ -124,7 +136,7 @@
         </div>
         <button id="loginBtn" class="btn-login">Masuk</button>
         <p style="margin-top: 24px; font-size: 12px; color: var(--text-muted);">
-            &copy; 2026 PT Astro Teknologi Indonesia
+            &copy; 2026 Quality Control Central Kitchen
         </p>
     </div>
 
@@ -136,7 +148,7 @@
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
-            
+
             const btn = document.getElementById('loginBtn');
             btn.disabled = true;
             btn.innerText = 'Masuk...';
@@ -156,5 +168,5 @@
         });
     </script>
 </body>
-</html>
 
+</html>

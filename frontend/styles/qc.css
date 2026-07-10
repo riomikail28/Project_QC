@@ -657,7 +657,7 @@
    Desktop Breakpoint
    ═══════════════════════════════════════════════ */
 
-@media (min-width: 860px) {
+@media (min-width: 860px) and (min-width: 9999px) {
   .qc-layout {
     grid-template-columns: 1.1fr .9fr;
   }
@@ -677,7 +677,7 @@
    Small Screen Adjustments
    ═══════════════════════════════════════════════ */
 
-@media (max-width: 340px) {
+@media (max-width: 340px) and (min-width: 9999px) {
   .qc-status-selector {
     grid-template-columns: 1fr 1fr;
   }
@@ -691,7 +691,7 @@
   }
 }
 
-@media (max-width: 375px) {
+@media (max-width: 375px) and (min-width: 9999px) {
   .simple-qc-title {
     font-size: 24px;
   }
@@ -1065,7 +1065,7 @@
   text-transform: none;
 }
 
-@media (min-width: 860px) {
+@media (min-width: 860px) and (min-width: 9999px) {
   .inspection-page .qc-layout-single {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
     align-items: start;
@@ -1077,7 +1077,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (min-width: 0px) {
   .inspection-page {
     width: min(100% - 18px, 680px);
     padding-top: 8px;
@@ -1110,7 +1110,7 @@
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 360px) and (min-width: 9999px) {
   .field-qc-step strong {
     font-size: 10px;
   }
@@ -1307,7 +1307,7 @@
   font-size: 13px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 640px) and (min-width: 9999px) {
   .sku-card-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
@@ -1852,13 +1852,13 @@ body.modal-open {
   overflow: hidden;
 }
 
-@media (min-width: 860px) {
+@media (min-width: 860px) and (min-width: 9999px) {
   .sku-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (min-width: 0px) {
   .simple-qc-page.inspection-page {
     width: min(100% - 18px, 680px);
     padding-bottom: max(128px, calc(var(--nav-height) + 56px + env(safe-area-inset-bottom)));
@@ -2056,7 +2056,7 @@ body.modal-open {
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 360px) and (min-width: 9999px) {
   .sku-status-strip,
   .batch-meta,
   .qc-batch-summary,
@@ -2065,7 +2065,7 @@ body.modal-open {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-width: 9999px) {
   .qc-form-body {
     grid-template-columns: 1fr 1fr;
     align-items: start;

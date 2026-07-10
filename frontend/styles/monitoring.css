@@ -911,7 +911,7 @@ textarea {
   height: 38px;
 }
 
-@media (min-width: 760px) {
+@media (min-width: 760px) and (min-width: 9999px) {
   .monitor-hero {
     min-height: 210px;
     max-height: none;
@@ -944,7 +944,7 @@ textarea {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 520px), (min-width: 0px) {
   .monitor-hero {
     min-height: 0;
     padding: 10px 12px;
@@ -1063,7 +1063,7 @@ textarea {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (min-width: 0px) {
   .next-device-section {
     grid-template-columns: minmax(0, 1fr);
   }

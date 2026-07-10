@@ -9,9 +9,24 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  background-color: #f1f5f9 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  min-height: 100vh !important;
 }
 
 body {
+  max-width: 480px !important;
+  width: 100vw !important;
+  margin: 0 auto !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 32px rgba(15, 23, 42, 0.08) !important;
+  min-height: 100vh !important;
+  position: relative !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
   --app-bg: linear-gradient(180deg, #f8fbff 0%, #eaf2ff 100%);
   --card-bg: rgba(255, 255, 255, 0.72);
   --primary: #2563eb;
@@ -1083,7 +1098,7 @@ label {
 .stagger > *:nth-child(4) { animation-delay: .15s; }
 .stagger > *:nth-child(5) { animation-delay: .2s; }
 
-@media (min-width: 740px) {
+@media (min-width: 740px) and (min-width: 9999px) {
   body {
     padding-bottom: 0;
   }
@@ -1141,7 +1156,7 @@ label {
   }
 }
 
-@media (max-width: 739px) {
+@media (max-width: 739px), (min-width: 0px) {
   .app-shell {
     padding-bottom: max(110px, calc(var(--nav-height) + 38px + env(safe-area-inset-bottom)));
   }
@@ -1195,7 +1210,7 @@ label {
   }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1100px) and (min-width: 9999px) {
   .nav-clock {
     display: block;
   }
@@ -1210,4 +1225,74 @@ label {
 .refresh-loading svg,
 .refresh-loading i {
   animation: spin 0.8s linear infinite !important;
+}
+
+/* Centering fixed elements for forced mobile layout on desktop */
+body .bottom-nav {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+}
+
+body .alert-drawer {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(105%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+  inset: 0 auto 0 50% !important;
+}
+
+body .alert-drawer.active {
+  transform: translateX(-50%) !important;
+}
+
+body .alert-drawer-overlay,
+body .sheet-overlay,
+body .qc-sheet-overlay,
+body #staffImageZoomModal,
+body #loading-screen {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+  height: 100% !important;
+}
+
+body .bottom-sheet {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translate(-50%, 110%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+  bottom: 0 !important;
+  border-radius: 26px 26px 0 0 !important;
+}
+
+body .bottom-sheet.active {
+  transform: translate(-50%, 0) !important;
+}
+
+body .qc-form-sheet {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translate(-50%, 110%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+  bottom: 0 !important;
+  border-radius: 24px 24px 0 0 !important;
+  max-height: 90vh !important;
+  transition: transform .32s ease !important;
+}
+
+body.qc-sheet-open .qc-form-sheet {
+  transform: translate(-50%, 0) !important;
 }
