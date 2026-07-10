@@ -575,13 +575,17 @@ const Inspection = {
         const gramasiContainer = document.getElementById('gramasiContainer');
         const cookingPhotoLabel = document.getElementById('cookingPhotoLabel');
 
+        const tempLabel = document.querySelector('label[for="qcTemp"]');
+        const tempInputWrap = document.querySelector('.temperature-input-wrap');
+        const tempErrorMsg = document.getElementById('qcTempError');
+
         if (stage === 'cooking_sensory') {
             // Show cookingFields (Suhu Masak, Foto Masakan)
             if (cooking) cooking.style.display = 'grid';
             
-            // Show Suhu Masak
-            const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
-            if (tempWrap) tempWrap.style.display = 'grid';
+            // Show Suhu Masak elements
+            if (tempLabel) tempLabel.style.display = 'block';
+            if (tempInputWrap) tempInputWrap.style.display = 'flex';
             
             // Show Foto Masakan (cookingUploadCard)
             if (cookingUploadCard) cookingUploadCard.style.display = 'block';
@@ -607,12 +611,13 @@ const Inspection = {
             this.selectedStatus = 'pass';
             
         } else if (stage === 'cooking_instrument') {
-            // Show cookingFields (only Parameter QC Tambahan)
+            // Show cookingFields
             if (cooking) cooking.style.display = 'grid';
             
-            // Hide Suhu Masak
-            const tempWrap = document.getElementById('qcTemp')?.closest('.simple-field');
-            if (tempWrap) tempWrap.style.display = 'none';
+            // Hide Suhu Masak elements
+            if (tempLabel) tempLabel.style.display = 'none';
+            if (tempInputWrap) tempInputWrap.style.display = 'none';
+            if (tempErrorMsg) tempErrorMsg.style.display = 'none';
             
             // Hide Foto Masakan
             if (cookingUploadCard) cookingUploadCard.style.display = 'none';
