@@ -51,9 +51,12 @@ class InspectionService:
     def _direct_fetch(self, table, select="*", order_by=None, desc=True, limit=None, filters=None):
         parts = [f"select={str(select).replace(' ', '')}"]
         for method, field, value in filters or []:
-            if method == "eq":
-                normalized = str(value).lower() if isinstance(value, bool) else value
-                parts.append(f"{field}=eq.{normalized}")
+            if method in ("eq", "is_", "is"):
+                if value == "null" or value is None:
+                    parts.append(f"{field}=is.null")
+                else:
+                    normalized = str(value).lower() if isinstance(value, bool) else value
+                    parts.append(f"{field}=eq.{normalized}")
             elif method == "gte":
                 parts.append(f"{field}=gte.{value}")
             elif method == "lte":
@@ -212,7 +215,7 @@ class InspectionService:
             if parent_inspection:
                 filters.append(("eq", "parent_inspection", parent_inspection))
             else:
-                filters.append(("is", "parent_inspection", "null"))
+                filters.append(("is_", "parent_inspection", "null"))
             existing = self._fetch("qc_reports", limit=1, filters=filters)
             if existing:
                 existing_report = existing[0]
@@ -221,7 +224,7 @@ class InspectionService:
             if parent_inspection:
                 filters.append(("eq", "parent_inspection", parent_inspection))
             else:
-                filters.append(("is", "parent_inspection", "null"))
+                filters.append(("is_", "parent_inspection", "null"))
             existing = self._fetch("qc_reports", limit=1, filters=filters)
             if existing:
                 existing_report = existing[0]
@@ -232,8 +235,8 @@ class InspectionService:
                 sensory_filters.append(("eq", "parent_inspection", parent_inspection))
                 instr_filters.append(("eq", "parent_inspection", parent_inspection))
             else:
-                sensory_filters.append(("is", "parent_inspection", "null"))
-                instr_filters.append(("is", "parent_inspection", "null"))
+                sensory_filters.append(("is_", "parent_inspection", "null"))
+                instr_filters.append(("is_", "parent_inspection", "null"))
             
             existing_sensory = self._fetch("qc_reports", limit=1, filters=sensory_filters)
             existing_instrument = self._fetch("qc_reports", limit=1, filters=instr_filters)
@@ -244,7 +247,7 @@ class InspectionService:
             if parent_inspection:
                 pack_filters.append(("eq", "parent_inspection", parent_inspection))
             else:
-                pack_filters.append(("is", "parent_inspection", "null"))
+                pack_filters.append(("is_", "parent_inspection", "null"))
             existing = self._fetch("qc_reports", limit=1, filters=pack_filters)
             if existing:
                 existing_report = existing[0]
