@@ -90,7 +90,7 @@ class InspectionService:
     def active_batches(self, limit=20):
         rows = self._fetch(
             "production_batches",
-            select="*, products(*), qc_reports(qc_stage, status)",
+            select="*, products(*), qc_reports(*)",
             order_by="created_at",
             limit=limit,
         )
@@ -334,7 +334,8 @@ class InspectionService:
             if existing_report:
                 report_id = existing_report.get("id")
                 self.sb.table("qc_reports").update(report_payload).eq("id", report_id).execute()
-                report = existing_report
+                fetched = self._fetch("qc_reports", limit=1, filters=[("eq", "id", report_id)])
+                report = fetched[0] if fetched else {**existing_report, **report_payload}
             else:
                 report = self._insert("qc_reports", report_payload)
                 report_id = report.get("id") if isinstance(report, dict) else None

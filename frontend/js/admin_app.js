@@ -3220,14 +3220,6 @@ const adminApp = {
                 </div>
             `);
         }
-        if (detail.label_photo) {
-            photosHtml.push(`
-                <div class="admin-photo-card" style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; background: #f8fafc; text-align: center;">
-                    <span style="font-size:0.8em; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">Foto Label</span>
-                    <img src="${this.escapeAttr(detail.label_photo)}" style="width:100px; height:100px; object-fit:cover; border-radius:4px; display:block; cursor:pointer;" onclick="adminApp.previewImage('${this.escapeAttr(detail.label_photo)}')">
-                </div>
-            `);
-        }
         
         if (!photosHtml.length && evidence) {
             const firstEv = String(evidence).split(';')[0];
