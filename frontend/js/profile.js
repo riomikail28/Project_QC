@@ -17,7 +17,7 @@ const ProfilePage = {
         try {
             const [me, summary] = await Promise.all([
                 API.getSWR('/profile/me', {
-                    ttlMs: 3600000,
+                    ttlMs: 0,
                     onUpdate: data => {
                         const user = data?.data || data || {};
                         Auth.persistUser(user);
@@ -26,7 +26,7 @@ const ProfilePage = {
                     }
                 }),
                 API.getSWR('/profile/activity-summary', {
-                    ttlMs: 30000,
+                    ttlMs: 0,
                     onUpdate: data => {
                         this.renderSummary(data?.data || data || {});
                         this.saveCache();
