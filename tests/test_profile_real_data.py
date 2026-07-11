@@ -44,3 +44,53 @@ def test_profile_admin_role_from_session(client, admin_headers):
         response = client.get("/api/profile/me", headers=admin_headers)
 
     assert response.get_json()["data"]["role"] == "admin"
+
+
+def test_profile_new_fields_and_calculations(client, staff_headers):
+    fake_db = FakeSupabase({
+        "staff_accounts": [
+            {
+                "id": "staff-1",
+                "username": "staff",
+                "employee_id": "QC-24001",
+                "department": "Quality Control",
+                "shift": "Morning Shift",
+                "join_date": "12 Jan 2025",
+                "role": "staff"
+            }
+        ],
+        "qc_reports": [
+            {
+                "id": "qc-1",
+                "staff_id": "staff-1",
+                "batch_id": "batch-1",
+                "status": "pass",
+                "created_at": "2026-07-11T10:00:00+07:00"
+            }
+        ],
+        "production_batches": [
+            {
+                "id": "batch-1",
+                "shift": "Pagi",
+                "production_date": "2026-07-11"
+            }
+        ]
+    })
+
+    with patch("backend.services.profile_service.get_client", return_value=fake_db):
+        me_resp = client.get("/api/profile/me", headers=staff_headers)
+        summary_resp = client.get("/api/profile/activity-summary", headers=staff_headers)
+
+    me_data = me_resp.get_json()["data"]
+    assert me_data["employee_id"] == "QC-24001"
+    assert me_data["department"] == "Quality Control"
+    assert me_data["shift"] == "Morning Shift"
+    assert me_data["join_date"] == "12 Jan 2025"
+
+    summary_data = summary_resp.get_json()["data"]
+    assert "today_activity" in summary_data
+    assert summary_data["today_activity"]["qc_pagi"] is True
+    assert summary_data["today_activity"]["qc_siang"] is False
+    assert "achievements" in summary_data
+    assert "weekly_performance" in summary_data
+

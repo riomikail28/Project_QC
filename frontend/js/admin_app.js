@@ -1832,7 +1832,7 @@ const adminApp = {
         if (!tbody) return;
         const endpoint = '/staff';
         if (!API.hasFreshCache(endpoint)) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading staff...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading staff...</td></tr>';
         }
         try {
             const staff = await API.getSWR(endpoint, {
@@ -1841,14 +1841,18 @@ const adminApp = {
                 onUpdate: () => this.scheduleSectionRefresh('staff', () => this.loadStaff({ fromRevalidate: true }))
             });
             if (!staff.length) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada staff.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Belum ada staff.</td></tr>';
                 return;
             }
             this.setHtmlIfChanged(tbody, staff.map(item => `
                 <tr>
                     <td data-label="Nama"><strong>${item.full_name || item.username || '-'}</strong></td>
+                    <td data-label="Employee ID">${item.employee_id || '-'}</td>
                     <td data-label="Username">${item.username || '-'}</td>
                     <td data-label="Role"><span class="status-badge status-${item.role === 'admin' ? 'fail' : 'pass'}">${(item.role || 'staff').toUpperCase()}</span></td>
+                    <td data-label="Department">${item.department || '-'}</td>
+                    <td data-label="Shift">${item.shift || '-'}</td>
+                    <td data-label="Join Date">${item.join_date || '-'}</td>
                     <td data-label="Action">
                         <span class="row-actions">
                             <button class="btn-secondary btn-sm" onclick='adminApp.openStaffModal(${this.safeJson(item)})'><i data-lucide="pencil"></i> Edit</button>
@@ -1860,7 +1864,7 @@ const adminApp = {
             this.applyTableFilter('table-staff');
             this.refreshIcons();
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Gagal memuat staff.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Gagal memuat staff.</td></tr>';
         }
     },
 
@@ -2223,6 +2227,9 @@ const adminApp = {
             <label>Nama Lengkap
                 <input id="staff-full-name" value="${item.full_name || item.username || ''}" required>
             </label>
+            <label>Employee ID
+                <input id="staff-employee-id" value="${item.employee_id || ''}" placeholder="Contoh: QC-24001">
+            </label>
             <label>Username
                 <input id="staff-username" value="${item.username || ''}" required>
             </label>
@@ -2231,6 +2238,15 @@ const adminApp = {
                     <option value="staff" ${item.role === 'staff' ? 'selected' : ''}>QC Staff</option>
                     <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>Admin</option>
                 </select>
+            </label>
+            <label>Department
+                <input id="staff-department" value="${item.department || ''}" placeholder="Contoh: Quality Control">
+            </label>
+            <label>Shift
+                <input id="staff-shift" value="${item.shift || ''}" placeholder="Contoh: Morning Shift">
+            </label>
+            <label>Join Date
+                <input id="staff-join-date" value="${item.join_date || ''}" placeholder="Contoh: 12 Jan 2025">
             </label>
             <label>${item.id ? 'Password Baru (opsional)' : 'Password'}
                 <input id="staff-password" type="password" autocomplete="${item.id ? 'new-password' : 'current-password'}" ${item.id ? '' : 'required'} placeholder="${item.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'}">
@@ -2367,6 +2383,10 @@ const adminApp = {
                     full_name: document.getElementById('staff-full-name').value.trim(),
                     username: document.getElementById('staff-username').value.trim(),
                     role: document.getElementById('staff-role').value,
+                    employee_id: document.getElementById('staff-employee-id').value.trim(),
+                    department: document.getElementById('staff-department').value.trim(),
+                    shift: document.getElementById('staff-shift').value.trim(),
+                    join_date: document.getElementById('staff-join-date').value.trim(),
                 };
                 const password = document.getElementById('staff-password').value;
                 if (password) payload.password = password;

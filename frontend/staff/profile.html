@@ -31,40 +31,59 @@
         </section>
 
         <section class="glass-card profile-cover fade-in">
-            <div class="profile-main">
-                <div class="avatar-circle" id="avatarLarge">
-                    <span id="avatarInitials">QC</span>
-                    <span class="presence-dot" aria-label="Online"></span>
+            <div class="profile-hero-grid">
+                <!-- Left side: Identity -->
+                <div class="profile-main">
+                    <div class="avatar-circle" id="avatarLarge">
+                        <span id="avatarInitials">QC</span>
+                        <span class="presence-dot" aria-label="Online"></span>
+                    </div>
+                    <div class="profile-identity">
+                        <span class="eyebrow" id="eyebrowRole">QC FIELD STAFF</span>
+                        <h1 id="displayUsername">Loading...</h1>
+                        <div class="profile-badges">
+                            <span class="online-pill"><span class="online-dot"></span>Online</span>
+                        </div>
+                        <p class="profile-quote">"Quality is not inspected, it is built."</p>
+                    </div>
                 </div>
-                <div class="profile-identity">
-                    <span class="eyebrow">QC Staff</span>
-                    <h1 id="displayUsername">Loading...</h1>
-                    <p id="roleSubtitle">Loading session</p>
-                    <div class="profile-badges">
-                        <span id="displayRole" class="role-pill staff">STAFF</span>
-                        <span class="online-pill"><span class="online-dot"></span>Online</span>
-                        <span class="shift-pill" id="displayShift">No shift data</span>
+                <!-- Right side: Info Card Grid -->
+                <div class="profile-meta-card">
+                    <div class="meta-item">
+                        <span class="meta-icon"><i class="fas fa-id-card"></i></span>
+                        <div class="meta-content">
+                            <span class="meta-label">Employee ID</span>
+                            <strong id="metaEmployeeId">-</strong>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon"><i class="fas fa-building"></i></span>
+                        <div class="meta-content">
+                            <span class="meta-label">Department</span>
+                            <strong id="metaDepartment">-</strong>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon"><i class="fas fa-clock"></i></span>
+                        <div class="meta-content">
+                            <span class="meta-label">Shift</span>
+                            <strong id="metaShift">-</strong>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon"><i class="fas fa-calendar-alt"></i></span>
+                        <div class="meta-content">
+                            <span class="meta-label">Join Date</span>
+                            <strong id="metaJoinDate">-</strong>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="profile-grid info-grid fade-in">
-            <div class="glass-card profile-info"><label>Full Name</label><p id="fullName">-</p></div>
-            <div class="glass-card profile-info"><label>Role</label><p id="roleInfo">-</p></div>
-            <div class="glass-card profile-info"><label>Department</label><p id="departmentInfo">-</p></div>
-            <div class="glass-card profile-info"><label>Status</label><p id="statusInfo">Active</p></div>
-            <div class="glass-card profile-info"><label>Last Login</label><p id="lastLogin">No login record</p></div>
-        </section>
-
-        <section class="panel-card performance-panel fade-in">
-            <div class="section-header">
-                <div>
-                    <span class="eyebrow">Live Summary</span>
-                    <h3 class="section-title">Ringkasan Aktivitas</h3>
-                </div>
-                <button class="section-link" type="button" onclick="ProfilePage.load()">Retry</button>
-            </div>
+        <!-- QUICK STATISTICS SECTION -->
+        <section class="performance-panel fade-in">
+            <span class="eyebrow" style="margin-left: 4px; display: block; margin-bottom: 8px;">QUICK STATISTICS</span>
             <div class="empty-state" id="emptyActivity" hidden>
                 <i data-lucide="database"></i>
                 <h3>No activity yet</h3>
@@ -73,8 +92,161 @@
             <div class="profile-grid stat-grid" id="performanceGrid"></div>
         </section>
 
-        <section class="menu-grid fade-in" aria-label="Profile actions">
-            <button class="menu-item logout-danger" type="button" onclick="Auth.logout()"><span class="menu-icon"><i class="fas fa-right-from-bracket"></i></span><strong>Logout</strong></button>
+        <!-- DOUBLE COLUMN SECTION 1 -->
+        <section class="profile-two-column fade-in">
+            <!-- TODAY'S ACTIVITY -->
+            <div class="glass-card activity-card">
+                <div class="column-title">TODAY'S ACTIVITY</div>
+                <div class="activity-content">
+                    <div class="activity-checklist">
+                        <div class="checklist-item" id="activityPagi">
+                            <span class="check-icon incomplete"><i class="far fa-circle"></i></span>
+                            <span>QC Pagi</span>
+                        </div>
+                        <div class="checklist-item" id="activitySiang">
+                            <span class="check-icon incomplete"><i class="far fa-circle"></i></span>
+                            <span>QC Siang</span>
+                        </div>
+                        <div class="checklist-item" id="activitySore">
+                            <span class="check-icon incomplete"><i class="far fa-circle"></i></span>
+                            <span>QC Sore</span>
+                        </div>
+                    </div>
+                    <div class="activity-progress-box">
+                        <span class="progress-label">Progress Hari Ini</span>
+                        <strong class="progress-percent" id="todayProgressPercent">0%</strong>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" id="todayProgressBar" style="width: 0%;"></div>
+                        </div>
+                        <span class="progress-status" id="todayProgressStatus">0 / 3 Selesai</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACHIEVEMENT -->
+            <div class="glass-card achievement-card">
+                <div class="column-title">ACHIEVEMENT</div>
+                <div class="achievement-list">
+                    <div class="achievement-item locked" id="achieveAccuracy">
+                        <span class="badge-icon gold"><i class="fas fa-star"></i></span>
+                        <div class="badge-info">
+                            <strong>Perfect Accuracy</strong>
+                            <span>100% Accuracy</span>
+                        </div>
+                    </div>
+                    <div class="achievement-item locked" id="achieveStreak">
+                        <span class="badge-icon red"><i class="fas fa-fire"></i></span>
+                        <div class="badge-info">
+                            <strong>7 Hari Berturut-turut</strong>
+                            <span>Aktivitas Konsisten</span>
+                        </div>
+                    </div>
+                    <div class="achievement-item locked" id="achieveEvidence">
+                        <span class="badge-icon blue"><i class="fas fa-camera"></i></span>
+                        <div class="badge-info">
+                            <strong>Evidence Master</strong>
+                            <span>Upload Evidence Terbaik</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DOUBLE COLUMN SECTION 2 -->
+        <section class="profile-two-column fade-in">
+            <!-- PERFORMANCE MINGGU INI -->
+            <div class="glass-card performance-card">
+                <div class="column-title">PERFORMANCE MINGGU INI</div>
+                <div class="performance-list">
+                    <div class="perf-item">
+                        <div class="perf-header">
+                            <span>QC</span>
+                            <strong id="perfQcVal">100%</strong>
+                        </div>
+                        <div class="perf-bar"><div class="perf-fill" id="perfQcBar" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-header">
+                            <span>Response</span>
+                            <strong id="perfResponseVal">84%</strong>
+                        </div>
+                        <div class="perf-bar"><div class="perf-fill" id="perfResponseBar" style="width: 84%;"></div></div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-header">
+                            <span>Temperature Log</span>
+                            <strong id="perfTempVal">93%</strong>
+                        </div>
+                        <div class="perf-bar"><div class="perf-fill" id="perfTempBar" style="width: 93%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFORMASI AKUN -->
+            <div class="glass-card account-info-card">
+                <div class="column-title">INFORMASI AKUN</div>
+                <div class="account-details">
+                    <div class="detail-row">
+                        <span>Nama</span>
+                        <strong id="infoName">-</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Role</span>
+                        <strong id="infoRole">-</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Department</span>
+                        <strong id="infoDepartment">-</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Status</span>
+                        <span class="status-badge" id="infoStatus">Active</span>
+                    </div>
+                    <div class="detail-row last-login-row">
+                        <span>Last Login</span>
+                        <strong id="infoLastLogin">-</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACTION MENU -->
+        <section class="menu-list-card fade-in" aria-label="Profile actions">
+            <a href="#" class="list-item" onclick="alert('Feature coming soon')">
+                <div class="item-left">
+                    <span class="item-icon"><i class="fas fa-user-edit"></i></span>
+                    <strong>Edit Profile</strong>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="#" class="list-item" onclick="alert('Feature coming soon')">
+                <div class="item-left">
+                    <span class="item-icon"><i class="fas fa-bell"></i></span>
+                    <strong>Notification</strong>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="#" class="list-item" onclick="alert('Feature coming soon')">
+                <div class="item-left">
+                    <span class="item-icon"><i class="fas fa-clock-rotate-left"></i></span>
+                    <strong>Activity History</strong>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="#" class="list-item" onclick="alert('Feature coming soon')">
+                <div class="item-left">
+                    <span class="item-icon"><i class="fas fa-key"></i></span>
+                    <strong>Change Password</strong>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="#" class="list-item logout-danger-item" onclick="Auth.logout()">
+                <div class="item-left">
+                    <span class="item-icon"><i class="fas fa-right-from-bracket"></i></span>
+                    <strong>Logout</strong>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
         </section>
     </main>
 

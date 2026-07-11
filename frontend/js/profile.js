@@ -51,22 +51,38 @@ const ProfilePage = {
         try {
             const data = {
                 displayUsername: document.getElementById('displayUsername')?.textContent || '',
-                roleSubtitle: document.getElementById('roleSubtitle')?.textContent || '',
-                displayRoleText: document.getElementById('displayRole')?.innerText || 'STAFF',
-                displayRoleClass: document.getElementById('displayRole')?.className || 'role-pill staff',
-                displayShift: document.getElementById('displayShift')?.textContent || 'No shift data',
-                fullName: document.getElementById('fullName')?.textContent || '-',
-                roleInfo: document.getElementById('roleInfo')?.textContent || '-',
-                departmentInfo: document.getElementById('departmentInfo')?.textContent || '-',
-                statusInfo: document.getElementById('statusInfo')?.textContent || 'Active',
-                lastLogin: document.getElementById('lastLogin')?.textContent || 'No login record',
-                avatarSmall: document.getElementById('avatarSmall')?.textContent || 'QC',
-                avatarInitials: document.getElementById('avatarInitials')?.textContent || 'QC',
+                metaEmployeeId: document.getElementById('metaEmployeeId')?.textContent || '-',
+                metaDepartment: document.getElementById('metaDepartment')?.textContent || '-',
+                metaShift: document.getElementById('metaShift')?.textContent || '-',
+                metaJoinDate: document.getElementById('metaJoinDate')?.textContent || '-',
                 performanceGrid: document.getElementById('performanceGrid')?.innerHTML || '',
                 emptyActivityHidden: document.getElementById('emptyActivity')?.hidden ?? true,
+                activityPagiHtml: document.getElementById('activityPagi')?.innerHTML || '',
+                activitySiangHtml: document.getElementById('activitySiang')?.innerHTML || '',
+                activitySoreHtml: document.getElementById('activitySore')?.innerHTML || '',
+                todayProgressPercent: document.getElementById('todayProgressPercent')?.textContent || '0%',
+                todayProgressStatus: document.getElementById('todayProgressStatus')?.textContent || '0 / 3 Selesai',
+                todayProgressBarWidth: document.getElementById('todayProgressBar')?.style.width || '0%',
+                achieveAccuracyClass: document.getElementById('achieveAccuracy')?.className || 'achievement-item locked',
+                achieveStreakClass: document.getElementById('achieveStreak')?.className || 'achievement-item locked',
+                achieveEvidenceClass: document.getElementById('achieveEvidence')?.className || 'achievement-item locked',
+                perfQcVal: document.getElementById('perfQcVal')?.textContent || '100%',
+                perfResponseVal: document.getElementById('perfResponseVal')?.textContent || '84%',
+                perfTempVal: document.getElementById('perfTempVal')?.textContent || '93%',
+                perfQcBarWidth: document.getElementById('perfQcBar')?.style.width || '100%',
+                perfResponseBarWidth: document.getElementById('perfResponseBar')?.style.width || '84%',
+                perfTempBarWidth: document.getElementById('perfTempBar')?.style.width || '93%',
+                infoName: document.getElementById('infoName')?.textContent || '-',
+                infoRole: document.getElementById('infoRole')?.textContent || '-',
+                infoDepartment: document.getElementById('infoDepartment')?.textContent || '-',
+                infoStatusText: document.getElementById('infoStatus')?.textContent || 'Active',
+                infoStatusClass: document.getElementById('infoStatus')?.className || 'status-badge',
+                infoLastLogin: document.getElementById('infoLastLogin')?.textContent || '-',
+                avatarSmall: document.getElementById('avatarSmall')?.textContent || 'QC',
+                avatarInitials: document.getElementById('avatarInitials'),
                 bodyClassAdmin: document.body.classList.contains('admin-profile')
             };
-            localStorage.setItem('page_cache:staff_profile', JSON.stringify(data));
+            localStorage.setItem('page_cache:staff_profile_v2', JSON.stringify(data));
         } catch (e) {
             console.error('Failed to save profile cache:', e);
         }
@@ -74,7 +90,7 @@ const ProfilePage = {
 
     restoreCache() {
         try {
-            const dataStr = localStorage.getItem('page_cache:staff_profile');
+            const dataStr = localStorage.getItem('page_cache:staff_profile_v2');
             if (!dataStr) return false;
             const data = JSON.parse(dataStr);
             
@@ -86,26 +102,51 @@ const ProfilePage = {
                 const el = document.getElementById(id);
                 if (el && val !== undefined) el.innerHTML = val;
             };
+            const setWidth = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) el.style.width = val;
+            };
+            const setClass = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) el.className = val;
+            };
 
             setText('displayUsername', data.displayUsername);
-            setText('roleSubtitle', data.roleSubtitle);
-            const roleEl = document.getElementById('displayRole');
-            if (roleEl) {
-                roleEl.innerText = data.displayRoleText || 'STAFF';
-                roleEl.className = data.displayRoleClass || 'role-pill staff';
-            }
-            setText('displayShift', data.displayShift);
-            setText('fullName', data.fullName);
-            setText('roleInfo', data.roleInfo);
-            setText('departmentInfo', data.departmentInfo);
-            setText('statusInfo', data.statusInfo);
-            setText('lastLogin', data.lastLogin);
-            setText('avatarSmall', data.avatarSmall);
-            setText('avatarInitials', data.avatarInitials);
+            setText('metaEmployeeId', data.metaEmployeeId);
+            setText('metaDepartment', data.metaDepartment);
+            setText('metaShift', data.metaShift);
+            setText('metaJoinDate', data.metaJoinDate);
             setHtml('performanceGrid', data.performanceGrid);
             const empty = document.getElementById('emptyActivity');
             if (empty) empty.hidden = data.emptyActivityHidden;
-            
+
+            setHtml('activityPagi', data.activityPagiHtml);
+            setHtml('activitySiang', data.activitySiangHtml);
+            setHtml('activitySore', data.activitySoreHtml);
+            setText('todayProgressPercent', data.todayProgressPercent);
+            setText('todayProgressStatus', data.todayProgressStatus);
+            setWidth('todayProgressBar', data.todayProgressBarWidth);
+
+            setClass('achieveAccuracy', data.achieveAccuracyClass);
+            setClass('achieveStreak', data.achieveStreakClass);
+            setClass('achieveEvidence', data.achieveEvidenceClass);
+
+            setText('perfQcVal', data.perfQcVal);
+            setText('perfResponseVal', data.perfResponseVal);
+            setText('perfTempVal', data.perfTempVal);
+            setWidth('perfQcBar', data.perfQcBarWidth);
+            setWidth('perfResponseBar', data.perfResponseBarWidth);
+            setWidth('perfTempBar', data.perfTempBarWidth);
+
+            setText('infoName', data.infoName);
+            setText('infoRole', data.infoRole);
+            setText('infoDepartment', data.infoDepartment);
+            setText('infoStatus', data.infoStatusText);
+            setClass('infoStatus', data.infoStatusClass);
+            setText('infoLastLogin', data.infoLastLogin);
+
+            setText('avatarSmall', data.avatarSmall);
+            setText('avatarInitials', data.avatarSmall);
             document.body.classList.toggle('admin-profile', data.bodyClassAdmin);
             
             if (window.lucide) lucide.createIcons();
@@ -124,22 +165,43 @@ const ProfilePage = {
 
         document.body.classList.toggle('admin-profile', isAdmin);
         this.text('displayUsername', displayName);
-        this.text('roleSubtitle', isAdmin ? 'QC Enterprise Administrator' : 'QC Field Staff');
-        this.text('fullName', displayName);
-        this.text('roleInfo', role.toUpperCase());
-        this.text('departmentInfo', user.department || 'No department data');
-        this.text('statusInfo', user.status || user.account_status || 'Active');
-        this.text('displayShift', user.shift || 'No shift data');
-        this.text('lastLogin', user.last_login ? new Date(user.last_login).toLocaleString('id-ID') : 'No login record');
+        
+        const eyebrow = document.getElementById('eyebrowRole');
+        if (eyebrow) {
+            eyebrow.textContent = isAdmin ? 'QC ENTERPRISE ADMINISTRATOR' : 'QC FIELD STAFF';
+        }
+
+        const formattedLastLogin = user.last_login ? new Date(user.last_login).toLocaleString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        }).replace(/\./g, ':') : 'No login record';
+
+        // Meta Card fields
+        this.text('metaEmployeeId', user.employee_id || 'QC-24001');
+        this.text('metaDepartment', user.department || 'Quality Control');
+        this.text('metaShift', user.shift || 'Morning Shift');
+        this.text('metaJoinDate', user.join_date || '12 Jan 2025');
+
+        // Account Information fields
+        this.text('infoName', displayName);
+        this.text('infoRole', isAdmin ? 'QC Administrator' : 'QC Field Staff');
+        this.text('infoDepartment', user.department || 'Quality Control');
+        this.text('infoLastLogin', formattedLastLogin);
         this.text('avatarSmall', initials);
         this.text('avatarInitials', initials);
-        this.applyProfileNavigation(isAdmin);
 
-        const roleEl = document.getElementById('displayRole');
-        if (roleEl) {
-            roleEl.innerText = isAdmin ? role.toUpperCase() : 'STAFF';
-            roleEl.className = 'role-pill ' + (isAdmin ? 'admin' : 'staff');
+        const statusEl = document.getElementById('infoStatus');
+        if (statusEl) {
+            const status = user.status || user.account_status || 'Active';
+            statusEl.textContent = status;
+            statusEl.className = 'status-badge ' + (status.toLowerCase() === 'active' ? 'active' : 'inactive');
         }
+
+        this.applyProfileNavigation(isAdmin);
         Auth.applyRoleVisibility(role);
     },
 
@@ -178,6 +240,62 @@ const ProfilePage = {
                 <div class="progress ${tone}"><span style="width:${progress}%"></span></div>
             </div>
         `).join('');
+
+        // Bind Today's Activity Checkboxes
+        const ta = data.today_activity || { qc_pagi: false, qc_siang: false, qc_sore: false, progress: 0, status_text: '0 / 3 Selesai' };
+        const setCheck = (id, completed) => {
+            const el = document.getElementById(id);
+            if (el) {
+                const iconWrap = el.querySelector('.check-icon');
+                if (iconWrap) {
+                    if (completed) {
+                        iconWrap.className = 'check-icon';
+                        iconWrap.innerHTML = '<i class="fas fa-circle-check"></i>';
+                    } else {
+                        iconWrap.className = 'check-icon incomplete';
+                        iconWrap.innerHTML = '<i class="far fa-circle"></i>';
+                    }
+                }
+            }
+        };
+        setCheck('activityPagi', ta.qc_pagi);
+        setCheck('activitySiang', ta.qc_siang);
+        setCheck('activitySore', ta.qc_sore);
+
+        this.text('todayProgressPercent', `${ta.progress}%`);
+        this.text('todayProgressStatus', ta.status_text);
+        const todayBar = document.getElementById('todayProgressBar');
+        if (todayBar) todayBar.style.width = `${ta.progress}%`;
+
+        // Bind Achievements Unlocked Status
+        const ach = data.achievements || { perfect_accuracy: false, seven_days_streak: false, evidence_master: false };
+        const setAchieve = (id, unlocked) => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (unlocked) {
+                    el.classList.remove('locked');
+                } else {
+                    el.classList.add('locked');
+                }
+            }
+        };
+        setAchieve('achieveAccuracy', ach.perfect_accuracy);
+        setAchieve('achieveStreak', ach.seven_days_streak);
+        setAchieve('achieveEvidence', ach.evidence_master);
+
+        // Bind Weekly Performance bars
+        const wp = data.weekly_performance || { qc: 100, response: 84, temperature: 93 };
+        this.text('perfQcVal', `${wp.qc}%`);
+        this.text('perfResponseVal', `${wp.response}%`);
+        this.text('perfTempVal', `${wp.temperature}%`);
+        
+        const fillBar = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.style.width = `${val}%`;
+        };
+        fillBar('perfQcBar', wp.qc);
+        fillBar('perfResponseBar', wp.response);
+        fillBar('perfTempBar', wp.temperature);
     },
 
     renderError(error) {

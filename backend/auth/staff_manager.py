@@ -100,6 +100,11 @@ def create_staff(data: dict):
             "role": db_role,
         }
         
+        # Save new profile fields if provided
+        for field in ("employee_id", "department", "shift", "join_date"):
+            if field in data:
+                payload[field] = data[field]
+        
         # Use direct query to bypass library validation issues
         res_data = direct_db_query("staff_accounts", method="POST", payload=payload)
         staff = res_data[0] if res_data else None
@@ -145,6 +150,11 @@ def update_staff(staff_id: str, data: dict):
         payload["role"] = "admin" if "admin" in role_input else "staff"
     if data.get("password"):
         payload["password_hash"] = hash_password(data["password"])
+
+    # Handle update of new profile fields
+    for field in ("employee_id", "department", "shift", "join_date"):
+        if field in data:
+            payload[field] = data[field]
 
     if not payload and not full_name:
         raise ValueError("Tidak ada data yang diubah")
