@@ -465,7 +465,7 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
         const result = await API.upload("/facility/monitoring/submit", formData);
         if (result.success) {
             // Success flow toast max 1s (Requirement 9)
-            showMonitoringToast("✓ Monitoring berhasil", false, 1000);
+            showMonitoringToast("Data monitoring berhasil disimpan.");
             
             // Clear draft (Requirement 8)
             localStorage.removeItem("monitoring_draft");
