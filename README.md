@@ -1,4 +1,4 @@
-# AstroQC - Enterprise Quality Control & Traceability System 🚀
+# Quality Control Management System - Enterprise Quality Control & Traceability System 🚀
 ## QC Enterprise - Quality Control & Traceability System for Central Kitchen
 
 A modern, mobile-first, and highly-secure Quality Control (QC) & HACCP compliance suite designed for central kitchens, food production lines, and caterers. This project digitizes temperature logs, batch tracking, product inspections, and compliance training into a unified enterprise platform.
@@ -14,7 +14,7 @@ A modern, mobile-first, and highly-secure Quality Control (QC) & HACCP complianc
 ## 🔗 Live Application & Demo Accounts
 
 The application is deployed and fully active. You can access the live instance here:
-👉 **[astro-qc.vercel.app](https://project-qc-mu.vercel.app/)**
+👉 **[project-qc-mu.vercel.app](https://project-qc-mu.vercel.app/)**
 
 To present this project to stakeholders, recruiters, or post on LinkedIn, use the following pre-configured credentials:
 

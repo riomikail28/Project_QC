@@ -21,7 +21,7 @@ CENTRAL_KITCHEN_PRODUCTS: list[dict] = [
     {"product_code": "SKU-BUMBU-002", "product_name": "Finish Goods - Garlic In Oil 150gr - AG", "ph_min": 4.5, "ph_max": 7.0},
     {"product_code": "SKU-BUMBU-003", "product_name": "Finish Goods - Bumbu Dasar Merah 150gr - AG", "ph_min": 5.0, "ph_max": 6.5},
     {"product_code": "SKU-BUMBU-004", "product_name": "Finish Goods - Bumbu Dasar Putih 150gr - AG", "ph_min": 5.0, "ph_max": 6.5},
-    {"product_code": "SKU-WIP-001", "product_name": "Finish Goods - WIP Astro Kitchen - Espresso concentrate 1L", "tds_min": 4800.0, "tds_max": 5700.0},
+    {"product_code": "SKU-WIP-001", "product_name": "Finish Goods - WIP Central Kitchen - Espresso concentrate 1L", "tds_min": 4800.0, "tds_max": 5700.0},
     {"product_code": "SKU-WIP-002", "product_name": "Finish Goods - WIP Cold Brew concentrate PATRIA 1L - AK", "tds_min": 2300.0, "tds_max": 3700.0},
     {"product_code": "SKU-WIP-003", "product_name": "Finish Goods - WIP Cold Brew concentrate KINTAMANI 1L - AK", "tds_min": 2300.0, "tds_max": 3700.0},
     {"product_code": "SKU-CHKN-002", "product_name": "Finish Goods - Grilled Chicken 100gr - AK", "brix_min": 55.0, "brix_max": 65.0, "ph_min": 4.0, "ph_max": 6.0},

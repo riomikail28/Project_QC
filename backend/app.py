@@ -1,7 +1,7 @@
 """
 QC Central Kitchen - Flask Application Entry Point
 ====================================================
-PT Astro Teknologi Indonesia - Central Kitchen
+Quality Control Management System - Central Kitchen
 
 Run:
     python backend/app.py
