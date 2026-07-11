@@ -67,10 +67,7 @@ graph TD
 *   **Interactive Camera & Compressions**: Built-in camera utility with high-efficiency frontend image compression to ensure fast photo uploads even under poor kitchen network conditions.
 *   **OCR Scanning Support**: Auto-reads dates from barcodes and fills manufacturing forms automatically to prevent human data entry errors.
 
-### 🎓 ITDV Learning Center (HACCP)
-*   **Compliance Training Modules**: Interactive courses covering HACCP, sanitation protocols, and CCP (Critical Control Points) limits.
-*   **Mini Quizzes & Evaluations**: Test staff understanding with localized questionnaires.
-*   **Verified Certificates**: Grants dynamic verification certificates upon module completions to keep logs of staff compliance levels.
+<!-- ITDV Learning Center -->
 
 ---
 
@@ -81,53 +78,7 @@ graph TD
 *   **Database**: Supabase PostgreSQL with real-time replication triggers, schema-level foreign key constraints, and seed data scripts.
 *   **Unit Tests**: Comprehensive automated test suites using `pytest` covering authorization gates, profile syncs, products CRUD, and submission pipelines.
 
----
 
-## 🚀 Local Development Setup
-
-To run this project locally, follow these steps:
-
-### 1. Clone the Repository
-```bash
-git clone <your-repository-url>
-cd Project_QC
-```
-
-### 2. Configure Environment Variables
-Copy the env template file:
-```bash
-copy .env.example .env
-```
-Fill in your Supabase variables and JWT keys:
-```env
-JWT_SECRET_KEY=your-jwt-secret-key-here
-JWT_ISSUER=qc-traceability-api
-SUPABASE_URL=https://your-supabase-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
-SUPABASE_STORAGE_BUCKET=qc-evidence
-```
-
-### 3. Install Dependencies & Setup Virtual Environment
-```bash
-python -m venv .venv
-# On Windows
-.venv\Scripts\activate
-# On macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 4. Start the Application
-```bash
-python api/app.py
-```
-Open your browser and navigate to:
-*   Staff Portal: `http://localhost:5000/staff/login.html`
-*   Admin Portal: `http://localhost:5000/admin/admin_panel.html`
-*   Learning Center: `http://localhost:5000/learning/`
-
----
 
 ## 🔌 Google Apps Script Webhook Export
 
