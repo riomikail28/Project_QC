@@ -497,6 +497,7 @@ class InspectionService:
             "id": row.get("id"),
             "product_code": row.get("product_code") or row.get("sku_code"),
             "product_name": row.get("product_name"),
+            "shelf_life_days": row.get("shelf_life_days"),
             "is_active": row.get("is_active", True),
         }
 

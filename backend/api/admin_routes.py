@@ -44,6 +44,11 @@ def _product_payload(data):
     if not code or not name:
         raise ValueError("Kode SKU dan nama produk wajib diisi")
 
+    try:
+        shelf_life = int(data.get("shelf_life_days")) if data.get("shelf_life_days") not in (None, "") else 3
+    except (ValueError, TypeError):
+        shelf_life = 3
+
     return {
         "product_code": code,
         "sku_code": code,
@@ -54,6 +59,7 @@ def _product_payload(data):
         "brix_max": _nullable_number(data.get("brix_max")),
         "tds_min": _nullable_number(data.get("tds_min")),
         "tds_max": _nullable_number(data.get("tds_max")),
+        "shelf_life_days": shelf_life,
         "is_active": _nullable_bool(data.get("is_active"), True),
     }
 

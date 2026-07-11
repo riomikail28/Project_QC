@@ -271,3 +271,41 @@ def test_admin_traceability_fallback_from_staff_submissions(client, admin_header
     assert rows[0]["barcode_value"] == "PPIC / Chiller"
     assert any(row.get("batch_code") == "BATCH-001" and row.get("product_name") == "Chicken Soup" for row in rows)
     assert any(row.get("photo_url") == "https://img/finding.jpg" for row in rows)
+
+
+def test_admin_product_shelf_life_days_create_and_update(client, admin_headers):
+    fake_db = FakeSupabase({"products": []})
+
+    # Test Create with shelf_life_days
+    with patch("backend.services.admin_service.get_client", return_value=fake_db):
+        response = client.post(
+            "/api/v1/admin/products",
+            json={
+                "product_code": "SKU-TEST-EXPD",
+                "product_name": "Test Exp Shelf Life Product",
+                "shelf_life_days": 14,
+                "is_active": True,
+            },
+            headers=admin_headers,
+        )
+
+    assert response.status_code == 201
+    body = response.get_json()
+    assert body["product_code"] == "SKU-TEST-EXPD"
+    assert body["shelf_life_days"] == 14
+
+    # Test Update shelf_life_days
+    with patch("backend.services.admin_service.get_client", return_value=fake_db):
+        response_update = client.patch(
+            "/api/v1/admin/products/product-1",
+            json={
+                "product_code": "SKU-TEST-EXPD",
+                "product_name": "Test Exp Shelf Life Product",
+                "shelf_life_days": 30,
+            },
+            headers=admin_headers,
+        )
+
+    assert response_update.status_code == 200
+    body_update = response_update.get_json()
+    assert body_update["shelf_life_days"] == 30

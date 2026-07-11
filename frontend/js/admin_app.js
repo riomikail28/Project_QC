@@ -2330,6 +2330,15 @@ const adminApp = {
             <label>TDS Max
                 <input id="sku-tds-max" type="number" step="0.01" value="${item.tds_max ?? ''}">
             </label>
+            <label>Exp (Hari)
+                <select id="sku-shelf-life-days">
+                    <option value="3" ${item.shelf_life_days === 3 ? 'selected' : ''}>3 Hari</option>
+                    <option value="4" ${item.shelf_life_days === 4 ? 'selected' : ''}>4 Hari</option>
+                    <option value="7" ${item.shelf_life_days === 7 ? 'selected' : ''}>7 Hari</option>
+                    <option value="14" ${item.shelf_life_days === 14 ? 'selected' : ''}>14 Hari</option>
+                    <option value="30" ${item.shelf_life_days === 30 ? 'selected' : ''}>30 Hari</option>
+                </select>
+            </label>
             <label>Status
                 <select id="sku-is-active">
                     <option value="true" ${item.is_active === false ? '' : 'selected'}>Aktif</option>
@@ -2434,6 +2443,7 @@ const adminApp = {
                     brix_max: this.numberOrNull('sku-brix-max'),
                     tds_min: this.numberOrNull('sku-tds-min'),
                     tds_max: this.numberOrNull('sku-tds-max'),
+                    shelf_life_days: Number(document.getElementById('sku-shelf-life-days').value),
                     is_active: document.getElementById('sku-is-active').value === 'true',
                 };
                 if (this.crudMode === 'addSku') await API.post('/v1/admin/products', payload);
@@ -2575,7 +2585,7 @@ const adminApp = {
         if (!tbody) return;
         const endpoint = '/v1/admin/products';
         if (!API.hasFreshCache(endpoint)) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading SKU...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading SKU...</td></tr>';
         }
         try {
             const products = await API.getSWR(endpoint, {
@@ -2584,7 +2594,7 @@ const adminApp = {
                 onUpdate: () => this.scheduleSectionRefresh('sku', () => this.loadSku({ fromRevalidate: true }))
             });
             if (!products.length) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada SKU produk.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Belum ada SKU produk.</td></tr>';
                 return;
             }
             this.setHtmlIfChanged(tbody, products.map(item => `
@@ -2594,6 +2604,7 @@ const adminApp = {
                     <td data-label="pH">${this.formatRange(item.ph_min, item.ph_max, 'pH')}</td>
                     <td data-label="Brix">${this.formatRange(item.brix_min, item.brix_max, '%')}</td>
                     <td data-label="TDS">${this.formatRange(item.tds_min, item.tds_max, 'ppm')}</td>
+                    <td data-label="Exp (Hari)">${item.shelf_life_days !== undefined && item.shelf_life_days !== null ? item.shelf_life_days + ' Hari' : '3 Hari'}</td>
                     <td data-label="Status"><span class="status-badge status-${item.is_active === false ? 'pending' : 'pass'}">${item.is_active === false ? 'NONAKTIF' : 'AKTIF'}</span></td>
                     <td data-label="Action">
                         <span class="row-actions">
@@ -2606,7 +2617,7 @@ const adminApp = {
             this.applyTableFilter('table-sku');
             this.refreshIcons();
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Gagal memuat SKU.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Gagal memuat SKU.</td></tr>';
         }
     },
 
