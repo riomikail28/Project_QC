@@ -182,7 +182,15 @@ class SecurityMiddleware:
 
     def _security_headers(self, response):
         supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
-        connect_sources = ["'self'", "http://localhost:5000", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com"]
+        connect_sources = [
+            "'self'",
+            "http://localhost:5000",
+            "https://cdn.jsdelivr.net",
+            "https://unpkg.com",
+            "https://cdnjs.cloudflare.com",
+            "https://fonts.googleapis.com",
+            "https://fonts.gstatic.com"
+        ]
         if supabase_url:
             connect_sources.append(supabase_url)
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qc-central-v4';
+const CACHE_NAME = 'qc-central-v5';
 const PRECACHE_ASSETS = [
   '/',
   '/login.html',
@@ -62,23 +62,26 @@ self.addEventListener('fetch', (e) => {
   // Stale-While-Revalidate strategy untuk static assets (HTML, CSS, JS, Font, Logo, Icons)
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(e.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Abaikan error background fetch agar tidak mengganggu response cache
-        });
+      // Jalankan network fetch
+      const fetchPromise = fetch(e.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      });
 
-      // Kembalikan versi cache secara instan (untuk kecepatan maksimal),
-      // jika belum ada di cache, gunakan response dari network
-      return cachedResponse || fetchPromise;
+      // Jika ada di cache, kembalikan versi cache langsung dan biarkan fetch berjalan di background
+      if (cachedResponse) {
+        // Tangani kegagalan fetch di background (misal offline/CSP block) agar tidak menyebabkan TypeError
+        fetchPromise.catch((err) => console.warn("Background fetch failed:", err));
+        return cachedResponse;
+      }
+
+      // Jika tidak ada di cache, kembalikan fetchPromise dari network
+      return fetchPromise;
     }).catch(() => {
       // Fallback offline untuk navigasi utama jika gagal total
       if (e.request.mode === 'navigate') {
