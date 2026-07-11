@@ -48,6 +48,11 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
+  // Hanya tangani request HTTP/HTTPS (bypass chrome-extension, data:, dll.)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   // Jangan cache request API, Supabase RPC, Google Sheets, atau non-GET requests
   if (
     url.pathname.startsWith('/api/') || 
