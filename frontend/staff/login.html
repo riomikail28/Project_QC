@@ -3,8 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masuk | ASTRO QC</title>
+    <meta name="description" content="Aplikasi Quality Control dan Ketertelusuran Produksi Dapur Sentral (Central Kitchen) QC Enterprise.">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +14,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <style>
         body {
             background: radial-gradient(circle at top right, #eff6ff 0%, #f8fafc 100%);
@@ -118,7 +120,7 @@
 </head>
 
 <body class="forced-mobile">
-    <div class="login-card">
+    <main class="login-card">
         <div class="logo-box">
             <i class="fas fa-microchip"></i>
         </div>
@@ -127,18 +129,18 @@
             <p>Sistem QC Dapur</p>
         </div>
         <div class="form-group">
-            <label>Username</label>
+            <label for="username">Username</label>
             <input type="text" id="username" class="form-input" placeholder="Masukkan username">
         </div>
         <div class="form-group" style="margin-bottom: 32px;">
-            <label>Password</label>
+            <label for="password">Password</label>
             <input type="password" id="password" class="form-input" placeholder="********">
         </div>
         <button id="loginBtn" class="btn-login">Masuk</button>
         <p style="margin-top: 24px; font-size: 12px; color: var(--text-muted);">
             &copy; 2026 Quality Control Central Kitchen
         </p>
-    </div>
+    </main>
 
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
