@@ -159,6 +159,17 @@ class OptimizedAPI {
             navigator.serviceWorker.register('/sw.js')
                 .then(registration => {
                     console.log('Service Worker registered:', registration);
+                    
+                    // Detect updates to service worker and reload
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New Service Worker version available, reloading...');
+                                window.location.reload();
+                            }
+                        });
+                    });
                 })
                 .catch(error => {
                     console.warn('Service Worker registration failed:', error);

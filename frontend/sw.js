@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qc-central-v2';
+const CACHE_NAME = 'qc-central-v3';
 const PRECACHE_ASSETS = [
   '/',
   '/login.html',
@@ -59,30 +59,30 @@ self.addEventListener('fetch', (e) => {
     return; // Langsung bypass ke network
   }
 
-  // Cache-First strategy untuk static assets (HTML, CSS, JS, Font, Logo, Icons)
+  // Network-First strategy untuk static assets (HTML, CSS, JS, Font, Logo, Icons)
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(e.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    fetch(e.request)
+      .then((networkResponse) => {
+        // Jika online dan sukses, simpan/update cache
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, responseToCache);
-        });
-
         return networkResponse;
-      }).catch(() => {
-        // Fallback offline untuk navigasi utama
-        if (e.request.mode === 'navigate') {
-          return caches.match('/login.html');
-        }
-      });
-    })
+      })
+      .catch(() => {
+        // Jika offline / network error, ambil dari cache
+        return caches.match(e.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback offline untuk navigasi utama
+          if (e.request.mode === 'navigate') {
+            return caches.match('/login.html');
+          }
+        });
+      })
   );
 });
