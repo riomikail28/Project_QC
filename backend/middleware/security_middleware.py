@@ -167,6 +167,11 @@ class SecurityMiddleware:
         payload = self.verify_token(token)
         if payload:
             g.current_user = payload
+            # Block demo_admin from mutating methods (POST, PUT, PATCH, DELETE)
+            if payload.get("username") == "demo_admin" and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+                # Exception: auth/login/logout endpoints
+                if not request.path.endswith("/login") and not request.path.endswith("/logout"):
+                    return jsonify({"error": "Akun Demo Admin hanya memiliki akses lihat-saja (read-only)."}), 403
         return None
 
     def _limit_request_size(self):

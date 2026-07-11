@@ -34,6 +34,23 @@ def login(username: str, password: str) -> dict:
     """Validate credentials and return user session data."""
     from backend.database.supabase_client import direct_db_query
     
+    # Add hardcoded demo fallbacks for deployment convenience
+    uname_lower = username.strip().lower()
+    if uname_lower == "demo_admin" and password == "demoadmin123":
+        return {
+            "id": "demo-admin-uuid-0001",
+            "username": "demo_admin",
+            "role": "admin",
+            "name": "Demo Admin (Read Only)",
+        }
+    if uname_lower == "demo_staff" and password == "demostaff123":
+        return {
+            "id": "demo-staff-uuid-0002",
+            "username": "demo_staff",
+            "role": "staff",
+            "name": "Demo Staff (QC)",
+        }
+
     try:
         # Use direct query with filter
         filters = f"username=eq.{quote(username, safe='')}"
