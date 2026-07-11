@@ -927,8 +927,22 @@ const Inspection = {
         
         try {
             [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kompresi Foto...';
+            
+            if (cookingPhoto) {
+                cookingPhoto = await API.preparePhoto(cookingPhoto, { filePrefix: `qc-cooking-${sku}` });
+            }
+            if (barcodePhoto) {
+                barcodePhoto = await API.preparePhoto(barcodePhoto, { filePrefix: `qc-barcode-${sku}` });
+            }
+            if (labelPhoto) {
+                labelPhoto = await API.preparePhoto(labelPhoto, { filePrefix: `qc-label-${sku}` });
+            }
         } catch (err) {
             this.message(err.message || 'Upload gagal', true);
+            this.updateSubmitState();
             return;
         }
 
@@ -982,6 +996,8 @@ const Inspection = {
             const currentBatchId = this.selectedBatch?.id || this.selectedBatch?.batch_code;
             const nextBatch = currentBatchId && productKey ? this.skuBatchMap[productKey]?.batches?.find(b => String(b.id || b.batch_code) !== String(currentBatchId) && this.normalizeStatus(b.qc_status || b.status) === 'pending') : null;
 
+            // Clear cache to ensure subsequent reload fetches fresh batches
+            API.clearCache("batch");
             localStorage.removeItem('inspection_draft');
 
             ['productSearch', 'qcSku', 'qcTemp', 'qcPh', 'qcBrix', 'qcTds', 'qcNotes', 'qcGramasi1', 'qcGramasi2', 'qcGramasi3', 'qcGramasi4', 'qcGramasi5'].forEach(id => {
@@ -2192,6 +2208,21 @@ const Inspection = {
             labelPhoto = this.photoFiles.labelPhoto || (document.getElementById('labelPhoto')?.files || [])[0];
         }
         
+        try {
+            [cookingPhoto, barcodePhoto, labelPhoto].filter(Boolean).forEach(file => API.validatePhoto(file));
+            if (cookingPhoto) {
+                cookingPhoto = await API.preparePhoto(cookingPhoto, { filePrefix: `qc-cooking-${sku}` });
+            }
+            if (barcodePhoto) {
+                barcodePhoto = await API.preparePhoto(barcodePhoto, { filePrefix: `qc-barcode-${sku}` });
+            }
+            if (labelPhoto) {
+                labelPhoto = await API.preparePhoto(labelPhoto, { filePrefix: `qc-label-${sku}` });
+            }
+        } catch (err) {
+            console.error("Failed to compress photos in auto-save:", err);
+        }
+
         const gramasi1 = document.getElementById('qcGramasi1')?.value?.trim();
         const gramasi2 = document.getElementById('qcGramasi2')?.value?.trim();
         const gramasi3 = document.getElementById('qcGramasi3')?.value?.trim();
@@ -2233,6 +2264,8 @@ const Inspection = {
         const response = await API.upload('/inspection/submit', formData);
         
         if (response && response.success && response.data) {
+            // Clear batch cache to ensure updates are fetched fresh
+            API.clearCache("batch");
             const report = response.data;
             const reports = this.selectedBatch.qc_reports || [];
             const idx = reports.findIndex(r => r.qc_stage === this.selectedStage);

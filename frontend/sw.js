@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qc-central-v3';
+const CACHE_NAME = 'qc-central-v4';
 const PRECACHE_ASSETS = [
   '/',
   '/login.html',
@@ -59,30 +59,31 @@ self.addEventListener('fetch', (e) => {
     return; // Langsung bypass ke network
   }
 
-  // Network-First strategy untuk static assets (HTML, CSS, JS, Font, Logo, Icons)
+  // Stale-While-Revalidate strategy untuk static assets (HTML, CSS, JS, Font, Logo, Icons)
   e.respondWith(
-    fetch(e.request)
-      .then((networkResponse) => {
-        // Jika online dan sukses, simpan/update cache
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        // Jika offline / network error, ambil dari cache
-        return caches.match(e.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
+    caches.match(e.request).then((cachedResponse) => {
+      const fetchPromise = fetch(e.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseToCache);
+            });
           }
-          // Fallback offline untuk navigasi utama
-          if (e.request.mode === 'navigate') {
-            return caches.match('/login.html');
-          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Abaikan error background fetch agar tidak mengganggu response cache
         });
-      })
+
+      // Kembalikan versi cache secara instan (untuk kecepatan maksimal),
+      // jika belum ada di cache, gunakan response dari network
+      return cachedResponse || fetchPromise;
+    }).catch(() => {
+      // Fallback offline untuk navigasi utama jika gagal total
+      if (e.request.mode === 'navigate') {
+        return caches.match('/login.html');
+      }
+    })
   );
 });

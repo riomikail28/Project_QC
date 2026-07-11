@@ -38,21 +38,6 @@
         });
     }
 
-    function canvasHasTransparency(canvas) {
-        const context = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        const step = Math.max(1, Math.floor(Math.min(width, height) / 64));
-        for (let y = 0; y < height; y += step) {
-            for (let x = 0; x < width; x += step) {
-                if (context.getImageData(x, y, 1, 1).data[3] < 255) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     function canvasToBlob(canvas, type, quality) {
         return new Promise(resolve => canvas.toBlob(resolve, type, quality));
     }
@@ -77,9 +62,8 @@
             const context = canvas.getContext('2d');
             context.drawImage(image, 0, 0, width, height);
 
-            const transparentPng = file.type === 'image/png' && canvasHasTransparency(canvas);
-            const outputType = transparentPng ? 'image/png' : 'image/jpeg';
-            const extension = transparentPng ? 'png' : 'jpg';
+            const outputType = 'image/jpeg';
+            const extension = 'jpg';
             const blob = await canvasToBlob(canvas, outputType, settings.quality);
             if (!blob || (file.size && blob.size >= file.size)) return file;
             return new File([blob], fileName(settings.filePrefix, extension), {

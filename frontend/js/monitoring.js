@@ -466,13 +466,16 @@ document.getElementById("monitoring-form").addEventListener("submit", async even
         if (result.success) {
             // Success flow toast max 1s (Requirement 9)
             showMonitoringToast("✓ Monitoring berhasil", false, 1000);
-            // showMonitoringToast("Data monitoring berhasil disimpan.")
             
             // Clear draft (Requirement 8)
             localStorage.removeItem("monitoring_draft");
 
-            // Reload schedule and logs in background
-            await loadTodaySchedule();
+            // Clear cache to force next reload to get fresh data
+            API.clearCache("schedule");
+            API.clearCache("monitoring");
+
+            // Reload schedule and logs in background (non-blocking)
+            loadTodaySchedule();
             loadRecentLogs();
 
             // Auto advance (Requirement 2)
