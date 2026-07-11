@@ -428,7 +428,10 @@ const adminApp = {
         const toast = document.getElementById('admin-toast');
         if (toast) {
             clearTimeout(this.adminToastTimer);
-            toast.textContent = message;
+            const iconHtml = type === 'success'
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            toast.innerHTML = `${iconHtml}<span>${message}</span>`;
             toast.className = `admin-toast ${type} show`;
             this.adminToastTimer = setTimeout(() => {
                 toast.className = `admin-toast ${type}`;
@@ -1823,7 +1826,7 @@ const adminApp = {
             await this.loadAnnouncements();
             this.notify('Pengumuman berhasil dihapus', 'success');
         } catch (error) {
-            alert(`Gagal menghapus pengumuman: ${error.message}`);
+            this.notify(`Gagal menghapus pengumuman: ${error.message}`, 'error');
         }
     },
 
@@ -2337,6 +2340,8 @@ const adminApp = {
                     <option value="7" ${item.shelf_life_days === 7 ? 'selected' : ''}>7 Hari</option>
                     <option value="14" ${item.shelf_life_days === 14 ? 'selected' : ''}>14 Hari</option>
                     <option value="30" ${item.shelf_life_days === 30 ? 'selected' : ''}>30 Hari</option>
+                    <option value="60" ${item.shelf_life_days === 60 ? 'selected' : ''}>60 Hari</option>
+                    <option value="90" ${item.shelf_life_days === 90 ? 'selected' : ''}>90 Hari</option>
                 </select>
             </label>
             <label>Status
@@ -2380,8 +2385,9 @@ const adminApp = {
             const facilitySectionActive = document.getElementById('section-facility')?.classList.contains('active');
             if (facilitySectionActive) await this.loadFacilityManager();
             this.closeMonitoringUnitPanel();
+            this.notify('Unit monitoring berhasil disimpan', 'success');
         } catch (error) {
-            alert(`Gagal menyimpan unit monitoring: ${error.message}`);
+            this.notify(`Gagal menyimpan unit monitoring: ${error.message}`, 'error');
         }
     },
 
@@ -2567,7 +2573,7 @@ const adminApp = {
 
     async deactivateMonitoringDevice(id) {
         if (!this.isUuid(id)) {
-            alert('Unit ini belum tersimpan di database. Refresh daftar unit.');
+            this.notify('Unit ini belum tersimpan di database. Refresh daftar unit.', 'error');
             return;
         }
         if (!confirm('Nonaktifkan unit monitoring ini?')) return;
@@ -2575,8 +2581,9 @@ const adminApp = {
             await API.patch(`/admin/facility/devices/${id}`, { is_active: false });
             await this.loadMonitoringManagementList();
             await this.loadMonitoring();
+            this.notify('Unit monitoring dinonaktifkan', 'success');
         } catch (error) {
-            alert(`Gagal menonaktifkan unit: ${error.message || 'Coba lagi'}`);
+            this.notify(`Gagal menonaktifkan unit: ${error.message || 'Coba lagi'}`, 'error');
         }
     },
 
