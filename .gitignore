@@ -5,3 +5,7 @@ __pycache__/
 .DS_Store
 # dashboard/ - removing ignore to deploy static assets
 scratch/*.log
+node_modules/
+.pytest_cache/
+.ruff_cache/
+.vercel/
