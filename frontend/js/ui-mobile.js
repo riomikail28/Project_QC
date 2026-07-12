@@ -122,6 +122,11 @@ const UI = {
             inputElement.setAttribute('data-had-multiple', hadMultiple ? 'true' : 'false');
         }
 
+        // Track original accept attribute (broad image/* is required to force direct mobile camera launch)
+        if (!inputElement.hasAttribute('data-original-accept')) {
+            inputElement.setAttribute('data-original-accept', inputElement.getAttribute('accept') || 'image/*');
+        }
+
         const title = 'Pilih Sumber Foto';
         const contentHtml = `
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
@@ -175,6 +180,7 @@ const UI = {
             camBtn.onclick = () => {
                 this.hideSheet();
                 inputElement.removeAttribute('multiple');
+                inputElement.setAttribute('accept', 'image/*');
                 inputElement.setAttribute('capture', 'environment');
                 inputElement.click();
             };
@@ -184,6 +190,10 @@ const UI = {
             galBtn.onclick = () => {
                 this.hideSheet();
                 inputElement.removeAttribute('capture');
+                const origAccept = inputElement.getAttribute('data-original-accept');
+                if (origAccept) {
+                    inputElement.setAttribute('accept', origAccept);
+                }
                 if (inputElement.getAttribute('data-had-multiple') === 'true') {
                     inputElement.setAttribute('multiple', '');
                 }
