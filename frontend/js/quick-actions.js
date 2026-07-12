@@ -27,7 +27,7 @@
                 visibleInput.click();
                 return;
             }
-            window.location.href = 'inspection.html';
+            window.location.href = 'dashboard.html?openFinding=true';
         },
         batch() {
             window.location.href = 'new_batch.html';
@@ -63,6 +63,8 @@
             trigger.setAttribute('aria-expanded', String(open));
         });
         actionMenu.querySelectorAll('[data-quick-action], .fab-mini').forEach((item, index) => {
+            // Respect dynamic style.display set by init()
+            if (item.style.display === 'none') return;
             window.setTimeout(() => item.classList.toggle('visible', open), index * 35);
         });
     }
@@ -93,6 +95,20 @@
         init() {
             if (document.documentElement.dataset.quickActionsReady) return;
             document.documentElement.dataset.quickActionsReady = 'true';
+
+            // Hide the action button for the current page to avoid redundancy
+            const path = window.location.pathname;
+            if (path.includes('monitoring.html')) {
+                const btn = document.querySelector('[data-quick-action="monitoring"]');
+                if (btn) btn.style.display = 'none';
+            } else if (path.includes('inspection.html')) {
+                const btn = document.querySelector('[data-quick-action="qc"]');
+                if (btn) btn.style.display = 'none';
+            } else if (path.includes('dashboard.html') || path.endsWith('/staff/') || path.endsWith('/staff')) {
+                const btn = document.querySelector('[data-quick-action="photo"]');
+                if (btn) btn.style.display = 'none';
+            }
+
             document.addEventListener('click', onClick);
             document.addEventListener('keydown', event => {
                 if (event.key === 'Escape') setOpen(false);
