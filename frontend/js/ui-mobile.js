@@ -235,6 +235,8 @@ const UI = {
     }
 };
 
+window.UI = UI;
+
 window.showToast = function showToast(message, type = 'info', duration = 3500) {
     UI.toast(message, type, duration);
 };
