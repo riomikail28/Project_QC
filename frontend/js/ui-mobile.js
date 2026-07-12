@@ -189,7 +189,9 @@ const UI = {
             camBtn.onclick = () => {
                 this.hideSheet();
                 inputElement.removeAttribute('multiple');
+                inputElement.multiple = false;
                 inputElement.setAttribute('accept', 'image/*');
+                inputElement.accept = 'image/*';
                 inputElement.setAttribute('capture', 'environment');
                 inputElement.click();
             };
@@ -202,9 +204,14 @@ const UI = {
                 const origAccept = inputElement.getAttribute('data-original-accept');
                 if (origAccept) {
                     inputElement.setAttribute('accept', origAccept);
+                    inputElement.accept = origAccept;
                 }
                 if (inputElement.getAttribute('data-had-multiple') === 'true') {
                     inputElement.setAttribute('multiple', '');
+                    inputElement.multiple = true;
+                } else {
+                    inputElement.removeAttribute('multiple');
+                    inputElement.multiple = false;
                 }
                 inputElement.click();
             };
