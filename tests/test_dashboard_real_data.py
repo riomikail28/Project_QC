@@ -31,6 +31,7 @@ def test_dashboard_summary_uses_real_tables(client, staff_headers):
     assert body["data"]["qc_success_rate"] == 50.0
     assert body["data"]["pending_approval"] == 1
     assert body["data"]["avg_freezer_temperature"] == -17.0
+    assert body["data"]["pending_qc"] == 1
 
 
 def test_dashboard_empty_state_is_not_dummy(client, staff_headers):

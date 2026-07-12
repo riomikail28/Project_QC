@@ -7,7 +7,7 @@
 }
 
 html.forced-mobile {
-  background-color: #f1f5f9 !important;
+  background: #f1f5f9 !important;
   display: flex !important;
   justify-content: center !important;
   align-items: stretch !important;
@@ -17,7 +17,7 @@ body.forced-mobile {
   max-width: 480px !important;
   width: 100vw !important;
   margin: 0 auto !important;
-  background-color: #ffffff !important;
+  background: #ffffff !important;
   box-shadow: 0 0 32px rgba(15, 23, 42, 0.08) !important;
   position: relative !important;
   display: flex !important;
@@ -1298,4 +1298,20 @@ body .qc-form-sheet {
 
 body.qc-sheet-open .qc-form-sheet {
   transform: translate(-50%, 0) !important;
+}
+
+/* Restricting floating action button to the simulated mobile bounds on desktop */
+body .fab-container {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  right: auto !important;
+  padding-right: 16px !important;
+  pointer-events: none !important;
+}
+
+body .fab-container > * {
+  pointer-events: auto !important;
 }

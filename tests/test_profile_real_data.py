@@ -47,6 +47,10 @@ def test_profile_admin_role_from_session(client, admin_headers):
 
 
 def test_profile_new_fields_and_calculations(client, staff_headers):
+    from datetime import datetime, timezone, timedelta
+    tz = timezone(timedelta(hours=7))
+    today_str = datetime.now(tz).date().isoformat()
+
     fake_db = FakeSupabase({
         "staff_accounts": [
             {
@@ -65,14 +69,14 @@ def test_profile_new_fields_and_calculations(client, staff_headers):
                 "staff_id": "staff-1",
                 "batch_id": "batch-1",
                 "status": "pass",
-                "created_at": "2026-07-11T10:00:00+07:00"
+                "created_at": f"{today_str}T10:00:00+07:00"
             }
         ],
         "production_batches": [
             {
                 "id": "batch-1",
                 "shift": "Pagi",
-                "production_date": "2026-07-11"
+                "production_date": today_str
             }
         ]
     })

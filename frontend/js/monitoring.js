@@ -353,7 +353,14 @@ function triggerPhoto() {
         script.src = '../js/image-compression.js';
         document.body.appendChild(script);
     }
-    document.getElementById("photo-input").click();
+    const input = document.getElementById("photo-input");
+    if (input) {
+        if (window.UI && typeof UI.showPhotoSourcePicker === "function") {
+            UI.showPhotoSourcePicker(input);
+        } else {
+            input.click();
+        }
+    }
 }
 
 document.getElementById("photo-input").addEventListener("change", async event => {

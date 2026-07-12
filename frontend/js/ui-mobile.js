@@ -69,17 +69,23 @@ const UI = {
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'sheet-overlay';
+            overlay.className = 'sheet-overlay';
             overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9000; opacity: 0; transition: opacity 0.3s ease;';
             overlay.onclick = () => this.hideSheet();
             document.body.appendChild(overlay);
+        } else {
+            overlay.className = 'sheet-overlay';
         }
 
         let sheet = document.getElementById('bottom-sheet');
         if (!sheet) {
             sheet = document.createElement('div');
             sheet.id = 'bottom-sheet';
+            sheet.className = 'bottom-sheet';
             sheet.style.cssText = 'position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-radius: 24px 24px 0 0; z-index: 9001; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 20px 24px 40px;';
             document.body.appendChild(sheet);
+        } else {
+            sheet.className = 'bottom-sheet';
         }
 
         sheet.innerHTML = `
@@ -104,6 +110,75 @@ const UI = {
         setTimeout(() => {
             if (overlay) overlay.style.display = 'none';
         }, 300);
+    },
+
+    // Hybrid Photo Picker for Mobile Devices (Camera + Gallery/Upload)
+    showPhotoSourcePicker(inputElement) {
+        if (!inputElement) return;
+        const title = 'Pilih Sumber Foto';
+        const contentHtml = `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                <button type="button" id="picker-source-camera" style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 16px;
+                    background: #eff6ff;
+                    color: #2563eb;
+                    border: 1px solid rgba(59, 130, 246, 0.2);
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    width: 100%;
+                    text-align: left;
+                    box-sizing: border-box;
+                ">
+                    <i class="fas fa-camera" style="font-size: 18px;"></i>
+                    <span>Ambil Foto Baru (Kamera)</span>
+                </button>
+                <button type="button" id="picker-source-gallery" style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 16px;
+                    background: #f8fafc;
+                    color: #475569;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    width: 100%;
+                    text-align: left;
+                    box-sizing: border-box;
+                ">
+                    <i class="fas fa-image" style="font-size: 18px;"></i>
+                    <span>Pilih dari Galeri / Upload</span>
+                </button>
+            </div>
+        `;
+        
+        this.showSheet(title, contentHtml);
+        
+        const camBtn = document.getElementById('picker-source-camera');
+        const galBtn = document.getElementById('picker-source-gallery');
+        
+        if (camBtn) {
+            camBtn.onclick = () => {
+                this.hideSheet();
+                inputElement.setAttribute('capture', 'environment');
+                inputElement.click();
+            };
+        }
+        
+        if (galBtn) {
+            galBtn.onclick = () => {
+                this.hideSheet();
+                inputElement.removeAttribute('capture');
+                inputElement.click();
+            };
+        }
     },
 
     // Speed Dial FAB

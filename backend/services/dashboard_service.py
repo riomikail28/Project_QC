@@ -48,6 +48,7 @@ class DashboardService:
                 "pending_approval": 0,
                 "avg_freezer_temperature": None,
                 "health_score": None,
+                "pending_qc": 0,
             })
 
         today, start, end = self._today_bounds()
@@ -80,6 +81,20 @@ class DashboardService:
             normal = sum(1 for row in freezer_logs if self._is_normal(row))
             health_score = round((normal / len(freezer_logs)) * 100, 1)
 
+        reported_batch_ids = set()
+        for row in qc_reports:
+            if row.get("batch_id"):
+                reported_batch_ids.add(row.get("batch_id"))
+            if row.get("batch_code"):
+                reported_batch_ids.add(row.get("batch_code"))
+
+        pending_qc = 0
+        for row in batches:
+            batch_id = row.get("id")
+            batch_code = row.get("batch_code")
+            if batch_id not in reported_batch_ids and batch_code not in reported_batch_ids:
+                pending_qc += 1
+
         return self._ok({
             "total_batches_today": len(batches),
             "total_alerts": total_alerts,
@@ -87,6 +102,7 @@ class DashboardService:
             "pending_approval": pending_approval,
             "avg_freezer_temperature": avg_freezer,
             "health_score": health_score,
+            "pending_qc": pending_qc,
             "has_data": bool(batches or qc_reports or abnormal_logs or open_alerts or freezer_logs),
         })
 

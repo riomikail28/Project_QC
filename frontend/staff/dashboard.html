@@ -631,7 +631,11 @@
             const input = document.getElementById('findingPhotoInput');
             if (!input) return;
             input.value = '';
-            input.click();
+            if (window.UI && typeof UI.showPhotoSourcePicker === 'function') {
+                UI.showPhotoSourcePicker(input);
+            } else {
+                input.click();
+            }
         }
 
         async function handleFindingPhoto(event) {
