@@ -98,15 +98,23 @@ const UI = {
         overlay.style.display = 'block';
         setTimeout(() => {
             overlay.style.opacity = '1';
-            sheet.style.transform = 'translateY(0)';
+            overlay.classList.add('active');
+            sheet.classList.add('active');
+            document.body.classList.add('modal-open');
         }, 10);
     },
 
     hideSheet() {
         const overlay = document.getElementById('sheet-overlay');
         const sheet = document.getElementById('bottom-sheet');
-        if (sheet) sheet.style.transform = 'translateY(100%)';
-        if (overlay) overlay.style.opacity = '0';
+        if (sheet) {
+            sheet.classList.remove('active');
+        }
+        if (overlay) {
+            overlay.classList.remove('active');
+            overlay.style.opacity = '0';
+        }
+        document.body.classList.remove('modal-open');
         setTimeout(() => {
             if (overlay) overlay.style.display = 'none';
         }, 300);
@@ -118,7 +126,8 @@ const UI = {
         
         // Track if input originally allowed multiple files (camera launch requires single file input)
         if (!inputElement.hasAttribute('data-had-multiple')) {
-            const hadMultiple = inputElement.hasAttribute('multiple') || inputElement.multiple;
+            const multiInputIds = ['photoInput', 'findingPhotoInput', 'photo-input'];
+            const hadMultiple = multiInputIds.includes(inputElement.id) || inputElement.hasAttribute('multiple') || inputElement.multiple;
             inputElement.setAttribute('data-had-multiple', hadMultiple ? 'true' : 'false');
         }
 
