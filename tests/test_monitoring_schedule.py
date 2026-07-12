@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -332,6 +332,7 @@ class ScheduleQuery:
         self.db = db
         self.payload = None
         self.filters = []
+        self.is_update = False
 
     def select(self, *args, **kwargs):
         return self
@@ -348,13 +349,32 @@ class ScheduleQuery:
 
     def insert(self, payload):
         self.payload = payload
+        self.is_update = False
+        return self
+
+    def update(self, payload):
+        self.payload = payload
+        self.is_update = True
         return self
 
     def execute(self):
         if self.payload is not None:
             payload = self.payload[0] if isinstance(self.payload, list) else self.payload
             self.db.inserted[self.table_name] = payload
-            self.db.rows.setdefault(self.table_name, []).append({"id": f"{self.table_name}-1", **payload})
+            rows = self.db.rows.setdefault(self.table_name, [])
+            matched = False
+            if self.is_update:
+                for row in rows:
+                    match = True
+                    for field, value in self.filters:
+                        if str(row.get(field)) != str(value):
+                            match = False
+                            break
+                    if match:
+                        row.update(payload)
+                        matched = True
+            if not matched:
+                rows.append({"id": f"{self.table_name}-1", **payload})
             return type("Result", (), {"data": [{"id": f"{self.table_name}-1", **payload}]})()
         rows = list(self.db.rows.get(self.table_name, []))
         for field, value in self.filters:
@@ -381,3 +401,46 @@ class ScheduleDb:
 
     def table(self, table_name):
         return ScheduleQuery(table_name, self)
+
+
+def test_submit_recheck_completed_slot_succeeds_when_allow_duplicate(client, staff_headers):
+    db = ScheduleDb(device_count=1)
+    current_date = datetime.now(JAKARTA).date().isoformat()
+    db.rows["facility_logs"] = [
+        {
+            "id": "log-1",
+            "monitoring_date": current_date,
+            "slot_time": "07:00",
+            "device_id": DEVICE_ID,
+            "room_id": ROOM_ID,
+            "schedule_status": "completed",
+        }
+    ]
+    frozen_now = datetime.combine(datetime.now(JAKARTA).date(), time(8, 0), tzinfo=JAKARTA)
+
+    with patch("backend.api.facility_routes.get_client", return_value=db), patch(
+        "backend.services.monitoring_service.upload_file_storage"
+    ), patch("backend.api.facility_routes.write_audit"), patch(
+        "backend.api.facility_routes.MonitoringScheduleService",
+        side_effect=lambda sb: MonitoringScheduleService(sb, now=frozen_now),
+    ):
+        # Without allow_duplicate (recheck not true), it fails with 409
+        response = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": DEVICE_ID, "temperature": "4.2", "slot_time": "07:00", "monitoring_date": current_date},
+        )
+        assert response.status_code == 409
+        assert "sudah diinput" in response.get_json()["message"] or "sudah selesai" in response.get_json()["message"]
+
+        # With allow_duplicate (recheck=true), it succeeds!
+        response = client.post(
+            "/api/facility/monitoring/submit",
+            headers=staff_headers,
+            data={"room_id": ROOM_ID, "device_id": DEVICE_ID, "temperature": "4.2", "slot_time": "07:00", "recheck": "true", "monitoring_date": current_date},
+        )
+        print("RESPONSE:", response.status_code, response.get_json())
+        assert response.status_code == 200
+        assert db.inserted["facility_logs"]["temperature_c"] == 4.2
+        assert db.rows["facility_logs"][0]["slot_time"] == "07:00"
+

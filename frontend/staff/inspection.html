@@ -172,7 +172,7 @@
                     </div>
                 </details>
                 <div class="upload-card-compact" id="cookingUploadCard">
-                    <div class="upload-card-header" onclick="document.getElementById('cookingPhoto').click()">
+                    <div class="upload-card-header" onclick="UI.showPhotoSourcePicker(document.getElementById('cookingPhoto'))">
                         <div class="upload-card-info">
                             <i class="fas fa-camera"></i>
                             <span id="cookingPhotoLabel">Foto evidence optional</span>
@@ -201,7 +201,7 @@
 
             <div class="simple-field" id="finalFields" hidden>
                 <div class="upload-card-compact" id="barcodeUploadCard">
-                    <div class="upload-card-header" onclick="document.getElementById('barcodePhoto').click()">
+                    <div class="upload-card-header" onclick="UI.showPhotoSourcePicker(document.getElementById('barcodePhoto'))">
                         <div class="upload-card-info">
                             <i class="fas fa-barcode"></i>
                             <span>Foto Barcode</span>
@@ -213,7 +213,7 @@
                     <input id="barcodePhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden>
                 </div>
                 <div class="upload-card-compact" id="labelUploadCard">
-                    <div class="upload-card-header" onclick="document.getElementById('labelPhoto').click()">
+                    <div class="upload-card-header" onclick="UI.showPhotoSourcePicker(document.getElementById('labelPhoto'))">
                         <div class="upload-card-info">
                             <i class="fas fa-tag"></i>
                             <span>Foto Label Cetak</span>

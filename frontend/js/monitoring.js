@@ -15,6 +15,7 @@ let selectedPhotoFiles = [];
 let latestTemperatureLogs = [];
 let activeUnitFilter = "all";
 let todaySchedule = null;
+let selectedSlotTime = null;
 const monitoringRoomOrder = ["PPIC", "Grouper", "Pack Basah", "Pack Kering", "Ruang Kopi", "Kitchen"];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -202,8 +203,9 @@ function monitoringMiniCardStatus(device) {
 }
 
 function monitoringMiniCardTemperature(device) {
-    const activeStatus = todaySchedule?.device_statuses?.[device.id]?.active_status;
-    const raw = activeStatus?.temperature_c ?? device.last_temperature_c ?? device.temperature_c;
+    const activeSlot = activeMonitoringSlot();
+    const slotStatus = activeSlot ? todaySchedule?.device_statuses?.[device.id]?.slots?.[activeSlot.time] : null;
+    const raw = slotStatus?.temperature_c ?? device.last_temperature_c ?? device.temperature_c;
     const value = Number(raw);
     if (!Number.isFinite(value)) return "--&deg;C";
     return `${Number.isInteger(value) ? value : value.toFixed(1)}&deg;C`;
@@ -251,7 +253,7 @@ function setupModalForDevice(deviceId) {
 
     document.getElementById("humidity-group").style.display = device.type === "room_temp" ? "block" : "none";
     
-    const activeStatus = todaySchedule?.device_statuses?.[deviceId]?.active_status;
+    const activeStatus = activeSlot ? todaySchedule?.device_statuses?.[deviceId]?.slots?.[activeSlot.time] : null;
     const deviceStatus = deviceScheduleStatus(deviceId);
 
     // Clear inputs first
@@ -617,20 +619,45 @@ function renderTodaySchedule() {
     message.textContent = todaySchedule.message || todaySchedule.progress_text || `${completed}/${total} monitoring selesai hari ini.`;
     count.textContent = `${completed}/${total}`;
     bar.style.width = `${Math.max(0, Math.min(100, Math.round((completed / total) * 100)))}%`;
-    grid.innerHTML = (todaySchedule.slots || []).map(slot => `
-        <article class="schedule-slot ${slot.status}">
-            <strong>${slot.time}</strong>
-            <span>${slot.completed_count || 0}/${slot.total_devices || todaySchedule.total_devices || 0} unit selesai</span>
-            ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
-        </article>
-    `).join("");
+    
+    const activeSlot = activeMonitoringSlot();
+    grid.innerHTML = (todaySchedule.slots || []).map(slot => {
+        const isSelected = activeSlot && activeSlot.time === slot.time;
+        return `
+            <article class="schedule-slot ${slot.status} ${isSelected ? "selected" : ""}" 
+                     style="cursor: pointer;" 
+                     onclick="clickSlot('${slot.time}')">
+                <strong>${slot.time}</strong>
+                <span>${slot.completed_count || 0}/${slot.total_devices || todaySchedule.total_devices || 0} unit selesai</span>
+                ${slot.temperature_c !== null && slot.temperature_c !== undefined ? `<small>${slot.temperature_c}&deg;C</small>` : ""}
+            </article>
+        `;
+    }).join("");
     renderNextDevice();
     renderRoomProgress();
     triggerSaveCache();
 }
 
+window.clickSlot = function(slotTime) {
+    if (!todaySchedule) return;
+    const slot = todaySchedule.slots.find(s => s.time === slotTime);
+    if (!slot) return;
+    if (slot.status === "upcoming") {
+        showMonitoringToast(`Slot ${slotTime} belum waktunya untuk diisi.`, true);
+        return;
+    }
+    selectedSlotTime = slotTime;
+    renderTodaySchedule();
+    if (facilityStructure.length) {
+        selectRoom(selectedRoomId || "all");
+    }
+};
+
 function activeMonitoringSlot() {
     if (!todaySchedule) return null;
+    if (selectedSlotTime) {
+        return (todaySchedule.slots || []).find(s => s.time === selectedSlotTime) || null;
+    }
     const current = todaySchedule.current_slot;
     if (current && current.status === "pending") return current;
     return null;
@@ -648,8 +675,11 @@ function scheduleUnavailableMessage() {
 
 function deviceScheduleStatus(deviceId) {
     const activeSlot = activeMonitoringSlot();
-    const status = todaySchedule?.device_statuses?.[deviceId]?.active_status;
-    if (!activeSlot || !status) {
+    if (!activeSlot) {
+        return { status: "idle", label: "Belum ada slot aktif", className: "muted" };
+    }
+    const status = todaySchedule?.device_statuses?.[deviceId]?.slots?.[activeSlot.time];
+    if (!status) {
         return { status: "idle", label: "Belum ada slot aktif", className: "muted" };
     }
     if (status.status === "completed") {
@@ -657,6 +687,9 @@ function deviceScheduleStatus(deviceId) {
     }
     if (status.status === "missed") {
         return { status: "missed", label: "Terlewat", className: "warning" };
+    }
+    if (status.status === "upcoming") {
+        return { status: "upcoming", label: "Belum waktunya", className: "muted" };
     }
     return { status: "pending", label: "Belum input", className: "muted" };
 }
@@ -860,7 +893,7 @@ function normalizeFacilityStructure(structure) {
 }
 
 function isUuid(value) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 let saveCacheDebounce = null;

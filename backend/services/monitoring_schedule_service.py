@@ -121,7 +121,7 @@ class MonitoringScheduleService:
                     "message": f"Slot {slot} belum waktunya.",
                     "schedule": schedule,
                 }
-            if slot_data["completed"]:
+            if slot_data["completed"] and not allow_duplicate:
                 return {
                     "success": False,
                     "status": 409,
@@ -142,7 +142,7 @@ class MonitoringScheduleService:
                 "message": f"Unit ini sudah diinput untuk slot {slot}.",
                 "schedule": schedule,
             }
-        if slot_data["completed"]:
+        if slot_data["completed"] and not allow_duplicate:
             return {
                 "success": False,
                 "status": 409,

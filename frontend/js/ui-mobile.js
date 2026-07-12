@@ -115,6 +115,13 @@ const UI = {
     // Hybrid Photo Picker for Mobile Devices (Camera + Gallery/Upload)
     showPhotoSourcePicker(inputElement) {
         if (!inputElement) return;
+        
+        // Track if input originally allowed multiple files (camera launch requires single file input)
+        if (!inputElement.hasAttribute('data-had-multiple')) {
+            const hadMultiple = inputElement.hasAttribute('multiple') || inputElement.multiple;
+            inputElement.setAttribute('data-had-multiple', hadMultiple ? 'true' : 'false');
+        }
+
         const title = 'Pilih Sumber Foto';
         const contentHtml = `
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
@@ -167,6 +174,7 @@ const UI = {
         if (camBtn) {
             camBtn.onclick = () => {
                 this.hideSheet();
+                inputElement.removeAttribute('multiple');
                 inputElement.setAttribute('capture', 'environment');
                 inputElement.click();
             };
@@ -176,6 +184,9 @@ const UI = {
             galBtn.onclick = () => {
                 this.hideSheet();
                 inputElement.removeAttribute('capture');
+                if (inputElement.getAttribute('data-had-multiple') === 'true') {
+                    inputElement.setAttribute('multiple', '');
+                }
                 inputElement.click();
             };
         }

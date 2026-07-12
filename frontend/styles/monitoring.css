@@ -163,6 +163,12 @@
   background: rgba(248,250,252,.86);
 }
 
+.schedule-slot.selected {
+  outline: 3px solid var(--primary, #2563eb) !important;
+  outline-offset: -2px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+}
+
 .schedule-slot strong {
   font-size: 21px;
   line-height: 1;
