@@ -1,6 +1,6 @@
-# Sequence Diagram QC Enterprise
+# Sequence Diagram QC Central Kitchen
 
-Dokumen ini menggambarkan interaksi antar komponen pada workflow utama QC Enterprise.
+Dokumen ini menggambarkan interaksi antar komponen pada workflow utama QC Central Kitchen.
 
 ## Staff Submit Monitoring
 
@@ -131,32 +131,3 @@ sequenceDiagram
 ```
 
 Sequence ini menunjukkan export data ke Google Sheets melalui Google Apps Script. Admin dapat melakukan export data monitoring, QC, atau historical re-export berdasarkan filter.
-
-## Admin Kelola Learning ITDV
-
-```mermaid
-sequenceDiagram
-    actor Admin as Admin QC
-    participant FE as Admin Frontend
-    participant API as Flask API
-    participant Service as Learning Service
-    participant DB as Supabase PostgreSQL
-    participant Audit as Audit Trail
-
-    Admin->>FE: Buka Learning Management
-    FE->>API: GET /api/admin/learning/modules
-    API->>Service: Validasi admin dan ambil modul
-    Service->>DB: Query itdv_modules
-    DB-->>Service: Data modul
-    API-->>FE: Daftar modul
-    Admin->>FE: Create atau update module, mini quiz, simulation, quiz
-    FE->>API: POST/PUT /api/admin/learning/modules
-    API->>Service: Validasi payload learning
-    Service->>DB: Insert atau update learning content
-    Service->>Audit: Catat perubahan learning
-    Audit->>DB: Insert audit_logs
-    API-->>FE: Perubahan berhasil
-    FE-->>Admin: Tampilkan konten terbaru
-```
-
-Sequence ini menjelaskan proses admin mengelola Learning ITDV. Admin dapat membuat dan mengubah modul, mini quiz, simulasi, dan quiz, sementara sistem mencatat perubahan ke audit trail.

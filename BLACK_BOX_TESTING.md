@@ -202,26 +202,7 @@ Modul ini menguji pengumpulan parameter filter data laporan operasional, kesesua
 
 ---
 
-## J. Learning Management (Modul Edukasi ITDV)
-
-Modul ini menguji pendaftaran modul pembelajaran baru, pembatasan kuis utama, perancangan kuis mini, dan pencatatan sertifikat kelulusan.
-
-| ID Test Case | Nama Fitur | Tujuan Pengujian | Kondisi Awal | Langkah Pengujian | Data Input | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TC-LRN-01** | Buka Modul Edukasi | Memverifikasi tampilan katalog belajar staf. | Staf masuk menu kuis. | 1. Pilih modul "Learning Center" pada navigasi. | User staf active | Sistem menampilkan daftar materi pelajaran penanganan mutu (HACCP) yang aktif. | Sesuai | PASS |
-| **TC-LRN-02** | Memuat Konten Modul Belajar | Memverifikasi keterbacaan materi pembelajaran. | Menu edukasi terbuka. | 1. Klik pada salah satu judul modul materi belajar. | Modul ID: `haccp-basics` | Sistem membuka materi pembelajaran lengkap berisi modul teks instruksi penanganan mutu. | Sesuai | PASS |
-| **TC-LRN-03** | Menyelesaikan Kuis Mini Modul | Memverifikasi pengisian mini-quiz pasca membaca materi belajar. | Modul materi belajar dibaca. | 1. Klik "Mulai Mini Quiz".<br>2. Pilih jawaban kuis.<br>3. Klik "Kirim Jawaban". | Pilihan jawaban: `A` | Sistem menilai jawaban secara instan, menyajikan feedback, dan memperbarui status progres belajar menjadi "Selesai". | Sesuai | PASS |
-| **TC-LRN-04** | Tambah Modul Belajar Baru (Admin) | Memverifikasi pembuatan materi ajar baru oleh admin. | Admin di menu "Learning". | 1. Klik "Tambah".<br>2. Input judul, deskripsi, isi materi belajar.<br>3. Klik "Simpan". | Title: `GMP Basics`<br>Content: `Good Manufacturing Practices...` | Materi belajar baru terdaftar dan secara instan muncul di halaman katalog belajar staf. | Sesuai | PASS |
-| **TC-LRN-05** | Tambah Pertanyaan Kuis Baru (Admin) | Memverifikasi penambahan instrumen evaluasi modul. | Admin di sub-tab "Mini Quiz". | 1. Pilih modul terkait.<br>2. Klik "Tambah Pertanyaan".<br>3. Input soal, opsi jawaban, kunci jawaban.<br>4. Klik "Simpan". | Soal: `Apa kepanjangan HACCP?`<br>Kunci: `Hazard Analysis...` | Pertanyaan kuis tersimpan di database dan langsung aktif memotong materi pembelajaran staf. | Sesuai | PASS |
-| **TC-LRN-06** | Hapus Modul Belajar (Admin) | Memverifikasi prosedur penghapusan aman materi ajar. | Admin di menu "Learning". | 1. Klik tombol hapus pada baris modul target.<br>2. Konfirmasi penghapusan. | Modul ID: `gmp-basics` | Modul dihapus secara logis (*soft delete* / dinonaktifkan) agar data progres lama staf tetap konsisten. | Sesuai | PASS |
-| **TC-LRN-07** | Akses Ujian Utama Sertifikat | Memverifikasi syarat pengerjaan ujian sertifikasi ITDV. | Modul kuis utama dibuka. | 1. Klik menu "Ujian Sertifikasi ITDV". | Syarat: Selesai baca semua modul | Sistem memvalidasi progres belajar staf. Jika modul belum dibaca semua, ujian terkunci. Jika lulus semua, soal ujian dimuat. | Sesuai | PASS |
-| **TC-LRN-08** | Lulus Ujian & Penerbitan Sertifikat | Memverifikasi kalkulasi kelulusan ujian utama dan penerbitan sertifikat digital. | Staf mengerjakan ujian sertifikasi. | 1. Selesaikan semua soal kuis utama.<br>2. Klik "Kirim Ujian". | Jawaban benar: `85%` (Nilai kelulusan: min 80%) | Sistem menyatakan lulus, menerbitkan kode sertifikat unik otomatis, dan mengaktifkan tombol unduh sertifikat. | Sesuai | PASS |
-| **TC-LRN-09** | Tidak Lulus Ujian Utama | Memverifikasi penanganan kegagalan nilai ujian. | Staf mengerjakan ujian sertifikasi. | 1. Isi jawaban kuis dengan banyak salah.<br>2. Klik "Kirim Ujian". | Jawaban benar: `50%` | Sistem menampilkan informasi "Tidak Lulus (Skor 50%)" dan menyarankan mengulang kuis kembali. | Sesuai | PASS |
-| **TC-LRN-10** | Pantau Progress Sertifikasi (Admin) | Memverifikasi pelacakan sertifikat staf oleh admin. | Admin masuk sub-tab "Progress". | 1. Buka sub-tab "Progress/Certificates". | Database `itdv_certificates` | Admin dapat memantau nama staf, nilai kelulusan, dan kode sertifikat yang telah terbit. | Sesuai | PASS |
-
----
-
-## K. Audit Trail (Modul Log Audit Sistem)
+## J. Audit Trail (Modul Log Audit Sistem)
 
 Modul ini menguji transparansi dokumentasi aktivitas pengguna, identifikasi data metadata log, pencatatan alamat IP, dan ketahanan data audit.
 
@@ -230,7 +211,7 @@ Modul ini menguji transparansi dokumentasi aktivitas pengguna, identifikasi data
 | **TC-AUD-01** | Buka Log Audit Trail | Memverifikasi pemuatan riwayat aktivitas sistem. | Admin QC login aktif. | 1. Masuk menu "Audit Trail" pada panel admin. | State admin aktif | Sistem memuat tabel log audit yang menyajikan detail waktu, user pelaksana, aksi, entitas, dan IP. | Sesuai | PASS |
 | **TC-AUD-02** | Pencatatan Aksi Login | Memverifikasi perekaman otomatis aktivitas masuk akun. | Pengguna sukses masuk sistem. | 1. Lakukan login akun.<br>2. Buka panel admin audit log. | User: `staf_qc` | Sistem secara otomatis merekam baris aktivitas baru: "User staf_qc melakukan aksi login pada entitas staff_account". | Sesuai | PASS |
 | **TC-AUD-03** | Pencatatan Pembuatan Batch Baru | Memverifikasi perekaman log transaksi pembuatan data. | Staf membuat batch baru. | 1. Lakukan penginputan batch baru.<br>2. Cek audit trail admin. | Batch: `BCH-100` | Sistem mencatat aktivitas dengan tipe aksi `create`, nama entitas `production_batches`, beserta ID-nya. | Sesuai | PASS |
-| **TC-ADM-04** | Pencatatan Edit Data SKU | Memverifikasi perekaman log modifikasi data master. | Admin mengubah parameter produk. | 1. Ubah rentang suhu aman produk.<br>2. Buka audit trail. | SKU: `SAUCE` | Sistem mencatat tipe aksi `update` pada entitas `products` lengkap dengan data lama dan data baru di JSON metadata. | Sesuai | PASS |
+| **TC-AUD-04** | Pencatatan Edit Data SKU | Memverifikasi perekaman log modifikasi data master. | Admin mengubah parameter produk. | 1. Ubah rentang suhu aman produk.<br>2. Buka audit trail. | SKU: `SAUCE` | Sistem mencatat tipe aksi `update` pada entitas `products` lengkap dengan data lama dan data baru di JSON metadata. | Sesuai | PASS |
 | **TC-AUD-05** | Pencatatan Penghapusan Akun Staf | Memverifikasi perekaman log penghapusan data penting. | Admin menghapus satu akun staf. | 1. Jalankan hapus staf.<br>2. Periksa audit trail. | Staf ID: `staf-12` | Sistem mencatat tipe aksi `delete` pada entitas `staff_account` beserta informasi akun yang dihapus. | Sesuai | PASS |
 | **TC-AUD-06** | Verifikasi IP Address Pelaksana | Memverifikasi keaslian perekaman identitas komputer pengirim request. | Aksi baru tercatat. | 1. Perhatikan kolom IP/User Agent pada baris audit log terbaru. | IP pelaksana: `127.0.0.1` | Sistem mencatat IP address pengakses secara valid untuk kebutuhan audit keamanan jaringan. | Sesuai | PASS |
 | **TC-AUD-07** | Filter Audit Kategori Aksi | Memverifikasi penyaringan log berdasarkan tipe aktivitas. | Menu audit trail dibuka. | 1. Pilih filter kategori aksi.<br>2. Klik Terapkan. | Aksi: `delete` | Sistem membatasi baris data dan hanya menampilkan log audit yang bertipe penghapusan (delete) saja. | Sesuai | PASS |
@@ -255,9 +236,8 @@ Tabel rekapitulasi di bawah ini merangkum total skenario pengujian fungsionalita
 | 7 | G. QC Finding | 10 | 10 | 0 | Pelaporan deviasi cepat, kompresi foto klien. |
 | 8 | H. Admin Panel | 20 | 20 | 0 | Otorisasi admin, CRUD Master, Ekspor Integrasi. |
 | 9 | I. Reporting | 10 | 10 | 0 | Penyaringan laporan multifilter, unduh CSV/PDF. |
-| 10 | J. Learning Management | 10 | 10 | 0 | Modul belajar ITDV, kuis mini, sertifikasi. |
-| 11 | K. Audit Trail | 10 | 10 | 0 | Jejak audit keamanan sistem (IP & JSON Meta). |
-| **Total** | **Seluruh Modul** | **130** | **130** | **0** | **Seluruh Pengujian Sukses (100% PASS)** |
+| 10 | J. Audit Trail | 10 | 10 | 0 | Jejak audit keamanan sistem (IP & JSON Meta). |
+| **Total** | **Seluruh Modul** | **120** | **120** | **0** | **Seluruh Pengujian Sukses (100% PASS)** |
 
 ---
 
@@ -267,9 +247,9 @@ Perhitungan persentase tingkat keberhasilan pengujian fungsionalitas sistem diru
 
 $$\text{Persentase Keberhasilan} = \left( \frac{\text{Jumlah Test Case Lulus (PASS)}}{\text{Total Seluruh Test Case}} \right) \times 100\%$$
 
-$$\text{Persentase Keberhasilan} = \left( \frac{130}{130} \right) \times 100\% = 100\%$$
+$$\text{Persentase Keberhasilan} = \left( \frac{120}{120} \right) \times 100\% = 100\%$$
 
-Berdasarkan hasil pengujian dari total **130 skenario uji** yang mencakup aspek input batas (*boundary value*), kesalahan masukan (*equivalence partition error*), otorisasi wewenang, integrasi data, hingga penanganan kondisi terputusnya jaringan internet (*offline state*), sistem meraih predikat kelulusan **100% Sukses (PASS)** tanpa ditemukan adanya kegagalan fungsional.
+Berdasarkan hasil pengujian dari total **120 skenario uji** yang mencakup aspek input batas (*boundary value*), kesalahan masukan (*equivalence partition error*), otorisasi wewenang, integrasi data, hingga penanganan kondisi terputusnya jaringan internet (*offline state*), sistem meraih predikat kelulusan **100% Sukses (PASS)** tanpa ditemukan adanya kegagalan fungsional.
 
 ---
 

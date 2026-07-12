@@ -1,222 +1,92 @@
-# Testing Guide
+# Panduan Pengujian (Testing Guide) QC Central Kitchen
 
-## 1. Overview
+Dokumen ini menjelaskan strategi pengujian untuk QC Central Kitchen guna memastikan keandalan, stabilitas, dan keamanan sistem sebelum didistribusikan ke lingkungan produksi.
 
-Testing in QC Enterprise is used to maintain system stability, prevent regression, and ensure that critical Quality Control workflows continue to work correctly after changes.
+---
 
-Because QC Enterprise supports Central Kitchen operations, testing should focus on authentication, role-based access, monitoring, batch production, QC inspection, reporting, audit trail, learning, and external Google Sheets export. A reliable testing process helps protect operational data quality and improves confidence before deployment.
+## 1. Unit Testing Backend (Pytest)
 
-This guide is intended for GitHub documentation, thesis support, portfolio review, and production readiness.
+Aplikasi menggunakan `pytest` untuk menguji fungsionalitas backend Flask dan integrasinya dengan Supabase.
 
-## 2. Test Stack
-
-QC Enterprise uses a practical testing stack that combines automated and manual validation.
-
-- **Pytest:** Backend unit, integration, route, and regression tests.
-- **JavaScript syntax check:** Static syntax validation for frontend JavaScript files.
-- **Smoke route test:** Basic route checks to confirm important pages and APIs respond.
-- **Manual browser test:** Human verification for UI, role behavior, uploads, mobile layout, and PWA behavior.
-- **Production checklist:** Final deployment validation for environment variables, external services, and integration readiness.
-
-## 3. How to Run Tests
-
-Run backend tests with:
-
+### Cara Menjalankan Tes:
+Jalankan perintah berikut di terminal Anda:
 ```bash
-py -m pytest
+pytest
 ```
-
-Alternative Python command:
-
+Untuk menjalankan file pengujian spesifik secara terpisah:
 ```bash
-python -m pytest
+python -m pytest tests/test_demo_accounts.py tests/test_admin_products.py
 ```
 
-Run JavaScript syntax checks with:
+### Area yang Diuji:
+*   **Autentikasi & Otorisasi:** Pengujian token JWT, pembatasan hak akses Admin/Staff, serta pengamanan ketat untuk akun demo admin.
+*   **Monitoring Suhu Harian:** Validasi logika pencegahan duplikasi input suhu pada slot waktu yang sama, serta pengujian parameter `allow_duplicate` untuk fitur pengukuran ulang (recheck).
+*   **Batch Produksi:** Verifikasi keunikan kode batch, pembuatan nomor sequence otomatis, dan perhitungan kedaluwarsa produk.
+*   **Laporan QC:** Pengujian status kelulusan PASS/HOLD/FAIL, concurrency lock, dan penyimpanan referensi URL foto bukti.
 
-```bash
-node --check frontend/js/admin_app.js
-node --check frontend/js/monitoring.js
-node --check frontend/js/inspection.js
-```
+---
 
-Recommended full local validation:
+## 2. Cakupan Uji Regresi Utama (Regression Tests)
 
-```bash
-py -m pytest
-node --check frontend/js/admin_app.js
-node --check frontend/js/monitoring.js
-node --check frontend/js/inspection.js
-```
+Uji regresi berikut wajib dijalankan setiap kali ada perubahan kode guna mencegah bug baru pada workflow kritis:
 
-## 4. Test Coverage Area
+### Hak Akses Pengguna (Role-based Security)
+*   Akun Staff **harus ditolak** ketika mengakses API khusus Admin (misal: ekspor data, konfigurasi produk, CRUD ruangan).
+*   Akun Admin **harus ditolak** jika mencoba menggunakan API khusus operasional dapur Staff yang memerlukan verifikasi unit kerja.
+*   Endpoint yang terlindungi **wajib menolak** request yang tidak menyertakan token JWT valid.
 
-Testing should cover the following system areas:
+### Alur Kerja Monitoring Harian
+*   Pengecekan device harus membagi hari menjadi empat slot: `07:00`, `13:00`, `16:00`, dan `19:00`.
+*   System harus mengizinkan staff mengisi slot waktu masa lalu atau saat ini yang terlewat (past/present slots).
+*   System harus memblokir pengisian untuk slot waktu di masa depan (upcoming slots).
+*   Validasi duplikasi harus menolak input berulang pada device-slot-tanggal yang sama, kecuali flag `allow_duplicate` aktif.
 
-- Auth.
-- Role redirect.
-- Admin dashboard.
-- Staff dashboard.
-- Monitoring schedule.
-- Batch production.
-- QC inspection.
-- Re-check.
-- Reports.
-- Audit trail.
-- Google Sheets export.
-- ITDV Learning.
-- Profile dropdown.
-- PWA manifest.
+### Alur Kerja Pembuatan Batch
+*   Format batch code wajib mengikuti pola `SKU-YYYYMMDD-00X` (misalnya: `SKU-20260712-001`).
+*   Jika batch dengan sequence yang sama didaftarkan kembali, sistem harus menolak dan menyarankan sequence berikutnya secara dinamis.
 
-These areas represent the main workflows that users interact with and the most important operational behavior in QC Enterprise.
+### Pengambilan Foto Bukti (Hybrid Picker)
+*   Ketika tombol kamera ditekan, pastikan browser mobile langsung membuka aplikasi kamera bawaan secara synchronous tanpa menampilkan pemilih file/galeri.
+*   Ketika opsi galeri ditekan, browser harus membuka pemilih berkas untuk mengunggah foto yang sudah ada.
+*   Proses kompresi gambar di sisi client wajib berjalan untuk mengecilkan resolusi berkas sebelum dikirim ke server.
 
-## 5. Critical Regression Tests
+### Tombol Pintas Speed Dial FAB
+*   Tombol Speed Dial di pojok kanan bawah halaman staff harus menyembunyikan tautan ke halaman aktif saat ini.
+*   Mengeklik opsi "QC Temuan" dari halaman **Monitoring** atau **QC Check** harus mengarahkan staff ke halaman dashboard utama dan otomatis membuka laci popup pengisian kendala dapur.
 
-Critical regression tests should verify behavior that must not break during future development.
+---
 
-### Role and Access Control
+## 3. Checklist Uji Coba Manual (Manual QA Checklist)
 
-- Staff users must not be able to access admin endpoints.
-- Admin users must be able to access admin endpoints.
-- Protected endpoints must reject unauthenticated requests.
+Gunakan checklist ini sebelum melakukan presentasi demo atau rilis produksi.
 
-### Monitoring
+### A. Pengujian Admin
+- [ ] Login admin berhasil dan dialihkan ke Dashboard Admin.
+- [ ] Diagram analitik dan statistik KPI termuat dengan benar.
+- [ ] Riwayat audit trail mencatat aktivitas penambahan/perubahan terbaru.
+- [ ] Menu Google Sheets Export berhasil melakukan test koneksi dan ekspor data ril berdasarkan filter tanggal.
+- [ ] Akun demo admin (`demo_admin`) dibatasi hanya-baca (tindakan ubah/hapus memicu pesan error).
 
-- Monitoring schedule must support per-device checks.
-- Monitoring slots should support 07:00, 13:00, 16:00, and 19:00.
-- Duplicate monitoring prevention must reject repeated submissions for the same device, slot, and date.
-- Monitoring progress should calculate against total device x slot requirements.
+### B. Pengujian Staff (Tampilan HP)
+- [ ] Login staff berhasil dan dialihkan ke Dashboard Staff.
+- [ ] Halaman monitoring menampilkan slot harian dengan indikasi warna status yang tepat.
+- [ ] Pengisian suhu slot berhasil disimpan dan memperbarui persentase progress monitoring di beranda.
+- [ ] Pembuatan batch baru menghitung tanggal kedaluwarsa secara otomatis sesuai umur simpan SKU.
+- [ ] Pengisian laporan QC check berhasil menyimpan status PASS/HOLD/FAIL.
+- [ ] Pengambilan foto bukti via hybrid picker berfungsi dengan baik (Kamera vs Galeri).
+- [ ] Menavigasi lewat tombol FAB menyembunyikan halaman aktif saat ini dengan benar.
+- [ ] Mengklik "QC Temuan" dari menu FAB di halaman lain berhasil mengarahkan ke dashboard dan membuka drawer kendala.
 
-### Batch Production
+### C. Pengujian PWA (Instalasi HP)
+- [ ] Prompt "Add to Home Screen" muncul pada browser Chrome (Android) atau Safari (iOS).
+- [ ] Aplikasi dapat dibuka dalam mode standalone (tanpa bilah alamat browser).
+- [ ] Navigasi mobile bekerja lancar tanpa lag transisi.
+- [ ] Asset statis (CSS/JS) tetap termuat secara offline berkat caching Service Worker.
 
-- Batch code sequence must generate correctly.
-- Batch code should follow the format `SKU-YYYYMMDD-001`.
-- Duplicate batch codes should be rejected.
+---
 
-### QC Inspection
+## 4. Risiko Teknis & Mitigasi
 
-- QC status must support `PASS`, `HOLD`, and `FAIL`.
-- QC concurrency lock must prevent conflicting updates.
-- Re-check records must preserve inspection history.
-- Evidence photo references must be stored correctly.
-
-### ITDV Learning
-
-- Mini quiz gating must prevent module completion when requirements are not met.
-- Certificate locked logic must prevent certificate generation before completion criteria are satisfied.
-- Learning progress should update after module, quiz, or simulation completion.
-
-### Google Sheets Export
-
-- Google Sheets webhook failure must not cause the main submit workflow to fail.
-- Export failure should be logged or reported clearly.
-- Historical export should respect selected filters or date ranges.
-
-## 6. Manual QA Checklist
-
-Use this checklist before demo, release, thesis presentation, or portfolio review.
-
-### Admin
-
-- [ ] Login works.
-- [ ] Dashboard loads correctly.
-- [ ] Reports page displays expected data.
-- [ ] Audit trail shows recent system activities.
-- [ ] Learning CRUD can create, update, and disable learning content.
-- [ ] Google Sheets export can send test and real export data.
-
-### Staff
-
-- [ ] Login works.
-- [ ] Dashboard loads correctly on mobile layout.
-- [ ] Monitoring can be submitted for the correct schedule slot.
-- [ ] QC check can be submitted with valid status.
-- [ ] New batch can be created.
-- [ ] Photo upload works for QC evidence.
-- [ ] Profile page or dropdown displays correct user information.
-
-### PWA
-
-- [ ] Add to home screen is available on supported devices.
-- [ ] Standalone mode opens without browser chrome when installed.
-- [ ] Mobile navigation works.
-- [ ] FAB is visible and usable on mobile screens.
-
-## 7. Production Testing Checklist
-
-Before production deployment, verify:
-
-- [ ] Environment variables are configured.
-- [ ] Supabase migrations are applied.
-- [ ] Demo account is available and tested.
-- [ ] Vercel deployment completes successfully.
-- [ ] Google Apps Script URL is configured.
-- [ ] Google Sheets export works from production.
-- [ ] Service worker is registered correctly.
-- [ ] Manifest file is available and valid.
-
-## 8. Known Risks
-
-Known risks that should be checked during testing:
-
-- **Google Apps Script permission:** Export can fail if the script is not deployed correctly or permission is not granted.
-- **Timezone Asia/Jakarta:** Monitoring date, schedule slot, and late status must use the correct timezone.
-- **Duplicate batch:** Batch code generation must prevent repeated batch codes.
-- **Device monitoring schedule:** Each device must map correctly to the required monitoring slots.
-- **Uploaded photo storage:** Evidence upload must store and retrieve photo references reliably.
-- **PWA cache:** Cached frontend assets may cause users to see outdated behavior after deployment.
-
-## 9. Bug Report Template
-
-Use this format when reporting bugs.
-
-```markdown
-## Title
-
-Short description of the issue.
-
-## Environment
-
-- Local / Staging / Production:
-- Browser:
-- Device:
-- Date and time:
-
-## Role
-
-- Admin / Staff:
-
-## Steps to Reproduce
-
-1. Open ...
-2. Click ...
-3. Submit ...
-
-## Expected Result
-
-Describe what should happen.
-
-## Actual Result
-
-Describe what actually happened.
-
-## Screenshot
-
-Attach screenshot or screen recording if available.
-
-## Logs
-
-Paste relevant backend, frontend console, Vercel, Supabase, or Google Apps Script logs.
-```
-
-## 10. Release Checklist
-
-Before releasing a new version, confirm:
-
-- [ ] All tests passed.
-- [ ] Migration applied.
-- [ ] README updated.
-- [ ] Demo account checked.
-- [ ] Production smoke test done.
-
-The release should only proceed after critical workflows have been verified for both Admin and Staff roles.
+*   **Kegagalan Webhook Google Sheets:** Jika Google Apps Script lambat atau mengalami masalah kuota harian, backend Flask tidak boleh menggagalkan proses penyimpanan transaksi utama di Supabase. Kegagalan webhook harus dicatat di log server sebagai peringatan non-blocking.
+*   **Zona Waktu (Timezone Asia/Jakarta):** Seluruh perbandingan jam slot (07:00, 13:00, 16:00, 19:00) dan penentuan status keterlambatan input (late status) harus menggunakan zona waktu `Asia/Jakarta`, bukan zona waktu server lokal (UTC).
+*   **Konflik Update QC Check (Concurrency Lock):** Jika dua staff QC mencoba menyunting laporan pemeriksaan yang sama secara bersamaan, sistem harus menampilkan peringatan penguncian transaksi agar data tidak saling menimpa.

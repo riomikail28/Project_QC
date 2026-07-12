@@ -1,6 +1,6 @@
-# Use Case Diagram QC Enterprise
+# Use Case Diagram QC Central Kitchen
 
-Dokumen ini menggambarkan aktor dan use case utama pada QC Enterprise.
+Dokumen ini menggambarkan aktor dan use case utama pada QC Central Kitchen.
 
 ## Use Case Diagram
 
@@ -12,7 +12,7 @@ flowchart LR
     Sheets([Google Sheets])
     System([System])
 
-    subgraph QCEnterprise["QC Enterprise"]
+    subgraph QCCentralKitchen["QC Central Kitchen"]
         UC1((Login))
         UC2((Akses Admin Dashboard))
         UC3((Akses Staff Dashboard))
@@ -24,8 +24,6 @@ flowchart LR
         UC9((Lihat Reports))
         UC10((Lihat Audit Trail))
         UC11((Export Google Sheets))
-        UC12((Kelola ITDV Learning))
-        UC13((Ikuti Learning Center))
         UC14((Validasi Role))
         UC15((Catat Audit Log))
         UC16((Generate Monitoring Schedule))
@@ -36,7 +34,6 @@ flowchart LR
     Admin --> UC9
     Admin --> UC10
     Admin --> UC11
-    Admin --> UC12
 
     Staff --> UC1
     Staff --> UC3
@@ -44,7 +41,6 @@ flowchart LR
     Staff --> UC5
     Staff --> UC7
     Staff --> UC8
-    Staff --> UC13
 
     Cook --> UC6
     Staff --> UC6
@@ -60,7 +56,6 @@ flowchart LR
     UC6 --> UC15
     UC7 --> UC15
     UC8 --> UC15
-    UC12 --> UC15
 ```
 
-Diagram ini menjelaskan pembagian tanggung jawab antar aktor. Admin berfokus pada pengawasan, laporan, audit, export, dan pengelolaan learning. Staff QC berfokus pada input operasional seperti monitoring, QC check, batch, re-check, dan pembelajaran. System menjalankan validasi role, audit log, dan penjadwalan monitoring.
+Diagram ini menjelaskan pembagian tanggung jawab antar aktor. Admin berfokus pada pengawasan, laporan, audit, dan export data. Staff QC berfokus pada input operasional seperti monitoring harian, QC check, pembuatan batch, dan re-check. System menjalankan fungsi internal otomatis seperti validasi role, pencatatan audit log, dan penjadwalan monitoring otomatis.

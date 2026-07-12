@@ -97,7 +97,7 @@ def test_readme_qc_temuan_apps_script_header_has_no_tanggal():
     header = "`Timestamp`, `Type`, `Staff`, `Temuan`, `Foto URL`, `Status`, `Source Type`, `Source ID`."
 
     assert header in readme
-    qc_temuan_section = readme.split("Tambahkan juga tab `QC Temuan`", 1)[1].split("Jika Google Apps Script", 1)[0]
+    qc_temuan_section = readme.split("Aplikasi ini mendukung ekspor data otomatis", 1)[1].split("## 🧪 Cara Menjalankan", 1)[0]
     assert "`Tanggal`" not in qc_temuan_section
     assert "`Area`" not in qc_temuan_section
     assert "data.area" not in qc_temuan_section

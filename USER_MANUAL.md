@@ -1,418 +1,150 @@
-# User Manual QC Enterprise
+# Panduan Penggunaan QC Central Kitchen
 
-## 1. Overview
+## 1. Pendahuluan
 
-QC Enterprise adalah sistem Quality Control berbasis web untuk operasional Central Kitchen. Sistem ini membantu admin dan staff dalam melakukan monitoring suhu, pencatatan batch produksi, QC check, upload evidence, laporan, audit trail, pembelajaran ITDV, dan export data ke Google Sheets.
+QC Central Kitchen adalah aplikasi berbasis web yang dirancang khusus untuk mempermudah operasional Quality Control di dapur pusat (Central Kitchen). Aplikasi ini membantu mendokumentasikan serta memantau data suhu area, pencatatan batch produksi, pengecekan QC (QC check) dengan lampiran foto bukti, pengelolaan temuan/kendala lapangan, audit trail aktivitas pengguna, serta ekspor data ke spreadsheet eksternal lewat Google Sheets.
 
-QC Enterprise dibuat agar proses QC lebih rapi, terdokumentasi, mudah ditelusuri, dan dapat digunakan melalui browser maupun tampilan mobile.
+Sistem ini memiliki tampilan yang ramah diakses lewat HP (mobile-friendly) maupun desktop, serta mendukung teknologi PWA (Progressive Web App) agar staff di area produksi dapat menggunakannya secara praktis.
 
-## 2. User Roles
+---
+
+## 2. Peran Pengguna (Roles)
 
 ### Admin
-
-Admin memiliki akses untuk mengelola dan memantau aktivitas QC secara menyeluruh.
-
-Fitur utama Admin:
-
-- Mengelola dashboard.
-- Melihat monitoring.
-- Melihat reports.
-- Melihat audit trail.
-- Mengelola learning.
-- Melakukan Google Sheets export.
+Admin memegang kendali penuh untuk memantau performa QC, meninjau kepatuhan dapur, dan melakukan analisis data.
+*   **Akses Utama:** Dashboard utama, log monitoring, laporan QC, riwayat aktivitas (audit trail), serta ekspor data ke Google Sheets.
+*   **Tanggung Jawab:** Memantau tren deviasi suhu, memvalidasi dan menyetujui batch produksi (approve/reject/hold), mendaftarkan SKU produk, mengatur ruangan dapur, serta memantau operasional harian.
 
 ### Staff
+Staff bertugas langsung di dapur untuk melakukan pengisian data secara real-time.
+*   **Akses Utama:** Dashboard staff, modul input monitoring suhu harian, modul input QC check produk, form pembuatan batch baru, serta halaman profil.
+*   **Tanggung Jawab:** Mencatat suhu ruangan dan peralatan sesuai slot waktu yang ditentukan, merekam aktivitas pembuatan batch produk, mengisi checklist QC produk, mengambil foto bukti (evidence), serta mencatat temuan deviasi di lapangan.
+
+---
+
+## 3. Cara Masuk ke Aplikasi (Login)
+
+1.  Buka tautan aplikasi QC Central Kitchen di browser Anda.
+2.  Masukkan username dan password akun Anda.
+3.  Klik tombol **Login**.
+4.  Sistem secara otomatis akan mengarahkan Anda ke halaman yang sesuai dengan peran Anda (Dashboard Admin atau Dashboard Staff).
 
-Staff memiliki akses untuk melakukan input data operasional harian.
+### Akun Demo (Untuk Uji Coba)
+*   **Admin Demo (Hanya Lihat):**
+    *   **Username:** `demo_admin`
+    *   **Password:** `demoadmin123`
+*   **Staff Demo (Bisa Input & Edit):**
+    *   **Username:** `demo_staff`
+    *   **Password:** `demostaff123`
 
-Fitur utama Staff:
+---
 
-- Input monitoring suhu.
-- Melakukan QC check.
-- Membuat batch.
-- Upload evidence atau foto bukti.
-- Melihat profile.
+## 4. Panduan untuk Admin
 
-## 3. Cara Login
+### Memantau Dashboard & KPI
+Setelah masuk, halaman utama menampilkan ringkasan performa dapur, seperti persentase kelulusan QC, jumlah deviasi suhu yang terdeteksi, serta daftar produk yang saat ini sedang ditahan (HOLD).
 
-### Login Admin
+### Meninjau Laporan & Riwayat Log
+1.  Pilih menu **Laporan** atau **Monitoring** pada bilah navigasi.
+2.  Gunakan filter tanggal atau jenis ruangan untuk menyaring data yang ingin Anda cari.
+3.  Anda dapat melihat riwayat suhu di setiap ruangan dapur serta status penyelesaian checklist QC untuk setiap batch.
 
-1. Buka website QC Enterprise.
-2. Masukkan akun admin.
-3. Klik tombol login.
-4. Jika berhasil, sistem akan membuka dashboard admin.
+### Menelusuri Audit Trail (Aktivitas Sistem)
+Sistem mencatat setiap perubahan data untuk menjamin transparansi operasional.
+1.  Buka menu **Audit Trail**.
+2.  Anda dapat melihat siapa yang memasukkan data, kapan data tersebut diubah, serta nilai data sebelum dan sesudahnya.
 
-### Login Staff
+### Ekspor Data ke Google Sheets
+1.  Buka halaman **Google Sheets Export**.
+2.  Pilih jenis data yang ingin disinkronkan (data Monitoring Suhu atau Laporan QC).
+3.  Gunakan pilihan **Export All** atau tentukan rentang tanggal tertentu (Date Range) untuk mengekspor data historis.
+4.  Klik tombol **Export** dan buka tautan spreadsheet Anda untuk memeriksa data yang masuk.
 
-1. Buka website QC Enterprise.
-2. Masukkan akun staff.
-3. Klik tombol login.
-4. Jika berhasil, sistem akan membuka dashboard staff.
+---
 
-### Demo Account
+## 5. Panduan untuk Staff
 
-Demo account digunakan untuk percobaan, presentasi, atau pengujian sistem.
+### Pengisian Monitoring Suhu Harian (Sistem Slot Waktu)
+Aplikasi menampilkan empat slot waktu pemantauan harian:
+*   **07:00**
+*   **13:00**
+*   **16:00**
+*   **19:00**
 
-Jika tersedia, gunakan akun demo sesuai role:
+**Cara melakukan input:**
+1.  Buka menu **Monitor** pada navigasi bawah.
+2.  **Klik slot kartu waktu** yang ingin Anda isi (misalnya, jika sekarang jam 13:00 namun slot jam 07:00 masih kosong, Anda dapat mengeklik slot jam 07:00 untuk melengkapi datanya).
+3.  Sistem melarang pengisian slot waktu di masa mendatang (upcoming slot).
+4.  Pilih ruangan atau peralatan yang ingin diukur.
+5.  Masukkan suhu hasil pengukuran termometer fisik Anda (serta kelembapan jika mengukur ruangan kering).
+6.  Tekan **Simpan**.
 
-- Demo Admin untuk mencoba fitur admin.
-- Demo Staff untuk mencoba fitur staff.
+**Melakukan Pengukuran Ulang (Recheck):**
+Jika nilai suhu sebelumnya berada di luar standar (terlalu panas/dingin), Anda diperbolehkan mengirimkan data pengukuran ulang pada slot yang sama. Data baru akan otomatis masuk sebagai log recheck untuk melacak tindakan perbaikan.
 
-Jangan gunakan akun demo untuk menyimpan data produksi penting.
+---
 
-## 4. Panduan Admin
+### Membuat Batch Produksi Baru
+Setiap kali proses memasak selesai, staff harus membuat catatan batch baru.
+1.  Buka menu **Home** lalu tekan tombol **+** di sudut kanan bawah, atau akses lewat menu navigasi.
+2.  Pilih produk (SKU) yang dimasak.
+3.  Masukkan tanggal produksi dan nama juru masak (cook).
+4.  Isi jumlah porsi/kuantitas hasil masak serta shift kerja yang berjalan.
+5.  Sistem akan otomatis menghitung nomor urut dan membuat kode batch unik dengan format `SKU-YYYYMMDD-00X`.
 
-### Membuka Dashboard Admin
+---
 
-Setelah login sebagai admin, sistem akan menampilkan dashboard admin. Halaman ini digunakan untuk melihat ringkasan kondisi QC, monitoring, laporan, dan aktivitas sistem.
+### Melakukan Pemeriksaan QC (QC Check)
+Setelah batch terdaftar, staff QC wajib memeriksa kualitas produk sebelum dikemas atau didistribusikan.
+1.  Buka menu **QC Check** di navigasi bawah.
+2.  Pilih kode batch produk yang ingin diperiksa.
+3.  Isi parameter kualitas produk (suhu masakan wajib diisi untuk masakan panas, pH, brix, tds, serta berat produk).
+4.  Tentukan status kelulusan produk:
+    *   **PASS:** Produk lulus uji dan siap didistribusikan.
+    *   **HOLD:** Produk bermasalah atau meragukan (misalnya suhu kurang panas). Status ini memerlukan tindakan perbaikan dan recheck ulang sebelum boleh dilepas.
+    *   **FAIL:** Produk gagal dan tidak layak dikonsumsi.
+5.  Lampirkan foto bukti (evidence) yang memadai.
 
-### Melihat KPI
+---
 
-Pada dashboard admin, lihat bagian KPI untuk memantau kondisi utama seperti jumlah monitoring, status QC, laporan, atau aktivitas penting lainnya.
+### Pengambilan Foto Bukti (Hybrid Camera & Gallery)
+Saat mengunggah foto di menu **QC Temuan, Monitoring, maupun QC Check**, sistem akan menampilkan popup menu di bagian bawah layar:
+1.  **Ambil Foto Baru (Kamera):** Opsi ini akan membuka aplikasi kamera bawaan HP Anda secara langsung agar Anda bisa langsung memotret kondisi aktual makanan atau ruangan.
+2.  **Pilih dari Galeri / Upload:** Opsi ini membuka galeri HP atau folder file Anda untuk mengunggah foto yang sudah diambil sebelumnya.
 
-### Melihat Monitoring
+*Sistem secara otomatis akan mengompres ukuran foto di sisi perangkat (client-side compression) sebelum dikirim untuk menghemat kuota internet dan mempercepat proses penyimpanan di area dapur yang sinyalnya kurang stabil.*
 
-1. Buka menu monitoring.
-2. Pilih tanggal atau filter jika tersedia.
-3. Periksa data monitoring berdasarkan device, ruangan, suhu, dan slot waktu.
-4. Pastikan data monitoring sudah sesuai dengan jadwal operasional.
+---
 
-### Melihat Reports
+### Fitur Navigasi Cepat (Speed Dial FAB Menu)
+Tombol lingkaran biru berikon **+** di sudut kanan bawah adalah menu pintasan cepat:
+*   Menu ini hanya akan menampilkan opsi navigasi ke halaman lain (opsi halaman yang sedang Anda buka akan otomatis disembunyikan untuk menghindari kebingungan).
+*   Jika Anda sedang berada di halaman **QC Check** atau **Monitoring** dan mengeklik **QC Temuan**, sistem akan otomatis mengarahkan Anda ke beranda utama dan langsung membukakan laci popup pengisian kendala dapur secara instan.
 
-1. Buka menu reports.
-2. Pilih jenis laporan yang ingin dilihat.
-3. Gunakan filter tanggal atau kategori jika tersedia.
-4. Periksa data monitoring, QC, batch, atau alert.
+---
 
-### Melihat Audit Trail
+## 6. Masalah yang Sering Terjadi (Troubleshooting)
 
-1. Buka menu audit trail.
-2. Lihat daftar aktivitas pengguna.
-3. Periksa informasi seperti siapa yang melakukan aksi, waktu aksi, dan data yang berubah.
+### Kenapa tombol Kamera langsung membuka File Chooser/Galeri?
+Pastikan Anda mengeklik opsi **Ambil Foto Baru (Kamera)** pada menu popup bawah. Jika Anda menggunakan HP dengan browser yang sangat lama atau WebView aplikasi pihak ketiga (seperti WhatsApp/Telegram browser), sistem mungkin akan menampilkan pemilih file sebagai alternatif keamanan sistem operasi Anda. Disarankan menggunakan Google Chrome di Android atau Safari di iOS.
 
-Audit trail membantu admin menelusuri aktivitas penting di sistem.
+### Kenapa Halaman Monitoring Kosong atau Room Tidak Tampil?
+Masalah ini biasanya terjadi karena kesalahan format data identitas (UUID) ruangan di database. Pastikan koneksi internet Anda stabil, lalu lakukan refresh halaman. Jika data tetap kosong, hubungi administrator untuk menyelaraskan konfigurasi ruangan di panel admin.
 
-### Mengelola Learning ITDV
+### Mengapa Input Monitoring Terkunci atau Ditolak?
+Sistem akan memblokir pengisian jika:
+*   Anda mencoba mengeklik slot waktu di masa mendatang (misalnya mencoba mengisi slot 19:00 padahal jam saat ini baru menunjukkan pukul 13:00).
+*   Slot waktu yang Anda pilih sudah pernah diisi dan admin menonaktifkan pengaturan recheck/duplikasi untuk peralatan tersebut.
 
-1. Buka menu Learning ITDV atau Learning Management.
-2. Tambahkan modul baru jika diperlukan.
-3. Ubah materi, mini quiz, simulasi, atau quiz.
-4. Nonaktifkan konten yang sudah tidak digunakan.
-5. Pastikan materi mudah dipahami oleh staff.
+---
 
-### Export Google Sheets
+## 7. Pertanyaan yang Sering Diajukan (FAQ)
 
-1. Buka menu Google Sheets export.
-2. Pilih jenis data yang ingin diexport.
-3. Jalankan test export jika diperlukan.
-4. Klik export.
-5. Buka Google Sheets untuk memastikan data berhasil masuk.
+**Apa perbedaan status HOLD dan FAIL pada QC check?**
+Status **HOLD** menandakan produk sedang ditahan sementara karena ada parameter yang kurang sesuai (misalnya suhu saat matang kurang tinggi), namun masih bisa diperbaiki (misal dimasak kembali) untuk kemudian diuji ulang (recheck). Status **FAIL** menandakan produk rusak total atau tidak memenuhi syarat mendasar sehingga harus dibuang (discard).
 
-### Re-Export Data Lama
+**Apakah foto yang saya ambil akan menghabiskan kuota internet dapur?**
+Tidak. Aplikasi ini dilengkapi modul kompresi otomatis berkualitas tinggi di browser. Sebelum foto diunggah ke server, ukurannya akan dikecilkan tanpa merusak kejelasan gambar, sehingga menghemat kuota internet dapur secara signifikan.
 
-1. Buka menu export atau reports.
-2. Pilih rentang tanggal data lama.
-3. Pilih jenis data, seperti monitoring atau QC reports.
-4. Jalankan export.
-5. Periksa hasilnya di Google Sheets.
-
-### Logout
-
-1. Klik menu profile atau tombol logout.
-2. Pilih logout.
-3. Pastikan sistem kembali ke halaman login.
-
-## 5. Panduan Staff
-
-### Membuka Dashboard Staff
-
-Setelah login sebagai staff, sistem akan membuka dashboard staff. Dashboard ini berisi akses cepat untuk monitoring suhu, QC check, batch, dan profile.
-
-### Input Monitoring Suhu
-
-1. Buka menu monitoring.
-2. Pilih device atau ruangan yang akan diperiksa.
-3. Masukkan suhu sesuai hasil pengukuran.
-4. Tambahkan catatan jika diperlukan.
-5. Simpan data monitoring.
-
-Pastikan suhu yang dimasukkan sesuai dengan kondisi aktual di lapangan.
-
-### Jadwal Monitoring
-
-Monitoring dilakukan pada slot waktu berikut:
-
-- 07:00
-- 13:00
-- 16:00
-- 19:00
-
-Jika slot belum waktunya, sistem dapat membatasi input atau menampilkan informasi bahwa monitoring belum tersedia.
-
-### Membuat Batch Baru
-
-1. Buka menu batch.
-2. Pilih produk.
-3. Masukkan tanggal produksi.
-4. Isi nama cook atau penanggung jawab masak.
-5. Masukkan quantity.
-6. Pilih shift produksi.
-7. Simpan batch.
-
-Satu batch berarti satu kali proses masak.
-
-### QC Check
-
-1. Buka menu QC Check.
-2. Pilih batch yang akan diperiksa.
-3. Isi data pemeriksaan.
-4. Pilih status QC.
-5. Upload foto evidence jika diperlukan.
-6. Simpan hasil QC.
-
-### Upload Foto
-
-1. Pada form QC Check, pilih upload foto.
-2. Ambil foto atau pilih foto dari perangkat.
-3. Pastikan foto jelas.
-4. Simpan bersama data QC.
-
-Foto digunakan sebagai bukti pemeriksaan atau evidence.
-
-### PASS/HOLD/FAIL
-
-Status QC terdiri dari:
-
-- **PASS:** Produk atau proses memenuhi standar QC.
-- **HOLD:** Produk atau proses perlu dicek ulang atau menunggu keputusan.
-- **FAIL:** Produk atau proses tidak memenuhi standar QC.
-
-Pilih status sesuai hasil pemeriksaan aktual.
-
-### Re-Check
-
-Re-check digunakan ketika hasil QC perlu diperiksa ulang, biasanya pada status HOLD.
-
-1. Buka data QC yang perlu dicek ulang.
-2. Pilih aksi re-check jika tersedia.
-3. Lakukan pemeriksaan ulang.
-4. Simpan hasil re-check.
-
-Riwayat re-check akan membantu menelusuri perubahan hasil pemeriksaan.
-
-### Profile
-
-1. Buka menu profile.
-2. Lihat informasi akun.
-3. Periksa nama, role, dan data pengguna.
-4. Logout jika sudah selesai menggunakan sistem.
-
-## 6. Panduan Learning ITDV
-
-### Membuka Learning Center
-
-1. Login ke sistem.
-2. Buka menu Learning Center atau ITDV Learning.
-3. Pilih modul yang ingin dipelajari.
-
-### Mulai Modul
-
-1. Pilih modul.
-2. Klik mulai atau buka modul.
-3. Ikuti materi sesuai urutan.
-
-### Baca Materi
-
-Baca materi dengan teliti. Materi dapat berisi penjelasan HACCP, QC, prosedur kerja, atau contoh kasus operasional.
-
-### Kerjakan Mini Quiz
-
-1. Setelah membaca materi, kerjakan mini quiz.
-2. Pilih jawaban yang paling tepat.
-3. Submit jawaban.
-4. Periksa hasil atau feedback jika tersedia.
-
-Mini quiz membantu memastikan staff memahami materi sebelum lanjut.
-
-### Simulasi
-
-1. Buka bagian simulasi.
-2. Baca skenario.
-3. Pilih tindakan yang sesuai.
-4. Submit jawaban.
-5. Baca feedback dari sistem.
-
-### Quiz Utama
-
-1. Buka quiz utama.
-2. Jawab semua pertanyaan.
-3. Submit quiz.
-4. Lihat skor atau hasil.
-
-### Sertifikat
-
-Sertifikat dapat tersedia setelah pengguna menyelesaikan syarat pembelajaran, seperti modul, mini quiz, simulasi, dan quiz utama.
-
-Jika sertifikat masih terkunci, selesaikan seluruh persyaratan terlebih dahulu.
-
-### Career Recommendation
-
-Career recommendation memberikan arahan pengembangan berdasarkan hasil belajar atau progress pengguna.
-
-Gunakan rekomendasi ini sebagai panduan untuk meningkatkan kemampuan di bidang QC, food safety, atau operasional Central Kitchen.
-
-## 7. Panduan Google Sheets Export
-
-### Test Export
-
-1. Login sebagai admin.
-2. Buka menu Google Sheets export.
-3. Klik test export.
-4. Buka Google Sheets.
-5. Pastikan data test berhasil masuk.
-
-### Buka Google Sheets
-
-Gunakan link Google Sheets yang sudah disiapkan oleh admin atau tim pengelola sistem.
-
-### Export All Monitoring
-
-1. Buka menu Google Sheets export.
-2. Pilih monitoring.
-3. Pilih export all monitoring.
-4. Tunggu proses selesai.
-5. Periksa data di Google Sheets.
-
-### Export All QC Reports
-
-1. Buka menu Google Sheets export.
-2. Pilih QC reports.
-3. Pilih export all QC reports.
-4. Tunggu proses selesai.
-5. Periksa data di Google Sheets.
-
-### Export by Date Range
-
-1. Buka menu export.
-2. Pilih tanggal mulai.
-3. Pilih tanggal akhir.
-4. Pilih jenis data.
-5. Klik export.
-6. Periksa hasil export di Google Sheets.
-
-## 8. PWA / Install ke HP
-
-QC Enterprise dapat digunakan seperti aplikasi melalui fitur PWA.
-
-### Install di Chrome Android
-
-1. Buka website QC Enterprise di Chrome Android.
-2. Buka menu browser.
-3. Pilih Add to Home Screen.
-4. Konfirmasi nama aplikasi.
-5. Buka aplikasi dari home screen.
-
-Setelah terpasang, QC Enterprise dapat dibuka seperti aplikasi biasa.
-
-## 9. Troubleshooting User
-
-### Login Gagal
-
-Kemungkinan penyebab:
-
-- Username atau password salah.
-- Akun belum aktif.
-- Koneksi internet bermasalah.
-- Server sedang error.
-
-Solusi:
-
-- Periksa kembali username dan password.
-- Hubungi admin jika akun belum aktif.
-- Coba refresh halaman atau login ulang.
-
-### Data Tidak Muncul
-
-Kemungkinan penyebab:
-
-- Filter tanggal tidak sesuai.
-- Data belum pernah dibuat.
-- Koneksi internet bermasalah.
-- User tidak memiliki akses ke data tersebut.
-
-Solusi:
-
-- Periksa filter.
-- Refresh halaman.
-- Login ulang jika diperlukan.
-- Hubungi admin jika data tetap tidak muncul.
-
-### Upload Foto Gagal
-
-Kemungkinan penyebab:
-
-- Ukuran file terlalu besar.
-- Format foto tidak didukung.
-- Koneksi internet tidak stabil.
-- Storage sedang bermasalah.
-
-Solusi:
-
-- Gunakan foto dengan ukuran lebih kecil.
-- Gunakan format umum seperti JPG atau PNG.
-- Coba upload ulang.
-
-### Monitoring Slot Belum Waktunya
-
-Monitoring hanya dapat dilakukan sesuai slot yang tersedia, seperti 07:00, 13:00, 16:00, dan 19:00.
-
-Jika slot belum waktunya, tunggu sampai jadwal monitoring aktif.
-
-### Batch Duplicate
-
-Batch duplicate terjadi jika batch dengan kode yang sama sudah pernah dibuat.
-
-Solusi:
-
-- Periksa batch code.
-- Buat batch dengan sequence berikutnya.
-- Hubungi admin jika batch code tidak otomatis berubah.
-
-### Google Sheets Export Gagal
-
-Kemungkinan penyebab:
-
-- Google Apps Script belum aktif.
-- Link webhook salah.
-- Izin Google Sheets belum sesuai.
-- Koneksi internet bermasalah.
-
-Solusi:
-
-- Jalankan test export.
-- Periksa Google Sheets.
-- Hubungi admin atau pengelola sistem.
-
-## 10. FAQ
-
-### Apa itu batch?
-
-Batch adalah satu kali proses masak. Setiap batch digunakan untuk menelusuri produk, tanggal produksi, cook, quantity, dan hasil QC.
-
-### Apa itu monitoring slot?
-
-Monitoring slot adalah jadwal waktu monitoring. Di QC Enterprise, slot monitoring utama adalah 07:00, 13:00, 16:00, dan 19:00.
-
-### Apa itu re-check?
-
-Re-check adalah pemeriksaan ulang terhadap hasil QC yang perlu diverifikasi kembali, biasanya untuk status HOLD.
-
-### Apa itu PASS/HOLD/FAIL?
-
-- **PASS:** Produk atau proses memenuhi standar.
-- **HOLD:** Produk atau proses perlu ditahan sementara dan dicek ulang.
-- **FAIL:** Produk atau proses tidak memenuhi standar.
-
-### Apakah data masuk Google Sheets otomatis?
-
-Data dapat masuk ke Google Sheets jika fitur export dijalankan dan integrasi Google Apps Script sudah aktif. Beberapa export dapat dilakukan secara manual oleh admin, termasuk export semua data atau export berdasarkan rentang tanggal.
+**Bagaimana cara menginstall aplikasi ini di HP saya?**
+Karena aplikasi ini mendukung PWA, Anda tidak perlu mengunduhnya dari Play Store atau App Store. Cukup buka aplikasi lewat browser Google Chrome (Android) atau Safari (iOS), lalu klik tombol menu browser dan pilih opsi **Tambahkan ke Layar Utama (Add to Home Screen)**. Aplikasi akan terpasang di HP Anda dan dapat dibuka langsung melalui ikon di layar utama.

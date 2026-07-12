@@ -89,7 +89,6 @@ flowchart TD
         H --> H3[Lihat Laporan & Histori Transaksi]
         H --> H4[Pantau Rekam Aktivitas / Audit Trail]
         H --> H5[Ekspor Data Manual ke Google Sheets]
-        H --> H6[Kelola Modul Pembelajaran ITDV]
     end
 
     subgraph StaffWorkflow["Alur Kerja Staff QC"]
@@ -98,10 +97,9 @@ flowchart TD
         I --> I3[Lakukan Inspeksi Mutu Batch / QC Check]
         I --> I4[Lakukan Inspeksi Ulang / Re-check]
         I --> I5[Laporkan Temuan Lapangan / QC Finding]
-        I --> I6[Akses Learning Center / Ujian ITDV]
     end
 
-    H1 & H2 & H6 & I1 & I2 & I3 & I4 & I5 --> J[Simpan Perubahan ke Supabase Database]
+    H1 & H2 & I1 & I2 & I3 & I4 & I5 --> J[Simpan Perubahan ke Supabase Database]
     I2 & I3 & I5 --> K[Upload Foto Bukti ke Supabase Storage]
     J & K --> L[Tulis Rekam Aktivitas ke Audit Logs]
     L --> M{Pemicu Ekspor Google Sheets?}
@@ -138,8 +136,6 @@ flowchart LR
         UC11((Lihat Riwayat & Laporan))
         UC12((Lihat Audit Trail))
         UC13((Ekspor Data Google Sheets))
-        UC14((Akses Belajar & Ujian ITDV))
-        UC15((Kelola Modul Belajar & Kuis))
         
         UC16((Validasi Token JWT & Otorisasi))
         UC17((Catat Jejak Aktivitas / Audit Log))
@@ -154,7 +150,6 @@ flowchart LR
     Admin --> UC11
     Admin --> UC12
     Admin --> UC13
-    Admin --> UC15
 
     Staff --> UC1
     Staff --> UC5
@@ -164,7 +159,6 @@ flowchart LR
     Staff --> UC9
     Staff --> UC10
     Staff --> UC11
-    Staff --> UC14
 
     UC13 -.-> GAS
     
@@ -549,64 +543,6 @@ erDiagram
         datetime created_at
     }
 
-    ITDV_MODULES {
-        uuid id PK
-        string slug UK
-        string title
-        string description
-        string content
-        int order_index
-        boolean is_active
-        datetime deleted_at
-        datetime created_at
-        datetime updated_at
-    }
-
-    ITDV_MODULE_MINI_QUIZZES {
-        uuid id PK
-        uuid module_id FK
-        string question
-        json options
-        string correct_answer
-        string explanation
-        int order_index
-        boolean is_active
-        datetime deleted_at
-    }
-
-    ITDV_QUIZ_QUESTIONS {
-        uuid id PK
-        string question
-        json options
-        string correct_answer
-        string category
-        string difficulty
-        boolean is_active
-        datetime deleted_at
-    }
-
-    ITDV_SIMULATIONS {
-        uuid id PK
-        string title
-        string scenario
-        json choices
-        string expected_answer
-        string feedback
-        boolean is_active
-        datetime deleted_at
-    }
-
-    ITDV_CERTIFICATES {
-        uuid id PK
-        uuid user_id FK
-        string certificate_code UK
-        float score
-        string status
-        json metadata
-        datetime issued_at
-        datetime created_at
-    }
-
     PRODUCTS ||--o{ PRODUCTION_BATCHES : "menghasilkan banyak batch"
     USERS_STAFF_ACCOUNTS ||--o{ PRODUCTION_BATCHES : "mencatat batch"
     PRODUCTION_BATCHES ||--o{ QC_REPORTS : "diperiksa dalam"
@@ -616,8 +552,6 @@ erDiagram
     USERS_STAFF_ACCOUNTS ||--o{ FACILITY_LOGS : "mengisi monitoring"
     USERS_STAFF_ACCOUNTS ||--o{ TEMPERATURE_LOGS : "mengisi pencatatan"
     USERS_STAFF_ACCOUNTS ||--o{ AUDIT_LOGS : "melakukan operasi"
-    USERS_STAFF_ACCOUNTS ||--o{ ITDV_CERTIFICATES : "mendapatkan sertifikasi"
-    ITDV_MODULES ||--o{ ITDV_MODULE_MINI_QUIZZES : "menyediakan kuis pendek"
 ```
 
 ---

@@ -1,6 +1,6 @@
-# Activity Diagram QC Enterprise
+# Activity Diagram QC Central Kitchen
 
-Dokumen ini menggambarkan alur aktivitas utama dalam QC Enterprise.
+Dokumen ini menggambarkan alur aktivitas utama dalam QC Central Kitchen.
 
 ## Login Role Redirect
 
@@ -20,27 +20,36 @@ flowchart TD
 
 Alur ini menunjukkan proses login dan redirect berdasarkan role. Admin diarahkan ke dashboard admin, sedangkan staff diarahkan ke dashboard staff.
 
-## Monitoring Suhu Harian
+## Monitoring Suhu Harian (Dengan Clickable Slots & Recheck)
 
 ```mermaid
 flowchart TD
     A([Mulai]) --> B[Staff membuka menu monitoring]
     B --> C[System menampilkan slot 07:00, 13:00, 16:00, 19:00]
-    C --> D[Pilih device dan room]
-    D --> E{Slot sudah tersedia?}
-    E -- Tidak --> F[Tampilkan informasi slot belum waktunya]
-    F --> Z([Selesai])
-    E -- Ya --> G[Input suhu dan catatan]
-    G --> H{Data device-slot-date sudah ada?}
-    H -- Ya --> I[Tolak sebagai duplicate monitoring]
-    I --> Z
-    H -- Tidak --> J[Simpan temperature log]
-    J --> K[Update progress total device x slot]
-    K --> L[Catat audit trail]
-    L --> Z
+    C --> D[Staff klik slot past/present yang ingin diisi]
+    D --> E{Apakah slot masa depan / upcoming?}
+    E -- Ya --> F[Tampilkan informasi slot belum waktunya]
+    F --> C
+    E -- No --> G[Pilih room dan device untuk slot terpilih]
+    G --> H[Pilih foto evidence via Hybrid Picker]
+    H --> I{Pilih Kamera atau Galeri?}
+    I -- Kamera --> J[Buka aplikasi kamera langsung]
+    I -- Galeri --> K[Buka galeri file pemilih foto]
+    J --> L[Input nilai suhu dan kelembapan jika ruangan]
+    K --> L
+    L --> M{Apakah unit sudah diisi di slot ini?}
+    M -- Ya --> N{Apakah mode recheck / allow_duplicate aktif?}
+    N -- Tidak --> O[Tampilkan error: Unit sudah diinput]
+    O --> Z([Selesai])
+    N -- Ya --> P[Simpan log baru sebagai recheck]
+    M -- Tidak --> Q[Simpan temperature log baru]
+    P --> R[Update progress check & status slot]
+    Q --> R
+    R --> S[Catat ke audit trail]
+    S --> Z
 ```
 
-Alur ini memastikan monitoring suhu dilakukan berdasarkan slot harian dan per-device. Duplicate prevention menjaga agar satu device tidak disubmit lebih dari satu kali pada slot dan tanggal yang sama.
+Alur ini memungkinkan staff memilih slot waktu secara fleksibel (07:00, 13:00, 16:00, 19:00). Duplicate prevention tetap berjalan, namun staff dapat menginput kembali (recheck) apabila sistem mengaktifkan parameter `allow_duplicate` untuk device tersebut.
 
 ## Buat Batch Produksi
 
@@ -61,28 +70,32 @@ flowchart TD
 
 Alur ini menjelaskan bahwa satu batch merepresentasikan satu kali proses masak. Batch code digunakan untuk traceability produksi dan QC.
 
-## QC Check
+## QC Check (Dengan Hybrid Photo Picker)
 
 ```mermaid
 flowchart TD
-    A([Mulai]) --> B[Staff membuka QC Check]
-    B --> C[Pilih batch produksi]
-    C --> D[Input data inspeksi]
-    D --> E[Upload evidence photo jika diperlukan]
-    E --> F[Pilih status PASS/HOLD/FAIL]
-    F --> G{Record sedang dikunci user lain?}
-    G -- Ya --> H[Tampilkan concurrency warning]
-    H --> Z([Selesai])
-    G -- Tidak --> I[Simpan QC report]
-    I --> J{Status HOLD?}
-    J -- Ya --> K[Tandai perlu re-check]
-    J -- Tidak --> L[Tandai inspeksi selesai]
-    K --> M[Catat audit trail]
-    L --> M
-    M --> Z
+    A([Mulai]) --> B[Staff membuka menu QC Check]
+    B --> C[Pilih batch produksi aktif]
+    C --> D[Input data inspeksi produk]
+    D --> E[Pilih foto evidence via Hybrid Picker jika diperlukan]
+    E --> F{Pilih Kamera atau Galeri?}
+    F -- Kamera --> G[Buka kamera secara langsung]
+    F -- Galeri --> H[Buka galeri penyimpanan file]
+    G --> I[Pilih status keputusan PASS/HOLD/FAIL]
+    H --> I
+    I --> J{Record sedang dikunci user lain?}
+    J -- Ya --> K[Tampilkan pesan concurrency warning]
+    K --> Z([Selesai])
+    J -- Tidak --> L[Simpan QC report]
+    L --> M{Status HOLD?}
+    M -- Ya --> N[Tandai perlu pemeriksaan ulang / re-check]
+    M -- Tidak --> O[Tandai inspeksi selesai]
+    N --> P[Catat ke audit trail]
+    O --> P
+    P --> Z
 ```
 
-Alur ini mendukung keputusan QC dengan status PASS, HOLD, dan FAIL. Evidence photo dan concurrency lock membantu menjaga validitas data inspeksi.
+Alur ini mendukung keputusan QC dengan status PASS, HOLD, dan FAIL dengan dukungan opsi pengambilan foto fleksibel (Kamera / Galeri) dan concurrency lock pengaman.
 
 ## Re-check
 
@@ -104,6 +117,29 @@ flowchart TD
 
 Alur re-check menyimpan riwayat pemeriksaan ulang tanpa menghapus hasil inspeksi sebelumnya. Ini penting untuk audit dan traceability.
 
+## Speed Dial FAB Menu & Navigation
+
+```mermaid
+flowchart TD
+    A([Mulai]) --> B[Pengguna klik tombol Speed Dial +]
+    B --> C[System mendeteksi halaman saat ini]
+    C --> D{Jenis Halaman?}
+    D -- Monitoring --> E[Tampilkan menu: QC Temuan & QC Check]
+    D -- QC Check --> F[Tampilkan menu: Monitoring & QC Temuan]
+    D -- Dashboard / Temuan --> G[Tampilkan menu: QC Check & Monitoring]
+    E --> H[Pengguna memilih salah satu menu]
+    F --> H
+    G --> H
+    H --> I{Pilihan menu?}
+    I -- Ke Halaman Lain --> J[Redirect ke halaman tujuan]
+    I -- Klik QC Temuan dari luar Dashboard --> K[Redirect ke dashboard.html?openFinding=true]
+    K --> L[Dashboard memuat halaman & auto-open Drawer QC Temuan]
+    J --> Z([Selesai])
+    L --> Z
+```
+
+Alur menu cepat (Speed Dial FAB) menampilkan opsi dinamis dengan menyembunyikan halaman aktif. Jika "QC Temuan" diklik dari luar dashboard, sistem melakukan redirect khusus agar drawer input temuan langsung terbuka di dashboard utama.
+
 ## Export Google Sheets
 
 ```mermaid
@@ -120,5 +156,3 @@ flowchart TD
     I --> J[Catat audit trail export]
     J --> Z
 ```
-
-Alur ini menjelaskan proses export data dari QC Enterprise ke Google Sheets melalui Google Apps Script webhook. Export dapat dilakukan untuk data monitoring, QC, maupun re-export data lama berdasarkan rentang tanggal.

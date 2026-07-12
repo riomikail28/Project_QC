@@ -29,17 +29,16 @@ def test_readme_is_github_portfolio_ready():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     required = [
-        "QC Enterprise - Quality Control & Traceability System for Central Kitchen",
+        "Aplikasi Quality Control & Traceability Central Kitchen",
         "https://project-qc-mu.vercel.app/",
         "demo.admin@qcenterprise.id",
         "demo.staff@qcenterprise.id",
-        "Admin enterprise dashboard",
-        "Staff mobile-first QC workflow",
-        "ITDV Learning Center",
+        "Dashboard & Panel Kontrol Admin",
+        "Alur Kerja Staff Mobile-First",
         "Python Flask",
         "Supabase PostgreSQL",
         "pytest",
-        "IoT temperature integration",
+        "Integrasi sensor suhu berbasis IoT",
         "Rio Mikail",
     ]
 

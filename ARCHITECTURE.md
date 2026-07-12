@@ -1,224 +1,110 @@
-# Project Architecture
+# Arsitektur Proyek QC Central Kitchen
 
-## 1. Overview
+## 1. Gambaran Umum
 
-QC Enterprise is a web-based Quality Control system designed for Central Kitchen operations. The system supports structured monitoring, batch production tracking, QC inspection, reporting, learning management, and Google Sheets export.
+QC Central Kitchen adalah sistem Quality Control berbasis web yang dirancang khusus untuk memenuhi kebutuhan dapur pusat (Central Kitchen). Aplikasi ini membantu pencatatan suhu area/alat secara terstruktur, pelacakan mutu batch produksi, pemeriksaan QC, pembuatan laporan temuan, audit trail aktivitas pengguna, serta ekspor data ke spreadsheet eksternal lewat Google Sheets.
 
-The architecture is designed to separate user interface, backend processing, database storage, and external reporting integration. This makes the project suitable for operational use, academic documentation, portfolio review, and future AI automation development.
+Arsitektur aplikasi dirancang untuk memisahkan antarmuka pengguna (user interface), pemrosesan logika backend, penyimpanan database, dan integrasi pelaporan eksternal. Struktur ini mempermudah pemeliharaan operasional dapur, penyusunan dokumentasi akademis, peninjauan portofolio, serta pengembangan otomatisasi berbasis AI di masa mendatang.
 
-## 2. System Architecture
+---
 
-QC Enterprise uses a web application architecture with the following components:
+## 2. Arsitektur Sistem
 
-- **Frontend:** HTML, CSS, and JavaScript.
-- **Backend:** Python Flask.
-- **Database:** Supabase PostgreSQL.
-- **Deployment:** Vercel.
-- **Integration:** Google Apps Script and Google Sheets.
-- **PWA Support:** Progressive Web App support for mobile-friendly access and installable app behavior.
+QC Central Kitchen menggunakan arsitektur aplikasi web modern yang terdiri dari komponen-komponen berikut:
 
-The frontend handles user interaction, form submission, dashboard views, and mobile workflows. The Flask backend provides API routes, validation, business logic, role-based access control, and integration handling. Supabase PostgreSQL stores operational data such as users, monitoring records, QC inspections, batch sequences, reports, and learning data. Google Apps Script acts as a webhook bridge for exporting system data to Google Sheets.
+*   **Frontend:** Dibangun menggunakan HTML5, CSS3, dan JavaScript murni (Vanilla JS) agar ringan dan responsif.
+*   **Backend:** Menggunakan Python Flask yang andal untuk menangani routing API, bisnis logika, validasi data, dan manajemen hak akses (role-based access).
+*   **Database:** Supabase PostgreSQL sebagai database relational utama untuk menyimpan data operasional seperti data pengguna, data suhu, batch produksi, laporan QC, temuan kendala, dan log audit.
+*   **Deployment:** Vercel digunakan untuk mendistribusikan aplikasi secara cepat dan andal.
+*   **Integrasi Eksternal:** Google Apps Script yang berperan sebagai jembatan webhook untuk mengekspor data operasional sistem ke Google Sheets.
+*   **Dukungan PWA (Progressive Web App):** Dilengkapi dengan service worker khusus bermetode *Network-First* agar aplikasi dapat diinstal di HP staff dan tetap handal diakses di dalam area dapur yang minim sinyal.
 
-## 3. Role Architecture
+---
+
+## 3. Pembagian Peran Pengguna (Role)
 
 ### Admin
-
-Admin users manage the broader QC operation and system configuration.
-
-Main access areas:
-
-- Dashboard.
-- Reports.
-- Monitoring.
-- Staff management.
-- Learning management.
-- Google Sheets export.
-
-Admin responsibilities include reviewing QC performance, managing staff, maintaining learning content, exporting data, and supervising operational compliance.
+Admin berfokus pada pengawasan operasional dapur secara menyeluruh, analisis performa, dan pengelolaan konfigurasi sistem.
+Akses utama Admin mencakup:
+*   Dashboard pemantauan analitik (grafik kelulusan QC & suhu).
+*   Peninjauan laporan dan detail log.
+*   Pemeriksaan riwayat aktivitas sistem (audit trail).
+*   Pengelolaan hak akses staff, daftar produk (SKU), dan ruangan dapur.
+*   Pemicu sinkronisasi data ekspor ke Google Sheets.
 
 ### Staff
+Staff berfokus pada pengisian data harian secara langsung di lapangan menggunakan HP/tablet.
+Akses utama Staff mencakup:
+*   Dashboard operasional staff.
+*   Modul pengisian suhu ruangan/alat berdasarkan slot waktu harian.
+*   Modul pembuatan batch masakan baru (automatic expiry calculation berdasarkan umur simpan SKU).
+*   Modul pengisian checklist QC produk (PASS/HOLD/FAIL).
+*   Modul pengisian temuan/deviasi di dapur beserta foto bukti (evidence).
 
-Staff users focus on mobile-friendly operational input and daily QC activities.
+---
 
-Main access areas:
+## 4. Alur Kerja Utama (Core Workflow)
 
-- Mobile dashboard.
-- Temperature monitoring.
-- QC check.
-- Batch input.
-- Profile.
+1.  Pengguna melakukan login menggunakan kredensial akun yang terdaftar.
+2.  Sistem memverifikasi kredensial di backend, membaca hak aksesnya, dan mengarahkan ke dashboard yang sesuai (Admin atau Staff).
+3.  Staff mengisi monitoring suhu ruangan dapur berdasarkan empat slot waktu harian yang fleksibel (07:00, 13:00, 16:00, 19:00). Staff dapat memilih slot waktu mana pun yang belum diisi untuk melengkapi data pemantauan harian.
+4.  Staff dapur mencatat setiap aktivitas memasak produk sebagai batch produksi baru. Sistem otomatis membuatkan kode batch unik berdasarkan tanggal produksi dan urutan sequence produk.
+5.  Staff QC mengecek batch produksi yang siap kirim, mengisi checklist parameter kualitas, mengambil foto bukti, menetapkan keputusan PASS/HOLD/FAIL, lalu menyimpan laporan QC.
+6.  Setiap data yang masuk ke database akan tercatat di audit trail secara otomatis untuk menjamin integritas data dapur.
 
-Staff responsibilities include submitting scheduled monitoring data, recording batch production activity, performing QC checks, uploading evidence, and maintaining accurate operational records.
+---
 
-## 4. Core Workflow
+## 5. Arsitektur Pemilihan Foto (Hybrid Photo Picker)
 
-The core workflow connects authentication, role-based access, production activity, QC validation, reporting, and export.
+Untuk memfasilitasi kebutuhan staff di lapangan, sistem dilengkapi modul picker foto hibrida di sisi client:
+*   Popup menu bawah (bottom sheet) memberikan pilihan kepada pengguna untuk memotret langsung (**Kamera**) atau memilih gambar yang sudah ada (**Galeri / Upload**).
+*   **Masalah Mobile Browser:** Browser bawaan mobile (seperti Chrome di Android atau Safari di iOS) seringkali menonaktifkan fitur kamera langsung apabila input file memiliki atribut `multiple` aktif.
+*   **Solusi Teknis:** Modul JavaScript [ui-mobile.js](file:///c:/Users/rio/.gemini/antigravity/scratch/Project_QC/frontend/js/ui-mobile.js) mendeteksi pilihan pengguna secara real-time. Jika pengguna memilih **Kamera**, sistem akan menghapus atribut `multiple` dan menyetel `.multiple = false` pada element DOM secara synchronous, lalu menambahkan atribut `capture="environment"` sebelum memicu event `.click()`. Jika memilih **Galeri**, sistem mengembalikan parameter `multiple` sehingga pengguna dapat memilih banyak berkas dari galeri penyimpanan HP mereka.
+*   **Kompresi Sisi Client:** Semua foto yang dipilih akan dikompresi ukurannya di browser staff sebelum dikirim ke server. Ini mempercepat proses penyimpanan data evidence di database meskipun koneksi internet dapur lambat.
 
-1. User logs in through the web interface.
-2. The system validates credentials and identifies the user role.
-3. The user is redirected based on role.
-4. Staff perform monitoring based on scheduled slots.
-5. Staff record batch production sequence data.
-6. QC inspection is submitted and classified.
-7. HOLD or uncertain results can proceed to re-check.
-8. Admin reviews operational data through reports.
-9. Admin exports monitoring or QC data to Google Sheets when needed.
+---
 
-## 5. Monitoring Workflow
+## 6. Penanganan Duplikasi Suhu (Recheck & Duplication)
 
-Monitoring is designed around fixed operational slots:
+Untuk mengamankan validitas log pemantauan harian:
+*   Sistem melarang pengisian ganda (duplicate) pada slot waktu yang sama untuk device yang sama pada hari tersebut, guna mencegah ketidaksengajaan klik ganda oleh staff.
+*   Namun, jika terjadi penyimpangan suhu (suhu kritis) dan staff melakukan tindakan perbaikan, staff diperbolehkan mengirimkan data baru (recheck) pada slot tersebut.
+*   Backend service [monitoring_schedule_service.py](file:///c:/Users/rio/.gemini/antigravity/scratch/Project_QC/backend/services/monitoring_schedule_service.py) memvalidasi status kelulusan. Apabila parameter `allow_duplicate` diset ke `True` oleh client, backend mengizinkan penulisan log suhu baru dan menyimpannya sebagai catatan audit recheck historis tanpa menimpa data sebelumnya.
 
-- 07:00
-- 13:00
-- 16:00
-- 19:00
+---
 
-Each monitoring slot supports per-device monitoring. This means every registered production device can be checked individually for each scheduled time.
+## 7. Desain Navigasi Cepat (Speed Dial FAB & Redirect)
 
-The workflow includes duplicate prevention to reduce repeated submissions for the same device and slot. This helps protect data quality and makes the monitoring history easier to audit.
+Tombol melayang Speed Dial FAB (Floating Action Button) mempermudah akses silang antarmodul di layar HP staff:
+*   **Opsi Kontekstual Dinamis:** Komponen [quick-actions.js](file:///c:/Users/rio/.gemini/antigravity/scratch/Project_QC/frontend/js/quick-actions.js) mendeteksi lokasi halaman saat ini dan menyembunyikan tombol navigasi yang merujuk ke halaman tersebut untuk menghindari kebingungan.
+*   **Navigasi Lintas Halaman Terbuka Langsung:** Laci popup input kendala (**QC Temuan**) hanya terpasang di kerangka DOM dashboard utama (`dashboard.html`). Jika staff berada di halaman **QC Check** atau **Monitoring** dan menekan menu **QC Temuan**, sistem melakukan redirect ke `dashboard.html?openFinding=true`. 
+*   Saat dashboard dimuat, parameter URL dibaca secara otomatis untuk membuka drawer pengisian temuan lapangan secara instan, lalu menyembunyikan parameter URL dari riwayat browser menggunakan `window.history.replaceState`.
 
-Monitoring progress can be calculated using:
+---
 
-```text
-Total Progress = Total Monitored Devices / (Total Devices x Total Slots)
-```
+## 8. Ekspor Integrasi Google Sheets
 
-This allows the system to show completion progress across all required device checks and scheduled monitoring times.
+Ekspor data operasional diintegrasikan ke spreadsheet eksternal menggunakan Google Apps Script sebagai perantara webhook.
+Kemampuan ekspor meliputi:
+*   Sinkronisasi data suhu monitoring harian.
+*   Sinkronisasi laporan pemeriksaan QC.
+*   Sinkronisasi laporan kendala dapur (QC Temuan).
+*   Ekspor historis berdasarkan rentang tanggal tertentu yang dipilih admin.
 
-## 6. Batch Workflow
+Setiap payload ekspor dikirimkan secara asinkron dari backend Flask menuju URL webhook Apps Script, yang kemudian menulis baris data baru ke lembar Google Sheets yang ditentukan.
 
-The batch workflow records production activity at the cooking process level.
+---
 
-In this system:
+## 9. Keamanan & Kestabilan Sistem
 
-- **1 batch = 1 cooking process.**
-- Each batch is represented by a `batch_sequence`.
-- Batch data can be connected with monitoring, QC inspection, reporting, and traceability workflows.
+*   **Pemisahan Akses (Role-Based Access):** Logika verifikasi hak akses divalidasi di setiap endpoint API Flask. Tampilan antarmuka hanya menyesuaikan visibilitas elemen, namun hak eksekusi tetap diamankan oleh backend.
+*   **Keamanan Token Sesi:** Sesi login divalidasi menggunakan token JWT. Akun demo admin dibatasi secara ketat sehingga hanya dapat membaca data tanpa memodifikasi isi database.
+*   **Variabel Lingkungan (Environment Variables):** Kunci API, URL database Supabase, kunci enkripsi JWT, dan alamat webhook Google Apps Script disimpan secara aman di variabel lingkungan server, bukan di dalam kode aplikasi.
 
-The recommended batch code format is:
+---
 
-```text
-SKU-YYYYMMDD-001
-```
+## 10. Strategi Pengujian (Testing)
 
-Example:
-
-```text
-CKN-20260529-001
-```
-
-This format helps identify the product SKU, production date, and sequence number for the day.
-
-## 7. QC Inspection Workflow
-
-QC inspection records the quality status of a product, process, or batch.
-
-Supported QC statuses:
-
-- **PASS:** The inspected item meets the defined quality requirements.
-- **HOLD:** The inspected item requires further review, corrective action, or re-check.
-- **FAIL:** The inspected item does not meet the defined quality requirements.
-
-The workflow supports evidence upload so users can attach supporting proof, such as inspection photos or related documentation.
-
-Concurrency lock logic is used to reduce the risk of conflicting updates when multiple users interact with the same inspection record. This helps preserve consistency during status changes, evidence updates, and re-check actions.
-
-Re-check history preserves follow-up inspection records. This is important for traceability because it shows how a HOLD or uncertain result was reviewed over time.
-
-## 8. ITDV Learning Workflow
-
-The ITDV Learning workflow supports structured internal learning for QC knowledge, HACCP concepts, and operational understanding.
-
-Learning components include:
-
-- Module.
-- Mini quiz.
-- Simulation.
-- Quiz.
-- Certificate.
-- Career recommendation.
-- Admin CRUD learning.
-
-Users can access learning modules, complete quizzes, follow simulations, and receive certificates after meeting completion criteria. Career recommendation features can help guide users toward relevant development paths based on learning progress and assessment results.
-
-Admin users can manage learning content through CRUD operations, including creating, updating, reviewing, and deleting learning materials.
-
-## 9. Google Sheets Export Workflow
-
-Google Sheets export is handled through an integration workflow using Google Apps Script as a webhook endpoint.
-
-Export capabilities include:
-
-- Monitoring export.
-- QC export.
-- Historical re-export.
-
-The Flask backend prepares selected data and sends it to the Google Apps Script webhook. Google Apps Script then writes the data into the configured Google Sheets document.
-
-Historical re-export allows admin users to export previous monitoring or QC records based on selected filters or date ranges. This supports reporting, external review, backup, and operational documentation.
-
-## 10. Data Flow Diagram Text
-
-```text
-Staff/Admin
-    |
-    v
-Frontend
-    |
-    v
-Flask API
-    |
-    v
-Service Layer
-    |
-    v
-Supabase
-    |
-    v
-Google Apps Script
-    |
-    v
-Google Sheets
-```
-
-This flow shows how user actions move from the interface to backend services, database storage, and external spreadsheet integration.
-
-## 11. Security
-
-Security is handled through role separation, environment configuration, and controlled backend access.
-
-Key security principles:
-
-- Role-based access for Admin and Staff users.
-- Admin-only endpoints for sensitive operations such as reports, staff management, learning management, and export.
-- Environment variables for secrets, service keys, API URLs, and integration configuration.
-- No secret values stored in frontend code.
-
-Sensitive operations should always be validated on the backend. The frontend may control visibility, but authorization must be enforced by the Flask API.
-
-## 12. Testing
-
-Testing supports stability, regression prevention, and deployment confidence.
-
-Testing scope includes:
-
-- `pytest` for backend unit and integration tests.
-- JavaScript syntax check for frontend script validation.
-- Smoke route tests to confirm important pages and API routes respond correctly.
-- Regression tests for critical workflows such as login, monitoring, QC inspection, re-check, reports, and export.
-
-These tests help ensure new changes do not break core QC operations or role-based behavior.
-
-## 13. Future Architecture
-
-QC Enterprise can be expanded into a more advanced digital QC platform through future architecture improvements.
-
-Potential future improvements:
-
-- IoT temperature sensor integration for automated monitoring input.
-- WhatsApp alert integration for HOLD, FAIL, missed monitoring, and urgent follow-up.
-- AI anomaly detection for unusual temperature patterns, recurring QC issues, and batch risk signals.
-- Multi-tenant SaaS architecture for supporting multiple branches, kitchens, or companies.
-- APK or Capacitor packaging for native-like mobile deployment.
-
-These future directions can extend QC Enterprise from a web-based information system into a scalable quality control automation platform.
+Kestabilan operasional dapur dijamin oleh suite pengujian otomatis menyeluruh:
+*   **Pytest backend:** Mengetes integritas API, validasi token, aturan duplikasi data suhu harian, alur recheck, dan hak akses demo.
+*   **Pengujian regresi:** Memastikan modifikasi antarmuka baru tidak merusak alur pengisian checklist QC dan pengiriman laporan harian.
