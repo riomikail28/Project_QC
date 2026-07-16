@@ -851,7 +851,7 @@ class LearningService:
 
     def _simple_certificate_pdf(self, data):
         lines = [
-            "QC LearnHub AI",
+            "QC LearnHub",
             "Sertifikat Penyelesaian QC LearnHub",
             f"Participant: {data.get('participant_name') or 'Peserta'}",
             f"Program: {data.get('program_name') or 'Simulasi Quality Control Industri Pangan'}",

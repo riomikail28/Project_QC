@@ -1,14 +1,19 @@
+/* Hallmark · route: custom · vibe: "industrial training portal, clean, blue-white"
+ * paper: oklch(98.5% 0.006 245) · accent: oklch(56% 0.18 245) · display: Outfit · body: Inter
+ * axes: light / geometric-sans / cool · studied: no · context: explicit · v1.1.0
+ */
+
 :root {
-    --itdv-ink: var(--text-main, #0f172a);
-    --itdv-muted: var(--text-muted, #64748b);
-    --itdv-line: var(--border-soft, rgba(191, 219, 254, 0.72));
-    --itdv-blue: var(--primary, #2563eb);
-    --itdv-green: var(--success, #10b981);
-    --itdv-amber: var(--warning, #f59e0b);
-    --itdv-red: var(--danger, #ef4444);
-    --itdv-bg: transparent;
-    --itdv-card: rgba(255, 255, 255, 0.78);
-    --itdv-shadow: 0 18px 42px rgba(37, 99, 235, 0.09);
+    --itdv-ink: oklch(18% 0.012 245);
+    --itdv-muted: oklch(50% 0.008 245);
+    --itdv-line: oklch(88% 0.008 245);
+    --itdv-blue: oklch(56% 0.18 245);
+    --itdv-green: oklch(62% 0.16 145);
+    --itdv-amber: oklch(72% 0.14 75);
+    --itdv-red: oklch(56% 0.18 25);
+    --itdv-bg: oklch(98.5% 0.006 245);
+    --itdv-card: oklch(100% 0.002 245);
+    --itdv-shadow: 0 12px 30px rgba(37, 99, 235, 0.04);
 }
 
 body {
@@ -71,9 +76,9 @@ body {
     flex: 0 0 36px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    background: var(--itdv-blue);
     color: white;
-    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.32);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
     font-weight: 800;
 }
 
@@ -262,11 +267,11 @@ body {
     height: 72px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    background: var(--itdv-blue);
     color: white;
     font-size: 24px;
     font-weight: 900;
-    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.32);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
 }
 
 .pitch-slide h2,
@@ -288,19 +293,19 @@ body {
 }
 
 .problem-slide {
-    border-left: 6px solid var(--itdv-red);
+    border: 1px solid var(--itdv-red);
 }
 
 .solution-slide {
-    border-left: 6px solid var(--itdv-blue);
+    border: 1px solid var(--itdv-blue);
 }
 
 .target-slide {
-    border-left: 6px solid var(--itdv-amber);
+    border: 1px solid var(--itdv-amber);
 }
 
 .impact-slide {
-    border-left: 6px solid var(--itdv-green);
+    border: 1px solid var(--itdv-green);
 }
 
 .pitch-close {
